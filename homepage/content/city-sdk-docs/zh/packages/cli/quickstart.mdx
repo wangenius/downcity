@@ -101,6 +101,22 @@ user workspace 里则保留高频 user 动作，例如：
 - `Edit City`
 - `Remove City`
 
+## 用 downfed 管理已部署 Federation
+
+当你要管理的是已经部署好的 Federation 本身，而不是本机 City workspace，用 `downfed`，也可以用短别名 `fed`。
+
+常用入口：
+
+```bash
+fed
+fed server add
+fed server manage
+```
+
+`fed server add` 会把已部署 Federation URL 保存到本地。`fed server manage` 会进入当前 Federation 的 admin 工作区；如果缺少 admin access，CLI 会在进入前要求输入 `admin_secret_key`。
+
+直接运行 `fed` 会优先显示已保存的 Federation 列表。选中某个 Federation 会直接进入它的 admin 工作区。编辑、移除、更新 admin key 都收在进入后的 `更多` 里。
+
 ## 一个最常见的上手流程
 
 ```bash

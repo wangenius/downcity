@@ -1,6 +1,6 @@
 {
   "name": "downcity",
-  "version": "1.1.222",
+  "version": "1.1.223",
   "type": "module",
   "description": "Downcity CLI — unified City and Agent host management",
   "bin": {
@@ -52,11 +52,9 @@
     "hono": "^4.12.23",
     "js-yaml": "^4.1.1",
     "nanoid": "^5.1.11",
-    "neo-blessed": "^0.2.0",
     "node-cron": "^4.2.1",
     "openai": "^6.39.1",
     "ora": "^9.4.0",
-    "prompts": "^2.4.2",
     "ws": "^8.21.0",
     "zod": "^4.4.3",
     "cli-highlight": "^2.1.11"
@@ -67,7 +65,6 @@
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.9.1",
     "@types/node-cron": "^3.0.11",
-    "@types/prompts": "^2.4.9",
     "@types/ws": "^8.18.1",
     "tsc-alias": "^1.8.17",
     "typescript": "^6.0.3"

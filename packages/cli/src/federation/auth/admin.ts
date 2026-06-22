@@ -12,8 +12,8 @@ export async function adminAuth(server: ServerProfile): Promise<AdminSession | u
   const adminSecretKey = String(server.admin_secret_key ?? "").trim();
   if (!adminSecretKey) {
     showError(t({
-      zh: "当前 City 缺少 admin_secret_key。",
-      en: "Current City is missing admin_secret_key.",
+      zh: "当前 Federation 缺少 admin_secret_key。",
+      en: "Current Federation is missing admin_secret_key.",
     }));
     return undefined;
   }

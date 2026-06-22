@@ -2,13 +2,15 @@
  * Federation 交互式管理 TUI 入口。
  *
  * 关键点（中文）
- * - 负责创建 blessed 全屏界面、主循环与动作分发。
- * - 状态构建与动作处理拆到 FederationManagerState.ts。
- * - 格式化与提示分别拆到 FederationManagerFormat.ts 与 FederationManagerPrompts.ts。
+ * - 使用 shared pi-tui runtime，保持与 fed/admin/city 首页一致的 TUI 框架。
+ * - 状态构建与动作处理仍拆在 FederationManagerState.ts。
+ * - 格式化与提示仍拆在 FederationManagerFormat.ts 与 FederationManagerPrompts.ts。
  */
 
-import blessed from "neo-blessed";
-import { t } from "@/shared/CliLocale.js";
+import { Key, matchesKey, type Component, type Focusable } from "@earendil-works/pi-tui";
+import { ManagedTuiRuntime } from "@/shared/tui/ManagedTuiRuntime.js";
+import { current_theme } from "@/city/agent/tui/theme/index.js";
+import { tui_pad_end, tui_truncate, tui_viewport, tui_wrap_lines } from "@/shared/tui/TuiText.js";
 import {
   resolve_loop_selectable_index,
   resolve_next_loop_selectable_index,
@@ -30,52 +32,12 @@ import {
 } from "@/city/tui/FederationManagerFormat.js";
 import type { tui_list_item } from "@/city/types/Tui.js";
 
-interface blessed_list_element extends blessed.Widgets.ListElement {
-  on: (
-    event: string,
-    listener: (...args: unknown[]) => void,
-  ) => blessed_list_element;
-  key: (
-    keys: string | string[],
-    listener: (...args: unknown[]) => void,
-  ) => blessed_list_element;
-  focus: () => void;
-  select: (index: number) => void;
-  setItems: (items: blessed.Widgets.ListElementItem[]) => void;
-  selected?: number;
-}
+const BORDER = "─";
+const POINTER = "❯";
 
-interface city_manager_shell {
-  /** blessed 全屏根节点。 */
-  screen: blessed.Widgets.Screen;
-
-  /** 左侧菜单容器。 */
-  sidebar_box: blessed.Widgets.BoxElement;
-
-  /** 右侧详情容器。 */
-  main_box: blessed.Widgets.BoxElement;
-
-  /** 右侧标题区。 */
-  header_box: blessed.Widgets.BoxElement;
-
-  /** 右侧详情文本区。 */
-  detail_box: blessed.Widgets.BoxElement;
-
-  /** 底部操作提示区。 */
-  footer_box: blessed.Widgets.BoxElement;
-}
-
-interface city_manager_runtime {
-  /** 是否已经退出。 */
-  finished: boolean;
-
-  /** 当前聚焦索引。 */
-  selected_index: number;
-
-  /** TUI 状态。 */
-  state: city_manager_state;
-}
-
+/**
+ * 打开 City Federation 管理 TUI。
+ */
 export async function open_city_manager_tui(): Promise<void> {
   let next_state_params: {
     initial_action?: city_manager_action;
@@ -94,252 +56,197 @@ export async function open_city_manager_tui(): Promise<void> {
 async function run_city_manager_screen(
   initial_state: city_manager_state,
 ): Promise<city_manager_action | null> {
-  return await new Promise<city_manager_action | null>((resolve) => {
-    const shell = create_city_manager_shell(initial_state);
-    const runtime: city_manager_runtime = {
-      finished: false,
-      selected_index: initial_state.initial_action
-        ? find_action_index(initial_state.items, initial_state.initial_action)
-        : resolve_loop_selectable_index(initial_state.items, 0, 0),
-      state: initial_state,
-    };
-
-    const finish = (value: city_manager_action | null): void => {
-      if (runtime.finished) return;
-      runtime.finished = true;
-      shell.screen.destroy();
-      resolve(value);
-    };
-
-    const list = blessed.list({
-      parent: shell.sidebar_box,
-      top: 2,
-      left: 0,
-      width: "100%",
-      height: "100%-2",
-      keys: false,
-      vi: false,
-      mouse: true,
-      style: {
-        item: { fg: "white" },
-        selected: {
-          fg: "black",
-          bg: "green",
-          bold: true,
-        },
-      },
-      items: runtime.state.items.map(format_city_item_label),
-    }) as blessed_list_element;
-
-    const render = (): void => {
-      const item = runtime.state.items[runtime.selected_index];
-      list.setItems(runtime.state.items.map(format_city_item_label));
-      list.select(runtime.selected_index);
-      shell.header_box.setContent(format_header(runtime.state));
-      shell.detail_box.setContent(runtime.state.detail_override ?? format_city_detail(item));
-      shell.footer_box.setContent(format_footer(item));
-      shell.screen.render();
-    };
-
-    const refresh_state = async (params?: {
-      keep_action?: city_manager_action;
-      detail_override?: string;
-      last_message?: string;
-    }): Promise<void> => {
-      const next_state = await build_city_manager_state({
-        detail_override: params?.detail_override,
-        last_message: params?.last_message,
-      });
-      runtime.state = next_state;
-      if (params?.keep_action) {
-        runtime.selected_index = find_action_index(next_state.items, params.keep_action);
-      } else {
-        runtime.selected_index = resolve_loop_selectable_index(
-          next_state.items,
-          runtime.selected_index,
-          0,
-        );
-      }
-      render();
-    };
-
-    const set_detail = (content: string): void => {
-      runtime.state = {
-        ...runtime.state,
-        detail_override: content,
-      };
-      render();
-    };
-
-    const sync_selection = (index_value: unknown = list.selected): void => {
-      runtime.selected_index = resolve_loop_selectable_index(
-        runtime.state.items,
-        index_value,
-        runtime.selected_index,
-      );
-      runtime.state = {
-        ...runtime.state,
-        detail_override: undefined,
-      };
-      render();
-    };
-
-    const run_action = async (): Promise<void> => {
-      sync_selection();
-      const item = runtime.state.items[runtime.selected_index];
-      if (is_disabled_item(item)) return;
-      const action = item?.id as city_manager_action | undefined;
-      if (!action) return;
-      if (action === "exit") {
-        finish(null);
-        return;
-      }
-      if (is_prompt_action(action)) {
-        finish(action);
-        return;
-      }
-
-      await handle_city_action({
-        action,
-        set_detail,
-        refresh_state,
-      });
-    };
-
-    list.on("select item", (_item, index_value) => {
-      sync_selection(index_value);
-    });
-
-    list.key(["up", "k"], () => {
-      runtime.selected_index = resolve_next_loop_selectable_index(
-        runtime.state.items,
-        runtime.selected_index,
-        -1,
-      );
-      sync_selection(runtime.selected_index);
-    });
-
-    list.key(["down", "j"], () => {
-      runtime.selected_index = resolve_next_loop_selectable_index(
-        runtime.state.items,
-        runtime.selected_index,
-        1,
-      );
-      sync_selection(runtime.selected_index);
-    });
-
-    list.key(["enter"], () => {
-      void run_action();
-    });
-
-    shell.detail_box.key(["pageup"], () => {
-      shell.detail_box.scroll(-Math.max(1, Math.floor((shell.detail_box.height as number) / 2)));
-      shell.screen.render();
-    });
-
-    shell.detail_box.key(["pagedown"], () => {
-      shell.detail_box.scroll(Math.max(1, Math.floor((shell.detail_box.height as number) / 2)));
-      shell.screen.render();
-    });
-
-    shell.screen.key(["escape", "q", "C-c"], () => finish(null));
-
-    list.focus();
-    render();
-  });
+  const runtime = new ManagedTuiRuntime({ title: "Downcity City" });
+  try {
+    return await runtime.run_custom<city_manager_action | null>((finish, request_render) =>
+      new CityManagerComponent({
+        initial_state,
+        finish,
+        request_render,
+      }),
+    );
+  } finally {
+    runtime.close();
+  }
 }
 
-function create_city_manager_shell(state: city_manager_state): city_manager_shell {
-  const screen = blessed.screen({
-    smartCSR: true,
-    fullUnicode: true,
-    title: "Downcity City",
-    dockBorders: true,
-    autoPadding: true,
-  });
-
-  screen.style = {
-    bg: "black",
-    fg: "white",
-  };
-
-  const sidebar_box = blessed.box({
-    parent: screen,
-    top: 0,
-    left: 0,
-    width: "34%",
-    height: "100%-3",
-    border: "line",
-    label: ` ${t({ zh: "City 连接", en: "City membership" })} `,
-    style: {
-      border: { fg: "green" },
-    },
-  });
-
-  const main_box = blessed.box({
-    parent: screen,
-    top: 0,
-    left: "34%",
-    width: "66%",
-    height: "100%-3",
-    border: "line",
-    label: ` ${t({ zh: "详情", en: "Detail" })} `,
-    style: {
-      border: { fg: "green" },
-    },
-  });
-
-  const header_box = blessed.box({
-    parent: main_box,
-    top: 0,
-    left: 1,
-    width: "100%-2",
-    height: 4,
-    tags: true,
-    content: format_header(state),
-  });
-
-  const detail_box = blessed.box({
-    parent: main_box,
-    top: 4,
-    left: 0,
-    width: "100%",
-    height: "100%-4",
-    padding: { left: 1, right: 1, top: 1, bottom: 1 },
-    tags: true,
-    scrollable: true,
-    alwaysScroll: true,
-    keys: true,
-    mouse: true,
-    style: {
-      fg: "white",
-    },
-  });
-
-  const footer_box = blessed.box({
-    parent: screen,
-    left: 0,
-    bottom: 0,
-    width: "100%",
-    height: 3,
-    padding: { left: 1, right: 1, top: 1 },
-    border: "line",
-    style: {
-      border: { fg: "green" },
-      fg: "gray",
-    },
-  });
-
-  return {
-    screen,
-    sidebar_box,
-    main_box,
-    header_box,
-    detail_box,
-    footer_box,
-  };
+interface city_manager_component_input {
+  /** 初始 TUI 状态。 */
+  initial_state: city_manager_state;
+  /** 结束当前 screen 的回调。 */
+  finish: (value: city_manager_action | null) => void;
+  /** 请求 pi-tui 重绘。 */
+  request_render: () => void;
 }
 
+class CityManagerComponent implements Component, Focusable {
+  focused = false;
+  private state: city_manager_state;
+  private selected_index: number;
+  private detail_scroll = 0;
+  private readonly finish: (value: city_manager_action | null) => void;
+  private readonly request_render: () => void;
+
+  /**
+   * @param input 组件构造参数。
+   */
+  constructor(input: city_manager_component_input) {
+    this.state = input.initial_state;
+    this.finish = input.finish;
+    this.request_render = input.request_render;
+    this.selected_index = input.initial_state.initial_action
+      ? find_action_index(input.initial_state.items, input.initial_state.initial_action)
+      : resolve_loop_selectable_index(input.initial_state.items, 0, 0);
+  }
+
+  handleInput(data: string): void {
+    if (matchesKey(data, Key.up)) {
+      this.move_selection(-1);
+      return;
+    }
+    if (matchesKey(data, Key.down)) {
+      this.move_selection(1);
+      return;
+    }
+    if (matchesKey(data, Key.pageUp)) {
+      this.detail_scroll = Math.max(0, this.detail_scroll - 8);
+      this.request_render();
+      return;
+    }
+    if (matchesKey(data, Key.pageDown)) {
+      this.detail_scroll += 8;
+      this.request_render();
+      return;
+    }
+    if (matchesKey(data, Key.enter)) {
+      void this.run_action();
+      return;
+    }
+    if (matchesKey(data, Key.escape) || matchesKey(data, "q") || matchesKey(data, "ctrl+c")) {
+      this.finish(null);
+    }
+  }
+
+  invalidate(): void {
+    // 组件没有缓存。
+  }
+
+  render(width: number): string[] {
+    const safe_width = Math.max(40, width);
+    const left_width = Math.max(24, Math.min(42, Math.floor(safe_width * 0.38)));
+    const right_width = Math.max(10, safe_width - left_width - 3);
+    const body_height = Math.max(1, process.stdout.rows - 5);
+    const left_lines = this.render_list(left_width).slice(0, body_height);
+    const right_lines = this.render_detail(right_width);
+    const right_view = tui_viewport(right_lines, body_height, this.detail_scroll);
+    const rows = Math.max(left_lines.length, right_view.length, 1);
+    const item = this.state.items[this.selected_index];
+
+    const output = [
+      tui_truncate(current_theme.bold_fg("primary", "管理 Federation"), safe_width),
+      tui_truncate(format_header(this.state), safe_width),
+      tui_truncate(BORDER.repeat(safe_width), safe_width),
+    ];
+
+    for (let index = 0; index < rows; index += 1) {
+      const left = tui_pad_end(left_lines[index] ?? "", left_width);
+      const right = tui_truncate(right_view[index] ?? "", right_width);
+      output.push(`${left} ${current_theme.dim_fg("border", "│")} ${right}`);
+    }
+
+    output.push(tui_truncate(BORDER.repeat(safe_width), safe_width));
+    output.push(tui_truncate(current_theme.dim_fg("textMuted", format_footer(item)), safe_width));
+    return output;
+  }
+
+  private move_selection(delta: number): void {
+    this.selected_index = resolve_next_loop_selectable_index(
+      this.state.items,
+      this.selected_index,
+      delta,
+    );
+    this.state = {
+      ...this.state,
+      detail_override: undefined,
+    };
+    this.detail_scroll = 0;
+    this.request_render();
+  }
+
+  private async refresh_state(params?: {
+    keep_action?: city_manager_action;
+    detail_override?: string;
+    last_message?: string;
+  }): Promise<void> {
+    const next_state = await build_city_manager_state({
+      detail_override: params?.detail_override,
+      last_message: params?.last_message,
+    });
+    this.state = next_state;
+    if (params?.keep_action) {
+      this.selected_index = find_action_index(next_state.items, params.keep_action);
+    } else {
+      this.selected_index = resolve_loop_selectable_index(
+        next_state.items,
+        this.selected_index,
+        0,
+      );
+    }
+    this.detail_scroll = 0;
+    this.request_render();
+  }
+
+  private set_detail(content: string): void {
+    this.state = {
+      ...this.state,
+      detail_override: content,
+    };
+    this.detail_scroll = 0;
+    this.request_render();
+  }
+
+  private async run_action(): Promise<void> {
+    const item = this.state.items[this.selected_index];
+    if (is_disabled_item(item)) return;
+    const action = item?.id as city_manager_action | undefined;
+    if (!action) return;
+    if (action === "exit") {
+      this.finish(null);
+      return;
+    }
+    if (is_prompt_action(action)) {
+      this.finish(action);
+      return;
+    }
+
+    await handle_city_action({
+      action,
+      set_detail: (content) => this.set_detail(content),
+      refresh_state: async (state) => await this.refresh_state(state),
+    });
+  }
+
+  private render_list(width: number): string[] {
+    return this.state.items.map((item, index) => {
+      if (is_disabled_item(item)) {
+        return current_theme.dim_fg("textMuted", tui_truncate(`  ${format_city_item_label(item)}`, width));
+      }
+      const selected = index === this.selected_index;
+      const pointer = selected ? POINTER : " ";
+      const title = selected
+        ? current_theme.bold_fg("primary", item.title)
+        : current_theme.fg("text", item.title);
+      const subtitle = item.subtitle ? current_theme.dim_fg("textMuted", ` ${item.subtitle}`) : "";
+      return tui_truncate(`${pointer} ${title}${subtitle}`, width);
+    });
+  }
+
+  private render_detail(width: number): string[] {
+    const item = this.state.items[this.selected_index];
+    const detail = this.state.detail_override ?? format_city_detail(item);
+    return tui_wrap_lines(detail, width);
+  }
+}
 
 function find_action_index(items: tui_list_item[], action: city_manager_action): number {
   const index = items.findIndex((item) => item.id === action);

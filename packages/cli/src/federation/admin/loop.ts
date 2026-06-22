@@ -189,8 +189,8 @@ export async function adminLoop(
               }),
               value: "more",
               hint: t({
-                zh: "更新 admin 访问、编辑当前 City 本地连接记录，或移除当前 City。",
-                en: "Update admin access, edit the current local City connection, or remove this City.",
+                zh: "更新 admin 访问、编辑当前 Federation 本地连接记录，或移除当前 Federation。",
+                en: "Update admin access, edit the current local Federation connection, or remove this Federation.",
               }),
             },
           ]

@@ -9,8 +9,9 @@
  * Federation 仪表盘可执行动作。
  */
 export type FederationAction =
+  | `open_federation:${string}`
+  | "add_federation"
   | "create_federation"
   | "deploy_federation"
-  | "refresh_env"
   | "more"
   | "quit";

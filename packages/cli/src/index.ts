@@ -31,9 +31,9 @@ if (argv.length === 1 && (argv[0] === "-v" || argv[0] === "--version")) {
 const invoked = process.argv[1] ? process.argv[1].replace(/\\/g, "/").split("/").pop() : "downcity";
 
 if (invoked === "downfed" || invoked === "fed") {
-  const { runDownfedCli } = await import("@/cli/downfed.js");
+  const { runDownfedCli } = await import("@/federation/index.js");
   await runDownfedCli();
 } else {
-  const { runDowncityCli } = await import("@/cli/downcity.js");
+  const { runDowncityCli } = await import("@/city/index.js");
   await runDowncityCli();
 }

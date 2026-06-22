@@ -101,6 +101,22 @@ Inside `Server management`, you can then choose:
 - `Edit City`
 - `Remove City`
 
+## Manage deployed Federations with downfed
+
+Use `downfed` or its short alias `fed` when you want to manage a deployed Federation itself, rather than a local City workspace.
+
+Common entry points:
+
+```bash
+fed
+fed server add
+fed server manage
+```
+
+`fed server add` saves the deployed Federation URL locally. `fed server manage` opens the admin workspace for the current Federation; if admin access is missing, the CLI asks for `admin_secret_key` before entering.
+
+Opening `fed` without arguments shows the saved Federation list first. Select a Federation to enter its admin workspace. Edit, remove, and admin-key updates live inside that workspace under `More`.
+
 ## A common first workflow
 
 ```bash

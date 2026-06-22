@@ -6,7 +6,7 @@
  * 关键点（中文）
  * - `downfed` 是 Federation 管理器，负责部署、City 实体、服务资源等 admin 能力。
  * - 默认无参数时打开交互式 Federation 管理界面。
- * - 本模块承载 commander 根命令，`src/index.ts` 只负责按命令名分发。
+ * - 本模块承载 Federation commander 根命令，`src/index.ts` 只负责按命令名分发。
  */
 
 import { readFileSync } from "node:fs";
@@ -19,7 +19,12 @@ import { createVersionBanner } from "@/shared/IndexSupport.js";
 import { setCliVerbosity } from "@/shared/CliReporter.js";
 import { deployFederationProject } from "@/federation/deploy/commands/deploy.js";
 import { createFederationProject } from "@/federation/create/commands/create.js";
-import { refreshEnvCache } from "@/federation/env/commands/refresh.js";
+import { readActiveServer } from "@/federation/core/session.js";
+import {
+  prompt_add_federation_server,
+  prompt_select_active_federation_server,
+} from "@/federation/server/FederationServerManager.js";
+import { open_federation_server_workspace } from "@/federation/server/FederationServerWorkspace.js";
 import { helpText, langOptionText, resolveCliLocale, setCliLocale, t } from "@/shared/CliLocale.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -69,6 +74,41 @@ export async function runDownfedCli(): Promise<void> {
     .helpOption("--help", helpText())
     .action(createVersionBanner(packageJson.version, async (action?: string) => {
       await runFederationApp(action ? [action] : []);
+    }));
+
+  const server_program = program
+    .command("server")
+    .alias("fed")
+    .description(t({
+      zh: "配置并管理已部署 Federation",
+      en: "configure and manage deployed Federations",
+    }))
+    .helpOption("--help", helpText());
+
+  server_program
+    .command("manage")
+    .description(t({
+      zh: "进入当前或已选择 Federation 的 admin 管理工作区",
+      en: "open the admin workspace for the current or selected Federation",
+    }))
+    .helpOption("--help", helpText())
+    .action(createVersionBanner(packageJson.version, async () => {
+      const server = readActiveServer()
+        ?? await prompt_select_active_federation_server()
+        ?? await prompt_add_federation_server();
+      if (!server) return;
+      await open_federation_server_workspace(server.base_url);
+    }));
+
+  server_program
+    .command("add")
+    .description(t({
+      zh: "添加已部署 Federation URL",
+      en: "add a deployed Federation URL",
+    }))
+    .helpOption("--help", helpText())
+    .action(createVersionBanner(packageJson.version, async () => {
+      await prompt_add_federation_server();
     }));
 
   program
@@ -132,25 +172,6 @@ export async function runDownfedCli(): Promise<void> {
       },
     ) => {
       await deployFederationProject(source ?? ".", options);
-    }));
-
-  const env_program = program
-    .command("env")
-    .description(t({
-      zh: "管理当前 Federation 的环境变量运行态能力",
-      en: "manage runtime environment capabilities for the current Federation",
-    }))
-    .helpOption("--help", helpText());
-
-  env_program
-    .command("refresh")
-    .description(t({
-      zh: "刷新当前 Federation runtime env cache",
-      en: "refresh the current Federation runtime env cache",
-    }))
-    .helpOption("--help", helpText())
-    .action(createVersionBanner(packageJson.version, async () => {
-      await refreshEnvCache();
     }));
 
   program.hook("preAction", (thisCommand) => {

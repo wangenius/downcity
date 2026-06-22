@@ -15,10 +15,11 @@ import { show, showError, showSuccess } from "@/federation/core/ui.js";
 import { updateCli } from "@/federation/core/update.js";
 import { getCliLocale, setCliLocale, t } from "@/shared/CliLocale.js";
 import { type CliLocale } from "@/shared/types/CliLocale.js";
-import { writePersistedCliLocale } from "@/federation/core/session.js";
+import { setActiveServer, writePersistedCliLocale } from "@/federation/core/session.js";
 import { createFederationProject } from "@/federation/create/commands/create.js";
 import { deployFederationProject } from "@/federation/deploy/commands/deploy.js";
-import { refreshEnvCache } from "@/federation/env/commands/refresh.js";
+import { prompt_add_federation_server } from "@/federation/server/FederationServerManager.js";
+import { open_federation_server_workspace } from "@/federation/server/FederationServerWorkspace.js";
 import { open_federation_dashboard } from "@/federation/tui/FederationDashboard.js";
 import type { FederationAction } from "@/federation/types/Interactive.js";
 import type { tui_action_result } from "@/federation/types/Tui.js";
@@ -47,13 +48,20 @@ async function run_federation_dashboard_action(
     return "refresh";
   }
 
-  if (action === "deploy_federation") {
-    await deployFederationProject(".", {});
+  if (action.startsWith("open_federation:")) {
+    const base_url = action.slice("open_federation:".length);
+    setActiveServer(base_url);
+    const result = await open_federation_server_workspace(base_url);
+    return result === "quit" ? "quit" : "refresh";
+  }
+
+  if (action === "add_federation") {
+    await prompt_add_federation_server();
     return "refresh";
   }
 
-  if (action === "refresh_env") {
-    await refreshEnvCache();
+  if (action === "deploy_federation") {
+    await deployFederationProject(".", {});
     return "refresh";
   }
 

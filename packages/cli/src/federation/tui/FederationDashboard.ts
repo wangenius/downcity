@@ -1,14 +1,15 @@
 /**
- * Federation 顶层全屏 TUI 仪表盘。
+ * Federation 顶层 TUI 仪表盘。
  *
  * 关键说明（中文）
  * - 这是 `downfed` / `downfed manage` 的默认交互入口。
- * - 左侧 sidebar 承载 Federation 操作菜单，右侧 main_section 展示当前项详情。
+ * - 首页直接展示已保存的 Federation 列表，选中后进入对应 admin 工作区。
+ * - 内部使用 shared pi-tui runtime，和其它 CLI TUI 保持同一套框架。
  */
 
-import blessed from "neo-blessed";
 import { readFileSync } from "node:fs";
-import { create_tui_shell } from "@/federation/tui/Shell.js";
+import { readConfig } from "@/federation/core/session.js";
+import { ManagedTuiRuntime } from "@/shared/tui/ManagedTuiRuntime.js";
 import { t } from "@/shared/CliLocale.js";
 import type { FederationAction } from "@/federation/types/Interactive.js";
 import type { tui_action_result, tui_list_item } from "@/federation/types/Tui.js";
@@ -18,52 +19,76 @@ interface federation_dashboard_options {
   run_action: (action: FederationAction) => Promise<tui_action_result>;
 }
 
-interface blessed_list_element extends blessed.Widgets.ListElement {
-  on: (
-    event: string,
-    listener: (...args: unknown[]) => void,
-  ) => blessed_list_element;
-  key: (
-    keys: string | string[],
-    listener: (...args: unknown[]) => void,
-  ) => blessed_list_element;
-  focus: () => void;
-  setItems: (items: blessed.Widgets.ListElementItem[]) => void;
-  selected?: number;
-}
-
 /**
  * 打开 Federation 顶层仪表盘。
  */
 export async function open_federation_dashboard(
   options: federation_dashboard_options,
 ): Promise<void> {
-  while (true) {
-    const state = build_federation_dashboard_state();
-    const selection = await run_federation_dashboard_once(state);
-    if (!selection) {
-      return;
-    }
+  const runtime = new ManagedTuiRuntime({ title: "Downcity Federation" });
+  try {
+    while (true) {
+      const state = build_federation_dashboard_state();
+      const selection = await runtime.dashboard(state);
+      if (!selection) {
+        return;
+      }
 
-    const result = await options.run_action(selection as FederationAction);
+      const result = await options.run_action(selection as FederationAction);
 
-    if (result === "quit") {
-      return;
+      if (result === "quit") {
+        return;
+      }
     }
+  } finally {
+    runtime.close();
   }
 }
 
 interface federation_dashboard_state {
+  /** dashboard 顶部标题。 */
   title: string;
+  /** dashboard 顶部副标题。 */
   subtitle: string;
+  /** dashboard 底部帮助文案。 */
   footer: string;
+  /** dashboard 列表项。 */
   items: tui_list_item[];
 }
 
 function build_federation_dashboard_state(): federation_dashboard_state {
   const version = read_federation_cli_version();
+  const config = readConfig();
+  const federation_items = config.servers.map((server) => ({
+    id: `open_federation:${server.base_url}`,
+    title: server.base_url === config.active_server_url ? `★ ${server.name}` : server.name,
+    subtitle: server.admin_secret_key
+      ? t({ zh: "admin 已配置", en: "admin configured" })
+      : t({ zh: "admin 未配置", en: "admin missing" }),
+    detail: t({
+      zh: `打开 ${server.name} 的 admin 管理工作区。\n\nURL: ${server.base_url}\nadmin: ${server.admin_secret_key ? "已配置" : "未配置"}`,
+      en: `Open the admin workspace for ${server.name}.\n\nURL: ${server.base_url}\nadmin: ${server.admin_secret_key ? "configured" : "missing"}`,
+    }),
+  }));
 
   const items: tui_list_item[] = [
+    ...federation_items,
+    {
+      id: "add_federation",
+      title: federation_items.length === 0
+        ? t({ zh: "添加第一个 Federation", en: "Add First Federation" })
+        : t({ zh: "添加 Federation", en: "Add Federation" }),
+      subtitle: t({ zh: "配置已部署 Federation URL", en: "Configure a deployed Federation URL" }),
+      detail: federation_items.length === 0
+        ? t({
+          zh: "当前没有已保存的 Federation。先添加一个已经部署好的 Federation 入口地址。",
+          en: "No Federation is saved yet. Add the URL of an already deployed Federation first.",
+        })
+        : t({
+          zh: "保存一个已经部署好的 Federation 入口地址。保存后会出现在首页列表中，点击即可进入管理。",
+          en: "Save the URL of an already deployed Federation. It will appear in the home list, where selecting it opens management.",
+        }),
+    },
     {
       id: "create_federation",
       title: t({ zh: "创建 Federation", en: "Create Federation" }),
@@ -80,15 +105,6 @@ function build_federation_dashboard_state(): federation_dashboard_state {
       detail: t({
         zh: "构建并部署当前目录中的 Federation 项目到 Cloudflare Workers。",
         en: "Build and deploy the Federation project in the current directory to Cloudflare Workers.",
-      }),
-    },
-    {
-      id: "refresh_env",
-      title: t({ zh: "刷新 env cache", en: "Refresh env cache" }),
-      subtitle: t({ zh: "刷新 Federation runtime env cache", en: "Refresh the Federation runtime env cache" }),
-      detail: t({
-        zh: "刷新当前 Federation 的运行时环境变量缓存。",
-        en: "Refresh the runtime environment variable cache for the current Federation.",
       }),
     },
     {
@@ -114,8 +130,12 @@ function build_federation_dashboard_state(): federation_dashboard_state {
   return {
     title: `Downcity Federation v${version}`,
     subtitle: t({
-      zh: "选择一项 Federation 管理操作",
-      en: "Choose a Federation management action",
+      zh: config.servers.length > 0
+        ? "选择一个 Federation 进入管理"
+        : "先添加一个已部署 Federation，或创建/部署新 Federation",
+      en: config.servers.length > 0
+        ? "Choose a Federation to manage"
+        : "Add a deployed Federation first, or create/deploy a new Federation",
     }),
     footer: t({
       zh: "Enter 进入 · Esc / q 退出 · ↑↓ 切换",
@@ -123,156 +143,6 @@ function build_federation_dashboard_state(): federation_dashboard_state {
     }),
     items,
   };
-}
-
-async function run_federation_dashboard_once(
-  state: federation_dashboard_state,
-): Promise<string | null> {
-  return await new Promise<string | null>((resolve) => {
-    const shell = create_tui_shell({
-      screen_title: "Downcity Federation",
-      breadcrumb: state.title,
-      footer: state.footer,
-    });
-    const { screen } = shell;
-
-    let finished = false;
-    let raw_input_listener: ((chunk: Buffer | string) => void) | undefined;
-    let selected_index = 0;
-
-    const finish = (value: string | null): void => {
-      if (finished) return;
-      finished = true;
-      if (raw_input_listener) {
-        process.stdin.off("data", raw_input_listener);
-      }
-      screen.destroy();
-      resolve(value);
-    };
-
-    blessed.box({
-      parent: shell.main_box,
-      top: 0,
-      left: 1,
-      width: "100%-2",
-      height: 3,
-      tags: true,
-      content: `{bold}${state.title}{/bold}\n${state.subtitle}`,
-    });
-
-    const list = blessed.list({
-      parent: shell.sidebar_box,
-      top: 2,
-      left: 0,
-      width: "100%",
-      height: "100%-2",
-      keys: true,
-      vi: true,
-      mouse: true,
-      style: {
-        item: { fg: "white" },
-        selected: {
-          fg: "black",
-          bg: "cyan",
-          bold: true,
-        },
-      },
-      items: state.items.map(format_list_label),
-    }) as blessed_list_element;
-
-    const detail = blessed.box({
-      parent: shell.main_box,
-      top: 4,
-      left: 0,
-      width: "100%",
-      height: "100%-4",
-      padding: { left: 1, right: 1, top: 1, bottom: 1 },
-      tags: true,
-      scrollable: true,
-      alwaysScroll: true,
-      keys: true,
-      mouse: true,
-      style: {
-        fg: "white",
-      },
-      content: format_detail_content(state.items[0]),
-    });
-
-    const sync_selection = (index_value: unknown = list.selected): void => {
-      selected_index = clamp_selected_index(index_value, state.items.length, selected_index);
-      const next_item = state.items[selected_index];
-      if (!next_item) return;
-      detail.setContent(format_detail_content(next_item));
-      shell.set_footer(format_footer(state.footer, next_item));
-      screen.render();
-    };
-
-    list.on("select item", (_item, index_value) => {
-      sync_selection(index_value);
-    });
-
-    list.on("keypress", () => {
-      setImmediate(() => {
-        if (finished) return;
-        sync_selection();
-      });
-    });
-
-    list.key(["enter"], () => {
-      sync_selection();
-      finish(state.items[selected_index]?.id ?? null);
-    });
-
-    detail.key(["pageup"], () => {
-      detail.scroll(-Math.max(1, Math.floor((detail.height as number) / 2)));
-      screen.render();
-    });
-
-    detail.key(["pagedown"], () => {
-      detail.scroll(Math.max(1, Math.floor((detail.height as number) / 2)));
-      screen.render();
-    });
-
-    screen.key(["escape", "q", "C-c"], () => finish(null));
-    raw_input_listener = (chunk: Buffer | string): void => {
-      const text = String(chunk);
-      if (text.includes("\u0003") || text === "\u001b") {
-        finish(null);
-        return;
-      }
-      if (text.includes("\r") || text.includes("\n")) {
-        finish(state.items[selected_index]?.id ?? null);
-      }
-    };
-    process.stdin.on("data", raw_input_listener);
-
-    list.focus();
-    sync_selection(selected_index);
-    screen.render();
-  });
-}
-
-function format_list_label(item: tui_list_item): string {
-  return item.title;
-}
-
-function format_detail_content(item: tui_list_item): string {
-  return `{bold}${item.title}{/bold}\n${item.subtitle}\n\n${item.detail}`;
-}
-
-function format_footer(base_footer: string, item: tui_list_item | undefined): string {
-  if (!item) return base_footer;
-  return `${base_footer} · ${item.subtitle}`;
-}
-
-function clamp_selected_index(
-  value: unknown,
-  length: number,
-  fallback: number,
-): number {
-  if (length <= 0) return 0;
-  const index = typeof value === "number" && Number.isInteger(value) ? value : fallback;
-  return Math.max(0, Math.min(length - 1, index));
 }
 
 function read_federation_cli_version(): string {

@@ -1,237 +1,81 @@
 /**
- * Admin 单屏 TUI Shell 运行时。
+ * Federation Admin TUI runtime 适配层。
  *
  * 关键说明（中文）
- * - Admin 启动后只创建一个 blessed screen，除退出外不再跳出全屏应用模式。
- * - 左侧 sidebar 承载所有菜单层级，右侧 section 只承载 loading、文本、JSON、消息与输入。
- * - 本模块只保留公共 runtime API，具体布局、渲染、输入循环拆分到 AdminTuiShell / AdminTuiRender / AdminTuiInput。
+ * - 业务命令继续依赖 admin_tui_runtime 接口。
+ * - 内部统一委托 shared pi-tui runtime，和其它 CLI TUI 保持同一套框架。
  */
 
-import { t } from "@/shared/CliLocale.js";
+import { ManagedTuiRuntime } from "@/shared/tui/ManagedTuiRuntime.js";
 import type {
   admin_tui_message_kind,
   admin_tui_runtime,
   admin_tui_select_option,
   admin_tui_table_input,
 } from "@/federation/types/AdminTui.js";
-import { create_shell } from "@/federation/tui/AdminTuiShell.js";
-import {
-  message_accent,
-  message_title,
-  render_loading,
-  render_nav,
-  render_option_detail,
-  show_content,
-  text_footer_text,
-} from "@/federation/tui/AdminTuiRender.js";
-import {
-  next_breadcrumb_parts,
-  run_sidebar_select,
-  run_text_in_content,
-} from "@/federation/tui/AdminTuiInput.js";
 
 /**
  * 创建 admin TUI runtime。
  */
 export function create_admin_tui_runtime(title = "Admin"): admin_tui_runtime {
-  const shell = create_shell(title);
-  let active_main_cleanup: (() => void) | undefined;
-  let breadcrumb_parts: string[] = [title];
-  const selected_index_by_breadcrumb = new Map<string, number>();
+  const runtime = new ManagedTuiRuntime({ title });
 
-  const cleanup_main = (): void => {
-    if (active_main_cleanup) {
-      active_main_cleanup();
-      active_main_cleanup = undefined;
-    }
-    shell.content_box.children.slice().forEach((child) => child.destroy());
-  };
-
-  const render_footer = (content: string): void => {
-    shell.footer_box.setContent(content);
-  };
-
-  const runtime: admin_tui_runtime = {
+  return {
     close(): void {
-      cleanup_main();
-      shell.screen.destroy();
+      runtime.close();
     },
 
     async select_nav(nav_title: string, options: admin_tui_select_option[]): Promise<string | undefined> {
-      cleanup_main();
-      breadcrumb_parts = [nav_title];
-      const breadcrumb_key = nav_title;
-      const selected_index = resolve_selectable_index_from_input(
-        options,
-        selected_index_by_breadcrumb.get(breadcrumb_key),
-      );
-      render_nav(shell, nav_title, options, selected_index);
-      render_option_detail(shell, nav_title, options[selected_index]);
-      return await run_sidebar_select({
-        shell,
+      return await runtime.select({
         title: nav_title,
+        footer: "Enter 选择 · Esc 返回 · ↑↓ 切换",
         options,
-        initial_index: selected_index,
-        on_select_index: (index) => selected_index_by_breadcrumb.set(breadcrumb_key, index),
-        on_focus_option: (option) => render_option_detail(shell, nav_title, option),
+        show_detail: true,
       });
     },
 
     async select(section_title: string, options: admin_tui_select_option[]): Promise<string | undefined> {
-      breadcrumb_parts = next_breadcrumb_parts(breadcrumb_parts, section_title);
-      const breadcrumb_key = breadcrumb_parts.join(" / ");
-      const selected_index = resolve_selectable_index_from_input(
-        options,
-        selected_index_by_breadcrumb.get(breadcrumb_key),
-      );
-      render_nav(shell, breadcrumb_key, options, selected_index);
-      cleanup_main();
-      render_option_detail(shell, section_title, options[selected_index]);
-      return await run_sidebar_select({
-        shell,
+      return await runtime.select({
         title: section_title,
+        footer: "Enter 选择 · Esc 返回 · ↑↓ 切换",
         options,
-        initial_index: selected_index,
-        on_select_index: (index) => selected_index_by_breadcrumb.set(breadcrumb_key, index),
-        on_focus_option: (option) => render_option_detail(shell, section_title, option),
+        show_detail: true,
       });
     },
 
     async text(section_title: string, placeholder?: string): Promise<string | undefined> {
-      cleanup_main();
-      render_footer(text_footer_text(false));
-      return await run_text_in_content(shell, {
+      return await runtime.text({
         title: section_title,
         placeholder,
-        secret: false,
-        on_cleanup: (cleanup) => {
-          active_main_cleanup = cleanup;
-        },
       });
     },
 
     async password(section_title: string, placeholder?: string): Promise<string | undefined> {
-      cleanup_main();
-      render_footer(text_footer_text(true));
-      return await run_text_in_content(shell, {
+      return await runtime.text({
         title: section_title,
         placeholder,
-        secret: true,
-        on_cleanup: (cleanup) => {
-          active_main_cleanup = cleanup;
-        },
+        password: true,
       });
     },
 
     async with_loading<T>(section_title: string, task: () => Promise<T>): Promise<T> {
-      cleanup_main();
-      render_loading(shell, section_title);
-      render_footer(t({
-        zh: "加载中...",
-        en: "Loading...",
-      }));
-      shell.screen.render();
-      try {
-        return await task();
-      } finally {
-        cleanup_main();
-      }
+      return await runtime.with_loading(section_title, task);
     },
 
     async show_text(section_title: string, content: string): Promise<void> {
-      await show_content(shell, {
-        title: section_title,
-        content: String(content || ""),
-        accent: "cyan",
-        on_cleanup: (cleanup) => {
-          active_main_cleanup = cleanup;
-        },
-      });
+      await runtime.show_text(section_title, content);
     },
 
     async show_table(input: admin_tui_table_input): Promise<void> {
-      const rows = input.rows.length > 0
-        ? [input.columns, ...input.rows.map((row) => row.cells)]
-        : [[input.empty_message ?? t({ zh: "暂无数据", en: "No data" })]];
-      await show_content(shell, {
-        title: input.title,
-        content: format_table(rows),
-        accent: "cyan",
-        on_cleanup: (cleanup) => {
-          active_main_cleanup = cleanup;
-        },
-      });
+      await runtime.show_table(input);
     },
 
     async show_json(section_title: string, data: unknown): Promise<void> {
-      await show_content(shell, {
-        title: section_title,
-        content: JSON.stringify(data, null, 2),
-        accent: "cyan",
-        on_cleanup: (cleanup) => {
-          active_main_cleanup = cleanup;
-        },
-      });
+      await runtime.show_json(section_title, data);
     },
 
     async show_message(kind: admin_tui_message_kind, message: string): Promise<void> {
-      await show_content(shell, {
-        title: message_title(kind),
-        content: message,
-        accent: message_accent(kind),
-        on_cleanup: (cleanup) => {
-          active_main_cleanup = cleanup;
-        },
-      });
+      await runtime.show_message(kind, message);
     },
   };
-
-  return runtime;
-}
-
-function resolve_selectable_index_from_input(
-  options: admin_tui_select_option[],
-  stored_index: number | undefined,
-): number {
-  const value = typeof stored_index === "number" ? stored_index : 0;
-  if (value >= 0 && value < options.length) return value;
-  return 0;
-}
-
-function format_table(rows: string[][]): string {
-  if (rows.length === 0) {
-    return "";
-  }
-
-  const widths = rows[0].map((_cell, index) => {
-    return Math.min(
-      36,
-      Math.max(...rows.map((row) => visible_width(row[index] ?? "")), 3),
-    );
-  });
-
-  return rows
-    .map((row, row_index) => {
-      const line = row
-        .map((cell, index) => pad_cell(cell, widths[index] ?? 12))
-        .join("  ");
-      if (row_index === 0 && rows.length > 1) {
-        const rule = widths.map((width) => "-".repeat(width)).join("  ");
-        return `${line}\n${rule}`;
-      }
-      return line;
-    })
-    .join("\n");
-}
-
-function pad_cell(value: string, width: number): string {
-  const normalized = String(value ?? "").replace(/\s+/g, " ").trim();
-  const clipped = visible_width(normalized) > width
-    ? `${normalized.slice(0, Math.max(0, width - 1))}…`
-    : normalized;
-  return clipped.padEnd(width, " ");
-}
-
-function visible_width(value: string): number {
-  return String(value ?? "").length;
 }

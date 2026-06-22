@@ -2,19 +2,13 @@
  * City 交互式 TUI prompt 适配层。
  *
  * 关键点（中文）
- * - 用全屏 TUI 替换 `prompts` 的交互行为，但尽量保持返回结构兼容。
- * - 本模块暴露类型、入口与公共 shell；具体 select / multiselect / confirm 在 PromptSelect.ts，
- *   text / number / password 在 PromptInput.ts。
+ * - 保持原有 prompts 风格的调用协议，减少业务模块改动。
+ * - 内部统一委托 shared pi-tui runtime，和其它 CLI TUI 保持同一套框架。
  */
 
-import blessed from "neo-blessed";
+import { ManagedTuiRuntime } from "@/shared/tui/ManagedTuiRuntime.js";
 import { t } from "@/shared/CliLocale.js";
-import {
-  run_confirm_prompt,
-  run_multiselect_prompt,
-  run_select_prompt,
-} from "@/city/tui/PromptSelect.js";
-import { run_number_prompt, run_text_prompt } from "@/city/tui/PromptInput.js";
+import type { tui_prompt_option } from "@/shared/types/TuiPrompt.js";
 
 /**
  * 单个问题的最小兼容类型。
@@ -71,53 +65,6 @@ export interface prompt_choice_option {
   disabled?: boolean;
 }
 
-export interface blessed_list_element extends blessed.Widgets.ListElement {
-  on: (
-    event: string,
-    listener: (...args: unknown[]) => void,
-  ) => blessed_list_element;
-  removeListener: (
-    event: string,
-    listener: (...args: unknown[]) => void,
-  ) => blessed_list_element;
-  key: (
-    keys: string | string[],
-    listener: (...args: unknown[]) => void,
-  ) => blessed_list_element;
-  focus: () => void;
-  select: (index: number) => void;
-  setItems: (items: blessed.Widgets.ListElementItem[]) => void;
-  selected?: number;
-}
-
-export interface blessed_textbox_element extends blessed.Widgets.TextboxElement {
-  key: (
-    keys: string | string[],
-    listener: (...args: unknown[]) => void,
-  ) => blessed_textbox_element;
-  focus: () => void;
-  readInput: (callback: (error: Error | null, value?: string) => void) => void;
-  submit: () => void;
-  _done?: (error: Error | string | null, value?: string | null) => void;
-  clearValue: () => void;
-  setValue: (value: string) => void;
-  getValue: () => string;
-}
-
-export interface prompt_shell {
-  /** blessed 全屏根节点。 */
-  screen: blessed.Widgets.Screen;
-
-  /** 左侧 sidebar 容器。 */
-  sidebar_box: blessed.Widgets.BoxElement;
-
-  /** 右侧主内容区。 */
-  main_box: blessed.Widgets.BoxElement;
-
-  /** 底部操作提示区。 */
-  footer_box: blessed.Widgets.BoxElement;
-}
-
 interface prompt_result_map {
   [key: string]: unknown;
 }
@@ -144,9 +91,7 @@ export default async function prompts(
   return answers;
 }
 
-async function run_prompt_question(
-  question: PromptObject,
-): Promise<unknown> {
+async function run_prompt_question(question: PromptObject): Promise<unknown> {
   if (question.type === "select") {
     return await run_select_prompt(question);
   }
@@ -165,107 +110,219 @@ async function run_prompt_question(
   return await run_text_prompt(question, { secret: false });
 }
 
-/**
- * 创建 prompt 全屏 shell。
- */
-export function create_prompt_shell(title: string): prompt_shell {
-  const screen = blessed.screen({
-    smartCSR: true,
-    fullUnicode: true,
-    title,
-    dockBorders: true,
-    autoPadding: true,
-  });
+async function run_select_prompt(question: PromptObject): Promise<unknown> {
+  const choices = question.choices ?? [];
+  const runtime = new ManagedTuiRuntime({ title: question.message });
+  try {
+    const selected = await runtime.select({
+      title: question.message,
+      footer: select_footer_text(),
+      options: choices.map(to_tui_option),
+      show_detail: true,
+    });
+    if (selected === undefined) return undefined;
+    return choices.find((choice) => encode_choice_value(choice.value) === selected)?.value;
+  } finally {
+    runtime.close();
+  }
+}
 
-  screen.style = {
-    bg: "black",
-    fg: "white",
-  };
+async function run_multiselect_prompt(question: PromptObject): Promise<unknown[] | undefined> {
+  const choices = question.choices ?? [];
+  const runtime = new ManagedTuiRuntime({ title: question.message });
+  try {
+    const selected_values = await runtime.multiselect({
+      title: question.message,
+      footer: multiselect_footer_text(),
+      options: choices.map(to_tui_option),
+      initial_values: normalize_initial_values(question.initial),
+    });
+    if (selected_values === undefined) return undefined;
+    return choices
+      .filter((choice) => selected_values.includes(encode_choice_value(choice.value)))
+      .map((choice) => choice.value)
+      .filter((value) => value !== undefined);
+  } finally {
+    runtime.close();
+  }
+}
 
-  const sidebar_box = blessed.box({
-    parent: screen,
-    top: 0,
-    left: 0,
-    width: "34%",
-    height: "100%-3",
-    border: "line",
-    label: ` ${t({ zh: "侧边栏", en: "Sidebar" })} `,
-    style: {
-      border: { fg: "green" },
+async function run_confirm_prompt(question: PromptObject): Promise<boolean | undefined> {
+  const choices: prompt_choice[] = [
+    {
+      title: t({ zh: "是", en: "Yes" }),
+      description: t({ zh: "确认执行该动作", en: "Confirm this action" }),
+      value: true,
     },
-  });
-
-  blessed.box({
-    parent: sidebar_box,
-    top: 0,
-    left: 1,
-    width: "100%-2",
-    height: 2,
-    content: format_breadcrumb(title),
-    style: {
-      fg: "green",
-      bold: true,
+    {
+      title: t({ zh: "否", en: "No" }),
+      description: t({ zh: "取消并返回", en: "Cancel and go back" }),
+      value: false,
     },
-  });
+  ];
+  if (question.initial !== true) {
+    choices.reverse();
+  }
 
-  const main_box = blessed.box({
-    parent: screen,
-    top: 0,
-    left: "34%",
-    width: "66%",
-    height: "100%-3",
-    border: "line",
-    label: ` ${t({ zh: "主区域", en: "Main" })} `,
-    style: {
-      border: { fg: "green" },
-    },
-  });
+  const runtime = new ManagedTuiRuntime({ title: question.message });
+  try {
+    const selected = await runtime.select({
+      title: question.message,
+      footer: confirm_footer_text(),
+      options: choices.map(to_tui_option),
+      show_detail: true,
+    });
+    if (selected === undefined) return undefined;
+    return selected === "true";
+  } finally {
+    runtime.close();
+  }
+}
 
-  const footer_box = blessed.box({
-    parent: screen,
-    left: 0,
-    bottom: 0,
-    width: "100%",
-    height: 3,
-    border: "line",
-    padding: { left: 1, top: 1 },
-    style: {
-      border: { fg: "green" },
-      fg: "gray",
-    },
-    content: "",
-  });
+async function run_text_prompt(
+  question: PromptObject,
+  options: { secret: boolean },
+): Promise<string | undefined> {
+  let error_message = "";
 
+  while (true) {
+    const runtime = new ManagedTuiRuntime({ title: question.message });
+    try {
+      const submitted_value = await runtime.text({
+        title: error_message ? `${question.message}\n${error_message}` : question.message,
+        placeholder: String(question.initial ?? ""),
+        password: options.secret,
+      });
+      if (submitted_value === undefined) {
+        return undefined;
+      }
+
+      const validated = await validate_prompt_value(question, submitted_value);
+      if (validated === true) {
+        return submitted_value;
+      }
+      error_message = validated;
+    } finally {
+      runtime.close();
+    }
+  }
+}
+
+async function run_number_prompt(question: PromptObject): Promise<number | undefined> {
+  let error_message = "";
+
+  while (true) {
+    const runtime = new ManagedTuiRuntime({ title: question.message });
+    try {
+      const submitted_value = await runtime.text({
+        title: error_message ? `${question.message}\n${error_message}` : question.message,
+        placeholder: String(question.initial ?? ""),
+      });
+      if (submitted_value === undefined) {
+        return undefined;
+      }
+
+      const parsed_value = Number(submitted_value);
+      if (!Number.isFinite(parsed_value)) {
+        error_message = t({ zh: "请输入有效数字", en: "Please enter a valid number" });
+        continue;
+      }
+      if (typeof question.min === "number" && parsed_value < question.min) {
+        error_message = t({
+          zh: `最小值为 ${question.min}`,
+          en: `Minimum value is ${question.min}`,
+        });
+        continue;
+      }
+
+      const validated = await validate_prompt_value(question, parsed_value);
+      if (validated === true) {
+        return parsed_value;
+      }
+      error_message = validated;
+    } finally {
+      runtime.close();
+    }
+  }
+}
+
+async function validate_prompt_value(
+  question: PromptObject,
+  value: unknown,
+): Promise<true | string> {
+  if (!question.validate) {
+    return true;
+  }
+  const result = await question.validate(value);
+  return result === true
+    ? true
+    : String(result || t({ zh: "输入无效", en: "Invalid input" }));
+}
+
+function to_tui_option(choice: prompt_choice): tui_prompt_option {
   return {
-    screen,
-    sidebar_box,
-    main_box,
-    footer_box,
+    label: format_choice_label(choice),
+    value: encode_choice_value(choice.value),
+    hint: choice_description(choice),
+    disabled: choice.disabled,
   };
 }
 
-/**
- * 构建列表样式。
- */
-export function build_list_style(): blessed.Widgets.ListOptions["style"] {
-  return {
-    border: { fg: "green" },
-    item: { fg: "white" },
-    selected: {
-      fg: "black",
-      bg: "green",
-      bold: true,
-    },
-  };
+function format_choice_label(choice?: {
+  title?: string;
+  label?: string;
+}): string {
+  return String(choice?.title ?? choice?.label ?? "").trim();
 }
 
-/**
- * 判断是否为纯 Esc 输入。
- */
-export function is_plain_escape_input(text: string): boolean {
-  return text === "\u001b";
+function choice_description(choice?: {
+  title?: string;
+  label?: string;
+  description?: string;
+  hint?: string;
+  disabled?: boolean;
+}): string {
+  if (choice?.disabled === true) {
+    return t({
+      zh: "这是侧边栏分区标题，用于区分当前菜单里的操作区域。",
+      en: "This is a sidebar section heading used to group actions in the current menu.",
+    });
+  }
+  const hint = String(choice?.description ?? choice?.hint ?? "").trim();
+  if (hint) return hint;
+  const title = format_choice_label(choice);
+  return t({
+    zh: `选择 ${title}`,
+    en: `Select ${title}`,
+  });
 }
 
-function format_breadcrumb(value: string): string {
-  return value.padEnd(80, " ");
+function encode_choice_value(value: unknown): string {
+  return String(value);
+}
+
+function normalize_initial_values(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => encode_choice_value(item));
+}
+
+function select_footer_text(): string {
+  return t({
+    zh: "Enter 选择 · Esc 取消 · ↑↓ 切换",
+    en: "Enter choose · Esc cancel · ↑↓ navigate",
+  });
+}
+
+function multiselect_footer_text(): string {
+  return t({
+    zh: "Space 切换 · Enter 确认 · Esc 取消 · ↑↓ 切换",
+    en: "Space toggle · Enter confirm · Esc cancel · ↑↓ navigate",
+  });
+}
+
+function confirm_footer_text(): string {
+  return t({
+    zh: "Enter 选择 · Esc 取消",
+    en: "Enter choose · Esc cancel",
+  });
 }

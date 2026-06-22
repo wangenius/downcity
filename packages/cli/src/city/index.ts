@@ -5,7 +5,7 @@
  * - `downcity`（别名 `city`）是本机 Agent 宿主命令，负责 Agent 生命周期、chat、plugin、gateway 等能力。
  * - Federation 运维能力（create / deploy / manage / env）统一进入 `downfed` 命令。
  * - 无参数时进入交互式 City 管理 TUI。
- * - 本模块承载 commander 根命令，`src/index.ts` 只负责进程入口分发。
+ * - 本模块承载 City commander 根命令，`src/index.ts` 只负责进程入口分发。
  */
 
 import { readFileSync } from "node:fs";
@@ -67,7 +67,7 @@ function resolveInstalledAgentVersion(): string {
     // 关键点（中文）：downcity 聚合包会把依赖放在 package root/node_modules。
     join(__dirname, "../../node_modules/@downcity/agent/package.json"),
     // 关键点（中文）：workspace 开发态的旧布局兜底，便于本地调试。
-    join(__dirname, "../../../../packages/agent/package.json"),
+    join(__dirname, "../../../agent/package.json"),
   ];
 
   for (const package_path of candidate_package_paths) {

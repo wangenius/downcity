@@ -104,10 +104,30 @@ install_downcity_cli_globally() {
   global_bin="$npm_prefix/bin"
   package_dir="$global_modules/downcity"
   source_dir="$workspace_root/packages/cli"
+  legacy_command="stu""dio"
 
   if [[ ! -f "$source_dir/bin/index.js" ]]; then
     echo "Missing Downcity CLI build output. Run packages/cli build first." >&2
     return 1
+  fi
+
+  # 关键点（中文）：本地开发时 `npm link` 会让全局 downcity 指向 workspace 的 packages/cli。
+  # 这种情况下 source_dir 与 package_dir 是同一个真实目录，不能执行增量同步里的 rm/cp，
+  # 否则会把 workspace 自己的 bin / README / package.json 删掉。
+  if [[ -e "$package_dir" ]]; then
+    local resolved_package_dir
+    local resolved_source_dir
+    resolved_package_dir="$(cd "$package_dir" && pwd -P)"
+    resolved_source_dir="$(cd "$source_dir" && pwd -P)"
+    if [[ "$resolved_package_dir" == "$resolved_source_dir" ]]; then
+      chmod +x "$source_dir/bin/index.js"
+      rm -f "$global_bin/$legacy_command" "$global_bin/city" "$global_bin/downcity" "$global_bin/downfed" "$global_bin/fed" 2>/dev/null || true
+      ln -s "../lib/node_modules/downcity/bin/index.js" "$global_bin/city"
+      ln -s "../lib/node_modules/downcity/bin/index.js" "$global_bin/downcity"
+      ln -s "../lib/node_modules/downcity/bin/index.js" "$global_bin/downfed"
+      ln -s "../lib/node_modules/downcity/bin/index.js" "$global_bin/fed"
+      return 0
+    fi
   fi
 
   mkdir -p "$global_modules" "$global_bin" "$package_dir"
@@ -141,7 +161,6 @@ install_downcity_cli_globally() {
 
   chmod +x "$package_dir/bin/index.js"
 
- legacy_command="stu""dio"
   rm -f "$global_bin/$legacy_command" "$global_bin/city" "$global_bin/downcity" "$global_bin/downfed" "$global_bin/fed" 2>/dev/null || true
   ln -s "../lib/node_modules/downcity/bin/index.js" "$global_bin/city"
   ln -s "../lib/node_modules/downcity/bin/index.js" "$global_bin/downcity"

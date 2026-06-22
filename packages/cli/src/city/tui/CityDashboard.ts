@@ -3,11 +3,10 @@
  *
  * 关键点（中文）
  * - 这是裸 `city` 的默认入口。
- * - 左侧 sidebar 承载动作菜单与 breadcrumb，右侧 main_section 展示当前动作说明。
+ * - 左侧列表承载动作菜单，右侧详情区展示当前动作说明。
  * - 动作结束后返回仪表盘，形成统一终端操作台体验。
  */
 
-import blessed from "neo-blessed";
 import { readFileSync } from "node:fs";
 import { read_federation_membership_state } from "@/city/shared/FederationConnection.js";
 import { getCliLocale, t } from "@/shared/CliLocale.js";
@@ -15,11 +14,7 @@ import { readCityPid, isCityProcessAlive } from "@/city/process/registry/CityRun
 import { resolveRunningManagedAgents } from "@/city/runtime/gateway/runtime/GatewayProcess.js";
 import type { FederationMembershipState } from "@/city/types/FederationMembership.js";
 import type { tui_action_result, tui_list_item } from "@/city/types/Tui.js";
-import {
-  is_disabled_selectable_item,
-  resolve_loop_selectable_index,
-  resolve_next_loop_selectable_index,
-} from "@/city/tui/SelectableList.js";
+import { ManagedTuiRuntime } from "@/shared/tui/ManagedTuiRuntime.js";
 
 type city_home_action =
   | "stop"
@@ -36,38 +31,6 @@ interface city_dashboard_options {
   run_action: (action: city_home_action) => Promise<tui_action_result>;
 }
 
-interface blessed_list_element extends blessed.Widgets.ListElement {
-  on: (
-    event: string,
-    listener: (...args: unknown[]) => void,
-  ) => blessed_list_element;
-  key: (
-    keys: string | string[],
-    listener: (...args: unknown[]) => void,
-  ) => blessed_list_element;
-  focus: () => void;
-  select: (index: number) => void;
-  setItems: (items: blessed.Widgets.ListElementItem[]) => void;
-  selected?: number;
-}
-
-interface city_dashboard_shell {
-  /** blessed 全屏根节点。 */
-  screen: blessed.Widgets.Screen;
-
-  /** 左侧 sidebar 容器。 */
-  sidebar_box: blessed.Widgets.BoxElement;
-
-  /** sidebar 顶部 breadcrumb。 */
-  breadcrumb_box: blessed.Widgets.BoxElement;
-
-  /** 右侧主内容区。 */
-  main_box: blessed.Widgets.BoxElement;
-
-  /** 底部操作提示。 */
-  footer_box: blessed.Widgets.BoxElement;
-}
-
 interface city_dashboard_state {
   title: string;
   subtitle: string;
@@ -81,17 +44,22 @@ interface city_dashboard_state {
 export async function open_city_dashboard(
   options: city_dashboard_options,
 ): Promise<void> {
-  while (true) {
-    const state = await build_city_dashboard_state();
-    const selection = await run_city_dashboard_once(state);
-    if (!selection) {
-      return;
-    }
+  const runtime = new ManagedTuiRuntime({ title: "Downcity City" });
+  try {
+    while (true) {
+      const state = await build_city_dashboard_state();
+      const selection = await runtime.dashboard(state);
+      if (!selection) {
+        return;
+      }
 
-    const result = await options.run_action(selection as city_home_action);
-    if (result === "quit") {
-      return;
+      const result = await options.run_action(selection as city_home_action);
+      if (result === "quit") {
+        return;
+      }
     }
+  } finally {
+    runtime.close();
   }
 }
 
@@ -205,214 +173,6 @@ async function build_city_dashboard_state(): Promise<city_dashboard_state> {
   };
 }
 
-async function run_city_dashboard_once(
-  state: city_dashboard_state,
-): Promise<string | null> {
-  return await new Promise<string | null>((resolve) => {
-    const shell = create_city_dashboard_shell(state);
-    const { screen } = shell;
-
-    let finished = false;
-    let selected_index = resolve_loop_selectable_index(state.items, 0, 0);
-
-    const finish = (value: string | null): void => {
-      if (finished) return;
-      finished = true;
-      screen.destroy();
-      resolve(value);
-    };
-
-    const list = blessed.list({
-      parent: shell.sidebar_box,
-      top: 2,
-      left: 0,
-      width: "100%",
-      height: "100%-2",
-      keys: false,
-      vi: false,
-      mouse: true,
-      style: {
-        item: { fg: "white" },
-        selected: {
-          fg: "black",
-          bg: "green",
-          bold: true,
-        },
-      },
-      items: state.items.map(format_list_label),
-    }) as blessed_list_element;
-
-    const detail = blessed.box({
-      parent: shell.main_box,
-      top: 4,
-      left: 0,
-      width: "100%",
-      height: "100%-4",
-      padding: { left: 1, right: 1, top: 1, bottom: 1 },
-      tags: true,
-      scrollable: true,
-      alwaysScroll: true,
-      keys: true,
-      mouse: true,
-      style: {
-        fg: "white",
-      },
-      content: format_detail_content(state.items[0]),
-    });
-
-    const sync_selection = (index_value: unknown = list.selected): void => {
-      selected_index = resolve_loop_selectable_index(
-        state.items,
-        index_value,
-        selected_index,
-      );
-      if (list.selected !== selected_index) {
-        list.select(selected_index);
-      }
-      const next_item = state.items[selected_index];
-      if (!next_item) return;
-      detail.setContent(format_detail_content(next_item));
-      shell.footer_box.setContent(format_footer(state.footer, next_item));
-      screen.render();
-    };
-
-    list.on("select item", (_item, index_value) => {
-      sync_selection(index_value);
-    });
-
-    list.key(["up", "k"], () => {
-      selected_index = resolve_next_loop_selectable_index(
-        state.items,
-        selected_index,
-        -1,
-      );
-      list.select(selected_index);
-      sync_selection(selected_index);
-    });
-
-    list.key(["down", "j"], () => {
-      selected_index = resolve_next_loop_selectable_index(
-        state.items,
-        selected_index,
-        1,
-      );
-      list.select(selected_index);
-      sync_selection(selected_index);
-    });
-
-    list.key(["enter"], () => {
-      sync_selection();
-      if (is_disabled_item(state.items[selected_index])) {
-        return;
-      }
-      finish(state.items[selected_index]?.id ?? null);
-    });
-
-    detail.key(["pageup"], () => {
-      detail.scroll(-Math.max(1, Math.floor((detail.height as number) / 2)));
-      screen.render();
-    });
-
-    detail.key(["pagedown"], () => {
-      detail.scroll(Math.max(1, Math.floor((detail.height as number) / 2)));
-      screen.render();
-    });
-
-    screen.key(["escape", "q", "C-c"], () => finish(null));
-
-    list.focus();
-    sync_selection(selected_index);
-    screen.render();
-  });
-}
-
-function create_city_dashboard_shell(state: city_dashboard_state): city_dashboard_shell {
-  const screen = blessed.screen({
-    smartCSR: true,
-    fullUnicode: true,
-    title: "Downcity City",
-    dockBorders: true,
-    autoPadding: true,
-  });
-
-  screen.style = {
-    bg: "black",
-    fg: "white",
-  };
-
-  const sidebar_box = blessed.box({
-    parent: screen,
-    top: 0,
-    left: 0,
-    width: "34%",
-    height: "100%-3",
-    border: "line",
-    label: ` ${t({ zh: "侧边栏", en: "Sidebar" })} `,
-    style: {
-      border: { fg: "green" },
-    },
-  });
-
-  const breadcrumb_box = blessed.box({
-    parent: sidebar_box,
-    top: 0,
-    left: 1,
-    width: "100%-2",
-    height: 2,
-    content: format_breadcrumb(state.title),
-    style: {
-      fg: "green",
-      bold: true,
-    },
-  });
-
-  const main_box = blessed.box({
-    parent: screen,
-    top: 0,
-    left: "34%",
-    width: "66%",
-    height: "100%-3",
-    border: "line",
-    label: ` ${t({ zh: "主区域", en: "Main" })} `,
-    style: {
-      border: { fg: "green" },
-    },
-  });
-
-  blessed.box({
-    parent: main_box,
-    top: 0,
-    left: 1,
-    width: "100%-2",
-    height: 3,
-    tags: true,
-    content: `{bold}${state.title}{/bold}\n${state.subtitle}`,
-  });
-
-  const footer_box = blessed.box({
-    parent: screen,
-    left: 0,
-    bottom: 0,
-    width: "100%",
-    height: 3,
-    padding: { left: 1, right: 1, top: 1 },
-    border: "line",
-    style: {
-      border: { fg: "green" },
-      fg: "gray",
-    },
-    content: state.footer,
-  });
-
-  return {
-    screen,
-    sidebar_box,
-    breadcrumb_box,
-    main_box,
-    footer_box,
-  };
-}
-
 async function safe_count_running_agents(): Promise<number> {
   try {
     return (await resolveRunningManagedAgents({ syncRegistry: false })).length;
@@ -488,39 +248,6 @@ function section_item(id: string, title: string): tui_list_item {
   };
 }
 
-function format_list_label(item: tui_list_item): string {
-  if (is_disabled_item(item)) {
-    return `── ${item.title} ──`;
-  }
-  return item.title;
-}
-
-function format_detail_content(item: tui_list_item): string {
-  if (is_disabled_item(item)) {
-    return [
-      `{bold}${item.title}{/bold}`,
-      t({
-        zh: "这是侧边栏分区标题，用于区分当前 City 管理区域。",
-        en: "This is a sidebar section heading used to group City management areas.",
-      }),
-    ].join("\n");
-  }
-  return `{bold}${item.title}{/bold}\n${item.subtitle}\n\n${item.detail}`;
-}
-
-function format_footer(base_footer: string, item: tui_list_item | undefined): string {
-  if (!item) return base_footer;
-  if (is_disabled_item(item)) return base_footer;
-  return `${base_footer} · ${item.subtitle}`;
-}
-
-function format_breadcrumb(value: string): string {
-  return value.padEnd(80, " ");
-}
-
-function is_disabled_item(item: tui_list_item | undefined): boolean {
-  return is_disabled_selectable_item(item);
-}
 
 function read_city_cli_version(): string {
   try {

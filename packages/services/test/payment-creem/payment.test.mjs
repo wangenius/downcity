@@ -118,7 +118,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    await base.getService("env")._env.upsert({ key: "DOWNCITY_FEDERATION_BASE_URL", value: "https://base.example.com/" })
+    await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
 
     const city = await (await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/cities/create",
@@ -342,7 +342,7 @@ test("paymentService marks failed and expired payments without crediting balance
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    await base.getService("env")._env.upsert({ key: "DOWNCITY_FEDERATION_BASE_URL", value: "https://base.example.com/" })
+    await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
 
     const city = await (await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/cities/create",

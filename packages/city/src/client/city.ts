@@ -82,6 +82,13 @@ export class City<TRole extends CityRole = CityRole> {
   }
 
   /**
+   * Admin 角色的 City 管理入口。
+   */
+  get cities(): AdminPactAccess["cities"] {
+    return this.require_admin().cities;
+  }
+
+  /**
    * Admin 角色的环境变量服务入口。
    */
   get env(): AdminPactAccess["env"] {

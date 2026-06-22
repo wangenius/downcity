@@ -199,6 +199,35 @@ await admin.env.refresh();
 
 这些修改会写入 City 数据库的 `env` 表。业务 env 和系统级 secret 都以 City 这张表为准，不需要再去手动改 Worker / Node 宿主 env。
 
+## `cities`
+
+`admin.cities` 用来管理同一个 Federation 里的产品边界。
+
+```ts
+const cities = await admin.cities.list();
+
+const city = await admin.cities.create({
+  name: "My App",
+  city_id: "city_my_app",
+});
+
+await admin.cities.pause(city.city_id);
+await admin.cities.activate(city.city_id);
+await admin.cities.remove(city.city_id);
+```
+
+如果你想在一次调用里给任意 city 签发 token，可以使用 `admin.cities` 下更底层的 token 管理器：
+
+```ts
+const issued = await admin.cities.tokens.apply({
+  city_id: "city_my_app",
+  user_id: "user_123",
+  ttl: "7d",
+});
+```
+
+如果一个 `Admin City` 实例只管理一个目标 city，优先使用 `admin.tokens.apply()`。它会自动注入构造时传入的 `city_id`。
+
 ## `listServices()` / `listModels()` / `instruction()`
 
 除了 `tokens` 和 `env`，管理端还可以读取 City 当前暴露的能力目录。
@@ -295,7 +324,6 @@ try {
 
 这几件事当前不走 `Admin City`：
 
-- City CRUD（改用 `admin.service("cities")` 通用调用）
 - 模型配置
 - 注册 service handler
 - 用户前端直接登录交互

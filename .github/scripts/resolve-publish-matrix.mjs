@@ -69,6 +69,11 @@ for (const manifest_path of list_package_manifest_paths()) {
     continue;
   }
 
+  // scoped packages 发布流只负责 @downcity/*，CLI 包由独立 workflow 在依赖包发布成功后发布。
+  if (!String(current_manifest.name ?? "").startsWith("@downcity/")) {
+    continue;
+  }
+
   if (!current_manifest.name || !current_manifest.version) {
     throw new Error(`${manifest_path} 缺少 name 或 version，无法参与发布判断。`);
   }

@@ -205,6 +205,7 @@ export type {
 } from "./pact/invoker/ai/types.js";
 
 export { BalanceInvoker, BalanceRedeemCodeInvoker } from "./pact/invoker/balance/index.js";
+export { CitiesInvoker } from "./pact/invoker/cities/index.js";
 export { EnvInvoker } from "./pact/invoker/env/index.js";
 
 export type {
@@ -227,6 +228,13 @@ export type {
   BalanceTopupRecord,
   BalanceTopupUpdateInput,
 } from "./pact/invoker/balance/types.js";
+
+export type {
+  CityCreateInput,
+  CityRecord,
+  TokenApplyInput,
+  TokenApplyResult,
+} from "./pact/invoker/cities/types.js";
 
 // ===========================================================================
 // 场景 7：内置表 Schema

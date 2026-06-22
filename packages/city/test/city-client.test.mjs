@@ -368,7 +368,11 @@ test("Admin City service() uses the shared /v1 route prefix", async () => {
   const requests = []
   const admin = new City({
     role: "admin",
-    federation_url: "http://localhost:3001/", admin_secret_key: "sk", fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) } })
+    federation_url: "http://localhost:3001/",
+    city_id: "p",
+    admin_secret_key: "sk",
+    fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) },
+  })
   const result = await admin.service("usage").action("report").invoke({ range: "today" })
   assert.deepEqual(result, { ok: true })
   assert.equal(requests[0].url, "http://localhost:3001/v1/usage/report")
@@ -379,7 +383,10 @@ test("Admin City env list / catalog / upsert / remove", async () => {
   const requests = []
   const admin = new City({
     role: "admin",
-    federation_url: "http://localhost:3001/", admin_secret_key: "sk", fetch: async (url, init) => {
+    federation_url: "http://localhost:3001/",
+    city_id: "p",
+    admin_secret_key: "sk",
+    fetch: async (url, init) => {
     requests.push({ url, init })
     if (url.endsWith("/v1/env/list")) return json({ items: [{ key: "K", value: "V", source: "database" }] })
     if (url.endsWith("/v1/env/catalog")) {
@@ -415,7 +422,10 @@ test("Admin City cities CRUD + tokens.apply", async () => {
   const requests = []; const p = { city_id: "p1", name: "Demo", status: "active", created_at: "t", updated_at: "t" }
   const admin = new City({
     role: "admin",
-    federation_url: "http://localhost:3001/", admin_secret_key: "sk", fetch: async (url, init) => {
+    federation_url: "http://localhost:3001/",
+    city_id: "p1",
+    admin_secret_key: "sk",
+    fetch: async (url, init) => {
     requests.push({ url, init })
     if (url.endsWith("/v1/cities/list")) return json({ items: [p] })
     if (url.endsWith("/v1/cities/create")) return json(p)
@@ -439,6 +449,7 @@ test("Admin City listServices() / listModels() / instruction()", async () => {
   const admin = new City({
     role: "admin",
     federation_url: "http://localhost:3001/",
+    city_id: "p",
     admin_secret_key: "sk",
     fetch: async (url, init) => {
       requests.push({ url, init })

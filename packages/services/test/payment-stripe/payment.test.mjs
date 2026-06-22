@@ -117,7 +117,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    await base.getService("env")._env.upsert({ key: "DOWNCITY_FEDERATION_BASE_URL", value: "https://base.example.com/" })
+    await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
 
     const city = await (await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/cities/create",
@@ -252,7 +252,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
   }
 })
 
-test("paymentService falls back to DOWNCITY_FEDERATION_BASE_URL for redirect URLs and exposes HTML pages", async () => {
+test("paymentService falls back to DOWNCITY_CITY_BASE_URL for redirect URLs and exposes HTML pages", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-payment-service-redirect-"))
   const stripeStub = await createStripeStub()
@@ -278,7 +278,7 @@ test("paymentService falls back to DOWNCITY_FEDERATION_BASE_URL for redirect URL
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    await base.getService("env")._env.upsert({ key: "DOWNCITY_FEDERATION_BASE_URL", value: "https://base.example.com/" })
+    await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
 
     const city = await (await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/cities/create",
@@ -406,7 +406,7 @@ test("paymentService marks failed and expired payments without crediting balance
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    await base.getService("env")._env.upsert({ key: "DOWNCITY_FEDERATION_BASE_URL", value: "https://base.example.com/" })
+    await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
 
     const city = await (await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/cities/create",

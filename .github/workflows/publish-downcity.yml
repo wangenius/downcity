@@ -6,21 +6,6 @@ on:
       - Publish Downcity scoped packages to npmjs
     types:
       - completed
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/publish-downcity.yml"
-      - "packages/cli/**"
-      - "packages/type/package.json"
-      - "packages/shell/package.json"
-      - "packages/agent/package.json"
-      - "packages/server/package.json"
-      - "packages/city/package.json"
-      - "packages/services/package.json"
-      - "packages/plugins/package.json"
-      - "packages/ui/package.json"
-      - "pnpm-lock.yaml"
   workflow_dispatch:
 
 concurrency:
@@ -31,7 +16,6 @@ jobs:
   publish:
     if: >
       github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push' ||
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest

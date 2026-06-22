@@ -12,6 +12,19 @@
 
 import { PlatformStore } from "@/city/runtime/store/index.js";
 
+const PLATFORM_SESSION_ENV_KEYS = new Set([
+  "CITY_ID",
+  "CITY_ADMIN_SECRET_KEY",
+  "CITY_URL",
+  "CITY_USER_TOKEN",
+  "DC_AUTH_TOKEN",
+  "DC_AGENT_TOKEN",
+  "DOWNCITY_CITY_ID",
+  "DOWNCITY_CITY_ADMIN_SECRET_KEY",
+  "DOWNCITY_CITY_URL",
+  "DOWNCITY_CITY_USER_TOKEN",
+]);
+
 /**
  * 读取平台 global env 映射。
  */
@@ -27,10 +40,26 @@ export function readPlatformGlobalEnv(): Record<string, string> {
 }
 
 /**
+ * 移除不允许由平台 global env 注入的会话/身份变量。
+ */
+export function stripPlatformSessionEnv(
+  env: Record<string, string>,
+): Record<string, string> {
+  const sanitized: Record<string, string> = {};
+  for (const [key, value] of Object.entries(env)) {
+    if (PLATFORM_SESSION_ENV_KEYS.has(key)) continue;
+    sanitized[key] = value;
+  }
+  return sanitized;
+}
+
+/**
  * 合并平台 global env 到目标环境变量映射。
  *
  * 关键点（中文）
- * - 平台 global env 视为宿主层统一真相，应覆盖基础进程环境中的同名键。
+ * - 平台 global env 视为运行配置，只补充当前进程缺失的变量。
+ * - 平台 global env 不能覆盖当前 CLI 登录态、本机控制 token 或 admin secret。
+ * - 显式 shell env 仍保留最高优先级，便于脚本化调试。
  * - 返回新对象，不直接修改传入参数。
  */
 export function mergeProcessEnvWithPlatformGlobalEnv(
@@ -40,8 +69,9 @@ export function mergeProcessEnvWithPlatformGlobalEnv(
   for (const [key, value] of Object.entries(baseEnv)) {
     if (typeof value === "string") merged[key] = value;
   }
+  const platformEnv = stripPlatformSessionEnv(readPlatformGlobalEnv());
   return {
+    ...platformEnv,
     ...merged,
-    ...readPlatformGlobalEnv(),
   };
 }

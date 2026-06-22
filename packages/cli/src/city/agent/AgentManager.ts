@@ -21,8 +21,10 @@ import {
 export async function runInteractiveAgentManager(): Promise<void> {
   if (!isInteractiveTerminal()) return;
 
+  let last_message = "";
   while (true) {
-    const selection = await promptAgentListSelection();
+    const selection = await promptAgentListSelection(last_message);
+    last_message = "";
     if (!selection || selection.type === "exit") {
       emitCliBlock({
         tone: "info",
@@ -34,27 +36,29 @@ export async function runInteractiveAgentManager(): Promise<void> {
     try {
       if (selection.type === "create") {
         await runCreateFlow();
+        last_message = "Agent 创建流程已结束";
         continue;
       }
       if (selection.type === "agent") {
         const agents = await loadAgentSummaries();
         const agent = agents.find((item) => item.projectRoot === selection.project_root);
         if (!agent) {
-          emitCliBlock({
-            tone: "info",
-            title: "Agent not found",
-            note: selection.project_root,
-          });
+          last_message = `Agent 不存在：${selection.project_root}`;
           continue;
         }
         await runSelectedAgentManager(agent);
+        last_message = `已返回 Agent 列表`;
       }
     } catch (error) {
-      emitCliBlock({
-        tone: "error",
-        title: "Agent manager action failed",
-        note: error instanceof Error ? error.message : String(error),
-      });
+      last_message = `操作失败：${format_agent_manager_error(error)}`;
     }
   }
+}
+
+function format_agent_manager_error(error: unknown): string {
+  if (error && typeof error === "object" && "note" in error) {
+    const note = String((error as { note?: unknown }).note ?? "").trim();
+    if (note) return note;
+  }
+  return error instanceof Error ? error.message : String(error);
 }

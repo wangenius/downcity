@@ -18,6 +18,19 @@ export function tui_truncate(text: string, width: number): string {
 }
 
 /**
+ * 将任意说明文本压成适合列表单行展示的摘要。
+ *
+ * 关键点（中文）
+ * - prompt description 经常是多行详情，不能直接拼进列表项。
+ * - 这里只做排版清洗，不改变业务含义；完整详情仍由底部预览或详情页承载。
+ */
+export function tui_compact_line(text: string): string {
+  return strip_blessed_tags(String(text || ""))
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
  * 将文本补齐到指定显示宽度。
  */
 export function tui_pad_end(text: string, width: number): string {

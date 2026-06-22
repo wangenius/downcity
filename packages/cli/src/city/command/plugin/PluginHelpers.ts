@@ -215,22 +215,12 @@ type plugin_manager_selection =
 export function formatPluginDescription(plugin: StaticCatalogEntry): string {
   return t({
     zh: [
-      `标题：${plugin.title || plugin.name}`,
-      `类型：${plugin.kind}`,
-      `Actions：${plugin.actions.join(", ") || "none"}`,
-      `System：${plugin.hasSystem ? "yes" : "no"}`,
-      plugin.note ? `说明：${plugin.note}` : "",
-      "",
-      "Enter 查看该 Plugin 的完整能力详情。City 只展示能力目录，具体运行态归属于 Agent。",
+      `${plugin.kind} · ${plugin.actionCount} 个 action · System ${plugin.hasSystem ? "yes" : "no"}`,
+      "Enter 查看完整能力详情。",
     ].filter(Boolean).join("\n"),
     en: [
-      `Title: ${plugin.title || plugin.name}`,
-      `Kind: ${plugin.kind}`,
-      `Actions: ${plugin.actions.join(", ") || "none"}`,
-      `System: ${plugin.hasSystem ? "yes" : "no"}`,
-      plugin.note ? `Note: ${plugin.note}` : "",
-      "",
-      "Press Enter to inspect this plugin's full capability details. City shows the catalog; runtime belongs to agents.",
+      `${plugin.kind} · ${plugin.actionCount} actions · System ${plugin.hasSystem ? "yes" : "no"}`,
+      "Press Enter to inspect details.",
     ].filter(Boolean).join("\n"),
   });
 }
@@ -252,8 +242,8 @@ export async function promptPluginSelection(): Promise<plugin_manager_selection 
       {
         title: t({ zh: "Chat", en: "Chat" }),
         description: t({
-          zh: "管理 chat plugin 的 City 级账号、访问控制与共享会话资源。",
-          en: "Manage City-level accounts, access control, and shared conversation resources for the chat plugin.",
+          zh: "管理 City 级 Chat 账号与共享会话。",
+          en: "Manage City-level Chat accounts and shared sessions.",
         }),
         value: {
           type: "chat" as const,

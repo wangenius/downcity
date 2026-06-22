@@ -16,7 +16,7 @@ export interface tui_prompt_option {
   /** 选中后返回给业务层的稳定值。 */
   value: string;
 
-  /** 右侧详情区域或列表辅助说明。 */
+  /** 列表辅助说明或选中项底部提示。 */
   hint?: string;
 
   /**
@@ -42,7 +42,7 @@ export interface tui_dashboard_item {
   /** 左侧列表副标题。 */
   subtitle: string;
 
-  /** 右侧详情面板内容。 */
+  /** 选中项底部提示内容。 */
   detail: string;
 
   /**

@@ -140,35 +140,32 @@ export function formatAgentDetail(agent: AgentManagerAgentSummary): string {
     en: "not configured",
   });
   const channels = agent.channels.length > 0
-    ? agent.channels.join(", ")
+    ? agent.channels.length === 1
+      ? agent.channels[0]
+      : t({ zh: `${agent.channels.length} 个账号`, en: `${agent.channels.length} accounts` })
     : t({ zh: "未连接", en: "not connected" });
 
   return t({
     zh: [
-      `状态：${agent.status === "running" ? "运行中" : "已停止"}`,
-      `执行绑定：${execution_binding}`,
-      `Chat 账号：${channels}`,
-      `项目路径：${agent.projectRoot}`,
-      "",
-      "Enter 进入该 Agent 的管理面板。运行控制在“状态”里，侧边栏只保留聊天和配置入口。",
+      `状态 ${agent.status === "running" ? "运行中" : "已停止"} · 模型 ${execution_binding} · Chat ${channels}`,
+      "Enter 进入管理面板。",
     ].join("\n"),
     en: [
-      `Status: ${agent.status}`,
-      `Execution: ${execution_binding}`,
-      `Chat accounts: ${channels}`,
-      `Project: ${agent.projectRoot}`,
-      "",
-      "Press Enter to open this agent's management panel. Runtime controls live under Status; the sidebar keeps Chat and Config as separate entries.",
+      `Status ${agent.status} · Model ${execution_binding} · Chat ${channels}`,
+      "Press Enter to manage this agent.",
     ].join("\n"),
   });
 }
 
-export async function promptAgentListSelection(): Promise<AgentManagerListSelection | null> {
+export async function promptAgentListSelection(
+  lastMessage?: string,
+): Promise<AgentManagerListSelection | null> {
   const agents = await loadAgentSummaries();
   const response = (await prompts({
     type: "select",
     name: "selection",
     message: t({ zh: "Agent 管理", en: "Agent management" }),
+    subtitle: lastMessage,
     choices: [
       {
         title: t({ zh: "Agent 列表", en: "Agents" }),
@@ -225,6 +222,7 @@ export async function promptAgentListSelection(): Promise<AgentManagerListSelect
 
 export async function promptAgentAction(
   agent: AgentManagerAgentSummary,
+  lastMessage?: string,
 ): Promise<AgentManagerAgentAction | null> {
   const response = (await prompts({
     type: "select",
@@ -233,6 +231,7 @@ export async function promptAgentAction(
       zh: `管理 Agent · ${agent.id}`,
       en: `Manage agent · ${agent.id}`,
     }),
+    subtitle: lastMessage,
     choices: [
       {
         title: t({ zh: "Agent", en: "Agent" }),
@@ -275,16 +274,12 @@ export async function promptAgentAction(
 export function formatAgentConfigPanelDescription(agent: AgentManagerAgentSummary): string {
   return t({
     zh: [
-      `Agent ID：${agent.id}`,
-      `Chat 账号：${agent.channels.length > 0 ? agent.channels.join(", ") : "未连接"}`,
-      "",
-      "Enter 后配置 Agent ID 或连接 City 全局 Chat 账号。",
+      `Agent ${agent.id} · Chat ${agent.channels.length > 0 ? agent.channels.length : "未连接"}`,
+      "配置 Agent ID 或连接 City 全局 Chat 账号。",
     ].join("\n"),
     en: [
-      `Agent ID: ${agent.id}`,
-      `Chat accounts: ${agent.channels.length > 0 ? agent.channels.join(", ") : "not connected"}`,
-      "",
-      "Press Enter to configure the Agent ID or bind City-level Chat accounts.",
+      `Agent ${agent.id} · Chat ${agent.channels.length > 0 ? agent.channels.length : "not connected"}`,
+      "Configure the Agent ID or bind City-level Chat accounts.",
     ].join("\n"),
   });
 }
@@ -640,9 +635,11 @@ export async function connectAgentChannels(
 
 export async function runSelectedAgentManager(agent_input: AgentManagerAgentSummary): Promise<void> {
   let agent = agent_input;
+  let last_message = "";
   while (true) {
     agent = await reloadAgentSummary(agent.projectRoot, agent);
-    const action = await promptAgentAction(agent);
+    const action = await promptAgentAction(agent, last_message);
+    last_message = "";
     if (!action) {
       emitCliBlock({
         tone: "info",
@@ -655,27 +652,32 @@ export async function runSelectedAgentManager(agent_input: AgentManagerAgentSumm
     try {
       if (action === "start") {
         await startAgentProject(agent.projectRoot);
+        const previous_agent = agent;
         agent = await reloadAgentSummary(agent.projectRoot, agent);
+        last_message = format_agent_start_result(previous_agent, agent);
         continue;
       }
       if (action === "stop") {
+        const previous_agent = agent;
         await stopCommand(agent.projectRoot);
         agent = await reloadAgentSummary(agent.projectRoot, agent);
+        last_message = format_agent_stop_result(previous_agent, agent);
         continue;
       }
       if (action === "restart") {
+        const previous_agent = agent;
         injectAgentContext(agent.projectRoot);
         await restartCommand(agent.projectRoot, {});
         agent = await reloadAgentSummary(agent.projectRoot, agent);
+        last_message = format_agent_restart_result(previous_agent, agent);
         continue;
       }
       if (action === "chat") {
         agent = await reloadAgentSummary(agent.projectRoot, agent);
         if (agent.status !== "running") {
-          emitCliBlock({
-            tone: "error",
-            title: "Agent is not running",
-            note: "请先启动当前 agent，再进入聊天。",
+          last_message = t({
+            zh: "无法聊天：请先启动当前 Agent",
+            en: "Cannot chat: start this agent first",
           });
           continue;
         }
@@ -690,19 +692,87 @@ export async function runSelectedAgentManager(agent_input: AgentManagerAgentSumm
         }
         if (config_action === "configureId") {
           agent = await configureAgentId(agent);
+          last_message = t({
+            zh: `配置已更新：${agent.id}`,
+            en: `Config updated: ${agent.id}`,
+          });
           continue;
         }
         if (config_action === "connectChatAccounts") {
           agent = await connectAgentChannels(agent);
+          last_message = t({
+            zh: "Chat 账号连接已更新",
+            en: "Chat account bindings updated",
+          });
           continue;
         }
       }
     } catch (error) {
-      emitCliBlock({
-        tone: "error",
-        title: "Agent manager action failed",
-        note: error instanceof Error ? error.message : String(error),
+      last_message = t({
+        zh: `操作失败：${format_agent_action_error(error)}`,
+        en: `Action failed: ${format_agent_action_error(error)}`,
       });
     }
   }
+}
+
+function format_agent_action_error(error: unknown): string {
+  if (error && typeof error === "object" && "note" in error) {
+    const note = String((error as { note?: unknown }).note ?? "").trim();
+    if (note) return note;
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
+function format_agent_start_result(
+  _previous_agent: AgentManagerAgentSummary,
+  next_agent: AgentManagerAgentSummary,
+): string {
+  if (next_agent.status === "running") {
+    return t({
+      zh: `已启动 ${next_agent.id}`,
+      en: `Started ${next_agent.id}`,
+    });
+  }
+  return t({
+    zh: `启动未生效：${next_agent.id} 仍是已停止`,
+    en: `Start did not take effect: ${next_agent.id} is still stopped`,
+  });
+}
+
+function format_agent_stop_result(
+  previous_agent: AgentManagerAgentSummary,
+  next_agent: AgentManagerAgentSummary,
+): string {
+  if (next_agent.status === "stopped") {
+    return previous_agent.status === "running"
+      ? t({
+        zh: `已停止 ${next_agent.id}`,
+        en: `Stopped ${next_agent.id}`,
+      })
+      : t({
+        zh: `${next_agent.id} 本来就是已停止`,
+        en: `${next_agent.id} was already stopped`,
+      });
+  }
+  return t({
+    zh: `停止未生效：${next_agent.id} 仍在运行`,
+    en: `Stop did not take effect: ${next_agent.id} is still running`,
+  });
+}
+
+function format_agent_restart_result(
+  _previous_agent: AgentManagerAgentSummary,
+  next_agent: AgentManagerAgentSummary,
+): string {
+  if (next_agent.status === "running") {
+    return t({
+      zh: `已重启 ${next_agent.id}`,
+      en: `Restarted ${next_agent.id}`,
+    });
+  }
+  return t({
+    zh: `重启未生效：${next_agent.id} 当前已停止`,
+    en: `Restart did not take effect: ${next_agent.id} is stopped`,
+  });
 }

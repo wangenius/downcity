@@ -23,6 +23,9 @@ export interface PromptObject {
   /** 问题标题。 */
   message: string;
 
+  /** 标题下方的状态提示。 */
+  subtitle?: string;
+
   /** 选项列表。 */
   choices?: prompt_choice_option[];
 
@@ -112,16 +115,20 @@ async function run_prompt_question(question: PromptObject): Promise<unknown> {
 
 async function run_select_prompt(question: PromptObject): Promise<unknown> {
   const choices = question.choices ?? [];
+  const options = choices.map((choice, index) => to_tui_option(choice, encode_choice_index(index)));
   const runtime = new ManagedTuiRuntime({ title: question.message });
   try {
     const selected = await runtime.select({
       title: question.message,
+      subtitle: question.subtitle,
       footer: select_footer_text(),
-      options: choices.map(to_tui_option),
+      options,
       show_detail: true,
+      initial_index: normalize_initial_index(question.initial, choices),
     });
     if (selected === undefined) return undefined;
-    return choices.find((choice) => encode_choice_value(choice.value) === selected)?.value;
+    const selected_index = decode_choice_index(selected);
+    return selected_index === null ? undefined : choices[selected_index]?.value;
   } finally {
     runtime.close();
   }
@@ -129,17 +136,24 @@ async function run_select_prompt(question: PromptObject): Promise<unknown> {
 
 async function run_multiselect_prompt(question: PromptObject): Promise<unknown[] | undefined> {
   const choices = question.choices ?? [];
+  const options = choices.map((choice, index) => to_tui_option(choice, encode_choice_index(index)));
   const runtime = new ManagedTuiRuntime({ title: question.message });
   try {
     const selected_values = await runtime.multiselect({
       title: question.message,
+      subtitle: question.subtitle,
       footer: multiselect_footer_text(),
-      options: choices.map(to_tui_option),
-      initial_values: normalize_initial_values(question.initial),
+      options,
+      initial_values: normalize_initial_values(question.initial, choices),
     });
     if (selected_values === undefined) return undefined;
+    const selected_indexes = new Set(
+      selected_values
+        .map((value) => decode_choice_index(value))
+        .filter((value): value is number => value !== null),
+    );
     return choices
-      .filter((choice) => selected_values.includes(encode_choice_value(choice.value)))
+      .filter((_choice, index) => selected_indexes.has(index))
       .map((choice) => choice.value)
       .filter((value) => value !== undefined);
   } finally {
@@ -168,12 +182,14 @@ async function run_confirm_prompt(question: PromptObject): Promise<boolean | und
   try {
     const selected = await runtime.select({
       title: question.message,
+      subtitle: question.subtitle,
       footer: confirm_footer_text(),
-      options: choices.map(to_tui_option),
+      options: choices.map((choice, index) => to_tui_option(choice, encode_choice_index(index))),
       show_detail: true,
     });
     if (selected === undefined) return undefined;
-    return selected === "true";
+    const selected_index = decode_choice_index(selected);
+    return choices[selected_index ?? -1]?.value === true;
   } finally {
     runtime.close();
   }
@@ -259,10 +275,10 @@ async function validate_prompt_value(
     : String(result || t({ zh: "输入无效", en: "Invalid input" }));
 }
 
-function to_tui_option(choice: prompt_choice): tui_prompt_option {
+function to_tui_option(choice: prompt_choice, value: string): tui_prompt_option {
   return {
     label: format_choice_label(choice),
-    value: encode_choice_value(choice.value),
+    value,
     hint: choice_description(choice),
     disabled: choice.disabled,
   };
@@ -297,13 +313,29 @@ function choice_description(choice?: {
   });
 }
 
-function encode_choice_value(value: unknown): string {
-  return String(value);
+function encode_choice_index(index: number): string {
+  return `choice:${index}`;
 }
 
-function normalize_initial_values(value: unknown): string[] {
+function decode_choice_index(value: string): number | null {
+  const match = /^choice:(\d+)$/u.exec(value);
+  if (!match) return null;
+  const index = Number(match[1]);
+  return Number.isSafeInteger(index) ? index : null;
+}
+
+function normalize_initial_index(value: unknown, choices: prompt_choice[]): number {
+  if (typeof value === "number" && Number.isInteger(value)) return value;
+  const matched_index = choices.findIndex((choice) => Object.is(choice.value, value));
+  return matched_index >= 0 ? matched_index : 0;
+}
+
+function normalize_initial_values(value: unknown, choices: prompt_choice[]): string[] {
   if (!Array.isArray(value)) return [];
-  return value.map((item) => encode_choice_value(item));
+  return value
+    .map((item) => choices.findIndex((choice) => Object.is(choice.value, item)))
+    .filter((index) => index >= 0)
+    .map(encode_choice_index);
 }
 
 function select_footer_text(): string {

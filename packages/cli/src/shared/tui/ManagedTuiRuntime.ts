@@ -7,7 +7,13 @@
  * - 这样可以避免不同终端 scrollback / viewport / 右边界自动换行导致旧帧堆叠。
  */
 
-import { isKeyRelease, ProcessTerminal, type Component, type Focusable } from "@earendil-works/pi-tui";
+import {
+  isKeyRelease,
+  isKeyRepeat,
+  ProcessTerminal,
+  type Component,
+  type Focusable,
+} from "@earendil-works/pi-tui";
 import {
   format_tui_table,
   TuiDashboardComponent,
@@ -157,6 +163,7 @@ export class ManagedTuiRuntime {
     footer: string;
     options: tui_prompt_option[];
     show_detail?: boolean;
+    initial_index?: number;
   }): Promise<string | undefined> {
     return await this.run_component<string | undefined>((finish) =>
       new TuiSelectComponent({
@@ -322,6 +329,9 @@ export class ManagedTuiRuntime {
     if (isKeyRelease(data) && !wants_key_release(this.component)) {
       return;
     }
+    if (isKeyRepeat(data) && !wants_key_repeat(this.component)) {
+      return;
+    }
     this.component.handleInput?.(data);
     this.request_render();
   }
@@ -353,4 +363,8 @@ export class ManagedTuiRuntime {
 
 function wants_key_release(component: Component & Partial<Focusable>): boolean {
   return (component as { wantsKeyRelease?: unknown }).wantsKeyRelease === true;
+}
+
+function wants_key_repeat(component: Component & Partial<Focusable>): boolean {
+  return (component as { wantsKeyRepeat?: unknown }).wantsKeyRepeat === true;
 }

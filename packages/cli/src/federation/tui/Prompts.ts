@@ -51,15 +51,17 @@ interface prompt_confirm_input {
  */
 export async function select(input: prompt_select_input): Promise<unknown> {
   const runtime = new ManagedTuiRuntime({ title: input.message });
+  const options = input.options.map((option, index) => to_tui_option(option, encode_option_index(index)));
   try {
     const selected = await runtime.select({
       title: input.message,
       footer: select_footer_text(),
-      options: input.options.map(to_tui_option),
+      options,
       show_detail: true,
     });
     if (selected === undefined) return cancel("cancel");
-    return input.options.find((option) => encode_option_value(option.value) === selected)?.value;
+    const selected_index = decode_option_index(selected);
+    return selected_index === null ? cancel("cancel") : input.options[selected_index]?.value;
   } finally {
     runtime.close();
   }
@@ -104,11 +106,12 @@ export async function confirm(input: prompt_confirm_input): Promise<unknown> {
     const selected = await runtime.select({
       title: input.message,
       footer: confirm_footer_text(),
-      options: options.map(to_tui_option),
+      options: options.map((option, index) => to_tui_option(option, encode_option_index(index))),
       show_detail: true,
     });
     if (selected === undefined) return cancel("cancel");
-    return selected === "yes";
+    const selected_index = decode_option_index(selected);
+    return options[selected_index ?? -1]?.value === "yes";
   } finally {
     runtime.close();
   }
@@ -176,17 +179,24 @@ async function run_text_prompt(
   }
 }
 
-function to_tui_option(option: prompt_select_option): tui_prompt_option {
+function to_tui_option(option: prompt_select_option, value: string): tui_prompt_option {
   return {
     label: option.label,
-    value: encode_option_value(option.value),
+    value,
     hint: option.hint,
     disabled: option.disabled,
   };
 }
 
-function encode_option_value(value: unknown): string {
-  return String(value);
+function encode_option_index(index: number): string {
+  return `option:${index}`;
+}
+
+function decode_option_index(value: string): number | null {
+  const match = /^option:(\d+)$/u.exec(value);
+  if (!match) return null;
+  const index = Number(match[1]);
+  return Number.isSafeInteger(index) ? index : null;
 }
 
 function select_footer_text(): string {

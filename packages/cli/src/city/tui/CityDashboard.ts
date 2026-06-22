@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这是裸 `city` 的默认入口。
- * - 左侧列表承载动作菜单，右侧详情区展示当前动作说明。
+ * - 单栏列表承载动作菜单，底部展示当前动作的轻量说明。
  * - 动作结束后返回仪表盘，形成统一终端操作台体验。
  */
 
@@ -69,8 +69,8 @@ async function build_city_dashboard_state(): Promise<city_dashboard_state> {
         en: `${managed_agents} running agents`,
       }),
       detail: t({
-        zh: "进入 Agent 列表。右侧会展示当前聚焦 Agent 的状态；点进某个 Agent 后再启动、停止、重启、聊天或修改配置。列表底部可创建新的 Agent。",
-        en: "Open the Agent list. The main section shows the focused agent status; open an agent to start, stop, restart, chat, or edit settings. Create a new agent from the bottom of the list.",
+        zh: "进入 Agent 列表。点进某个 Agent 后可启动、停止、重启、聊天或修改配置。",
+        en: "Open the Agent list. Select an agent to start, stop, restart, chat, or edit settings.",
       }),
     },
     {

@@ -12,11 +12,10 @@ import { ManagedTuiRuntime } from "@/shared/tui/ManagedTuiRuntime.js";
 import { current_theme } from "@/city/agent/tui/theme/index.js";
 import {
   resolve_tui_visible_scroll,
+  tui_compact_line,
   tui_safe_body_height,
   tui_safe_render_width,
-  tui_pad_end,
   tui_truncate,
-  tui_viewport,
   tui_wrap_lines,
 } from "@/shared/tui/TuiText.js";
 import {
@@ -42,6 +41,8 @@ import type { tui_list_item } from "@/city/types/Tui.js";
 
 const BORDER = "─";
 const POINTER = "❯";
+const DETAIL_PREVIEW_LINES = 2;
+const LIST_HINT_MAX_WIDTH = 28;
 
 /**
  * 打开 City Federation 管理 TUI。
@@ -92,7 +93,6 @@ class CityManagerComponent implements Component, Focusable {
   private state: city_manager_state;
   private selected_index: number;
   private list_scroll = 0;
-  private detail_scroll = 0;
   private readonly finish: (value: city_manager_action | null) => void;
   private readonly request_render: () => void;
 
@@ -118,13 +118,11 @@ class CityManagerComponent implements Component, Focusable {
       return;
     }
     if (matchesKey(data, Key.pageUp)) {
-      this.detail_scroll = Math.max(0, this.detail_scroll - 8);
-      this.request_render();
+      this.move_selection(-this.get_current_body_height());
       return;
     }
     if (matchesKey(data, Key.pageDown)) {
-      this.detail_scroll += 8;
-      this.request_render();
+      this.move_selection(this.get_current_body_height());
       return;
     }
     if (matchesKey(data, Key.enter)) {
@@ -142,22 +140,19 @@ class CityManagerComponent implements Component, Focusable {
 
   render(width: number): string[] {
     const safe_width = tui_safe_render_width(width, 40);
-    const left_width = Math.max(24, Math.min(42, Math.floor(safe_width * 0.38)));
-    const right_width = Math.max(10, safe_width - left_width - 3);
-    const body_height = tui_safe_body_height(5);
+    const item = this.state.items[this.selected_index];
+    const detail_lines = this.render_detail_preview(safe_width);
+    const body_height = get_city_manager_body_height(detail_lines.length);
     this.list_scroll = resolve_tui_visible_scroll({
       selected_index: this.selected_index,
       scroll_offset: this.list_scroll,
       viewport_height: body_height,
       item_count: this.state.items.length,
     });
-    const left_lines = this.render_list(left_width).slice(
+    const list_lines = this.render_list(safe_width).slice(
       this.list_scroll,
       this.list_scroll + body_height,
     );
-    const right_lines = this.render_detail(right_width);
-    const right_view = tui_viewport(right_lines, body_height, this.detail_scroll);
-    const item = this.state.items[this.selected_index];
 
     const output = [
       tui_truncate(current_theme.bold_fg("primary", "管理 Federation"), safe_width),
@@ -165,12 +160,11 @@ class CityManagerComponent implements Component, Focusable {
       tui_truncate(BORDER.repeat(safe_width), safe_width),
     ];
 
-    for (let index = 0; index < body_height; index += 1) {
-      const left = tui_pad_end(left_lines[index] ?? "", left_width);
-      const right = tui_truncate(right_view[index] ?? "", right_width);
-      output.push(`${left} ${current_theme.dim_fg("border", "│")} ${right}`);
+    for (const line of list_lines) {
+      output.push(tui_truncate(line, safe_width));
     }
 
+    output.push(...detail_lines.map((line) => tui_truncate(current_theme.dim_fg("textMuted", line), safe_width)));
     output.push(tui_truncate(BORDER.repeat(safe_width), safe_width));
     output.push(tui_truncate(current_theme.dim_fg("textMuted", format_footer(item)), safe_width));
     return output;
@@ -189,10 +183,9 @@ class CityManagerComponent implements Component, Focusable {
     this.list_scroll = resolve_tui_visible_scroll({
       selected_index: this.selected_index,
       scroll_offset: this.list_scroll,
-      viewport_height: tui_safe_body_height(5),
+      viewport_height: this.get_current_body_height(),
       item_count: this.state.items.length,
     });
-    this.detail_scroll = 0;
     this.request_render();
   }
 
@@ -218,10 +211,9 @@ class CityManagerComponent implements Component, Focusable {
     this.list_scroll = resolve_tui_visible_scroll({
       selected_index: this.selected_index,
       scroll_offset: this.list_scroll,
-      viewport_height: tui_safe_body_height(5),
+      viewport_height: this.get_current_body_height(),
       item_count: next_state.items.length,
     });
-    this.detail_scroll = 0;
     this.request_render();
   }
 
@@ -230,7 +222,6 @@ class CityManagerComponent implements Component, Focusable {
       ...this.state,
       detail_override: content,
     };
-    this.detail_scroll = 0;
     this.request_render();
   }
 
@@ -258,26 +249,60 @@ class CityManagerComponent implements Component, Focusable {
   private render_list(width: number): string[] {
     return this.state.items.map((item, index) => {
       if (is_disabled_item(item)) {
-        return current_theme.dim_fg("textMuted", tui_truncate(`  ${format_city_item_label(item)}`, width));
+        return current_theme.dim_fg("textMuted", tui_truncate(`  ${format_list_text(format_city_item_label(item))}`, width));
       }
       const selected = index === this.selected_index;
       const pointer = selected ? POINTER : " ";
+      const marker = selected ? current_theme.fg("primary", pointer) : pointer;
+      const item_title = format_list_text(item.title);
       const title = selected
-        ? current_theme.bold_fg("primary", item.title)
-        : current_theme.fg("text", item.title);
-      const subtitle = item.subtitle ? current_theme.dim_fg("textMuted", ` ${item.subtitle}`) : "";
-      return tui_truncate(`${pointer} ${title}${subtitle}`, width);
+        ? current_theme.bold_fg("primary", item_title)
+        : current_theme.fg("text", item_title);
+      const item_subtitle = format_list_hint(item.subtitle, width);
+      const subtitle = item_subtitle ? current_theme.dim_fg("textMuted", ` ${item_subtitle}`) : "";
+      return tui_truncate(`${marker} ${title}${subtitle}`, width);
     });
   }
 
-  private render_detail(width: number): string[] {
+  private render_detail_preview(width: number): string[] {
     const item = this.state.items[this.selected_index];
     const detail = this.state.detail_override ?? format_city_detail(item);
-    return tui_wrap_lines(detail, width);
+    return format_detail_preview_lines(detail, width);
+  }
+
+  private get_current_body_height(): number {
+    const width = tui_safe_render_width(process.stdout.columns || 80, 40);
+    return get_city_manager_body_height(this.render_detail_preview(width).length);
   }
 }
 
 function find_action_index(items: tui_list_item[], action: city_manager_action): number {
   const index = items.findIndex((item) => item.id === action);
   return index >= 0 ? index : resolve_loop_selectable_index(items, 0, 0);
+}
+
+function get_city_manager_body_height(detail_line_count = DETAIL_PREVIEW_LINES): number {
+  // 关键点（中文）：标题、状态行、分隔线、底部分隔线、footer 加上 1 行安全空间。
+  return tui_safe_body_height(6 + Math.max(0, detail_line_count));
+}
+
+function format_list_text(text: string): string {
+  return tui_compact_line(text);
+}
+
+function format_list_hint(text: string | undefined, width: number): string {
+  const compact = tui_compact_line(text ?? "");
+  if (!compact) return "";
+  const max_width = Math.max(12, Math.min(LIST_HINT_MAX_WIDTH, Math.floor(width * 0.32)));
+  return tui_truncate(compact, max_width);
+}
+
+function format_detail_preview_lines(text: string, width: number): string[] {
+  const lines = String(text || "")
+    .split(/\r?\n/u)
+    .map((line) => tui_compact_line(line))
+    .filter(Boolean)
+    .slice(0, DETAIL_PREVIEW_LINES);
+  if (lines.length === 0) return [];
+  return tui_wrap_lines(lines.join("\n"), width).filter(Boolean).slice(0, DETAIL_PREVIEW_LINES);
 }

@@ -77,7 +77,7 @@ export interface city_manager_state {
   /** 余额读取错误。 */
   balance_error?: string;
 
-  /** 右侧详情覆盖内容。 */
+  /** 选中项底部提示覆盖内容。 */
   detail_override?: string;
 
   /** 最近一次动作结果。 */

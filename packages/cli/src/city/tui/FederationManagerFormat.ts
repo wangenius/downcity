@@ -56,8 +56,8 @@ export function format_city_detail(item: tui_list_item | undefined): string {
 
 export function format_footer(item: tui_list_item | undefined): string {
   const base = t({
-    zh: "Enter 执行动作 · Esc / q 退出 · ↑↓ 切换 · PgUp/PgDn 滚动详情",
-    en: "Enter run action · Esc / q quit · ↑↓ navigate · PgUp/PgDn scroll detail",
+    zh: "Enter 执行动作 · Esc / q 退出 · ↑↓ 切换 · PgUp/PgDn 翻页",
+    en: "Enter run action · Esc / q quit · ↑↓ navigate · PgUp/PgDn page list",
   });
   if (!item || is_disabled_item(item)) return base;
   return `${base} · ${item.subtitle}`;

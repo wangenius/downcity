@@ -11,8 +11,6 @@ on:
       - main
     paths:
       - ".github/workflows/publish-downcity.yml"
-      - "cli/city/**"
-      - "packages/cli/**"
       - "packages/cli/**"
       - "packages/type/package.json"
       - "packages/shell/package.json"
@@ -89,8 +87,6 @@ jobs:
           pnpm -C packages/services build
           pnpm -C packages/plugins build
           pnpm -C packages/ui build
-          pnpm -C cli/city build
-          pnpm -C packages/cli build
           pnpm -C packages/cli build
 
       - name: Validate npm token and package ownership

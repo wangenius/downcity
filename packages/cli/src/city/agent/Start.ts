@@ -25,7 +25,7 @@ import { CliError } from "@/shared/CliError.js";
  * daemon 启动入口。
  *
  * 流程（中文）
- * 1) 统一预检（city runtime + 项目初始化 + binding）
+ * 1) 统一预检（sandbox + 项目初始化 + binding）
  * 2) 组装 `agent start` 子进程参数
  * 3) 通过 daemon manager 后台拉起并打印 pid/log
  */

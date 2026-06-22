@@ -1,10 +1,9 @@
 /**
- * City runtime 命令装配模块。
+ * City 全局命令装配模块。
  *
  * 关键点（中文）
- * - City CLI 不再启动 Console UI 项目；`city start` 只负责本机 runtime。
- * - 旧 gateway 源码暂时保留给历史 API/清理逻辑，但不再挂到用户命令入口。
- * - 本文件只保留命令树装配；runtime 与状态细节已拆到辅助模块。
+ * - City 根命令只保留一次性全局初始化、配置、env、token 与 federation 管理能力。
+ * - Agent 生命周期统一收敛到 `city agent ...`，不再提供 top-level `city start/stop/restart/status`。
  */
 
 import { Command } from "commander";
@@ -16,17 +15,6 @@ import { gatewayInitCommand } from "@/city/runtime/gateway/runtime/GatewayInit.j
 import { createVersionBanner } from "@/shared/IndexSupport.js";
 import { CliError } from "@/shared/CliError.js";
 import { updateCommand } from "@/city/shared/Update.js";
-import {
-  gatewayStatusCommand,
-} from "@/city/runtime/gateway/runtime/GatewayStatus.js";
-import {
-  prepareForegroundAgent,
-  ensureRegisteredAgentProjectRoot,
-  restartCityRuntimeCommand,
-  runCityRuntimeCommand,
-  startCityRuntimeCommand,
-  stopCityRuntimeCommand,
-} from "@/city/runtime/gateway/runtime/GatewayProcess.js";
 import { helpText, t } from "@/shared/CliLocale.js";
 
 /**
@@ -40,11 +28,11 @@ export interface GatewayCommandRegistrationContext {
 }
 
 /**
- * 注册 top-level city 生命周期命令。
+ * 注册 top-level city 全局命令。
  *
  * 语义说明（中文）
- * - `city ...` 管的是本机宿主 runtime 与受管 agent。
- * - Console UI 已从 City 启动链路断开，不再提供 `city console` / `city public` 入口。
+ * - `city ...` 管一次性全局配置与 Federation 连接。
+ * - 需要长期运行的是具体 Agent daemon，由 `city agent start/stop/restart/status` 管理。
  */
 export function registerGatewayCommands(
   program: Command,
@@ -59,50 +47,6 @@ export function registerGatewayCommands(
     .helpOption("--help", helpText())
     .action(createVersionBanner(context.version, async () => {
       await gatewayInitCommand();
-    }));
-
-  program
-    .command("start")
-    .description(t({
-      zh: "启动 city runtime（不启动 Console UI）",
-      en: "start the City runtime without starting the Console UI",
-    }))
-    .helpOption("--help", helpText())
-    .action(createVersionBanner(context.version, async () => {
-      await startCityRuntimeCommand(context.cliPath);
-    }));
-
-  program
-    .command("stop")
-    .description(t({
-      zh: "停止 City runtime 与受管 agent",
-      en: "stop the City runtime and managed agents",
-    }))
-    .helpOption("--help", helpText())
-    .action(createVersionBanner(context.version, async () => {
-      await stopCityRuntimeCommand();
-    }));
-
-  program
-    .command("restart")
-    .description(t({
-      zh: "重启 City runtime 并恢复已运行 agent",
-      en: "restart the City runtime and recover running agents",
-    }))
-    .helpOption("--help", helpText())
-    .action(createVersionBanner(context.version, async () => {
-      await restartCityRuntimeCommand(context.cliPath);
-    }));
-
-  program
-    .command("status")
-    .description(t({
-      zh: "查看 city runtime 与已托管 agent 运行状态",
-      en: "show City runtime and managed agent status",
-    }))
-    .helpOption("--help", helpText())
-    .action(createVersionBanner(context.version, async () => {
-      await gatewayStatusCommand();
     }));
 
   program
@@ -133,21 +77,8 @@ export function registerGatewayCommands(
       });
     }));
 
-  program
-    .command("run", { hidden: true })
-    .description(t({
-      zh: "City 内部运行时（不直接使用）",
-      en: "City internal runtime (not for direct use)",
-    }))
-    .action(runCityRuntimeCommand);
-
   registerConfigCommand(program);
   registerEnvCommand(program);
   registerTokenCommand(program);
   register_federation_command(program);
 }
-
-export {
-  ensureRegisteredAgentProjectRoot,
-  prepareForegroundAgent,
-};

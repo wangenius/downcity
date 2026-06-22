@@ -2,8 +2,7 @@
  * City Agent runtime 辅助模块。
  *
  * 关键点（中文）
- * - City 负责本机 Agent 宿主能力，不能再从 City gateway 源码导入 helper。
- * - 这里只保留 City 启动/列表/前台运行需要的最小运行态逻辑。
+ * - City 根命令不再拥有常驻 runtime；这里只保留 Agent 列表与前台启动装配逻辑。
  * - City 管理命令仍通过 `city` 入口负责。
  */
 
@@ -20,7 +19,6 @@ import {
   listManagedAgentEntries,
   markManagedAgentStopped,
 } from "@/city/process/registry/CityRegistry.js";
-import { isCityRunning } from "@/city/process/registry/CityRuntime.js";
 import { assertProjectExecutionModelReady } from "@/city/runtime/city-model/ExecutionModelBinding.js";
 import { CliError } from "@/shared/CliError.js";
 import { injectAgentContext } from "@/shared/IndexSupport.js";
@@ -92,13 +90,6 @@ export async function prepareForegroundAgent(
   options: AgentStartOptions & { foreground?: boolean };
   shouldForeground: boolean;
 }> {
-  if (!(await isCityRunning())) {
-    throw new CliError({
-      title: "city runtime is not running",
-      fix: "city start",
-    });
-  }
-
   injectAgentContext(cwd);
   const project_root = resolve(String(cwd || "."));
   await checkShellSandboxHostPreflight();

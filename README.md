@@ -35,7 +35,7 @@ Downcity gives creators, indie builders, and teams one reusable runtime layer fo
 ## Core Capabilities
 
 - Agent project runtime: initialize a repo or folder with `PROFILE.md`, `SOUL.md`, `downcity.json`, and `.downcity/`.
-- Local hosting and operations: run `downcity start` or `downcity status` to host local agents and access the control surface.
+- Local agent operations: run `downcity agent start`, `downcity agent status`, and `downcity agent list` to host and inspect local agents.
 - Agent lifecycle: create, start, stop, restart, inspect, chat with, diagnose, and observe project agents.
 - City connection: use `downcity federation` to connect local Agents to the active City server; manage City models and Service resources with `city`.
 - City backend capabilities: reuse accounts, balance, usage, payment, env, auth, and Service routing across agents and products.
@@ -124,20 +124,17 @@ To run in the foreground:
 downcity agent start . --foreground
 ```
 
-### 6. Start Console
+### 6. Inspect running agents
 
 ```bash
-downcity start
-# or
-downcity status
+downcity agent list
 ```
 
 Useful status commands:
 
 ```bash
-downcity status
 downcity agent list
-downcity status
+downcity agent status .
 ```
 
 ## SDK Example

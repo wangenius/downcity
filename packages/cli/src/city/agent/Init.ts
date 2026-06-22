@@ -261,7 +261,7 @@ export async function initCommand(
   ];
   if (primaryModelId) {
     nextSteps.push("Edit downcity.json.execution.modelId (bind to City AIService model id)");
-    nextSteps.push('Use "city city status" to confirm the Agent runtime can reach City');
+    nextSteps.push('Use "city agent start" to confirm the Agent can reach its configured model');
   }
 
   if (selectedChannels.includes("telegram")) {

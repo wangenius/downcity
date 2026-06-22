@@ -3,6 +3,7 @@
  *
  * 关键点（中文）
  * - 这是裸 `city` 的默认入口。
+ * - City 根入口没有独立启动态，只汇总 Agent、Federation、Plugin 与设置。
  * - 单栏列表承载动作菜单，底部展示当前动作的轻量说明。
  * - 动作结束后返回仪表盘，形成统一终端操作台体验。
  */
@@ -10,15 +11,12 @@
 import { readFileSync } from "node:fs";
 import { read_federation_membership_state } from "@/city/shared/FederationConnection.js";
 import { getCliLocale, t } from "@/shared/CliLocale.js";
-import { readCityPid, isCityProcessAlive } from "@/city/process/registry/CityRuntime.js";
-import { resolveRunningManagedAgents } from "@/city/runtime/gateway/runtime/GatewayProcess.js";
+import { resolveRunningManagedAgents } from "@/city/shared/CityAgentRuntime.js";
 import type { FederationMembershipState } from "@/city/types/FederationMembership.js";
 import type { tui_action_result, tui_list_item } from "@/city/types/Tui.js";
 import { run_managed_dashboard_loop } from "@/shared/tui/ManagedTuiRuntime.js";
 
 type city_home_action =
-  | "stop"
-  | "restart"
   | "federation"
   | "agent"
   | "plugin"
@@ -54,8 +52,6 @@ export async function open_city_dashboard(
 async function build_city_dashboard_state(): Promise<city_dashboard_state> {
   const version = read_city_cli_version();
   const locale = getCliLocale();
-  const pid = await readCityPid();
-  const running = Boolean(pid && isCityProcessAlive(pid));
   const city_state = read_federation_membership_state();
   const managed_agents = await safe_count_running_agents();
 
@@ -114,32 +110,9 @@ async function build_city_dashboard_state(): Promise<city_dashboard_state> {
     },
     section_item("actions", t({ zh: "操作", en: "Actions" })),
     {
-      id: "stop",
-      title: t({ zh: "停止 City", en: "Stop City" }),
-      subtitle: running
-        ? t({ zh: "停止 City 与托管 agent", en: "stop City and managed agents" })
-        : t({ zh: "当前 City 已停止", en: "City already stopped" }),
-      detail: t({
-        zh: "停止 City，并清理当前受管 agent daemon。",
-        en: "Stop City and clean up currently managed agent daemons.",
-      }),
-    },
-    {
-      id: "restart",
-      title: t({ zh: "重启 City", en: "Restart City" }),
-      subtitle: t({
-        zh: "重启 City 并恢复受管状态",
-        en: "restart City and recover managed state",
-      }),
-      detail: t({
-        zh: "重启 City，并尝试恢复此前托管的 agent 运行态。",
-        en: "Restart City and try to recover previously managed agent state.",
-      }),
-    },
-    {
       id: "exit",
       title: t({ zh: "退出", en: "Exit" }),
-      subtitle: t({ zh: "关闭 City", en: "Close City" }),
+      subtitle: t({ zh: "关闭当前界面", en: "Close this view" }),
       detail: t({
         zh: "退出当前 City CLI。",
         en: "Exit the current City CLI.",
@@ -150,8 +123,8 @@ async function build_city_dashboard_state(): Promise<city_dashboard_state> {
   return {
     title: `City v${version}`,
     subtitle: t({
-      zh: `City：${runtime_state_text(running)} · City：${build_federation_subtitle(city_state)} · agent：${managed_agents}`,
-      en: `City: ${runtime_state_text(running)} · City: ${build_federation_subtitle(city_state)} · agents: ${managed_agents}`,
+      zh: `Federation：${build_federation_subtitle(city_state)} · agent：${managed_agents}`,
+      en: `Federation: ${build_federation_subtitle(city_state)} · agents: ${managed_agents}`,
     }),
     footer: t({
       zh: "Enter 进入动作 · Esc / q 退出 · ↑↓ 切换 · 当前入口：全屏 TUI",
@@ -206,15 +179,6 @@ function build_federation_detail(city_state: FederationMembershipState): string 
       "Selecting this opens the `city federation` interactive manager for join, use, login, recharge, and related flows.",
     ].filter(Boolean).join("\n"),
   });
-}
-
-/**
- * runtime 状态显示文案。
- */
-function runtime_state_text(running: boolean): string {
-  return running
-    ? t({ zh: "运行中", en: "running" })
-    : t({ zh: "已停止", en: "stopped" });
 }
 
 /**

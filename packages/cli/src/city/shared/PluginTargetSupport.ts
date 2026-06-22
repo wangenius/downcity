@@ -4,6 +4,7 @@
  * 关键点（中文）
  * - 统一承载 plugin runtime 命令的参数解析、目标 agent 路径解析与项目目录校验。
  * - 提供 `checkAgentPreflight` 供 start/restart/status 等命令统一使用。
+ * - Agent 命令不依赖 top-level city 常驻进程；长期运行边界只在 Agent daemon。
  * - 保持 command 注册层只关注命令树，不再直接承载路径解析细节。
  */
 
@@ -11,7 +12,6 @@ import path from "node:path";
 import fs from "node:fs";
 import { getProfileMdPath, getDowncityJsonPath } from "@/city/config/Paths.js";
 import { listManagedAgentEntries } from "@/city/process/registry/CityRegistry.js";
-import { isCityRunning } from "@/city/process/registry/CityRuntime.js";
 import type { JsonValue } from "@downcity/agent";
 import { resolveAgentId } from "@/shared/IndexSupport.js";
 import { CliError } from "@/shared/CliError.js";
@@ -30,8 +30,6 @@ export function isRegistryEntryRunning(
  * Agent 启动前预检选项。
  */
 export interface AgentPreflightOptions {
-  /** 是否要求 city runtime 已运行。 */
-  requireCityRunning?: boolean;
   /** 是否检查 shell sandbox 宿主依赖。 */
   requireShellSandbox?: boolean;
 }
@@ -65,7 +63,7 @@ export async function checkShellSandboxHostPreflight(): Promise<void> {
  *
  * 关键点（中文）
  * - 收敛 start/restart/status 等命令的前置校验逻辑。
- * - 按顺序检查，首个失败即抛 CliError（City running → PROFILE.md → downcity.json → binding）。
+ * - 按顺序检查，首个失败即抛 CliError（sandbox → PROFILE.md → downcity.json → binding）。
  *
  * @throws {CliError} 任一校验失败时抛出。
  */
@@ -73,15 +71,6 @@ export async function checkAgentPreflight(
   projectRoot: string,
   options?: AgentPreflightOptions,
 ): Promise<void> {
-  if (options?.requireCityRunning !== false) {
-    if (!(await isCityRunning())) {
-      throw new CliError({
-        title: "city runtime is not running",
-        fix: "city start",
-      });
-    }
-  }
-
   if (options?.requireShellSandbox !== false) {
     await checkShellSandboxHostPreflight();
   }

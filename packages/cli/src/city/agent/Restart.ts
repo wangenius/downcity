@@ -31,8 +31,8 @@ export async function restartCommand(
 ): Promise<void> {
   const projectRoot = path.resolve(cwd);
 
-  // 关键点（中文）：统一预检（restart 不强制要求 city runtime running，因为 stop 后可能已停）。
-  await checkAgentPreflight(projectRoot, { requireCityRunning: false });
+  // 关键点（中文）：统一预检项目初始化状态、sandbox 与 execution binding。
+  await checkAgentPreflight(projectRoot);
 
   // 计算当前 CLI 的入口路径（编译后是 `bin/index.js`）。
   // 本模块位于 `bin/city/agent/`，需上溯两级才能到达 `bin/index.js`。

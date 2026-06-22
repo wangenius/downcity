@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - Downcity 的全局根目录固定在用户目录 `~/.downcity/`。
  * - `~/.downcity/downcity.db`：全局 SQLite 数据库，保存平台级配置。
- * - `~/.downcity/main/*`：city runtime 运行文件目录。
+ * - `~/.downcity/main/*`：全局 agent registry、旧 pid/log 清理文件与平台密钥目录。
  * - 这里定义的是“全局路径约定”，不是单个 agent 项目的 `.downcity/` 路径。
  */
 
@@ -31,7 +31,7 @@ export function getPlatformStoreDbPath(): string {
 }
 
 /**
- * City 全局运行目录（pid/log/registry）。
+ * City 全局状态目录（registry / 平台密钥 / 旧运行态文件）。
  */
 export function getCityRuntimeDirPath(): string {
   return path.join(getPlatformRootDirPath(), "main");
@@ -61,7 +61,7 @@ export function getCityLogPath(): string {
 /**
  * 旧 Console gateway pid 文件路径。
  *
- * 关键点（中文）：当前仅用于 `city stop` 清理历史状态文件。
+ * 关键点（中文）：仅保留路径约定，便于后续迁移或清理旧安装状态文件。
  */
 export function getGatewayPidPath(): string {
   return path.join(getCityRuntimeDirPath(), "gateway.pid");
@@ -70,7 +70,7 @@ export function getGatewayPidPath(): string {
 /**
  * 旧 Console gateway 元数据路径。
  *
- * 关键点（中文）：当前仅用于 `city stop` 清理历史状态文件。
+ * 关键点（中文）：仅保留路径约定，便于后续迁移或清理旧安装状态文件。
  */
 export function getGatewayMetaPath(): string {
   return path.join(getCityRuntimeDirPath(), "gateway.json");

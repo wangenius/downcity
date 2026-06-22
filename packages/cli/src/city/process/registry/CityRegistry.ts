@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - registry 只维护“City 认知到的 agent 项目列表”，用于统一观测与批量管理。
  * - registry 不承载实时健康检查：status/list 会读取每个项目的 daemon pid 并判活。
- * - agent daemon 启动成功后必须登记到 city 后台（强约束）。
+ * - registry 是普通本地状态文件，不依赖任何 top-level city 常驻进程。
  */
 
 import fs from "fs-extra";
@@ -14,7 +14,6 @@ import type {
   ManagedAgentRegistryV1,
 } from "@downcity/agent";
 import { getManagedAgentRegistryPath, getCityRuntimeDirPath } from "@/city/process/registry/CityPaths.js";
-import { isCityRunning } from "@/city/process/registry/CityRuntime.js";
 
 const CONSOLE_DIR = getCityRuntimeDirPath();
 const MANAGED_AGENTS_FILE = getManagedAgentRegistryPath();
@@ -180,11 +179,6 @@ export async function upsertManagedAgentEntry(input: {
   status?: "running" | "stopped";
   stoppedAt?: string;
 }): Promise<void> {
-  // 关键点（中文）：agent 必须登记到 city 后台才“有效”，因此 City 未启动时拒绝写入 registry。
-  if (!(await isCityRunning())) {
-    throw new Error("city runtime is not running");
-  }
-
   const projectRoot = normalizeProjectRoot(input.projectRoot);
   const pid = normalizePid(input.pid);
   const nowIso = new Date().toISOString();

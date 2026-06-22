@@ -212,6 +212,6 @@ export async function updateCommand(
         value: manager,
       },
     ],
-    note: "如果当前已有 city runtime 在运行，建议执行 `city restart` 载入最新版本。",
+    note: "如果当前已有 agent daemon 在运行，建议执行 `city agent restart <path>` 载入最新版本。",
   });
 }

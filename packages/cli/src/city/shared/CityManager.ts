@@ -3,13 +3,10 @@
  *
  * 关键点（中文）
  * - 裸 `city` 是本机 Agent 与 Plugin 操作台，不是 City 资源管理器。
+ * - City 不再拥有 top-level 常驻 runtime 生命周期；长期运行的只有具体 Agent daemon。
  * - City 通过 Federation 成员资格访问共享资源；Federation 管理由 `city federation` 子命令负责。
  */
 
-import {
-  restartCityRuntimeCommand,
-  stopCityRuntimeCommand,
-} from "@/city/runtime/gateway/runtime/GatewayProcess.js";
 import { runInteractiveAgentManager } from "@/city/agent/AgentManager.js";
 import { runInteractivePluginManager } from "@/city/command/PluginCommand.js";
 import { run_interactive_federation_manager } from "@/city/shared/FederationConnection.js";
@@ -20,8 +17,6 @@ import { open_city_dashboard } from "@/city/tui/CityDashboard.js";
 import type { tui_action_result } from "@/city/types/Tui.js";
 
 type CityHomeAction =
-  | "stop"
-  | "restart"
   | "federation"
   | "agent"
   | "plugin"
@@ -42,11 +37,6 @@ export async function runInteractiveCityManager(params: {
    * City 根命令帮助输出器。
    */
   program: CityHelpProgram;
-
-  /**
-   * 当前 CLI 入口路径，用于启动或重启 City runtime。
-   */
-  cli_path: string;
 }): Promise<void> {
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     params.program.outputHelp();
@@ -73,7 +63,6 @@ async function run_city_dashboard_action(
   action: CityHomeAction,
   params: {
     program: CityHelpProgram;
-    cli_path: string;
   },
 ): Promise<tui_action_result> {
   if (action === "exit") {
@@ -81,14 +70,6 @@ async function run_city_dashboard_action(
   }
 
   try {
-    if (action === "stop") {
-      await stopCityRuntimeCommand();
-      return "refresh";
-    }
-    if (action === "restart") {
-      await restartCityRuntimeCommand(params.cli_path);
-      return "refresh";
-    }
     if (action === "federation") {
       await run_interactive_federation_manager();
       return "refresh";

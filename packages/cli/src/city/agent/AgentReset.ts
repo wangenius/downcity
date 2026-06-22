@@ -108,23 +108,7 @@ export async function agentResetCommand(cwd: string = "."): Promise<void> {
     ],
   });
 
-  // 关键点（中文）：检测控制面是否运行，决定能否即时重启。
-  const { isCityRunning } = await import("@/city/process/registry/CityRuntime.js");
-  const cityRuntimeRunning = await isCityRunning();
-
-  if (!cityRuntimeRunning) {
-    emitCliBlock({
-      tone: "warning",
-      title: "City runtime is not running",
-      note: "请先启动 City runtime 再重启 agent",
-      facts: [
-        { label: "step 1", value: "city start" },
-        { label: "step 2", value: `city agent restart ${projectRoot}` },
-      ],
-    });
-    return;
-  }
-
+  // 关键点（中文）：模型绑定写入后可直接重启目标 Agent，无需 top-level city runtime。
   const restartNow = (await prompts({
     type: "confirm",
     name: "restart",

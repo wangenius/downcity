@@ -212,8 +212,8 @@ export interface AgentSessionSummary {
    *
    * 说明（中文）
    * - 标题持久化在 session `meta.json` 顶层。
-   * - 首条用户消息出现后，SDK 会优先生成标题，失败时回退到首条用户消息截断。
-   * - 空 session 可能暂时没有标题，调用方可回退到 `sessionId`。
+   * - SDK 只在模型成功生成标题时写入，不再从首条用户消息生成 fallback。
+   * - 标题允许为空，调用方需要展示占位文案时可自行回退到 `sessionId`。
    */
   title?: string;
   /**

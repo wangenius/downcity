@@ -32,15 +32,12 @@ import type {
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import { pickLastSuccessfulChatSendText } from "@/executor/messages/UserVisibleText.js";
 import { getSdkAgentSessionMessagesPath } from "@/session/storage/Paths.js";
+import { getSdkAgentSessionMetaPath } from "@/session/storage/Paths.js";
 import { getSdkAgentSessionsRootDirPath } from "@/session/storage/Paths.js";
 import { getSdkAgentArchivedSessionsDirPath } from "@/session/storage/Paths.js";
 import { getSdkAgentArchivedSessionMessagesPath } from "@/session/storage/Paths.js";
 import { getSdkAgentArchivedSessionMetaPath } from "@/session/storage/Paths.js";
-import { readSessionMetadata } from "@/session/storage/Metadata.js";
 import { readSessionMetadataFromPath } from "@/session/storage/Metadata.js";
-import {
-  ensureSessionTitle,
-} from "@/session/SessionTitle.js";
 
 type AnyUiPart = UIMessagePart<Record<string, never>, Record<string, never>>;
 
@@ -479,7 +476,7 @@ export async function listAgentSessionSummaryPage(params: {
     const sessionId = decodeMaybe(entry.name);
     if (!sessionId) continue;
     const metadata = await readSessionMetadataFromPath({
-      filePath: getSdkAgentArchivedSessionMetaPath(
+      filePath: getSdkAgentSessionMetaPath(
         params.projectRoot,
         params.agentId,
         sessionId,
@@ -488,19 +485,17 @@ export async function listAgentSessionSummaryPage(params: {
       agentId: params.agentId,
     });
     const messages = await loadSessionMessagesFromPath(
-      getSdkAgentArchivedSessionMessagesPath(
+      getSdkAgentSessionMessagesPath(
         params.projectRoot,
         params.agentId,
         sessionId,
       ),
     );
-    // 关键点（中文）：归档 session 不再生成新 title，仅读取已有 meta。
-    const metadataWithTitle = metadata;
     const info = buildSessionInfo({
       projectRoot: params.projectRoot,
       agentId: params.agentId,
       sessionId,
-      metadata: metadataWithTitle,
+      metadata,
       messages,
       executing: params.executingSessionIds?.has(sessionId),
     });
@@ -575,27 +570,28 @@ export async function listArchivedAgentSessionSummaryPage(params: {
     if (!entry.isDirectory()) continue;
     const sessionId = decodeMaybe(entry.name);
     if (!sessionId) continue;
-    const metadata = await readSessionMetadata({
-      projectRoot: params.projectRoot,
-      agentId: params.agentId,
+    const metadata = await readSessionMetadataFromPath({
+      filePath: getSdkAgentArchivedSessionMetaPath(
+        params.projectRoot,
+        params.agentId,
+        sessionId,
+      ),
       sessionId,
+      agentId: params.agentId,
     });
     const messages = await loadSessionMessagesFromPath(
-      getSdkAgentSessionMessagesPath(params.projectRoot, params.agentId, sessionId),
+      getSdkAgentArchivedSessionMessagesPath(
+        params.projectRoot,
+        params.agentId,
+        sessionId,
+      ),
     );
-    const metadataWithTitle = metadata.title
-      ? metadata
-      : await ensureSessionTitle({
-          projectRoot: params.projectRoot,
-          agentId: params.agentId,
-          sessionId,
-          messages,
-        });
+    // 关键点（中文）：归档 session 不再生成新 title，仅读取归档目录内已有 meta。
     const info = buildSessionInfo({
       projectRoot: params.projectRoot,
       agentId: params.agentId,
       sessionId,
-      metadata: metadataWithTitle,
+      metadata,
       messages,
       executing: false,
     });

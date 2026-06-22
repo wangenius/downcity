@@ -227,6 +227,15 @@ export class CoreEngineRunner {
             abortSignal: input.run_context.abortSignal,
           });
 
+        final_assistant_ui_message = mergeAssistantUiMessages(
+          final_assistant_ui_message,
+          step_assistant_ui_message,
+        );
+
+        // 关键点（中文）：先保存本 step 已收敛的 assistant 消息，再等待 steps。
+        // stop/abort 时 `result.steps` 可能抛错，但当前已经生成的文本仍应沉淀。
+        message_state.appendRuntimeSessionMessage(step_assistant_ui_message);
+
         const executed_steps = await result.steps;
         const last_step = executed_steps[executed_steps.length - 1];
         if (!last_step) break;
@@ -312,14 +321,6 @@ export class CoreEngineRunner {
           ? last_step.response.messages
           : [];
         message_state.appendModelMessages(response_messages);
-
-        final_assistant_ui_message = mergeAssistantUiMessages(
-          final_assistant_ui_message,
-          step_assistant_ui_message,
-        );
-
-        // 关键点（中文）：把本 step 的 assistant UI 消息并入运行时上下文，保证后续全量重算不丢历史。
-        message_state.appendRuntimeSessionMessage(step_assistant_ui_message);
 
         if (loop_decision.continueForToolCalls) {
           text_only_continuation_count = 0;

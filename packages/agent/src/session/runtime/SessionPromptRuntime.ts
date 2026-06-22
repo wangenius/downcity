@@ -228,15 +228,15 @@ export class SessionPromptRuntime {
           },
           abortSignal: activeTurn.abortController.signal,
         });
-        if (activeTurn.abortController.signal.aborted) {
-          throw new Error(TURN_STOPPED_MESSAGE);
-        }
+        const stopped = activeTurn.abortController.signal.aborted;
         const finalResult: AgentSessionTurnResult = {
           turnId,
           text: result.text,
-          success: result.success,
+          success: stopped ? false : result.success,
           assistantMessage: result.assistantMessage,
-          ...(result.error ? { error: result.error } : {}),
+          ...(stopped
+            ? { error: TURN_STOPPED_MESSAGE }
+            : result.error ? { error: result.error } : {}),
         };
         activeTurn.result = finalResult;
         this.publish({

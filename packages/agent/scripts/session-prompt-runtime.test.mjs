@@ -207,9 +207,10 @@ test("SessionPromptRuntime stops current turn and cancels unmerged queued prompt
       });
       await executionFinished.promise;
       return {
-        text: "should-not-succeed",
-        success: true,
-        assistantMessage: createAssistantMessage("should-not-succeed", 1),
+        text: "partial answer",
+        success: false,
+        assistantMessage: createAssistantMessage("partial answer", 1),
+        error: "Turn stopped",
       };
     },
     stopTurn: () => {
@@ -234,6 +235,8 @@ test("SessionPromptRuntime stops current turn and cancels unmerged queued prompt
   assert.equal(stopResult.cancelledQueuedPrompts, 1);
   assert.equal(firstResult.success, false);
   assert.equal(firstResult.error, "Turn stopped");
+  assert.equal(firstResult.text, "partial answer");
+  assert.equal(firstResult.assistantMessage.parts[0]?.text, "partial answer");
   assert.equal(secondResult.success, false);
   assert.equal(
     secondResult.error,

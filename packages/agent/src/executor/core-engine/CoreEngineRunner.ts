@@ -151,6 +151,7 @@ export class CoreEngineRunner {
       : [];
     const tools = input.execute_input.tools;
     let last_observed_stream_error: unknown = undefined;
+    let final_assistant_ui_message: SessionMessageV1 | null = null;
 
     try {
       const message_state = await CoreEngineMessageState.create({
@@ -190,7 +191,6 @@ export class CoreEngineRunner {
         runContext: input.run_context,
       });
 
-      let final_assistant_ui_message: SessionMessageV1 | null = null;
       let text_only_continuation_count = 0;
       let incomplete_response_recovery_count = 0;
 
@@ -224,6 +224,7 @@ export class CoreEngineRunner {
                 input.run_context,
               ),
             onUiMessageChunkCallback: input.run_context.onUiMessageChunkCallback,
+            abortSignal: input.run_context.abortSignal,
           });
 
         const executed_steps = await result.steps;
@@ -413,13 +414,18 @@ export class CoreEngineRunner {
         await this.logger.log("info", "[agent] stopped", {
           sessionId: session_id,
         });
+        const stopped_message = mergePendingAssistantFileParts(
+          final_assistant_ui_message ||
+            this.context_composer.buildFallbackAssistantMessage(
+              error_text,
+              input.run_context,
+            ),
+          input.run_context.pendingAssistantFileParts,
+        );
         return {
           success: false,
           error: error_text,
-          assistantMessage: this.context_composer.buildFallbackAssistantMessage(
-            error_text,
-            input.run_context,
-          ),
+          assistantMessage: stopped_message,
           deferredPersistedUserMessages: [
             ...input.run_context.deferredPersistedUserMessages,
           ],

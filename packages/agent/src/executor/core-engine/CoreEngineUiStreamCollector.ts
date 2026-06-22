@@ -42,9 +42,18 @@ export async function collectFinalAssistantMessageFromUiStream(params: {
    * UI stream chunk 回调。
    */
   onUiMessageChunkCallback?: SessionUiMessageChunkCallback;
+  /**
+   * 当前 turn 的取消信号。
+   *
+   * 关键点（中文）
+   * - stop 触发后，UI stream 可能在 onFinish 前中断。
+   * - 此时仍应尽量用已经收到的 text delta 构造可持久化 assistant 消息。
+   */
+  abortSignal?: AbortSignal;
 }): Promise<SessionMessageV1> {
   let streamedAssistantMessage: SessionMessageV1 | null = null;
   let uiFinishSummary: JsonObject | null = null;
+  let streamed_text = "";
 
   const uiStream = params.result.toUIMessageStream<SessionMessageV1>({
     // 关键点（中文）：SDK stream 需要 reasoning 旁路事件时可直接消费；最终落盘仍由 responseMessage 收敛。
@@ -74,12 +83,21 @@ export async function collectFinalAssistantMessageFromUiStream(params: {
     },
   });
 
-  for await (const chunk of uiStream) {
-    if (typeof params.onUiMessageChunkCallback !== "function") continue;
-    try {
-      await params.onUiMessageChunkCallback(chunk);
-    } catch {
-      // ignore UI stream callback failures
+  try {
+    for await (const chunk of uiStream) {
+      if (chunk.type === "text-delta") {
+        streamed_text += String(chunk.delta || "");
+      }
+      if (typeof params.onUiMessageChunkCallback !== "function") continue;
+      try {
+        await params.onUiMessageChunkCallback(chunk);
+      } catch {
+        // ignore UI stream callback failures
+      }
+    }
+  } catch (error) {
+    if (!params.abortSignal?.aborted) {
+      throw error;
     }
   }
 
@@ -97,6 +115,9 @@ export async function collectFinalAssistantMessageFromUiStream(params: {
     assistantText = String((await params.result.text) ?? "").trim();
   } catch {
     assistantText = "";
+  }
+  if (!assistantText) {
+    assistantText = streamed_text.trim();
   }
 
   await params.logger.log("warn", "[agent] final.message.fallback", {

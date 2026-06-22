@@ -123,6 +123,29 @@ export function registerSdkSessionRoutes(
     }
   });
 
+  app.post("/api/sdk/sessions/:sessionId/stop", async (c) => {
+    try {
+      const sessionId = String(c.req.param("sessionId") || "").trim();
+      if (!sessionId) {
+        return c.json({ success: false, error: "Missing sessionId" }, 400);
+      }
+      const session = await sessionCollection.get_session(sessionId);
+      const result = await session.stop();
+      return c.json({
+        success: true,
+        result,
+      });
+    } catch (error) {
+      return c.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        500,
+      );
+    }
+  });
+
   app.get("/api/sdk/sessions/:sessionId/events", async (c) => {
     const sessionId = String(c.req.param("sessionId") || "").trim();
     if (!sessionId) {

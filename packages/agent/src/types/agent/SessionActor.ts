@@ -28,6 +28,7 @@ import type {
   AgentSessionUnsubscribe,
 } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
+import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 
 /**
@@ -65,6 +66,9 @@ export interface AgentSessionActor {
 
   /** 追加一条新的 prompt。 */
   prompt(input: AgentSessionPromptInput): Promise<AgentSessionTurnHandle>;
+
+  /** 停止当前 turn，并取消尚未被吸收的排队 prompt。 */
+  stop(): Promise<AgentSessionStopResult>;
 
   /** 订阅当前 session 的未来事件。 */
   subscribe(subscriber: AgentSessionSubscriber): AgentSessionUnsubscribe;

@@ -43,6 +43,8 @@ import type {
 } from "@/executor/types/SessionRun.js";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 
+const TURN_STOPPED_MESSAGE = "Turn stopped";
+
 /**
  * 生成 file part 去重 key。
  */
@@ -200,6 +202,7 @@ export class CoreEngineRunner {
           prepareStep: prepare_step,
           messages: message_state.modelMessages,
           tools,
+          abortSignal: input.run_context.abortSignal,
           providerOptions: buildOpenAIResponsesProviderOptions(),
           onError: async ({ error }) => {
             last_observed_stream_error = error;
@@ -405,6 +408,24 @@ export class CoreEngineRunner {
         ],
       };
     } catch (error) {
+      if (input.run_context.abortSignal?.aborted) {
+        const error_text = TURN_STOPPED_MESSAGE;
+        await this.logger.log("info", "[agent] stopped", {
+          sessionId: session_id,
+        });
+        return {
+          success: false,
+          error: error_text,
+          assistantMessage: this.context_composer.buildFallbackAssistantMessage(
+            error_text,
+            input.run_context,
+          ),
+          deferredPersistedUserMessages: [
+            ...input.run_context.deferredPersistedUserMessages,
+          ],
+        };
+      }
+
       if (this.should_compact_on_error(error)) {
         throw error;
       }

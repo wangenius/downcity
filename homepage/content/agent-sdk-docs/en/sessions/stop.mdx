@@ -1,0 +1,30 @@
+---
+title: session.stop()
+description: Stop the current Session turn and cancel queued prompts that have not been merged yet
+---
+
+# `session.stop()`
+
+Use `session.stop()` to stop the current running turn.
+
+```ts
+const turn = await session.prompt({
+  query: "Run a long task",
+});
+
+const stopResult = await session.stop();
+await turn.finished;
+```
+
+`stop()` aborts the active turn and cancels queued prompts that have not yet been merged into that turn.
+
+```ts
+type AgentSessionStopResult = {
+  stopped: boolean;
+  turnId?: string;
+  cancelledQueuedPrompts: number;
+  reason: "stopped" | "idle";
+};
+```
+
+Stopped turns finish with `success: false`. `turn.finished` still resolves rather than rejecting.

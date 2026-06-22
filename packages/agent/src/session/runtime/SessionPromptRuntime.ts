@@ -12,10 +12,15 @@ import type { SessionUserMessageV1 } from "@/executor/types/SessionMessages.js";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
+import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type {
   AgentSessionTurnHandle,
   AgentSessionTurnResult,
 } from "@/types/sdk/AgentSessionTurn.js";
+
+const TURN_STOPPED_MESSAGE = "Turn stopped";
+const QUEUED_PROMPT_CANCELLED_MESSAGE =
+  "Prompt cancelled because session was stopped";
 
 type QueuedPrompt = {
   /**
@@ -62,6 +67,11 @@ interface ActiveTurnState {
    * 当前 turn 完成 Promise 控制器。
    */
   deferredFinished: Deferred<AgentSessionTurnResult>;
+
+  /**
+   * 当前 turn 的取消控制器。
+   */
+  abortController: AbortController;
 }
 
 /**
@@ -92,12 +102,18 @@ export interface SessionPromptRuntimeOptions {
     turnId: string;
     promptInput: AgentSessionPromptInput;
     onStepMerge: () => Promise<SessionUserMessageV1[]>;
+    abortSignal: AbortSignal;
   }) => Promise<{
     text: string;
     success: boolean;
     assistantMessage: SessionMessageV1;
     error?: string;
   }>;
+
+  /**
+   * 请求底层执行器停止当前 run。
+   */
+  stopTurn: () => boolean;
 }
 
 /**
@@ -108,14 +124,17 @@ export class SessionPromptRuntime {
   private readonly publish: SessionPromptRuntimeOptions["publish"];
   private readonly createAndPersistUserMessage: SessionPromptRuntimeOptions["createAndPersistUserMessage"];
   private readonly executeTurn: SessionPromptRuntimeOptions["executeTurn"];
+  private readonly stopTurn: SessionPromptRuntimeOptions["stopTurn"];
   private readonly queue: QueuedPrompt[] = [];
   private processingPromise: Promise<void> | null = null;
+  private activeTurn: ActiveTurnState | null = null;
 
   constructor(options: SessionPromptRuntimeOptions) {
     this.sessionId = String(options.sessionId || "").trim();
     this.publish = options.publish;
     this.createAndPersistUserMessage = options.createAndPersistUserMessage;
     this.executeTurn = options.executeTurn;
+    this.stopTurn = options.stopTurn;
     if (!this.sessionId) {
       throw new Error("SessionPromptRuntime requires a non-empty sessionId");
     }
@@ -147,6 +166,34 @@ export class SessionPromptRuntime {
     return this.processingPromise !== null || this.queue.length > 0;
   }
 
+  /**
+   * 停止当前 turn，并取消尚未被吸收的排队 prompt。
+   */
+  stop(): AgentSessionStopResult {
+    const active_turn = this.activeTurn;
+    const cancelled_queued_prompts = this.cancelQueuedPrompts();
+    let executor_stop_requested = false;
+
+    if (active_turn) {
+      if (!active_turn.abortController.signal.aborted) {
+        active_turn.abortController.abort(new Error(TURN_STOPPED_MESSAGE));
+      }
+      executor_stop_requested = this.stopTurn();
+    }
+
+    const stopped = Boolean(
+      active_turn ||
+        executor_stop_requested ||
+        cancelled_queued_prompts > 0,
+    );
+    return {
+      stopped,
+      ...(active_turn ? { turnId: active_turn.turnId } : {}),
+      cancelledQueuedPrompts: cancelled_queued_prompts,
+      reason: stopped ? "stopped" : "idle",
+    };
+  }
+
   private ensureProcessing(): void {
     if (this.processingPromise) return;
     this.processingPromise = this.processLoop().finally(() => {
@@ -164,6 +211,7 @@ export class SessionPromptRuntime {
 
       const turnId = `turn:${this.sessionId}:${Date.now()}:${nanoid(6)}`;
       const activeTurn = createActiveTurnState(turnId);
+      this.activeTurn = activeTurn;
       this.publish({
         type: "turn-start",
         turnId,
@@ -178,7 +226,11 @@ export class SessionPromptRuntime {
           onStepMerge: async () => {
             return await this.drainQueuedPromptsAsMessages(activeTurn);
           },
+          abortSignal: activeTurn.abortController.signal,
         });
+        if (activeTurn.abortController.signal.aborted) {
+          throw new Error(TURN_STOPPED_MESSAGE);
+        }
         const finalResult: AgentSessionTurnResult = {
           turnId,
           text: result.text,
@@ -196,7 +248,9 @@ export class SessionPromptRuntime {
         });
         activeTurn.deferredFinished.resolve(finalResult);
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = activeTurn.abortController.signal.aborted
+          ? TURN_STOPPED_MESSAGE
+          : error instanceof Error ? error.message : String(error);
         const finalResult: AgentSessionTurnResult = {
           turnId,
           text: "",
@@ -208,10 +262,12 @@ export class SessionPromptRuntime {
           error: message,
         };
         activeTurn.result = finalResult;
-        this.publish({
-          type: "error",
-          message,
-        });
+        if (message !== TURN_STOPPED_MESSAGE) {
+          this.publish({
+            type: "error",
+            message,
+          });
+        }
         this.publish({
           type: "turn-finish",
           turnId,
@@ -220,8 +276,46 @@ export class SessionPromptRuntime {
           error: message,
         });
         activeTurn.deferredFinished.resolve(finalResult);
+      } finally {
+        if (this.activeTurn === activeTurn) {
+          this.activeTurn = null;
+        }
       }
     }
+  }
+
+  private cancelQueuedPrompts(): number {
+    if (this.queue.length <= 0) return 0;
+    const cancelled = this.queue.splice(0, this.queue.length);
+    for (const item of cancelled) {
+      const turnId = `turn:${this.sessionId}:cancelled:${Date.now()}:${nanoid(6)}`;
+      const cancelledTurn = createActiveTurnState(turnId);
+      const finalResult: AgentSessionTurnResult = {
+        turnId,
+        text: "",
+        success: false,
+        assistantMessage: buildPromptRuntimeErrorAssistantMessage({
+          sessionId: this.sessionId,
+          message: QUEUED_PROMPT_CANCELLED_MESSAGE,
+        }),
+        error: QUEUED_PROMPT_CANCELLED_MESSAGE,
+      };
+      cancelledTurn.result = finalResult;
+      cancelledTurn.deferredFinished.resolve(finalResult);
+      this.publish({
+        type: "turn-start",
+        turnId,
+      });
+      this.publish({
+        type: "turn-finish",
+        turnId,
+        text: "",
+        success: false,
+        error: QUEUED_PROMPT_CANCELLED_MESSAGE,
+      });
+      item.deferredHandle.resolve(createTurnHandle(cancelledTurn));
+    }
+    return cancelled.length;
   }
 
   private async drainQueuedPromptsAsMessages(
@@ -286,6 +380,7 @@ function createActiveTurnState(turnId: string): ActiveTurnState {
     turnId,
     result: null,
     deferredFinished: createDeferred<AgentSessionTurnResult>(),
+    abortController: new AbortController(),
   };
 }
 

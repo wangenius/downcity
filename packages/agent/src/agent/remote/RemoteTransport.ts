@@ -20,6 +20,7 @@ import type {
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
+  AgentSessionStopResult,
   RemoteAgentPluginActionInput,
   RemoteAgentPluginActionResult,
 } from "@/types/agent/AgentTypes.js";
@@ -53,6 +54,8 @@ export type RemoteSessionTransport = {
     session_id: string,
     input: AgentSessionPromptInput,
   ): Promise<{ id: string }>;
+  /** 停止当前 session turn，并取消未吸收队列。 */
+  stop(session_id: string): Promise<AgentSessionStopResult>;
   /** 订阅 session 事件。 */
   subscribe(params: {
     session_id: string;

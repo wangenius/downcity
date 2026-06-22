@@ -36,6 +36,7 @@ import type {
   AgentSessionUnsubscribe,
 } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
+import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 import { SessionEventHub } from "@/session/runtime/SessionEventHub.js";
 import { SessionStateService } from "@/session/services/SessionStateService.js";
@@ -190,6 +191,13 @@ export class Session implements AgentSession {
   }
 
   /**
+   * 停止当前 turn，并取消尚未被吸收的排队 prompt。
+   */
+  async stop(): Promise<AgentSessionStopResult> {
+    return await this.turnService.stop();
+  }
+
+  /**
    * 订阅当前 Session 的未来事件。
    */
   subscribe(subscriber: AgentSessionSubscriber): AgentSessionUnsubscribe {
@@ -269,6 +277,7 @@ export class Session implements AgentSession {
       sessionId: this.id,
       getExecutor: () => this.executor.getExecutor(),
       prompt: async (input) => await this.prompt(input),
+      stop: async () => await this.stop(),
       subscribe: (subscriber) => this.subscribe(subscriber),
       publishEvent: (event) => {
         this.eventHub.publish(event);

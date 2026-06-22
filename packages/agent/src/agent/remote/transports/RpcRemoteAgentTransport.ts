@@ -20,6 +20,7 @@ import type {
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
+  AgentSessionStopResult,
   RemoteAgentPluginActionInput,
   RemoteAgentPluginActionResult,
 } from "@/types/agent/AgentTypes.js";
@@ -65,6 +66,10 @@ export class RpcRemoteAgentTransport implements RemoteAgentTransport {
       session_id,
       input,
     });
+  }
+
+  async stop(session_id: string): Promise<AgentSessionStopResult> {
+    return await this.client.stop_session(session_id);
   }
 
   async subscribe(params: {

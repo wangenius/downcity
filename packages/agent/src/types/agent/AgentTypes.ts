@@ -49,6 +49,7 @@ export type {
   AgentSessionSystemSnapshot,
   AgentSessionTimelineEvent,
 } from "@/types/agent/SessionTypes.js";
+export type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 export type {
   AgentSession,
   AgentSessionActor,

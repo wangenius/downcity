@@ -27,6 +27,7 @@ import type {
 } from "@/executor/types/SessionRun.js";
 import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
+import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type {
   AgentSessionEvent,
   AgentSessionSubscriber,
@@ -93,9 +94,10 @@ export interface SessionExecutorPort {
    * 请求取消当前正在执行的 turn。
    *
    * 关键点（中文）
-   * - 对普通本地 runtime 可不实现。
-   * - ACP runtime 可借此向远端发送 `session/cancel`。
+   * - 返回 `true` 表示已发出取消请求。
+   * - 返回 `false` 表示当前没有可取消的执行。
    */
+  stop(): boolean;
 }
 
 /**
@@ -122,6 +124,10 @@ export interface SessionPort {
    * - 返回值只有在当前输入被绑定到某个 turn 后才会兑现。
    */
   prompt(input: AgentSessionPromptInput): Promise<AgentSessionTurnHandle>;
+  /**
+   * 停止当前 turn，并取消尚未被吸收的排队 prompt。
+   */
+  stop(): Promise<AgentSessionStopResult>;
   /**
    * 订阅当前 session 后续产生的 future 事件。
    *

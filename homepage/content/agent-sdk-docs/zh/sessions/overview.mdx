@@ -39,6 +39,7 @@ await turn.finished;
 - `set`
 - `getInfo`
 - `prompt`
+- `stop`
 - `subscribe`
 - `history`
 - `system`
@@ -65,6 +66,7 @@ await turn.finished;
 ## 使用建议
 
 - 用 `prompt()` 追加新的用户输入
+- 用 `stop()` 停止当前 turn，并取消尚未被吸收的排队 prompt
 - 用 `subscribe()` 观察后续 turn 事件
 - 需要等待某一轮最终结果时，使用 `turn.finished`
 
@@ -72,4 +74,5 @@ await turn.finished;
 
 - [set model](/zh/agent-sdk-docs/sessions/set-model)
 - [prompt](/zh/agent-sdk-docs/sessions/prompt)
+- [stop](/zh/agent-sdk-docs/sessions/stop)
 - [subscribe](/zh/agent-sdk-docs/sessions/subscribe)

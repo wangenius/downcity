@@ -20,6 +20,7 @@ import type {
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
+  AgentSessionStopResult,
   RemoteAgentPluginActionInput,
   RemoteAgentPluginActionResult,
 } from "@/types/agent/AgentTypes.js";
@@ -121,6 +122,23 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
       throw new Error(String(payload.error || "Remote session prompt failed"));
     }
     return { id };
+  }
+
+  async stop(session_id: string): Promise<AgentSessionStopResult> {
+    const payload = await read_http_json<{
+      success?: boolean;
+      error?: string;
+      result?: AgentSessionStopResult;
+    }>(`${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/stop`, {
+      method: "POST",
+      headers: this.headers({
+        "Content-Type": "application/json",
+      }),
+    });
+    if (!payload.success || !payload.result) {
+      throw new Error(String(payload.error || "Remote session stop failed"));
+    }
+    return payload.result;
   }
 
   async subscribe(params: {

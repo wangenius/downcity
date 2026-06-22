@@ -1,0 +1,71 @@
+---
+title: session.stop()
+description: 停止当前 Session turn，并取消尚未被吸收的排队 prompt
+---
+
+# `session.stop()`
+
+`session.stop()` 用来停止当前正在执行的 turn。
+
+```ts
+const turn = await session.prompt({
+  query: "执行一个较长任务",
+});
+
+const result = await session.stop();
+console.log(result.stopped);
+
+await turn.finished;
+```
+
+## 返回值
+
+```ts
+type AgentSessionStopResult = {
+  stopped: boolean;
+  turnId?: string;
+  cancelledQueuedPrompts: number;
+  reason: "stopped" | "idle";
+};
+```
+
+字段含义：
+
+- `stopped`：本次调用是否实际停止了活跃 turn 或取消了排队 prompt
+- `turnId`：被停止的当前 turn
+- `cancelledQueuedPrompts`：被取消的未绑定 prompt 数量
+- `reason`：`stopped` 表示发生了停止动作，`idle` 表示当前没有可停止的工作
+
+## 队列语义
+
+`session.prompt()` 允许在当前 turn 运行中继续追加输入。`stop()` 的规则是：
+
+- 当前正在执行的 turn 会被停止
+- 已经被当前 turn 吸收的 prompt 会随当前 turn 一起结束
+- 尚未被吸收、仍在队列里的 prompt 会被取消
+- 被取消的 queued prompt 不会自动开启下一轮
+
+因此用户点击停止后，session 不会因为队列里还有输入而立刻继续执行。
+
+## 事件和结果
+
+被停止的 turn 会以失败结果结束：
+
+```ts
+const result = await turn.finished;
+
+console.log(result.success); // false
+console.log(result.error);   // "Turn stopped"
+```
+
+订阅方也会收到 `turn-finish`：
+
+```ts
+const unsubscribe = session.subscribe((event) => {
+  if (event.type === "turn-finish" && !event.success) {
+    console.log(event.error);
+  }
+});
+```
+
+`turn.finished` 仍然会 resolve，不会因为 stop 而 reject。

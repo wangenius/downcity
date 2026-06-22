@@ -19,6 +19,7 @@ import type {
   AgentSessionHistoryInput,
   AgentSessionHistoryPage,
   AgentSessionInfo,
+  AgentSessionStopResult,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
 } from "@/types/agent/AgentTypes.js";
@@ -179,6 +180,19 @@ export class RpcClient {
       },
     });
     return data.turn;
+  }
+
+  /**
+   * 停止远程 session 当前 turn。
+   */
+  async stop_session(session_id: string): Promise<AgentSessionStopResult> {
+    const data = await this.request<{ result: AgentSessionStopResult }>({
+      method: "sdk.sessions.stop",
+      params: {
+        sessionId: session_id,
+      },
+    });
+    return data.result;
   }
 
   /**

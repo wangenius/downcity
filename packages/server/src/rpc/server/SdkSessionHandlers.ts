@@ -53,6 +53,12 @@ export async function handleSdkSessionRpcRequest(params: {
       write_success(request.id, { turn: { id: turn.id } });
       return true;
     }
+    case "sdk.sessions.stop": {
+      const session = await options.sessionCollection.get_session(request.params.sessionId);
+      const result = await session.stop();
+      write_success(request.id, { result });
+      return true;
+    }
     case "sdk.sessions.history": {
       const session = await options.sessionCollection.get_session(request.params.sessionId);
       const history = await session.history(request.params.input);

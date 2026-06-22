@@ -39,12 +39,15 @@ await turn.finished;
 - `set`
 - `getInfo`
 - `prompt`
+- `stop`
 - `subscribe`
 - `history`
 - `system`
 - `fork`
 
 If you remember only one thing, remember this: the real working object in the SDK is not `Agent` itself, but the `session`.
+
+`session.stop()` stops the current turn and cancels queued prompts that have not been merged into that turn yet.
 
 ## One important difference
 

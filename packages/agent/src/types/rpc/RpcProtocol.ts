@@ -16,6 +16,7 @@ import type {
   AgentArchiveSessionsResult,
   AgentCleanArchiveResult,
   AgentSessionHistoryInput,
+  AgentSessionStopResult,
   AgentSessionSystemSnapshot,
 } from "@/types/agent/AgentTypes.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
@@ -95,6 +96,17 @@ export type RpcRequest =
         sessionId: string;
         /** SDK prompt 输入。 */
         input: AgentSessionPromptInput;
+      };
+    }
+  | {
+      /** 请求 id，用于匹配响应。 */
+      id: string;
+      /** 停止当前 session turn。 */
+      method: "sdk.sessions.stop";
+      /** 停止参数。 */
+      params: {
+        /** 目标 session id。 */
+        sessionId: string;
       };
     }
   | {

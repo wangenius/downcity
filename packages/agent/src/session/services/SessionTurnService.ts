@@ -15,6 +15,7 @@ import type {
   AgentSessionUnsubscribe,
 } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
+import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 import type {
   SessionMessageV1,
@@ -80,13 +81,15 @@ export class SessionTurnService {
           input,
         );
       },
-      executeTurn: async ({ turnId, promptInput, onStepMerge }) => {
+      executeTurn: async ({ turnId, promptInput, onStepMerge, abortSignal }) => {
         return await this.execute_prompt_turn({
           turnId,
           promptInput,
           onStepMerge,
+          abortSignal,
         });
       },
+      stopTurn: () => this.executor.stop(),
     });
   }
 
@@ -126,12 +129,20 @@ export class SessionTurnService {
   }
 
   /**
+   * 停止当前 turn，并取消尚未被吸收的排队 prompt。
+   */
+  async stop(): Promise<AgentSessionStopResult> {
+    return this.prompt_runtime.stop();
+  }
+
+  /**
    * 执行单轮 prompt turn。
    */
   private async execute_prompt_turn(input: {
     turnId: string;
     promptInput: AgentSessionPromptInput;
     onStepMerge: () => Promise<SessionUserMessageV1[]>;
+    abortSignal?: AbortSignal;
   }): Promise<{
     text: string;
     success: boolean;
@@ -192,6 +203,7 @@ export class SessionTurnService {
       injectedUserMessages: [],
       deferredPersistedUserMessages: [],
       pendingAssistantFileParts: [],
+      ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
     };
     const result = await this.executor.run({
       query: input.promptInput.query,

@@ -109,6 +109,7 @@ export class Executor implements SessionExecutor {
   private readonly core_engine_runner: CoreEngineRunner;
 
   private executing = false;
+  private abort_controller: AbortController | null = null;
 
   constructor(options: ExecutorOptions) {
     const sessionId = String(options.sessionId || "").trim();
@@ -160,6 +161,17 @@ export class Executor implements SessionExecutor {
    */
   isExecuting(): boolean {
     return this.executing;
+  }
+
+  /**
+   * 请求停止当前执行。
+   */
+  stop(): boolean {
+    if (!this.executing || !this.abort_controller) return false;
+    if (!this.abort_controller.signal.aborted) {
+      this.abort_controller.abort(new Error("Turn stopped"));
+    }
+    return true;
   }
 
   /**
@@ -260,6 +272,22 @@ export class Executor implements SessionExecutor {
     };
     run_context.onAssistantStepCallback = wrappedOnAssistantStepCallback;
 
+    const upstream_abort_signal = run_context.abortSignal;
+    const abort_controller = new AbortController();
+    const abort_from_upstream = () => {
+      if (!abort_controller.signal.aborted) {
+        abort_controller.abort(upstream_abort_signal?.reason);
+      }
+    };
+    if (upstream_abort_signal?.aborted) {
+      abort_from_upstream();
+    } else {
+      upstream_abort_signal?.addEventListener("abort", abort_from_upstream, {
+        once: true,
+      });
+    }
+    this.abort_controller = abort_controller;
+    run_context.abortSignal = abort_controller.signal;
     this.executing = true;
     this.recovery_policy.reset_run_state();
     try {
@@ -308,6 +336,10 @@ export class Executor implements SessionExecutor {
       return result;
     } finally {
       this.recovery_policy.reset_run_state();
+      if (this.abort_controller === abort_controller) {
+        this.abort_controller = null;
+      }
+      upstream_abort_signal?.removeEventListener("abort", abort_from_upstream);
       this.executing = false;
     }
   }
@@ -397,6 +429,7 @@ export class Executor implements SessionExecutor {
       ...(typeof input?.onUiMessageChunkCallback === "function"
         ? { onUiMessageChunkCallback: input.onUiMessageChunkCallback }
         : {}),
+      ...(input?.abortSignal ? { abortSignal: input.abortSignal } : {}),
       injectedUserMessages: Array.isArray(input?.injectedUserMessages)
         ? [...input.injectedUserMessages]
         : [],

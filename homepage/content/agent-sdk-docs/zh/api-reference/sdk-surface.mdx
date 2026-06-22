@@ -121,6 +121,7 @@ await turn.finished;
 - `session.set(input)`
 - `session.getInfo()`
 - `session.prompt(input)`
+- `session.stop()`
 - `session.subscribe(subscriber)`
 - `session.history(input?)`
 - `session.system()`
@@ -143,6 +144,7 @@ await turn.finished;
 - `session.id`
 - `session.getInfo()`
 - `session.prompt(input)`
+- `session.stop()`
 - `session.subscribe(subscriber)`
 - `session.history(input?)`
 - `session.system()`
@@ -173,6 +175,7 @@ await turn.finished;
 - 需要读取单个 session 的当前摘要/详情：`getInfo()`
 - 需要分页读取会话内容：`history()`
 - 需要监听后续 turn 事件：`subscribe()`
+- 需要停止当前 turn 并清空未吸收队列：`stop()`
 - 需要查看当前实际生效的 system prompt 快照：`system()`
 - 需要从当前状态分叉一条新会话：`fork()`
 

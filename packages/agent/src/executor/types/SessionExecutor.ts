@@ -21,9 +21,10 @@ export interface SessionExecutor {
    * 请求取消当前正在执行的 turn。
    *
    * 关键点（中文）
-   * - 主要给 ACP 执行器使用，对应协议侧 `session/cancel`。
+   * - `session.stop()` 会调用这里终止当前模型流与 tool-loop。
    * - 返回 `true` 表示本次请求已发出；`false` 表示当前没有可取消的 turn。
    */
+  stop(): boolean;
 
   /**
    * 释放执行器持有的资源。

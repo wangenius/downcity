@@ -5,6 +5,7 @@
     "set-model",
     "info",
     "prompt",
+    "stop",
     "subscribe",
     "history",
     "system",

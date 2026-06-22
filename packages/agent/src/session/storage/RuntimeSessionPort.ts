@@ -9,6 +9,7 @@
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
+import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type {
   AgentSessionEvent,
   AgentSessionSubscriber,
@@ -32,6 +33,10 @@ export interface CreateRuntimeSessionPortParams {
    * 追加一条新的 session prompt。
    */
   prompt: (input: AgentSessionPromptInput) => Promise<AgentSessionTurnHandle>;
+  /**
+   * 停止当前 turn，并取消尚未被吸收的排队 prompt。
+   */
+  stop: () => Promise<AgentSessionStopResult>;
   /**
    * 订阅当前 session 的 future 事件。
    */
@@ -89,6 +94,10 @@ export function createRuntimeSessionPort(
     prompt: async (input) => {
       await params.ensureReadyForExecution();
       return await params.prompt(input);
+    },
+    stop: async () => {
+      await params.ensureReadyForExecution();
+      return await params.stop();
     },
     subscribe: (subscriber) => {
       return params.subscribe(subscriber);

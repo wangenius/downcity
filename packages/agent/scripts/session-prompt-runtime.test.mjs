@@ -98,6 +98,7 @@ test("SessionPromptRuntime merges queued prompts at the next step boundary", asy
         assistantMessage: createAssistantMessage("done", 1),
       };
     },
+    stopTurn: () => false,
   });
 
   const firstTurn = await runtime.prompt({ query: "first" });
@@ -159,6 +160,7 @@ test("SessionPromptRuntime moves unmerged prompts into the next turn", async () 
         ),
       };
     },
+    stopTurn: () => false,
   });
 
   const firstTurn = await runtime.prompt({ query: "first" });
@@ -183,5 +185,62 @@ test("SessionPromptRuntime moves unmerged prompts into the next turn", async () 
   assert.deepEqual(
     events.map((event) => event.type),
     ["turn-start", "turn-finish", "turn-start", "turn-finish"],
+  );
+});
+
+test("SessionPromptRuntime stops current turn and cancels unmerged queued prompts", async () => {
+  const events = [];
+  const executionFinished = createDeferred();
+  let stopRequested = false;
+
+  const runtime = new SessionPromptRuntime({
+    sessionId: "test",
+    publish: (event) => {
+      events.push(event);
+    },
+    createAndPersistUserMessage: async (input) => {
+      return createUserMessage(input.query, events.length + 1);
+    },
+    executeTurn: async (input) => {
+      await new Promise((resolve) => {
+        input.abortSignal.addEventListener("abort", resolve, { once: true });
+      });
+      await executionFinished.promise;
+      return {
+        text: "should-not-succeed",
+        success: true,
+        assistantMessage: createAssistantMessage("should-not-succeed", 1),
+      };
+    },
+    stopTurn: () => {
+      stopRequested = true;
+      executionFinished.resolve();
+      return true;
+    },
+  });
+
+  const firstTurn = await runtime.prompt({ query: "first" });
+  const secondTurnPromise = runtime.prompt({ query: "second" });
+  await waitUntil(() => runtime.isActive());
+
+  const stopResult = runtime.stop();
+  const secondTurn = await secondTurnPromise;
+  const firstResult = await firstTurn.finished;
+  const secondResult = await secondTurn.finished;
+
+  assert.equal(stopRequested, true);
+  assert.equal(stopResult.stopped, true);
+  assert.equal(stopResult.turnId, firstTurn.id);
+  assert.equal(stopResult.cancelledQueuedPrompts, 1);
+  assert.equal(firstResult.success, false);
+  assert.equal(firstResult.error, "Turn stopped");
+  assert.equal(secondResult.success, false);
+  assert.equal(
+    secondResult.error,
+    "Prompt cancelled because session was stopped",
+  );
+  assert.deepEqual(
+    events.map((event) => event.type),
+    ["turn-start", "turn-start", "turn-finish", "turn-finish"],
   );
 });

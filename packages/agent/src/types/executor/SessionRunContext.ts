@@ -67,6 +67,15 @@ export interface SessionRunContext {
   onUiMessageChunkCallback?: SessionUiMessageChunkCallback;
 
   /**
+   * 当前 turn 的取消信号。
+   *
+   * 关键点（中文）
+   * - `session.stop()` 会触发该 signal。
+   * - 模型流、tool-loop 与长耗时 composer 应优先监听它，尽快结束当前 turn。
+   */
+  abortSignal?: AbortSignal;
+
+  /**
    * 本轮运行中待并入下一 step 的 user 消息。
    *
    * 关键点（中文）

@@ -16,6 +16,7 @@ import type {
   AgentSessionSetInput,
   AgentSessionSystemSnapshot,
 } from "@/types/agent/AgentTypes.js";
+import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type {
   AgentSessionEvent,
   AgentSessionSubscriber,
@@ -102,6 +103,14 @@ export class RemoteSession implements AgentSession {
     const turn = await this.transport.prompt(this.id, input);
     const lifecycle = this.ensure_turn_lifecycle(turn.id);
     return create_turn_handle(lifecycle);
+  }
+
+  /**
+   * 停止当前远程 session turn，并取消未吸收队列。
+   */
+  async stop(): Promise<AgentSessionStopResult> {
+    await this.ensure_event_pump();
+    return await this.transport.stop(this.id);
   }
 
   /**

@@ -79,6 +79,7 @@ export interface FederationD1DatabaseSummary {
 export type FederationQueueStatus =
   | "created"
   | "reused"
+  | "pending"
   | "skipped";
 
 /**

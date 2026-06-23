@@ -206,7 +206,7 @@ if (current.status === "succeeded") {
 
 Generated image file-part `url` values are returned exactly as the concrete Provider supplies them. A Provider may return HTTPS URLs, R2/resource URLs, or `data:image/...;base64,...` data URLs.
 
-`image_create()` returns after the task is submitted. The server-side Provider/worker is responsible for persisting the final result in the background; `image_result()` only reads that saved state.
+`image_create()` returns after the task is submitted. A backend worker or admin process should call `/v1/ai/image/persist`; AIService stores the final result in its built-in `async_jobs` table, and `image_result()` reads that saved state.
 
 You can also use `messages` for conversational or reference-image workflows:
 

@@ -206,7 +206,7 @@ if (current.status === "succeeded") {
 
 生成图片的 file part `url` 会按具体 Provider 返回的内容原样返回。Provider 可以返回 HTTPS URL、R2/resource URL，或 `data:image/...;base64,...` data URL。
 
-`image_create()` 会在任务提交后立即返回。服务端 Provider / worker 负责在后台持久化最终结果；`image_result()` 只读取已经保存的任务状态。
+`image_create()` 会在任务提交后立即返回。后台 worker 或 admin 进程应该调用 `/v1/ai/image/persist`；AIService 会把最终结果写入内置 `async_jobs` 表，`image_result()` 只读取已经保存的任务状态。
 
 也可以在对话或参考图场景使用 `messages`：
 

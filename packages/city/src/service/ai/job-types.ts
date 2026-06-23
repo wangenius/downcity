@@ -2,11 +2,12 @@
  * AI 图片任务协议类型。
  *
  * 关键点（中文）
- * - AIService 只固定 image_create / image_persist / image_result 的返回协议。
- * - 图片任务如何存储、如何后台执行、图片 URL 如何表达，全部由具体 Provider 实现决定。
+ * - AIService 固定 image_create / image_persist / image_result 的返回协议。
+ * - AIService 默认使用内置 async_jobs 表保存图片任务，Provider 只负责创建和持久化上游结果。
  */
 
 import type { UIMessage } from "ai";
+import type { AsyncJobRecord } from "../../types/AsyncJob.js";
 
 /** 图片任务状态。 */
 export type AIImageJobStatus = "queued" | "running" | "succeeded" | "failed";
@@ -45,6 +46,8 @@ export interface AIImageProviderPersistResult {
   error?: string;
   /** 当前任务状态说明，便于后台排障。 */
   message?: string;
+  /** 建议后台下一次 persist 的间隔毫秒数。 */
+  poll_after_ms?: number;
   /** 稳定计费引用，用于幂等扣费。 */
   billing_ref?: string;
   /** 具体 Provider 返回的扩展元数据，例如 usage。 */
@@ -79,4 +82,14 @@ export type UserImageJobResult = AIImageProviderResult;
 export interface UserImageJobResultInput {
   /** 图片任务 ID，由 image_create 返回。 */
   job_id: string;
+}
+
+/** Provider 在 image_persist 中可读取的图片任务上下文。 */
+export interface AIImageJobContext {
+  /** async_jobs 中保存的完整任务记录。 */
+  record: AsyncJobRecord;
+  /** image_create 时的原始输入。 */
+  input: Record<string, unknown>;
+  /** image_create / image_persist 返回的 provider 状态。 */
+  state?: AIImageJobMetadata;
 }

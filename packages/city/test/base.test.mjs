@@ -574,7 +574,6 @@ test("Federation AI image jobs persist and finish through provider result", asyn
           jobs.set(job_id, persisted)
           return persisted
         },
-        image_result: async (ctx) => jobs.get(String(ctx.input.job_id)),
       },
     })
     base.use(ai)
@@ -622,7 +621,7 @@ test("Federation AI image jobs persist and finish through provider result", asyn
       status: "succeeded",
       result: message,
       message: "succeeded",
-      poll_after_ms: 2000,
+      metadata: {},
     })
   } finally {
     process.chdir(cwd)
@@ -630,7 +629,7 @@ test("Federation AI image jobs persist and finish through provider result", asyn
   }
 })
 
-test("Federation AI image jobs require provider create, persist, and result actions", async () => {
+test("Federation AI image jobs require provider create and persist actions", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-image-job-output-"))
 
@@ -667,13 +666,6 @@ test("Federation AI image jobs require provider create, persist, and result acti
           message: "succeeded",
           poll_after_ms: 2000,
         }),
-        image_result: async (ctx) => ({
-          job_id: String(ctx.input.job_id),
-          status: "succeeded",
-          result: jobs.get(String(ctx.input.job_id)),
-          message: "succeeded",
-          poll_after_ms: 2000,
-        }),
       },
     })
     base.use(ai)
@@ -693,6 +685,16 @@ test("Federation AI image jobs require provider create, persist, and result acti
     const created = await createResponse.json()
     assert.equal(created.status, "running")
 
+    const persistResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/persist", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ job_id: created.job_id }),
+    }))
+    assert.equal(persistResponse.status, 200)
+
     const resultResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",
       headers: {
@@ -708,7 +710,7 @@ test("Federation AI image jobs require provider create, persist, and result acti
       status: "succeeded",
       result: message,
       message: "succeeded",
-      poll_after_ms: 2000,
+      metadata: {},
     })
   } finally {
     process.chdir(cwd)
@@ -753,13 +755,6 @@ test("Federation AI image jobs return provider result as-is", async () => {
           message: "succeeded",
           poll_after_ms: 2000,
         }),
-        image_result: async (ctx) => ({
-          job_id: String(ctx.input.job_id),
-          status: "succeeded",
-          result: jobs.get(String(ctx.input.job_id)),
-          message: "succeeded",
-          poll_after_ms: 2000,
-        }),
       },
     })
     base.use(ai)
@@ -777,6 +772,16 @@ test("Federation AI image jobs return provider result as-is", async () => {
 
     assert.equal(createResponse.status, 200)
     const created = await createResponse.json()
+
+    const persistResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/persist", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ job_id: created.job_id }),
+    }))
+    assert.equal(persistResponse.status, 200)
 
     const resultResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",
@@ -819,10 +824,6 @@ test("Federation AI image direct endpoint is not exposed", async () => {
           job_id: String(ctx.input.job_id),
           status: "running",
         }),
-        image_result: async (ctx) => ({
-          job_id: String(ctx.input.job_id),
-          status: "running",
-        }),
       },
     })
     base.use(ai)
@@ -861,10 +862,6 @@ test("Federation AI image jobs reject incomplete provider actions", async () => 
       actions: {
         image_create: async () => ({
           job_id: "img_incomplete_1",
-          status: "running",
-        }),
-        image_result: async (ctx) => ({
-          job_id: String(ctx.input.job_id),
           status: "running",
         }),
       },
@@ -947,15 +944,6 @@ test("AIService charges image jobs only after provider persist succeeds", async 
           },
           metadata: {
             user_id: "user_1",
-          },
-        }),
-        image_result: async (ctx) => ({
-          job_id: String(ctx.input.job_id),
-          status: "succeeded",
-          result: {
-            id: "msg_priced_image",
-            role: "assistant",
-            parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,abc" }],
           },
         }),
       },
@@ -1171,18 +1159,6 @@ test("Federation AI image jobs can advance through result polling", async () => 
           jobs.set(job_id, persisted)
           return persisted
         },
-        image_result: async (ctx) => {
-          calls += 1
-          const job_id = String(ctx.input.job_id)
-          assert.equal(jobs.get(job_id)?.step, "persisted")
-          return {
-            job_id,
-            status: "succeeded",
-            result: message,
-            message: "succeeded",
-            poll_after_ms: 2000,
-          }
-        },
       },
     })
     base.use(ai)
@@ -1227,9 +1203,9 @@ test("Federation AI image jobs can advance through result polling", async () => 
       status: "succeeded",
       result: message,
       message: "succeeded",
-      poll_after_ms: 2000,
+      metadata: {},
     })
-    assert.equal(calls, 3)
+    assert.equal(calls, 2)
   } finally {
     process.chdir(cwd)
     await fs.rm(tempDir, { recursive: true, force: true })

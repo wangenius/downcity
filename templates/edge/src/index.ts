@@ -22,7 +22,6 @@ import {
   waffoPaymentProvider,
 } from "@downcity/services";
 import {
-  D1ImageJobStore,
   GeminiImageProvider,
   LuchiImageProvider,
   OpenAIImageProvider,
@@ -80,18 +79,13 @@ async function init_federation(env: Env): Promise<Federation> {
   federation.use(new UsageService({ record_errors: true }));
 
   const deepseek_provider = new DeepSeekProvider();
-  const image_job_store = new D1ImageJobStore(env.DB);
-  await image_job_store.ensureSchema();
-
   const luchi_image_provider = new LuchiImageProvider({
     id: "luchi-image",
-    jobStore: image_job_store,
     envKey: "LUCHI_IMAGE_API_KEY",
     defaultModelId: "gpt-image-2",
   });
   const image_302_provider = new OpenAIImageProvider({
     id: "302-image",
-    jobStore: image_job_store,
     envKey: "AI302_API_KEY",
     baseURL: "https://api.302.ai/v1",
     defaultModelId: "gpt-image-1",
@@ -99,14 +93,12 @@ async function init_federation(env: Env): Promise<Federation> {
   });
   const openai_image_provider = new OpenAIImageProvider({
     id: "openai-image",
-    jobStore: image_job_store,
     envKey: "OPENAI_API_KEY",
     baseURL: "https://api.openai.com/v1",
     defaultModelId: "gpt-image-1",
   });
   const gemini_image_provider = new GeminiImageProvider({
     id: "gemini-image",
-    jobStore: image_job_store,
     envKey: "GEMINI_API_KEY",
     defaultModelId: "gemini-2.5-flash-image",
   });

@@ -204,6 +204,10 @@ if (current.status === "succeeded") {
 }
 ```
 
+Generated image file-part `url` values are returned exactly as the concrete Provider supplies them. A Provider may return HTTPS URLs, R2/resource URLs, or `data:image/...;base64,...` data URLs.
+
+`image_create()` returns after the task is submitted. The server-side Provider/worker is responsible for persisting the final result in the background; `image_result()` only reads that saved state.
+
 You can also use `messages` for conversational or reference-image workflows:
 
 ```ts
@@ -221,7 +225,7 @@ const job = await client.ai.image_create({
 });
 ```
 
-The low-level contract is intentionally small: the client sends `prompt` / `messages` / `model` / `size` / `ratio` / `quality` / `count` / `provider_options`; the City-side Provider normalizes upstream image responses, such as OpenAI image APIs, into AI SDK `UIMessage` file parts.
+The low-level contract is intentionally small: the client sends `prompt` / `messages` / `model` / `size` / `ratio` / `quality` / `count` / `provider_options`; the City-side Provider creates, persists, and reads image jobs through its own storage.
 
 `video()` still returns AI SDK `UIMessage`. The City-side Provider `video` action should also return `UIMessage`.
 

@@ -63,7 +63,7 @@ const client = new City({
 ```
 
 - `Admin City`: runs in a trusted backend; creates cities, manages env, issues `user_token`.
-- `User City`: runs in a product client; only holds `city_id + user_token` and calls `ai.text()`, `ai.stream()`, `ai.image()`, and Service actions.
+- `User City`: runs in a product client; only holds `city_id + user_token` and calls `ai.text()`, `ai.stream()`, `ai.image_create()` / `ai.image_result()`, and Service actions.
 
 The client never receives provider keys, and `User City` never receives the `admin_secret_key`.
 

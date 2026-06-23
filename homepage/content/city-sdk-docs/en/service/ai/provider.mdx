@@ -91,31 +91,90 @@ description: Provider is an abstract base class for AI upstreams. Subclass it to
 
  `@downcity/city` does not ship concrete image provider factories for OpenAI, DeepSeek, or other upstreams. The City package provides the `Provider` abstraction, `AIService` registration, and the unified `client.ai.image_create()` / `client.ai.image_result()` job contract.
 
- Provider-specific adapters should live in the concrete City project. Those adapters can normalize different upstream responses into AI SDK `UIMessage` file parts, then register models through `Provider.model()`:
+Provider-specific adapters should live in the concrete City project. Those adapters can normalize different upstream responses into AI SDK `UIMessage` file parts, then register models through `Provider.model()`:
 
- ```ts
- import { Provider, type AIProviderChargedOutput, type Context } from "@downcity/city";
- import type { UIMessage } from "ai";
+```ts
+import {
+  Provider,
+  type AIImageProviderCreateResult,
+  type AIImageProviderPersistResult,
+  type AIImageProviderResult,
+  type Context,
+} from "@downcity/city";
+
+interface ImageJobStore {
+  create(record: {
+    job_id: string;
+    input: Record<string, unknown>;
+    status: "running";
+    user_id?: string;
+  }): Promise<void>;
+  get(job_id: string): Promise<{
+    input: Record<string, unknown>;
+    status: "running" | "succeeded" | "failed";
+    user_id?: string;
+    result?: AIImageProviderResult["result"];
+    usage?: unknown;
+    error?: string;
+  } | undefined>;
+  update(record: {
+    job_id: string;
+    status: "running" | "succeeded" | "failed";
+    result?: AIImageProviderResult["result"];
+    usage?: unknown;
+    error?: string;
+  }): Promise<void>;
+}
 
  class MyImageProvider extends Provider {
-   constructor() {
+   constructor(private readonly job_store: ImageJobStore) {
      super({ id: "my-image", envKey: "MY_IMAGE_API_KEY" });
-   }
+  }
 
-   async image(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
-     const apiKey = ctx.env("MY_IMAGE_API_KEY");
-     const response = await fetch("https://image.example.com/generate", {
+  async image_create(ctx: Context): Promise<AIImageProviderCreateResult> {
+    const job_id = crypto.randomUUID();
+    await this.job_store.create({
+      job_id,
+      input: ctx.input as Record<string, unknown>,
+      status: "running",
+      user_id: ctx.user?.user_id,
+    });
+
+    return {
+      job_id,
+      status: "running",
+      poll_after_ms: 2000,
+    };
+  }
+
+  async image_persist(ctx: Context): Promise<AIImageProviderPersistResult> {
+    const job_id = String(ctx.input.job_id);
+    const job = await this.job_store.get(job_id);
+    if (!job) return { job_id, status: "failed", error: "image job is missing" };
+    if (job.status === "succeeded") {
+      return {
+        job_id,
+        status: "succeeded",
+        result: job.result,
+        billing_ref: `image:${job_id}`,
+        metadata: { user_id: job.user_id, usage: job.usage },
+      };
+    }
+
+    const apiKey = ctx.env("MY_IMAGE_API_KEY");
+    const response = await fetch("https://image.example.com/generate", {
        method: "POST",
        headers: {
          authorization: `Bearer ${apiKey}`,
          "content-type": "application/json",
        },
-       body: JSON.stringify(ctx.input),
+       body: JSON.stringify(job.input),
      });
      const data = await response.json();
-
-     return {
-       output: {
+     const result: AIImageProviderResult = {
+       job_id,
+       status: "succeeded",
+       result: {
          id: crypto.randomUUID(),
          role: "assistant",
          parts: [
@@ -127,10 +186,33 @@ description: Provider is an abstract base class for AI upstreams. Subclass it to
          ],
        },
      };
+
+     await this.job_store.update({
+       job_id,
+       status: "succeeded",
+       result: result.result,
+       usage: data.usage,
+     });
+     return {
+       ...result,
+       billing_ref: `image:${job_id}`,
+       metadata: { user_id: job.user_id, usage: data.usage },
+     };
    }
+
+  async image_result(ctx: Context): Promise<AIImageProviderResult> {
+    const job_id = String(ctx.input.job_id);
+    const job = await this.job_store.get(job_id);
+    if (!job) {
+      return { job_id, status: "failed", error: "image result is missing" };
+    }
+    if (job.status === "succeeded") return { job_id, status: "succeeded", result: job.result };
+    if (job.status === "failed") return { job_id, status: "failed", error: job.error };
+    return { job_id, status: "running", poll_after_ms: 2000 };
+  }
  }
 
- const imageProvider = new MyImageProvider();
+ const imageProvider = new MyImageProvider(jobStore);
 
  ai.use(imageProvider.model({
    id: "image-basic",
@@ -154,21 +236,38 @@ description: Provider is an abstract base class for AI upstreams. Subclass it to
  const file = current.result?.parts.find((part) => part.type === "file");
  ```
 
- ## Async image jobs
+## Provider job contract
 
- If image generation is asynchronous, override `image_job`:
+Callers only use `client.ai.image_create()` and `client.ai.image_result()`. Provider implementations use three methods:
 
- ```ts
- import { type AIImageJobStepResult, type Context } from "@downcity/city";
+```ts
+import {
+  type AIImageProviderCreateResult,
+  type AIImageProviderPersistResult,
+  type AIImageProviderResult,
+  type Context,
+} from "@downcity/city";
 
- class LuchiImageProvider extends Provider {
-   // ...
-   async image_job(ctx: Context): Promise<AIImageJobStepResult> {
-     // create or poll upstream job
-     // return { status: "running" | "succeeded" | "failed", ... }
-   }
- }
- ```
+class LuchiImageProvider extends Provider {
+  // ...
+  async image_create(ctx: Context): Promise<AIImageProviderCreateResult> {
+    // create/start the upstream job and store whatever your runtime needs
+    return { job_id: "upstream_job_id", status: "running", poll_after_ms: 2000 };
+  }
+
+  async image_persist(ctx: Context): Promise<AIImageProviderPersistResult> {
+    // background worker/admin action writes the final result to provider-owned storage
+    return { job_id: String(ctx.input.job_id), status: "running", poll_after_ms: 2000 };
+  }
+
+  async image_result(ctx: Context): Promise<AIImageProviderResult> {
+    // only read the provider-owned stored state by ctx.input.job_id
+    return { job_id: String(ctx.input.job_id), status: "running" };
+  }
+}
+```
+
+AIService validates the fixed return shape and returns it as-is. Storage, background execution, retry policy, and whether image URLs are HTTPS, R2 URLs, or data URLs are owned by the concrete Provider implementation. For production, run `image_persist` from your queue/cron/admin worker after `image_create`; do not make the frontend call it.
 
  ## Auto Passthrough
 
@@ -221,6 +320,8 @@ description: Provider is an abstract base class for AI upstreams. Subclass it to
  ## Provider Billing
 
 Use `bill(ctx, output)` when a provider or a specific model needs to turn a finished AI call into a charge draft. `bill` does not deduct balance by itself. AIService reads the returned charge line and calls `balance.charge()` through the configured `BalanceService` bridge.
+
+For image jobs, `bill(ctx, output)` is called only after `image_persist()` returns `status: "succeeded"`. `image_create()` never bills, and `image_result()` only reads stored state. If your background persist runs without a user context, return `user_id` in the charge line from the persisted job owner.
 
 The usual priority is:
 
@@ -296,8 +397,9 @@ ai.use(deepseek.model({
  | `createClient` | Override when text/stream is needed; returns an OpenAI-compatible client |
  | `text` | SDK text action (default from base class) |
  | `stream` | SDK stream action (default from base class) |
- | `image` | SDK image action |
- | `image_job` | Async image job action |
+ | `image_create` | Create and start an image provider job |
+ | `image_persist` | Persist the final image result; successful persist triggers `bill` |
+ | `image_result` | Read an image provider job result |
  | `video` | SDK video action |
  | `openai` | /chat/completions action (auto-passthrough if omitted) |
  | `bill` | Return a charge draft for the finished call |

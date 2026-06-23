@@ -526,7 +526,7 @@ test("AIService lets model bill override provider bill", async () => {
   }
 })
 
-test("Federation AI image jobs persist and finish through waitUntil", async () => {
+test("Federation AI image jobs persist and finish through provider result", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-image-job-"))
 
@@ -539,6 +539,7 @@ test("Federation AI image jobs persist and finish through waitUntil", async () =
       role: "assistant",
       parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,abc" }],
     }
+    const jobs = new Map()
 
     const ai = new AIService()
     ai.use({
@@ -546,14 +547,40 @@ test("Federation AI image jobs persist and finish through waitUntil", async () =
       name: "Echo Image",
       default: ["image"],
       actions: {
-        image: async () => message,
+        image_create: async () => {
+          const job_id = "img_echo_1"
+          jobs.set(job_id, {
+            job_id,
+            status: "running",
+            message: "running",
+            poll_after_ms: 2000,
+          })
+          return {
+            job_id,
+            status: "running",
+            message: "running",
+            poll_after_ms: 2000,
+          }
+        },
+        image_persist: async (ctx) => {
+          const job_id = String(ctx.input.job_id)
+          const current = jobs.get(job_id)
+          const persisted = {
+            ...current,
+            status: "succeeded",
+            result: message,
+            message: "succeeded",
+          }
+          jobs.set(job_id, persisted)
+          return persisted
+        },
+        image_result: async (ctx) => jobs.get(String(ctx.input.job_id)),
       },
     })
     base.use(ai)
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    const pending = []
     const createResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
       method: "POST",
       headers: {
@@ -561,20 +588,24 @@ test("Federation AI image jobs persist and finish through waitUntil", async () =
         authorization: `Bearer ${adminSecret}`,
       },
       body: JSON.stringify({ prompt: "draw" }),
-    }), {
-      execution: {
-        waitUntil(promise) {
-          pending.push(promise)
-        },
-      },
-    })
+    }))
 
     assert.equal(createResponse.status, 200)
     const created = await createResponse.json()
-    assert.equal(created.status, "queued")
+    assert.equal(created.status, "running")
     assert.equal(typeof created.job_id, "string")
 
-    await Promise.all(pending)
+    const persistResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/persist", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ job_id: created.job_id }),
+    }))
+
+    assert.equal(persistResponse.status, 200)
+    assert.equal((await persistResponse.json()).status, "succeeded")
 
     const resultResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",
@@ -599,9 +630,274 @@ test("Federation AI image jobs persist and finish through waitUntil", async () =
   }
 })
 
-test("AIService charges image create requests from model bill", async () => {
+test("Federation AI image jobs require provider create, persist, and result actions", async () => {
   const cwd = process.cwd()
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-image-create-charge-"))
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-image-job-output-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+    const message = {
+      id: "msg_image_charged",
+      role: "assistant",
+      parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,abc" }],
+    }
+    const jobs = new Map()
+
+    const ai = new AIService()
+    ai.use({
+      id: "wrapped-image",
+      name: "Wrapped Image",
+      default: ["image"],
+      actions: {
+        image_create: async () => {
+          const job_id = "img_wrapped_1"
+          jobs.set(job_id, message)
+          return {
+            job_id,
+            status: "running",
+            poll_after_ms: 2000,
+          }
+        },
+        image_persist: async (ctx) => ({
+          job_id: String(ctx.input.job_id),
+          status: "succeeded",
+          result: jobs.get(String(ctx.input.job_id)),
+          message: "succeeded",
+          poll_after_ms: 2000,
+        }),
+        image_result: async (ctx) => ({
+          job_id: String(ctx.input.job_id),
+          status: "succeeded",
+          result: jobs.get(String(ctx.input.job_id)),
+          message: "succeeded",
+          poll_after_ms: 2000,
+        }),
+      },
+    })
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    const createResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ prompt: "draw" }),
+    }))
+
+    assert.equal(createResponse.status, 200)
+    const created = await createResponse.json()
+    assert.equal(created.status, "running")
+
+    const resultResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ job_id: created.job_id }),
+    }))
+
+    assert.equal(resultResponse.status, 200)
+    assert.deepEqual(await resultResponse.json(), {
+      job_id: created.job_id,
+      status: "succeeded",
+      result: message,
+      message: "succeeded",
+      poll_after_ms: 2000,
+    })
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("Federation AI image jobs return provider result as-is", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-image-job-as-is-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+    const message = {
+      id: "msg_image_remote",
+      role: "assistant",
+      parts: [{ type: "file", mediaType: "image/png", url: "https://cdn.example.com/generated.png" }],
+    }
+    const jobs = new Map()
+
+    const ai = new AIService()
+    ai.use({
+      id: "remote-image",
+      name: "Remote Image",
+      default: ["image"],
+      actions: {
+        image_create: async () => {
+          const job_id = "img_remote_1"
+          jobs.set(job_id, message)
+          return {
+            job_id,
+            status: "running",
+            poll_after_ms: 2000,
+          }
+        },
+        image_persist: async (ctx) => ({
+          job_id: String(ctx.input.job_id),
+          status: "succeeded",
+          result: jobs.get(String(ctx.input.job_id)),
+          message: "succeeded",
+          poll_after_ms: 2000,
+        }),
+        image_result: async (ctx) => ({
+          job_id: String(ctx.input.job_id),
+          status: "succeeded",
+          result: jobs.get(String(ctx.input.job_id)),
+          message: "succeeded",
+          poll_after_ms: 2000,
+        }),
+      },
+    })
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    const createResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ prompt: "draw" }),
+    }))
+
+    assert.equal(createResponse.status, 200)
+    const created = await createResponse.json()
+
+    const resultResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ job_id: created.job_id }),
+    }))
+
+    assert.equal(resultResponse.status, 200)
+    const body = await resultResponse.json()
+    assert.equal(body.status, "succeeded")
+    assert.equal(body.result.parts[0].url, "https://cdn.example.com/generated.png")
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("Federation AI image direct endpoint is not exposed", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-image-direct-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+    const ai = new AIService()
+    ai.use({
+      id: "image-only",
+      name: "Image Only",
+      default: ["image"],
+      actions: {
+        image_create: async () => ({
+          job_id: "img_direct_1",
+          status: "running",
+        }),
+        image_persist: async (ctx) => ({
+          job_id: String(ctx.input.job_id),
+          status: "running",
+        }),
+        image_result: async (ctx) => ({
+          job_id: String(ctx.input.job_id),
+          status: "running",
+        }),
+      },
+    })
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    const response = await base.handleRequest(new Request("http://localhost/v1/ai/image", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ prompt: "draw" }),
+    }))
+
+    assert.equal(response.status, 404)
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("Federation AI image jobs reject incomplete provider actions", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-image-incomplete-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+    const ai = new AIService()
+    ai.use({
+      id: "incomplete-image",
+      name: "Incomplete Image",
+      default: ["image"],
+      actions: {
+        image_create: async () => ({
+          job_id: "img_incomplete_1",
+          status: "running",
+        }),
+        image_result: async (ctx) => ({
+          job_id: String(ctx.input.job_id),
+          status: "running",
+        }),
+      },
+    })
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    const response = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ model: "incomplete-image", prompt: "draw" }),
+    }))
+
+    assert.equal(response.status, 422)
+    assert.deepEqual(await response.json(), {
+      error: {
+        message: "Model incomplete-image does not support mode: image_create",
+        type: "server_error",
+      },
+    })
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("AIService charges image jobs only after provider persist succeeds", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-image-persist-charge-"))
 
   try {
     process.chdir(tempDir)
@@ -623,22 +919,44 @@ test("AIService charges image create requests from model bill", async () => {
       default: ["image"],
       bill(ctx, output) {
         return {
+          user_id: output.metadata.user_id,
           amount_microcredits: 777,
-          note: "AI image create",
+          note: "AI image persist",
           ref: output.job_id,
           metadata: {
             service_id: "ai",
             action_id: ctx.metering?.metadata?.mode,
             model_id: ctx.metering?.model_id,
             provider_id: ctx.metering?.provider_id,
+            image_count: ctx.metering?.image_count,
           },
         }
       },
       actions: {
-        image: async () => ({
-          id: "msg_image",
-          role: "assistant",
-          parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,aQ==" }],
+        image_create: async () => ({
+          job_id: "img_priced_1",
+          status: "running",
+        }),
+        image_persist: async (ctx) => ({
+          job_id: String(ctx.input.job_id),
+          status: "succeeded",
+          result: {
+            id: "msg_priced_image",
+            role: "assistant",
+            parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,abc" }],
+          },
+          metadata: {
+            user_id: "user_1",
+          },
+        }),
+        image_result: async (ctx) => ({
+          job_id: String(ctx.input.job_id),
+          status: "succeeded",
+          result: {
+            id: "msg_priced_image",
+            role: "assistant",
+            parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,abc" }],
+          },
         }),
       },
     })
@@ -671,25 +989,46 @@ test("AIService charges image create requests from model bill", async () => {
         authorization: `Bearer ${tokenBody.user_token}`,
       },
       body: JSON.stringify({ model: "priced-image", prompt: "draw" }),
-    }), {
-      execution: {
-        waitUntil() {},
-      },
-    })
+    }))
 
     assert.equal(response.status, 200)
     const body = await response.json()
-    assert.match(body.job_id, /^img_/)
+    assert.equal(body.job_id, "img_priced_1")
+    assert.deepEqual(charges, [])
+
+    const resultResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${tokenBody.user_token}`,
+      },
+      body: JSON.stringify({ model: "priced-image", job_id: body.job_id }),
+    }))
+
+    assert.equal(resultResponse.status, 200)
+    assert.deepEqual(charges, [])
+
+    const persistResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/persist", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ model: "priced-image", job_id: body.job_id }),
+    }))
+
+    assert.equal(persistResponse.status, 200)
     assert.deepEqual(charges, [{
       user_id: "user_1",
       amount_microcredits: 777,
-      note: "AI image create",
+      note: "AI image persist",
       ref: body.job_id,
       metadata: {
         service_id: "ai",
-        action_id: "image/create",
+        action_id: "image/persist",
         model_id: "priced-image",
         provider_id: "image-provider",
+        image_count: 1,
       },
     }])
   } finally {
@@ -798,6 +1137,7 @@ test("Federation AI image jobs can advance through result polling", async () => 
       parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,abc" }],
     }
     let calls = 0
+    const jobs = new Map()
 
     const ai = new AIService()
     ai.use({
@@ -805,18 +1145,42 @@ test("Federation AI image jobs can advance through result polling", async () => 
       name: "Step Image",
       default: ["image"],
       actions: {
-        image: async () => message,
-        image_job: async (ctx) => {
+        image_create: async (ctx) => {
           calls += 1
-          const state = ctx.locals.image_job?.state
-          if (state?.upstream_job_id === "up_1") {
-            return { status: "succeeded", result: message, message: "succeeded" }
-          }
+          const job_id = "up_1"
+          jobs.set(job_id, { step: "created" })
           return {
+            job_id,
             status: "running",
-            state: { upstream_job_id: "up_1" },
             message: "running",
             poll_after_ms: 10,
+          }
+        },
+        image_persist: async (ctx) => {
+          calls += 1
+          const job_id = String(ctx.input.job_id)
+          assert.deepEqual(jobs.get(job_id), { step: "created" })
+          const persisted = {
+            step: "persisted",
+            job_id,
+            status: "succeeded",
+            result: message,
+            message: "succeeded",
+            poll_after_ms: 2000,
+          }
+          jobs.set(job_id, persisted)
+          return persisted
+        },
+        image_result: async (ctx) => {
+          calls += 1
+          const job_id = String(ctx.input.job_id)
+          assert.equal(jobs.get(job_id)?.step, "persisted")
+          return {
+            job_id,
+            status: "succeeded",
+            result: message,
+            message: "succeeded",
+            poll_after_ms: 2000,
           }
         },
       },
@@ -837,6 +1201,18 @@ test("Federation AI image jobs can advance through result polling", async () => 
     assert.equal(created.status, "running")
     assert.equal(calls, 1)
 
+    const persist = await base.handleRequest(new Request("http://localhost/v1/ai/image/persist", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ job_id: created.job_id }),
+    }))
+    assert.equal(persist.status, 200)
+    assert.equal((await persist.json()).status, "succeeded")
+    assert.equal(calls, 2)
+
     const result = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",
       headers: {
@@ -853,7 +1229,7 @@ test("Federation AI image jobs can advance through result polling", async () => 
       message: "succeeded",
       poll_after_ms: 2000,
     })
-    assert.equal(calls, 2)
+    assert.equal(calls, 3)
   } finally {
     process.chdir(cwd)
     await fs.rm(tempDir, { recursive: true, force: true })

@@ -1,22 +1,25 @@
- /**
-  * 图片 Provider。
-  *
-  * 关键点（中文）
-  * - client.ai.image() 的统一返回协议是 AI SDK UIMessage。
-  * - OpenAI / 302、Gemini、Luchi 三种图片 Provider 都继承 Provider 基类。
-  * - 不同上游的同步响应、Gemini content parts、Luchi 异步 job 都在这里归一成 file parts。
-  * - 第一版只支持 JSON / URL / data URL，不处理 multipart 本地文件上传。
-  */
+/**
+ * 图片 Provider。
+ *
+ * 关键点（中文）
+ * - client.ai.image_create() / image_result() 的统一结果协议是 AI SDK UIMessage。
+ * - Provider 侧统一实现 image_create() / image_persist() / image_result()。
+ * - image_create() 只创建并启动任务；image_persist() 写入最终结果并触发计费；image_result() 只读取已保存结果。
+ * - 任务状态通过 ImageJobStore 持久化，避免 Worker / queue / cron 跨请求丢失内存状态。
+ * - OpenAI / 302、Gemini、Luchi 三种图片 Provider 都继承 Provider 基类。
+ * - 不同上游的同步响应、Gemini content parts、Luchi 异步 job 都在这里归一成 file parts。
+ * - 第一版只支持 JSON / URL / data URL，不处理 multipart 本地文件上传。
+ */
 
- import type { FileUIPart, UIMessage } from "ai";
+import type { UIMessage } from "ai";
 import {
   Provider,
-  type AIImageJobStepResult,
-  type AIProviderChargedOutput,
+  type AIImageProviderCreateResult,
+  type AIImageProviderPersistResult,
+  type AIImageProviderResult,
   type Context,
   buildImageMessage,
   isRecord,
-  readImageJobStepContext,
   readJsonResponse,
   readRequiredEnv,
   readErrorMessage,
@@ -106,6 +109,8 @@ import {
  export interface OpenAIImageProviderOptions {
    /** Provider 唯一 ID。 */
    id: string;
+   /** 图片任务持久化存储。 */
+   jobStore: ImageJobStore;
    /** API Key 环境变量。 */
    envKey: string;
    /** OpenAI-compatible base URL，通常包含 `/v1`。 */
@@ -124,6 +129,8 @@ import {
  export interface GeminiImageProviderOptions {
    /** Provider 唯一 ID。 */
    id: string;
+   /** 图片任务持久化存储。 */
+   jobStore: ImageJobStore;
    /** API Key 环境变量。 */
    envKey: string;
    /** Gemini API base URL。 */
@@ -138,6 +145,8 @@ import {
  export interface LuchiImageProviderOptions {
    /** Provider 唯一 ID。 */
    id: string;
+   /** 图片任务持久化存储。 */
+   jobStore: ImageJobStore;
    /** Luchi 长期 API Key 环境变量。 */
    envKey: string;
    /** Luchi image API base URL。 */
@@ -150,9 +159,9 @@ import {
    maxPolls?: number;
  }
 
- interface ExtractedImage {
-   /** 图片 URL 或 data URL。 */
-   url: string;
+interface ExtractedImage {
+  /** 图片 URL 或 data URL。 */
+  url: string;
    /** 图片 MIME 类型。 */
    media_type: string;
    /** 文件名。 */
@@ -161,16 +170,228 @@ import {
 
  const DEFAULT_IMAGE_MEDIA_TYPE = "image/png";
 
+interface StoredImageJob {
+  /** 图片任务 ID。 */
+  job_id: string;
+  /** 原始创建输入，用于后台 persist 调用上游。 */
+  input: ImageActionInput;
+  /** 当前任务状态。 */
+  status: AIImageProviderResult["status"];
+  /** 创建任务时的用户 ID，用于后台计费归属。 */
+  user_id?: string;
+  /** 创建任务时的 city ID，用于结果元数据。 */
+  city_id?: string;
+  /** 上游模型 ID。 */
+  upstream_model: string;
+  /** 当前任务说明。 */
+  message?: string;
+  /** 失败原因。 */
+  error?: string;
+  /** 建议轮询间隔。 */
+  poll_after_ms?: number;
+  /** 已持久化的 UIMessage。 */
+  result?: UIMessage;
+  /** Provider 扩展元数据。 */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * 图片任务创建输入。
+ */
+export interface ImageJobCreateRecord {
+  /** 图片任务 ID。 */
+  job_id: string;
+  /** 原始创建输入，用于后台 persist 调用上游。 */
+  input: ImageActionInput;
+  /** 当前任务状态。 */
+  status: AIImageProviderResult["status"];
+  /** 创建任务时的用户 ID，用于后台计费归属。 */
+  user_id?: string;
+  /** 创建任务时的 city ID，用于结果元数据。 */
+  city_id?: string;
+  /** 上游模型 ID。 */
+  upstream_model: string;
+  /** 当前任务说明。 */
+  message?: string;
+  /** 建议轮询间隔。 */
+  poll_after_ms?: number;
+  /** Provider 扩展元数据。 */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * 图片任务持久化更新输入。
+ */
+export interface ImageJobUpdateRecord {
+  /** 图片任务 ID。 */
+  job_id: string;
+  /** 当前任务状态。 */
+  status: AIImageProviderResult["status"];
+  /** 当前任务说明。 */
+  message?: string;
+  /** 失败原因。 */
+  error?: string;
+  /** 建议轮询间隔。 */
+  poll_after_ms?: number;
+  /** 已持久化的 UIMessage。 */
+  result?: UIMessage;
+  /** Provider 扩展元数据。 */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * 图片任务存储接口。
+ */
+export interface ImageJobStore {
+  /** 创建图片任务记录。 */
+  create(record: ImageJobCreateRecord): Promise<void>;
+  /** 读取图片任务记录。 */
+  get(job_id: string): Promise<StoredImageJob | undefined>;
+  /** 更新图片任务记录。 */
+  update(record: ImageJobUpdateRecord): Promise<void>;
+}
+
+/**
+ * D1 图片任务存储。
+ */
+export class D1ImageJobStore implements ImageJobStore {
+  /** D1 表名。 */
+  private readonly table_name: string;
+
+  constructor(
+    private readonly db: D1Database,
+    options: { tableName?: string } = {},
+  ) {
+    this.table_name = normalizeTableName(options.tableName ?? "ai_image_jobs");
+  }
+
+  /**
+   * 确保图片任务表存在。
+   */
+  async ensureSchema(): Promise<void> {
+    await this.db.exec(`
+      CREATE TABLE IF NOT EXISTS ${this.table_name} (
+        job_id TEXT PRIMARY KEY,
+        status TEXT NOT NULL,
+        input_json TEXT NOT NULL,
+        result_json TEXT,
+        error TEXT,
+        message TEXT,
+        city_id TEXT,
+        user_id TEXT,
+        upstream_model TEXT NOT NULL,
+        poll_after_ms INTEGER,
+        metadata_json TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    `);
+  }
+
+  async create(record: ImageJobCreateRecord): Promise<void> {
+    const now = new Date().toISOString();
+    await this.db.prepare(`
+      INSERT INTO ${this.table_name} (
+        job_id,
+        status,
+        input_json,
+        result_json,
+        error,
+        message,
+        city_id,
+        user_id,
+        upstream_model,
+        poll_after_ms,
+        metadata_json,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      record.job_id,
+      record.status,
+      JSON.stringify(record.input),
+      record.message ?? null,
+      record.city_id ?? null,
+      record.user_id ?? null,
+      record.upstream_model,
+      record.poll_after_ms ?? null,
+      JSON.stringify(record.metadata ?? {}),
+      now,
+      now,
+    ).run();
+  }
+
+  async get(job_id: string): Promise<StoredImageJob | undefined> {
+    const row = await this.db.prepare(`
+      SELECT
+        job_id,
+        status,
+        input_json,
+        result_json,
+        error,
+        message,
+        city_id,
+        user_id,
+        upstream_model,
+        poll_after_ms,
+        metadata_json
+      FROM ${this.table_name}
+      WHERE job_id = ?
+      LIMIT 1
+    `).bind(job_id).first<Record<string, unknown>>();
+    if (!row) return undefined;
+    return {
+      job_id: readString(row.job_id),
+      input: parseJsonObject(row.input_json),
+      status: readImageStatus(row.status),
+      user_id: readOptionalString(row.user_id),
+      city_id: readOptionalString(row.city_id),
+      upstream_model: readString(row.upstream_model),
+      message: readOptionalString(row.message),
+      error: readOptionalString(row.error),
+      poll_after_ms: readOptionalNumber(row.poll_after_ms),
+      result: parseJsonMessage(row.result_json),
+      metadata: parseJsonRecord(row.metadata_json),
+    };
+  }
+
+  async update(record: ImageJobUpdateRecord): Promise<void> {
+    await this.db.prepare(`
+      UPDATE ${this.table_name}
+      SET
+        status = ?,
+        result_json = ?,
+        error = ?,
+        message = ?,
+        poll_after_ms = ?,
+        metadata_json = ?,
+        updated_at = ?
+      WHERE job_id = ?
+    `).bind(
+      record.status,
+      record.result ? JSON.stringify(record.result) : null,
+      record.error ?? null,
+      record.message ?? null,
+      record.poll_after_ms ?? null,
+      JSON.stringify(record.metadata ?? {}),
+      new Date().toISOString(),
+      record.job_id,
+    ).run();
+  }
+}
+
  // ===========================================================================
  // OpenAI / 302 images API Provider
  // ===========================================================================
 
  /**
   * OpenAI / 302 images API 图片 Provider。
-  */
- export class OpenAIImageProvider extends Provider {
+ */
+export class OpenAIImageProvider extends Provider {
    private readonly generation_path: string;
    private readonly provider_options_key: string;
+   private readonly job_store: ImageJobStore;
 
    constructor(options: OpenAIImageProviderOptions) {
      super({
@@ -181,39 +402,107 @@ import {
      });
      this.generation_path = options.generationPath ?? "/images/generations";
      this.provider_options_key = options.providerOptionsKey ?? "openai";
+     this.job_store = options.jobStore;
    }
 
-   async image(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
+   async image_create(ctx: Context): Promise<AIImageProviderCreateResult> {
      const input = normalizeImageActionInput(ctx.input);
-     const api_key = readRequiredEnv(ctx, this.envKey ?? "");
      const upstream_model = resolveUpstreamModel(ctx, this.passthroughModel ?? "");
-     const provider_options = readProviderOptions(input, this.provider_options_key);
-     const body = stripUndefined({
-       model: upstream_model,
-       prompt: extractPrompt(input),
-       n: readImageCount(input),
-       size: input.size,
-       seed: input.seed,
-       ...provider_options,
+     const job_id = `openai_img_${crypto.randomUUID()}`;
+     await this.job_store.create({
+       job_id,
+       input,
+       status: "running",
+       user_id: ctx.user?.user_id,
+       city_id: ctx.city?.city_id,
+       upstream_model,
+       message: "running",
+       poll_after_ms: 1000,
+       metadata: { provider: this.id, provider_options_key: this.provider_options_key, upstream_model },
      });
-
-     const response = await fetch(`${trimTrailingSlash(this.baseURL ?? "")}${this.generation_path}`, {
-       method: "POST",
-       headers: {
-         Authorization: `Bearer ${api_key}`,
-         "Content-Type": "application/json",
-       },
-       body: JSON.stringify(body),
-     });
-     const data = await readJsonResponse(response);
      return {
-       output: buildImageMessage(ctx, extractImagesFromOpenAIResponse(data), {
+       job_id,
+       status: "running",
+       message: "running",
+       poll_after_ms: 1000,
+     };
+   }
+
+   async image_persist(ctx: Context): Promise<AIImageProviderPersistResult> {
+     const job_id = readImageJobId(ctx.input);
+     const job = await this.job_store.get(job_id);
+     if (!job) {
+       return {
+         job_id,
+         status: "failed",
+         message: "failed",
+         error: "OpenAI image job is missing",
+       };
+     }
+     if (job.status === "succeeded" && job.result) {
+       return toPersistResult(job);
+     }
+     if (job.status === "failed") {
+       return toPersistResult(job);
+     }
+
+     try {
+       const api_key = readRequiredEnv(ctx, this.envKey ?? "");
+       const provider_options = readProviderOptions(job.input, this.provider_options_key);
+       const body = stripUndefined({
+         model: job.upstream_model,
+         prompt: extractPrompt(job.input),
+         n: readImageCount(job.input),
+         size: job.input.size,
+         seed: job.input.seed,
+         response_format: "b64_json",
+         ...provider_options,
+       });
+
+       const response = await fetch(`${trimTrailingSlash(this.baseURL ?? "")}${this.generation_path}`, {
+         method: "POST",
+         headers: {
+           Authorization: `Bearer ${api_key}`,
+           "Content-Type": "application/json",
+         },
+         body: JSON.stringify(body),
+       });
+       const data = await readJsonResponse(response);
+       job.status = "succeeded";
+       job.message = "succeeded";
+       job.result = buildImageMessage(ctx, extractImagesFromOpenAIResponse(data), {
          provider: this.id,
          provider_options_key: this.provider_options_key,
-         upstream_model,
+         upstream_model: job.upstream_model,
+         city_id: job.city_id,
+         user_id: job.user_id,
          raw: pickMetadata(data, ["usage", "created"]),
-       }),
-     };
+       });
+       job.metadata = {
+         ...job.metadata,
+         raw: pickMetadata(data, ["usage", "created"]),
+       };
+     } catch (error) {
+       job.status = "failed";
+       job.message = "failed";
+       job.error = error instanceof Error ? error.message : String(error);
+     }
+     await this.job_store.update(toJobUpdateRecord(job));
+     return toPersistResult(job);
+   }
+
+   async image_result(ctx: Context): Promise<AIImageProviderResult> {
+     const job_id = readImageJobId(ctx.input);
+     const job = await this.job_store.get(job_id);
+     if (!job) {
+       return {
+         job_id,
+         status: "failed",
+         message: "failed",
+         error: "OpenAI image result is missing",
+       };
+     }
+     return toImageResult(job);
    }
  }
 
@@ -224,8 +513,9 @@ import {
  /**
   * Gemini generateContent 图片 Provider。
   */
- export class GeminiImageProvider extends Provider {
+export class GeminiImageProvider extends Provider {
    private readonly base_url: string;
+   private readonly job_store: ImageJobStore;
 
    constructor(options: GeminiImageProviderOptions) {
      super({
@@ -234,38 +524,105 @@ import {
        passthroughModel: options.defaultModelId,
      });
      this.base_url = options.baseURL ?? "https://generativelanguage.googleapis.com/v1beta";
+     this.job_store = options.jobStore;
    }
 
-   async image(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
+   async image_create(ctx: Context): Promise<AIImageProviderCreateResult> {
      const input = normalizeImageActionInput(ctx.input);
-     const api_key = readRequiredEnv(ctx, this.envKey ?? "");
      const upstream_model = resolveUpstreamModel(ctx, this.passthroughModel ?? "");
-     const provider_options = readProviderOptions(input, "gemini");
-     const body = stripUndefined({
-       contents: toGeminiContents(input),
-       generationConfig: {
-         responseModalities: ["TEXT", "IMAGE"],
-         ...(toRecord(provider_options.generationConfig) ?? {}),
-       },
-       ...omitKeys(provider_options, ["generationConfig"]),
+     const job_id = `gemini_img_${crypto.randomUUID()}`;
+     await this.job_store.create({
+       job_id,
+       input,
+       status: "running",
+       user_id: ctx.user?.user_id,
+       city_id: ctx.city?.city_id,
+       upstream_model,
+       message: "running",
+       poll_after_ms: 1000,
+       metadata: { provider: this.id, upstream_model },
      });
-
-     const response = await fetch(`${trimTrailingSlash(this.base_url)}/models/${encodeURIComponent(upstream_model)}:generateContent`, {
-       method: "POST",
-       headers: {
-         "Content-Type": "application/json",
-         "x-goog-api-key": api_key,
-       },
-       body: JSON.stringify(body),
-     });
-     const data = await readJsonResponse(response);
      return {
-       output: buildImageMessage(ctx, extractImagesFromGeminiResponse(data), {
-         provider: this.id,
-         upstream_model,
-         raw: pickMetadata(data, ["usageMetadata", "promptFeedback"]),
-       }),
+       job_id,
+       status: "running",
+       message: "running",
+       poll_after_ms: 1000,
      };
+   }
+
+   async image_persist(ctx: Context): Promise<AIImageProviderPersistResult> {
+     const job_id = readImageJobId(ctx.input);
+     const job = await this.job_store.get(job_id);
+     if (!job) {
+       return {
+         job_id,
+         status: "failed",
+         message: "failed",
+         error: "Gemini image job is missing",
+       };
+     }
+     if (job.status === "succeeded" && job.result) {
+       return toPersistResult(job);
+     }
+     if (job.status === "failed") {
+       return toPersistResult(job);
+     }
+
+     try {
+       const api_key = readRequiredEnv(ctx, this.envKey ?? "");
+       const provider_options = readProviderOptions(job.input, "gemini");
+       const body = stripUndefined({
+         contents: toGeminiContents(job.input),
+         generationConfig: {
+           responseModalities: ["TEXT", "IMAGE"],
+           ...(toRecord(provider_options.generationConfig) ?? {}),
+         },
+         ...omitKeys(provider_options, ["generationConfig"]),
+       });
+
+       const response = await fetch(`${trimTrailingSlash(this.base_url)}/models/${encodeURIComponent(job.upstream_model)}:generateContent`, {
+         method: "POST",
+         headers: {
+           "Content-Type": "application/json",
+           "x-goog-api-key": api_key,
+         },
+         body: JSON.stringify(body),
+       });
+       const data = await readJsonResponse(response);
+       job.status = "succeeded";
+       job.message = "succeeded";
+       job.result = buildImageMessage(ctx, extractImagesFromGeminiResponse(data), {
+         provider: this.id,
+         upstream_model: job.upstream_model,
+         city_id: job.city_id,
+         user_id: job.user_id,
+         raw: pickMetadata(data, ["usageMetadata", "promptFeedback"]),
+       });
+       job.metadata = {
+         ...job.metadata,
+         raw: pickMetadata(data, ["usageMetadata", "promptFeedback"]),
+       };
+     } catch (error) {
+       job.status = "failed";
+       job.message = "failed";
+       job.error = error instanceof Error ? error.message : String(error);
+     }
+     await this.job_store.update(toJobUpdateRecord(job));
+     return toPersistResult(job);
+   }
+
+   async image_result(ctx: Context): Promise<AIImageProviderResult> {
+     const job_id = readImageJobId(ctx.input);
+     const job = await this.job_store.get(job_id);
+     if (!job) {
+       return {
+         job_id,
+         status: "failed",
+         message: "failed",
+         error: "Gemini image result is missing",
+       };
+     }
+     return toImageResult(job);
    }
  }
 
@@ -280,6 +637,7 @@ import {
    private readonly base_url: string;
    private readonly poll_interval_ms: number;
    private readonly max_polls: number;
+   private readonly job_store: ImageJobStore;
 
    constructor(options: LuchiImageProviderOptions) {
      super({
@@ -290,9 +648,10 @@ import {
      this.base_url = options.baseURL ?? "https://image.luchikey.com";
      this.poll_interval_ms = options.pollIntervalMs ?? 3000;
      this.max_polls = options.maxPolls ?? 60;
+     this.job_store = options.jobStore;
    }
 
-   async image(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
+   async image_create(ctx: Context): Promise<AIImageProviderCreateResult> {
      const input = normalizeImageActionInput(ctx.input);
      const api_key = readRequiredEnv(ctx, this.envKey ?? "");
      const upstream_model = resolveUpstreamModel(ctx, this.passthroughModel ?? "");
@@ -303,39 +662,45 @@ import {
        base_url: this.base_url,
        upstream_model,
      });
-     const finished = await pollLuchiJob({
-       base_url: this.base_url,
-       api_key,
+     await this.job_store.create({
        job_id,
-       poll_interval_ms: this.poll_interval_ms,
-       max_polls: this.max_polls,
+       input,
+       status: "running",
+       user_id: ctx.user?.user_id,
+       city_id: ctx.city?.city_id,
+       upstream_model,
+       message: "running",
+       poll_after_ms: this.poll_interval_ms,
+       metadata: { provider: this.id, upstream_model },
      });
-
      return {
-       output: buildImageMessage(ctx, extractImagesFromLuchiResponse(finished, this.base_url), {
-         provider: this.id,
-         upstream_model,
-         job_id,
-         raw: pickMetadata(finished, ["status", "usage", "error"]),
-       }),
+       job_id,
+       status: "running",
+       message: "running",
+       poll_after_ms: this.poll_interval_ms,
+       metadata: { provider: this.id, upstream_model },
      };
    }
 
-   async image_job(ctx: Context): Promise<AIImageJobStepResult> {
-     const input = normalizeImageActionInput(ctx.input);
+   async image_persist(ctx: Context): Promise<AIImageProviderPersistResult> {
      const api_key = readRequiredEnv(ctx, this.envKey ?? "");
-     const upstream_model = resolveUpstreamModel(ctx, this.passthroughModel ?? "");
-     const image_job = readImageJobStepContext(ctx);
-     const upstream_job_id = typeof image_job?.state?.upstream_job_id === "string"
-       ? image_job.state.upstream_job_id
-       : "";
-     const job_id = upstream_job_id || await createLuchiJob({
-       ctx,
-       input,
-       api_key,
-       base_url: this.base_url,
-       upstream_model,
-     });
+     const job_id = readImageJobId(ctx.input);
+     const job = await this.job_store.get(job_id);
+     if (!job) {
+       return {
+         job_id,
+         status: "failed",
+         message: "failed",
+         error: "Luchi image job is missing",
+       };
+     }
+     if (job.status === "succeeded" && job.result) {
+       return toPersistResult(job);
+     }
+     if (job.status === "failed") {
+       return toPersistResult(job);
+     }
+
      const data = await readLuchiJob({
        base_url: this.base_url,
        api_key,
@@ -343,34 +708,54 @@ import {
      });
      const status = readJobStatus(data);
      if (["succeeded", "success", "completed", "done"].includes(status)) {
-       return {
-         status: "succeeded",
-         message: "succeeded",
-         result: buildImageMessage(ctx, extractImagesFromLuchiResponse(data, this.base_url), {
-           provider: this.id,
-           upstream_model,
-           job_id,
-           raw: pickMetadata(data, ["status", "usage", "error"]),
-         }),
+       job.status = "succeeded";
+       job.message = "succeeded";
+       job.result = buildImageMessage(ctx, extractImagesFromLuchiResponse(data, this.base_url), {
+         provider: this.id,
+         upstream_model: job.upstream_model,
+         city_id: job.city_id,
+         user_id: job.user_id,
+         job_id,
+         raw: pickMetadata(data, ["status", "usage", "error"]),
+       });
+       job.metadata = {
+         ...job.metadata,
+         raw: pickMetadata(data, ["status", "usage", "error"]),
        };
+       await this.job_store.update(toJobUpdateRecord(job));
+       return toPersistResult(job);
      }
      if (["failed", "failure", "error", "cancelled", "canceled"].includes(status)) {
+       job.status = "failed";
+       job.message = "failed";
+       job.error = readErrorMessage(data) || `Luchi image job failed: ${job_id}`;
+       await this.job_store.update(toJobUpdateRecord(job));
+       return toPersistResult(job);
+     }
+     job.status = "running";
+     job.message = "running";
+     job.poll_after_ms = this.poll_interval_ms;
+     job.metadata = {
+       ...job.metadata,
+       upstream_status: status || "running",
+       max_polls: this.max_polls,
+     };
+     await this.job_store.update(toJobUpdateRecord(job));
+     return toPersistResult(job);
+   }
+
+   async image_result(ctx: Context): Promise<AIImageProviderResult> {
+     const job_id = readImageJobId(ctx.input);
+     const job = await this.job_store.get(job_id);
+     if (!job) {
        return {
+         job_id,
          status: "failed",
          message: "failed",
-         error: readErrorMessage(data) || `Luchi image job failed: ${job_id}`,
+         error: "Luchi image result is missing",
        };
      }
-     return {
-       status: "running",
-       message: "running",
-       poll_after_ms: this.poll_interval_ms,
-       state: {
-         provider: this.id,
-         upstream_job_id: job_id,
-         upstream_status: status || "running",
-       },
-     };
+     return toImageResult(job);
    }
  }
 
@@ -378,11 +763,103 @@ import {
  // 图片输入解析
  // ===========================================================================
 
- function normalizeImageActionInput(input: unknown): ImageActionInput {
-   return input && typeof input === "object" && !Array.isArray(input)
-     ? input as ImageActionInput
-     : {};
- }
+function normalizeImageActionInput(input: unknown): ImageActionInput {
+  return input && typeof input === "object" && !Array.isArray(input)
+    ? input as ImageActionInput
+    : {};
+}
+
+function readImageJobId(input: unknown): string {
+  const record = toRecord(input);
+  return readString(record?.job_id);
+}
+
+function toImageResult(job: StoredImageJob): AIImageProviderResult {
+  return stripUndefined({
+    job_id: job.job_id,
+    status: job.status,
+    result: job.result,
+    error: job.error,
+    message: job.message,
+    poll_after_ms: job.poll_after_ms,
+    metadata: job.metadata,
+  });
+}
+
+function toPersistResult(job: StoredImageJob): AIImageProviderPersistResult {
+  return stripUndefined({
+    job_id: job.job_id,
+    status: job.status,
+    result: job.result,
+    error: job.error,
+    message: job.message,
+    billing_ref: job.status === "succeeded" ? `image:${job.job_id}` : undefined,
+    metadata: {
+      ...(job.metadata ?? {}),
+      user_id: job.user_id,
+      city_id: job.city_id,
+    },
+  });
+}
+
+function toJobUpdateRecord(job: StoredImageJob): ImageJobUpdateRecord {
+  return {
+    job_id: job.job_id,
+    status: job.status,
+    message: job.message,
+    error: job.error,
+    poll_after_ms: job.poll_after_ms,
+    result: job.result,
+    metadata: job.metadata,
+  };
+}
+
+function normalizeTableName(value: string): string {
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)) {
+    throw new Error(`Invalid D1 table name: ${value}`);
+  }
+  return value;
+}
+
+function parseJsonRecord(value: unknown): Record<string, unknown> {
+  const parsed = parseJson(value);
+  return isRecord(parsed) ? parsed : {};
+}
+
+function parseJsonObject(value: unknown): ImageActionInput {
+  const parsed = parseJson(value);
+  return isRecord(parsed) ? parsed as ImageActionInput : {};
+}
+
+function parseJsonMessage(value: unknown): UIMessage | undefined {
+  const parsed = parseJson(value);
+  return isRecord(parsed) && parsed.role === "assistant" && Array.isArray(parsed.parts)
+    ? parsed as unknown as UIMessage
+    : undefined;
+}
+
+function parseJson(value: unknown): unknown {
+  if (typeof value !== "string" || !value.trim()) return undefined;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return undefined;
+  }
+}
+
+function readImageStatus(value: unknown): AIImageProviderResult["status"] {
+  return value === "queued" || value === "running" || value === "succeeded" || value === "failed"
+    ? value
+    : "failed";
+}
+
+function readOptionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function readOptionalNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
 
  function extractPrompt(input: ImageActionInput): string {
    const direct_prompt = typeof input.prompt === "string" ? input.prompt.trim() : "";
@@ -419,12 +896,12 @@ import {
    return input.count ?? input.n;
  }
 
- function readProviderOptions(input: ImageActionInput, key: string): Record<string, unknown> {
-   const options = toRecord(input.provider_options);
-   if (!options) return {};
-   const scoped = toRecord(options[key]);
-   return scoped ?? {};
- }
+function readProviderOptions(input: ImageActionInput, key: string): Record<string, unknown> {
+  const options = toRecord(input.provider_options);
+  if (!options) return {};
+  const scoped = toRecord(options[key]);
+  return scoped ?? {};
+}
 
  // ===========================================================================
  // Gemini 内容转换
@@ -543,21 +1020,21 @@ import {
    };
  }
 
- function imageFromRecord(record: Record<string, unknown> | null | undefined, fallback_filename: string): ExtractedImage | null {
+function imageFromRecord(record: Record<string, unknown> | null | undefined, fallback_filename: string): ExtractedImage | null {
    if (!record) return null;
    const media_type = readString(record.media_type) || readString(record.mime_type) || readString(record.mimeType) || DEFAULT_IMAGE_MEDIA_TYPE;
-   const direct_url = readString(record.url) || readString(record.image_url);
-   if (direct_url) {
+   const b64 = readString(record.b64_json) || readString(record.base64) || readString(record.data);
+   if (b64) {
      return {
-       url: direct_url,
+       url: b64.startsWith("data:") ? b64 : toDataUrl(media_type, b64),
        media_type,
        filename: readString(record.filename) || fallback_filename,
      };
    }
-   const b64 = readString(record.b64_json) || readString(record.base64) || readString(record.data);
-   if (!b64) return null;
+   const direct_url = readString(record.url) || readString(record.image_url);
+   if (!direct_url) return null;
    return {
-     url: b64.startsWith("data:") ? b64 : toDataUrl(media_type, b64),
+     url: direct_url,
      media_type,
      filename: readString(record.filename) || fallback_filename,
    };
@@ -593,8 +1070,8 @@ import {
      ratio: params.input.ratio ?? params.input.aspect_ratio,
      quality: params.input.quality,
      count: readImageCount(params.input),
-     seed: params.input.seed,
-     client_job_id: params.input.client_job_id || readImageJobStepContext(params.ctx)?.job_id,
+    seed: params.input.seed,
+    client_job_id: params.input.client_job_id,
      ...provider_options,
    });
    const has_reference_images = reference_images.length > 0;
@@ -636,25 +1113,6 @@ import {
      },
    });
    return await readJsonResponse(response);
- }
-
- async function pollLuchiJob(params: {
-   base_url: string;
-   api_key: string;
-   job_id: string;
-   poll_interval_ms: number;
-   max_polls: number;
- }): Promise<unknown> {
-   for (let attempt = 0; attempt < params.max_polls; attempt += 1) {
-     if (attempt > 0) await sleep(params.poll_interval_ms);
-     const data = await readLuchiJob(params);
-     const status = readJobStatus(data);
-     if (["succeeded", "success", "completed", "done"].includes(status)) return data;
-     if (["failed", "error", "cancelled", "canceled"].includes(status)) {
-       throw new Error(readErrorMessage(data) || `Luchi image job failed: ${status}`);
-     }
-   }
-   throw new Error("Luchi image job timed out");
  }
 
  function createLuchiEditFormData(
@@ -707,10 +1165,6 @@ import {
    const record = toRecord(data);
    const nested = toRecord(record?.data) ?? toRecord(record?.job);
    return (readString(record?.status) || readString(nested?.status)).toLowerCase();
- }
-
- function sleep(ms: number): Promise<void> {
-   return new Promise((resolve) => setTimeout(resolve, ms));
  }
 
  // ===========================================================================

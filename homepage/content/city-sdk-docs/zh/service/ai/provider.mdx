@@ -91,31 +91,90 @@ description: Provider 是第三方 AI 提供商的基类，通过子类化声明
 
  `@downcity/city` 不内置 OpenAI、DeepSeek 或其他具体图片 Provider 构造器。City 包只提供 `Provider` 抽象、`AIService` 注册机制，以及 `client.ai.image_create()` / `client.ai.image_result()` 的统一任务协议。
 
- 具体上游适配应放在具体 City 项目里实现。这些 adapter 可以把不同上游的响应归一成 AI SDK `UIMessage` file parts，然后通过 `Provider.model()` 注册给 `AIService`：
+具体上游适配应放在具体 City 项目里实现。这些 adapter 可以把不同上游的响应归一成 AI SDK `UIMessage` file parts，然后通过 `Provider.model()` 注册给 `AIService`：
 
- ```ts
- import { Provider, type AIProviderChargedOutput, type Context } from "@downcity/city";
- import type { UIMessage } from "ai";
+```ts
+import {
+  Provider,
+  type AIImageProviderCreateResult,
+  type AIImageProviderPersistResult,
+  type AIImageProviderResult,
+  type Context,
+} from "@downcity/city";
+
+interface ImageJobStore {
+  create(record: {
+    job_id: string;
+    input: Record<string, unknown>;
+    status: "running";
+    user_id?: string;
+  }): Promise<void>;
+  get(job_id: string): Promise<{
+    input: Record<string, unknown>;
+    status: "running" | "succeeded" | "failed";
+    user_id?: string;
+    result?: AIImageProviderResult["result"];
+    usage?: unknown;
+    error?: string;
+  } | undefined>;
+  update(record: {
+    job_id: string;
+    status: "running" | "succeeded" | "failed";
+    result?: AIImageProviderResult["result"];
+    usage?: unknown;
+    error?: string;
+  }): Promise<void>;
+}
 
  class MyImageProvider extends Provider {
-   constructor() {
+   constructor(private readonly job_store: ImageJobStore) {
      super({ id: "my-image", envKey: "MY_IMAGE_API_KEY" });
-   }
+  }
 
-   async image(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
-     const apiKey = ctx.env("MY_IMAGE_API_KEY");
-     const response = await fetch("https://image.example.com/generate", {
+  async image_create(ctx: Context): Promise<AIImageProviderCreateResult> {
+    const job_id = crypto.randomUUID();
+    await this.job_store.create({
+      job_id,
+      input: ctx.input as Record<string, unknown>,
+      status: "running",
+      user_id: ctx.user?.user_id,
+    });
+
+    return {
+      job_id,
+      status: "running",
+      poll_after_ms: 2000,
+    };
+  }
+
+  async image_persist(ctx: Context): Promise<AIImageProviderPersistResult> {
+    const job_id = String(ctx.input.job_id);
+    const job = await this.job_store.get(job_id);
+    if (!job) return { job_id, status: "failed", error: "image job is missing" };
+    if (job.status === "succeeded") {
+      return {
+        job_id,
+        status: "succeeded",
+        result: job.result,
+        billing_ref: `image:${job_id}`,
+        metadata: { user_id: job.user_id, usage: job.usage },
+      };
+    }
+
+    const apiKey = ctx.env("MY_IMAGE_API_KEY");
+    const response = await fetch("https://image.example.com/generate", {
        method: "POST",
        headers: {
          authorization: `Bearer ${apiKey}`,
          "content-type": "application/json",
        },
-       body: JSON.stringify(ctx.input),
+       body: JSON.stringify(job.input),
      });
      const data = await response.json();
-
-     return {
-       output: {
+     const result: AIImageProviderResult = {
+       job_id,
+       status: "succeeded",
+       result: {
          id: crypto.randomUUID(),
          role: "assistant",
          parts: [
@@ -127,10 +186,33 @@ description: Provider 是第三方 AI 提供商的基类，通过子类化声明
          ],
        },
      };
+
+     await this.job_store.update({
+       job_id,
+       status: "succeeded",
+       result: result.result,
+       usage: data.usage,
+     });
+     return {
+       ...result,
+       billing_ref: `image:${job_id}`,
+       metadata: { user_id: job.user_id, usage: data.usage },
+     };
    }
+
+  async image_result(ctx: Context): Promise<AIImageProviderResult> {
+    const job_id = String(ctx.input.job_id);
+    const job = await this.job_store.get(job_id);
+    if (!job) {
+      return { job_id, status: "failed", error: "image result is missing" };
+    }
+    if (job.status === "succeeded") return { job_id, status: "succeeded", result: job.result };
+    if (job.status === "failed") return { job_id, status: "failed", error: job.error };
+    return { job_id, status: "running", poll_after_ms: 2000 };
+  }
  }
 
- const imageProvider = new MyImageProvider();
+ const imageProvider = new MyImageProvider(jobStore);
 
  ai.use(imageProvider.model({
    id: "image-basic",
@@ -154,21 +236,38 @@ description: Provider 是第三方 AI 提供商的基类，通过子类化声明
  const file = current.result?.parts.find((part) => part.type === "file");
  ```
 
- ## 异步图片任务
+## Provider 任务协议
 
- 如果图片生成是异步的，覆盖 `image_job` 方法：
+调用方只使用 `client.ai.image_create()` 和 `client.ai.image_result()`。Provider 实现侧统一使用三个方法：
 
- ```ts
- import { type AIImageJobStepResult, type Context } from "@downcity/city";
+```ts
+import {
+  type AIImageProviderCreateResult,
+  type AIImageProviderPersistResult,
+  type AIImageProviderResult,
+  type Context,
+} from "@downcity/city";
 
- class LuchiImageProvider extends Provider {
-   // ...
-   async image_job(ctx: Context): Promise<AIImageJobStepResult> {
-     // 创建或查询上游 job
-     // 返回 { status: "running" | "succeeded" | "failed", ... }
-   }
- }
- ```
+class LuchiImageProvider extends Provider {
+  // ...
+  async image_create(ctx: Context): Promise<AIImageProviderCreateResult> {
+    // 创建/启动上游 job，并用你的运行环境保存需要的状态
+    return { job_id: "upstream_job_id", status: "running", poll_after_ms: 2000 };
+  }
+
+  async image_persist(ctx: Context): Promise<AIImageProviderPersistResult> {
+    // 由后台 worker / admin action 写入最终结果到 Provider 自己的存储
+    return { job_id: String(ctx.input.job_id), status: "running", poll_after_ms: 2000 };
+  }
+
+  async image_result(ctx: Context): Promise<AIImageProviderResult> {
+    // 只通过 ctx.input.job_id 读取 Provider 自己已经保存的状态
+    return { job_id: String(ctx.input.job_id), status: "running" };
+  }
+}
+```
+
+AIService 只校验固定返回格式并原样返回。任务如何存储、如何后台执行、如何重试、图片 URL 是 HTTPS、R2 URL 还是 data URL，都由具体 Provider 实现决定。生产环境里通常由 queue / cron / admin worker 在 `image_create` 后调用 `image_persist`，不要让前端直接调用它。
 
  ## 自动透传
 
@@ -220,7 +319,9 @@ description: Provider 是第三方 AI 提供商的基类，通过子类化声明
 
  ## Provider 出账
 
- 当 Provider 或某个具体 model 需要把一次完成的 AI 调用转换成账单草稿时，使用 `bill(ctx, output)`。`bill` 不直接扣余额；AIService 会读取它返回的 charge line，并通过配置的 `BalanceService` bridge 调用 `balance.charge()`。
+当 Provider 或某个具体 model 需要把一次完成的 AI 调用转换成账单草稿时，使用 `bill(ctx, output)`。`bill` 不直接扣余额；AIService 会读取它返回的 charge line，并通过配置的 `BalanceService` bridge 调用 `balance.charge()`。
+
+图片任务的扣费只会在 `image_persist()` 返回 `status: "succeeded"` 后触发。`image_create()` 不扣费，`image_result()` 只读取已保存状态。如果后台 persist 没有当前用户上下文，`bill()` 应该从持久化任务归属里返回 charge line 的 `user_id`。
 
  通常优先级是：
 
@@ -296,8 +397,9 @@ description: Provider 是第三方 AI 提供商的基类，通过子类化声明
  | `createClient` | 需要 text/stream 时覆盖，返回 OpenAI-compatible client |
  | `text` | SDK 文本生成 action（基类默认提供） |
  | `stream` | SDK 流式生成 action（基类默认提供） |
- | `image` | SDK 图片生成 action |
- | `image_job` | 异步图片任务 action |
+ | `image_create` | 创建并启动图片 provider 任务 |
+ | `image_persist` | 持久化最终图片结果；成功后触发 `bill` |
+ | `image_result` | 读取图片 provider 任务结果 |
  | `video` | SDK 视频生成 action |
  | `openai` | /chat/completions action（未提供则自动透传） |
  | `bill` | 为本次完成的调用返回账单草稿 |

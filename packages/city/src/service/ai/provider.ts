@@ -17,7 +17,11 @@ import type {
   AIProviderChargedResponse,
   AIProviderChargeLine,
 } from "./charge.js";
-import type { AIImageJobStepResult } from "./job-types.js";
+import type {
+  AIImageProviderCreateResult,
+  AIImageProviderPersistResult,
+  AIImageProviderResult,
+} from "./job-types.js";
 import type {
   ModelConfig,
   ModelActions,
@@ -221,18 +225,26 @@ export abstract class Provider {
   }
 
    /**
-    * 图片生成 action。
+    * 图片任务创建 action。
     *
-    * 子类实现图片生成时覆盖。
+    * 子类实现图片生成时覆盖，负责创建并启动 provider 侧图片任务。
     */
-   image?(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>>;
+   image_create?(ctx: Context): Promise<AIImageProviderCreateResult>;
 
    /**
-    * 图片任务推进 action。
+    * 图片结果持久化 action。
     *
-    * 子类实现异步图片任务时覆盖。
+    * 子类实现图片生成时覆盖，负责把最终结果写入具体实现自己的存储。
+    * AIService 会在该 action 成功后执行 bill。
     */
-   image_job?(ctx: Context): Promise<AIImageJobStepResult>;
+   image_persist?(ctx: Context): Promise<AIImageProviderPersistResult>;
+
+   /**
+    * 图片任务查询 action。
+    *
+    * 子类实现图片生成时覆盖，负责根据 provider 任务状态读取结果。
+    */
+   image_result?(ctx: Context): Promise<AIImageProviderResult>;
 
    /**
     * 视频生成 action。
@@ -274,8 +286,9 @@ export abstract class Provider {
      const all_modalities = [
        "text",
        "stream",
-       "image",
-       "image_job",
+       "image_create",
+       "image_persist",
+       "image_result",
        "video",
        "tts",
        "asr",

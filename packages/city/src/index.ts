@@ -77,7 +77,6 @@ export {
   normalizeAIUsage,
   normalizeOpenAICompatibleBody,
   readErrorMessage,
-  readImageJobStepContext,
   readJsonResponse,
   readOpenAICompatibleSseUsage,
   readRequiredEnv,
@@ -193,9 +192,9 @@ export type {
 } from "./pact/user/types.js";
 
 export type {
-  AIImageJobStepContext,
-  AIImageJobStepResult,
-  AIImageJobStepState,
+  AIImageProviderCreateResult,
+  AIImageProviderPersistResult,
+  AIImageProviderResult,
 } from "./service/ai/job-types.js";
 
 export type {

@@ -204,6 +204,10 @@ if (current.status === "succeeded") {
 }
 ```
 
+生成图片的 file part `url` 会按具体 Provider 返回的内容原样返回。Provider 可以返回 HTTPS URL、R2/resource URL，或 `data:image/...;base64,...` data URL。
+
+`image_create()` 会在任务提交后立即返回。服务端 Provider / worker 负责在后台持久化最终结果；`image_result()` 只读取已经保存的任务状态。
+
 也可以在对话或参考图场景使用 `messages`：
 
 ```ts
@@ -221,7 +225,7 @@ const job = await client.ai.image_create({
 });
 ```
 
-`image_create()` 的底层约定很简单：client 只发送 `prompt` / `messages` / `model` / `size` / `ratio` / `quality` / `count` / `provider_options` 这些输入；City 侧 Provider 负责把 OpenAI 图片 API 等上游响应归一成 AI SDK `UIMessage` file parts。
+图片任务的底层约定很简单：client 只发送 `prompt` / `messages` / `model` / `size` / `ratio` / `quality` / `count` / `provider_options` 这些输入；City 侧 Provider 通过自己的存储完成创建、持久化和查询。
 
 `video()` 仍然固定返回 AI SDK `UIMessage`。City 侧的 Provider `video` action 也应该返回 `UIMessage`。
 

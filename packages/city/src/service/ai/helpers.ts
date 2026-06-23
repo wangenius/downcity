@@ -8,7 +8,6 @@
  import type { DynamicToolUIPart, FileUIPart, ToolSet, UIMessage } from "ai";
  import { jsonSchema, tool } from "ai";
  import type { AIProviderChargeLine } from "./charge.js";
- import type { AIImageJobStepContext } from "./job-types.js";
  import type { Context } from "../service.js";
 
  // ===========================================================================
@@ -232,16 +231,6 @@
        ...metadata,
      }),
    };
- }
-
- /**
-  * 读取图片任务推进上下文。
-  */
- export function readImageJobStepContext(ctx: Context): AIImageJobStepContext | undefined {
-   const value = ctx.locals.image_job;
-   return value && typeof value === "object" && !Array.isArray(value)
-     ? value as AIImageJobStepContext
-     : undefined;
  }
 
  // ===========================================================================

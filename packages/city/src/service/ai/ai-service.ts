@@ -9,19 +9,18 @@
  * 路由（City 自动生成）：
  * - POST /v1/ai/text             — 文本生成
  * - POST /v1/ai/stream           — 流式生成
- * - POST /v1/ai/image            — 图片生成
  * - POST /v1/ai/video            — 视频生成
+ * - POST /v1/ai/image/create     — 创建图片生成任务
+ * - POST /v1/ai/image/result     — 查询图片生成任务
+ * - POST /v1/ai/image/persist    — 后台持久化图片结果（admin）
  * - POST /v1/ai/chat/completions — OpenAI 兼容端点
  * - GET  /v1/ai/models           — 模型列表
  */
 
 import { Service, type Context } from "../service.js";
-import { httpError, randomSecret } from "../../utils/helpers.js";
+import { httpError } from "../../utils/helpers.js";
 import type { ActionFn } from "../action.js";
-import { sqliteAsyncJobs } from "../async-job/schema.js";
 import { normalizeAIUsage } from "./helpers.js";
-import type { UIMessage } from "ai";
-import type { AsyncJobRecord, AsyncJobStatus } from "../../types/AsyncJob.js";
 import type {
   AIServiceOptions,
   AIModelEnvRequirement,
@@ -36,21 +35,19 @@ import type {
   AIProviderChargeLine,
 } from "./charge.js";
 import type {
-  AIImageJobStepContext,
-  AIImageJobStepResult,
-  AIImageJobStepState,
+  AIImageProviderCreateResult,
+  AIImageProviderPersistResult,
+  AIImageProviderResult,
   UserImageJobCreateResult,
   UserImageJobResult,
 } from "./job-types.js";
 
-/** AIService 直接暴露的 SDK 通路模态列表。 */
-const MODALITIES = ["text", "stream", "image", "video", "tts", "asr"] as const;
+/** AIService 直接暴露的 SDK 通路模态列表。图片只通过 image/create + image/result 暴露。 */
+const MODALITIES = ["text", "stream", "video", "tts", "asr"] as const;
 /** 用户侧默认以 text 模态排序模型 */
 const DEFAULT_MODEL_MODE = "text";
-/** 图片任务轮询建议间隔 */
-const IMAGE_JOB_POLL_AFTER_MS = 2_000;
-/** 图片生成任务在通用 async_jobs 表中的类型。 */
-const IMAGE_GENERATE_JOB_TYPE = "ai.image.generate";
+/** 图片任务的内部 action 列表。 */
+const IMAGE_ACTION_MODES = ["image_create", "image_persist", "image_result"] as const;
 
 type Modality = (typeof MODALITIES)[number];
 type EnvReader = (key: string) => string | undefined;
@@ -96,15 +93,6 @@ function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
 }
 
 /**
- * 读取必填字符串。
- */
-function readRequiredString(value: unknown, label: string): string {
-  const text = readOptionalString(value);
-  if (!text) throw httpError(422, `${label} is required`);
-  return text;
-}
-
-/**
  * 读取可选字符串。
  */
 function readOptionalString(value: unknown): string | undefined {
@@ -112,55 +100,13 @@ function readOptionalString(value: unknown): string | undefined {
 }
 
 /**
- * 归一化图片任务输出。
+ * 保留已知 HTTP 错误状态，其它异常统一包装成上游错误。
  */
-async function normalizeImageJobOutput(output: unknown): Promise<UIMessage> {
-  if (!isResponse(output)) return output as UIMessage;
-  const text = await output.text();
-  if (!output.ok) {
-    throw httpError(output.status, text || output.statusText || "image generation failed");
+function imageActionError(error: unknown, fallback_message: string): Error {
+  if (error instanceof Error && typeof (error as { statusCode?: unknown }).statusCode === "number") {
+    return error;
   }
-  return text ? JSON.parse(text) as UIMessage : {} as UIMessage;
-}
-
-/**
- * 解析已持久化的图片任务结果。
- */
-function parseImageJobResult(raw: string): UIMessage | undefined {
-  try {
-    return JSON.parse(raw) as UIMessage;
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * 解析可恢复任务状态。
- */
-function parseImageJobStepState(raw: string | null | undefined): AIImageJobStepState | undefined {
-  if (!raw) return undefined;
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as AIImageJobStepState
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * 解析已持久化的图片任务输入。
- */
-function parseImageJobInput(raw: string): Record<string, unknown> {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
-      : {};
-  } catch {
-    return {};
-  }
+  return httpError(502, error instanceof Error ? error.message : fallback_message);
 }
 
 /**
@@ -201,57 +147,54 @@ function countImageOutputs(output: unknown): number | undefined {
 }
 
 /**
- * 判断 provider 是否返回了图片任务推进结果。
+ * 判断 provider 是否返回了图片任务创建结果。
  */
-function isImageJobStepResult(value: unknown): value is AIImageJobStepResult {
+function isImageProviderCreateResult(value: unknown): value is AIImageProviderCreateResult {
   if (!value || typeof value !== "object") return false;
-  const status = (value as { status?: unknown }).status;
-  return status === "running" || status === "succeeded" || status === "failed";
+  const record = value as { job_id?: unknown; status?: unknown };
+  return typeof record.job_id === "string" &&
+    Boolean(record.job_id.trim()) &&
+    isImageJobStatus(record.status);
 }
 
 /**
- * 把类型化任务记录转成 TableApi 使用的普通行。
+ * 判断 provider 是否返回了图片任务查询结果。
  */
-function recordToRow(record: Partial<AsyncJobRecord>): Record<string, unknown> {
-  return { ...record };
+function isImageProviderResult(value: unknown): value is AIImageProviderResult {
+  if (!value || typeof value !== "object") return false;
+  const record = value as { job_id?: unknown; status?: unknown; result?: unknown };
+  if (typeof record.job_id !== "string" || !record.job_id.trim()) return false;
+  if (!isImageJobStatus(record.status)) return false;
+  if (record.status === "succeeded") {
+    const result = isRecord(record.result) ? record.result : undefined;
+    if (!result || result.role !== "assistant" || !Array.isArray(result.parts)) return false;
+  }
+  return true;
 }
 
 /**
- * 把 TableApi 普通行转成图片任务记录。
+ * 判断 provider 是否返回了图片持久化结果。
  */
-function rowToAsyncJobRecord(row: Record<string, unknown>): AsyncJobRecord {
-  return {
-    job_id: String(row.job_id ?? ""),
-    job_type: String(row.job_type ?? ""),
-    status: readJobStatus(row.status),
-    input_json: String(row.input_json ?? "{}"),
-    state_json: readNullableString(row.state_json),
-    result_json: readNullableString(row.result_json),
-    error: readNullableString(row.error),
-    message: readNullableString(row.message),
-    city_id: readNullableString(row.city_id),
-    user_id: readNullableString(row.user_id),
-    service_id: readNullableString(row.service_id),
-    model_id: readNullableString(row.model_id),
-    created_at: String(row.created_at ?? ""),
-    updated_at: String(row.updated_at ?? ""),
-  };
+function isImageProviderPersistResult(value: unknown): value is AIImageProviderPersistResult {
+  if (!value || typeof value !== "object") return false;
+  const record = value as { job_id?: unknown; status?: unknown; result?: unknown };
+  if (typeof record.job_id !== "string" || !record.job_id.trim()) return false;
+  if (!isImageJobStatus(record.status)) return false;
+  if (record.status === "succeeded") {
+    const result = isRecord(record.result) ? record.result : undefined;
+    if (!result || result.role !== "assistant" || !Array.isArray(result.parts)) return false;
+  }
+  return true;
 }
 
 /**
- * 读取任务状态。
+ * 判断图片任务状态。
  */
-function readJobStatus(value: unknown): AsyncJobStatus {
-  return value === "queued" || value === "running" || value === "succeeded" || value === "failed"
-    ? value
-    : "failed";
-}
-
-/**
- * 读取可空字符串字段。
- */
-function readNullableString(value: unknown): string | null {
-  return typeof value === "string" ? value : null;
+function isImageJobStatus(value: unknown): boolean {
+  return value === "queued" ||
+    value === "running" ||
+    value === "succeeded" ||
+    value === "failed";
 }
 
 export class AIService extends Service {
@@ -265,7 +208,7 @@ export class AIService extends Service {
   private readonly balance?: AIBalanceBridge;
 
   constructor(options: AIServiceOptions = {}) {
-    super({ id: "ai", name: "AI", tables: { async_jobs: sqliteAsyncJobs } });
+    super({ id: "ai", name: "AI" });
     this.balance = options.balance;
 
     // 为每个 modality 注册 routing action
@@ -281,6 +224,9 @@ export class AIService extends Service {
     });
     this.action("image/result", async (ctx) => this.readImageJob(ctx), {
       auth: ["user", "admin"],
+    });
+    this.action("image/persist", async (ctx) => this.persistImageJob(ctx), {
+      auth: ["admin"],
     });
 
     // OpenAI 兼容端点
@@ -350,6 +296,13 @@ export class AIService extends Service {
   }
 
   private getAction(model: ModelConfig, mode?: string): ActionFn | undefined {
+    if (mode === "image" || IMAGE_ACTION_MODES.includes(mode as (typeof IMAGE_ACTION_MODES)[number])) {
+      const has_image_actions = Boolean(model.actions.image_create && model.actions.image_persist && model.actions.image_result);
+      if (!has_image_actions) return undefined;
+      return mode === "image"
+        ? model.actions.image_create
+        : model.actions[mode as keyof ModelActions];
+    }
     return model.actions[(mode ?? "text") as keyof ModelActions];
   }
 
@@ -430,8 +383,11 @@ export class AIService extends Service {
 
   private getModelModalities(model: ModelConfig): string[] {
     const modalities = Object.keys(model.actions).filter((key) => model.actions[key] !== undefined);
+    if (modalities.includes("image_create") && modalities.includes("image_persist") && modalities.includes("image_result")) {
+      modalities.push("image");
+    }
     if (!modalities.includes("openai") && this.resolveOpenAIAction(model)) modalities.push("openai");
-    return modalities;
+    return modalities.filter((mode) => mode !== "image_create" && mode !== "image_persist" && mode !== "image_result");
   }
 
   private getModelEnvRequirements(model: ModelConfig): AIModelEnvRequirement[] {
@@ -480,219 +436,58 @@ export class AIService extends Service {
   // ========== 图片任务通路 ==========
 
   private async createImageJob(ctx: Context): Promise<UserImageJobCreateResult> {
-    const resolved = this.resolve({ model: ctx.input.model as string | undefined, mode: "image" }, ctx.env);
-    const job_id = `img_${randomSecret(12)}`;
+    const resolved = this.resolve({ model: ctx.input.model as string | undefined, mode: "image_create" }, ctx.env);
     this.attachResolvedModel(ctx, resolved.model, "image/create");
-    await this.handleCharge(ctx, resolved.model?.bill?.(ctx, { job_id }), false);
-
-    const now = new Date().toISOString();
-    const record: AsyncJobRecord = {
-      job_id,
-      job_type: IMAGE_GENERATE_JOB_TYPE,
-      status: "queued",
-      input_json: JSON.stringify(ctx.input),
-      state_json: null,
-      result_json: null,
-      error: null,
-      message: "queued",
-      city_id: ctx.city?.city_id ?? readOptionalString(ctx.input.city_id),
-      user_id: ctx.user?.user_id ?? null,
-      service_id: "ai",
-      model_id: resolved.model?.id ?? null,
-      created_at: now,
-      updated_at: now,
-    };
-
-    await this.asyncJobTable(ctx).insert(recordToRow(record));
-
-    const job_ctx: Context = {
-      ...ctx,
-      input: { ...ctx.input },
-      locals: {},
-      output: undefined,
-      error: undefined,
-    };
-    if (resolved.model?.actions.image_job) {
-      let advanced: AsyncJobRecord;
-      try {
-        advanced = await this.advanceImageJob(job_ctx, record);
-      } catch (error) {
-        await this.updateImageJob(ctx, job_id, {
-          status: "failed",
-          error: error instanceof Error ? error.message : String(error),
-          message: "failed",
-          updated_at: new Date().toISOString(),
-        });
-        throw httpError(502, error instanceof Error ? error.message : "image_job action failed");
+    try {
+      const created = await resolved.action(ctx);
+      if (!isImageProviderCreateResult(created)) {
+        throw httpError(500, "image_create action returned invalid result");
       }
-      return {
-        job_id,
-        status: advanced.status,
-        poll_after_ms: IMAGE_JOB_POLL_AFTER_MS,
-      };
-    } else {
-      const promise = this.runImageJob(job_id, job_ctx);
-      if (ctx.waitUntil) ctx.waitUntil(promise);
-      else void promise;
+      return created;
+    } catch (error) {
+      throw imageActionError(error, "image_create action failed");
     }
-
-    return {
-      job_id,
-      status: "queued",
-      poll_after_ms: IMAGE_JOB_POLL_AFTER_MS,
-    };
   }
 
   private async readImageJob(ctx: Context): Promise<UserImageJobResult> {
-    const job_id = readRequiredString(ctx.input.job_id, "job_id");
-    const record = await this.getImageJob(ctx, job_id);
-    if (!record) throw httpError(404, `Image job not found: ${job_id}`);
-    this.ensureImageJobAccess(ctx, record);
-    if (record.status === "queued" || record.status === "running") {
-      const advanced = await this.advanceImageJob(ctx, record);
-      return this.toImageJobResult(advanced);
-    }
-    return this.toImageJobResult(record);
-  }
-
-  private async advanceImageJob(ctx: Context, record: AsyncJobRecord): Promise<AsyncJobRecord> {
-    const input = parseImageJobInput(record.input_json);
-    const resolved = this.resolve({ model: input.model as string | undefined, mode: "image" }, ctx.env);
-    const step_action = resolved.model?.actions.image_job;
-    if (!step_action) return record;
-
-    this.attachResolvedModel(ctx, resolved.model, "image");
-    const step_ctx: Context = {
-      ...ctx,
-      input,
-      locals: {
-        ...ctx.locals,
-        image_job: {
-          job_id: record.job_id,
-          status: record.status,
-          state: parseImageJobStepState(record.state_json),
-        } satisfies AIImageJobStepContext,
-      },
-    };
-    const output = await step_action(step_ctx);
-    if (!isImageJobStepResult(output)) {
-      throw httpError(500, "image_job action returned invalid result");
-    }
-
-    const updated_at = new Date().toISOString();
-    if (output.status === "succeeded") {
-      if (!output.result) throw httpError(500, "image_job action succeeded without result");
-      await this.updateImageJob(ctx, record.job_id, {
-        status: "succeeded",
-        state_json: null,
-        result_json: JSON.stringify(output.result),
-        error: null,
-        message: output.message ?? "succeeded",
-        updated_at,
-      });
-    } else if (output.status === "failed") {
-      await this.updateImageJob(ctx, record.job_id, {
-        status: "failed",
-        error: output.error ?? output.message ?? "image generation failed",
-        message: output.message ?? "failed",
-        updated_at,
-      });
-    } else {
-      await this.updateImageJob(ctx, record.job_id, {
-        status: "running",
-        state_json: output.state ? JSON.stringify(output.state) : record.state_json,
-        error: null,
-        message: output.message ?? "running",
-        updated_at,
-      });
-    }
-
-    const next = await this.getImageJob(ctx, record.job_id);
-    return next ?? record;
-  }
-
-  private async runImageJob(job_id: string, ctx: Context): Promise<void> {
+    const resolved = this.resolve({ model: ctx.input.model as string | undefined, mode: "image_result" }, ctx.env);
+    this.attachResolvedModel(ctx, resolved.model, "image/result");
     try {
-      await this.updateImageJob(ctx, job_id, {
-        status: "running",
-        message: "running",
-        error: null,
-        updated_at: new Date().toISOString(),
-      });
-
-      const resolved = this.resolve({ model: ctx.input.model as string | undefined, mode: "image" }, ctx.env);
-      this.attachResolvedModel(ctx, resolved.model, "image");
       const output = await resolved.action(ctx);
-      const result = await normalizeImageJobOutput(output);
-
-      await this.updateImageJob(ctx, job_id, {
-        status: "succeeded",
-        state_json: null,
-        result_json: JSON.stringify(result),
-        error: null,
-        message: "succeeded",
-        updated_at: new Date().toISOString(),
-      });
+      if (!isImageProviderResult(output)) {
+        throw httpError(500, "image_result action returned invalid result");
+      }
+      return output;
     } catch (error) {
-      await this.updateImageJob(ctx, job_id, {
-        status: "failed",
-        error: error instanceof Error ? error.message : String(error),
-        message: "failed",
-        updated_at: new Date().toISOString(),
-      });
+      throw imageActionError(error, "image_result action failed");
     }
   }
 
-  private asyncJobTable(ctx: Context) {
-    const table = ctx.db.async_jobs;
-    if (!table) throw httpError(500, "Async job table is not initialized");
-    return table;
-  }
-
-  private async getImageJob(ctx: Context, job_id: string): Promise<AsyncJobRecord | undefined> {
-    const rows = await this.asyncJobTable(ctx).select({
-      job_id,
-      job_type: IMAGE_GENERATE_JOB_TYPE,
-    });
-    return rows[0] ? rowToAsyncJobRecord(rows[0]) : undefined;
-  }
-
-  private async updateImageJob(
-    ctx: Context,
-    job_id: string,
-    values: Partial<AsyncJobRecord>,
-  ): Promise<void> {
-    await this.asyncJobTable(ctx).update({
-      where: {
-        job_id,
-        job_type: IMAGE_GENERATE_JOB_TYPE,
-      },
-      values: recordToRow(values),
-    });
-  }
-
-  private ensureImageJobAccess(ctx: Context, record: AsyncJobRecord): void {
-    if (ctx.identity?.kind !== "user") return;
-    if (record.city_id && ctx.city?.city_id && record.city_id !== ctx.city.city_id) {
-      throw httpError(404, `Image job not found: ${record.job_id}`);
+  /**
+   * 持久化图片任务结果，并在持久化成功后触发计费。
+   *
+   * 关键点（中文）
+   * - 这个方法供后台 worker / queue / cron 调用，不是前端轮询 API。
+   * - Provider 负责把结果写入自己的存储；AIService 只在 succeeded 后执行 model.bill。
+   */
+  async persistImageJob(ctx: Context): Promise<AIImageProviderPersistResult> {
+    const resolved = this.resolve({ model: ctx.input.model as string | undefined, mode: "image_persist" }, ctx.env);
+    this.attachResolvedModel(ctx, resolved.model, "image/persist");
+    const started_at = Date.now();
+    try {
+      const output = await resolved.action(ctx);
+      if (!isImageProviderPersistResult(output)) {
+        throw httpError(500, "image_persist action returned invalid result");
+      }
+      if (output.status === "succeeded") {
+        this.attachOutputMetering(ctx, output.result, "image", started_at);
+        const charge = resolved.model?.bill?.(ctx, output);
+        await this.handleCharge(ctx, charge, isPromiseLike(charge));
+      }
+      return output;
+    } catch (error) {
+      throw imageActionError(error, "image_persist action failed");
     }
-    if (record.user_id && ctx.user?.user_id && record.user_id !== ctx.user.user_id) {
-      throw httpError(404, `Image job not found: ${record.job_id}`);
-    }
-  }
-
-  private toImageJobResult(record: AsyncJobRecord): UserImageJobResult {
-    const result = record.status === "succeeded" && record.result_json
-      ? parseImageJobResult(record.result_json)
-      : undefined;
-    return {
-      job_id: record.job_id,
-      status: record.status,
-      result,
-      error: record.error ?? undefined,
-      message: record.message ?? undefined,
-      poll_after_ms: IMAGE_JOB_POLL_AFTER_MS,
-    };
   }
 
   // ========== OpenAI 兼容通路 ==========
@@ -797,10 +592,11 @@ export class AIService extends Service {
     const promise = Promise.resolve(charge)
       .then(async (line) => {
         if (!line || line.amount_microcredits <= 0) return;
-        if (!ctx.user?.user_id) return;
+        const user_id = line.user_id ?? ctx.user?.user_id;
+        if (!user_id) return;
         await this.balance?.charge({
-          user_id: ctx.user.user_id,
           ...line,
+          user_id,
         });
       });
     if (!defer) {

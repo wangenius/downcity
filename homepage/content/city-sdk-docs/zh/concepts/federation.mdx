@@ -65,7 +65,7 @@ const client = new City({
 ```
 
 - `Admin City`：运行在可信后端，负责创建 city、管理 env、签发 `user_token`。
-- `User City`：运行在产品 client，只持有 `city_id + user_token`，调用 `ai.text()`、`ai.stream()`、`ai.image()` 和 Service action。
+- `User City`：运行在产品 client，只持有 `city_id + user_token`，调用 `ai.text()`、`ai.stream()`、`ai.image_create()` / `ai.image_result()` 和 Service action。
 
 客户端永远拿不到 provider key，`User City` 也永远拿不到 `admin_secret_key`。
 

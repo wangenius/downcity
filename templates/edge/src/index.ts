@@ -22,6 +22,7 @@ import {
   waffoPaymentProvider,
 } from "@downcity/services";
 import {
+  D1ImageJobStore,
   GeminiImageProvider,
   LuchiImageProvider,
   OpenAIImageProvider,
@@ -79,13 +80,18 @@ async function init_federation(env: Env): Promise<Federation> {
   federation.use(new UsageService({ record_errors: true }));
 
   const deepseek_provider = new DeepSeekProvider();
+  const image_job_store = new D1ImageJobStore(env.DB);
+  await image_job_store.ensureSchema();
+
   const luchi_image_provider = new LuchiImageProvider({
     id: "luchi-image",
+    jobStore: image_job_store,
     envKey: "LUCHI_IMAGE_API_KEY",
     defaultModelId: "gpt-image-2",
   });
   const image_302_provider = new OpenAIImageProvider({
     id: "302-image",
+    jobStore: image_job_store,
     envKey: "AI302_API_KEY",
     baseURL: "https://api.302.ai/v1",
     defaultModelId: "gpt-image-1",
@@ -93,12 +99,14 @@ async function init_federation(env: Env): Promise<Federation> {
   });
   const openai_image_provider = new OpenAIImageProvider({
     id: "openai-image",
+    jobStore: image_job_store,
     envKey: "OPENAI_API_KEY",
     baseURL: "https://api.openai.com/v1",
     defaultModelId: "gpt-image-1",
   });
   const gemini_image_provider = new GeminiImageProvider({
     id: "gemini-image",
+    jobStore: image_job_store,
     envKey: "GEMINI_API_KEY",
     defaultModelId: "gemini-2.5-flash-image",
   });
@@ -217,6 +225,7 @@ function withCors(response: Response): Response {
 function bill_ai_request(ctx: Context, output: unknown, amount_microcredits: number) {
   const mode = String(ctx.metering?.metadata?.mode ?? "request");
   return {
+    user_id: read_bill_user_id(output),
     amount_microcredits,
     note: `AI ${mode}`,
     ref: read_bill_ref(output),
@@ -237,4 +246,16 @@ function read_bill_ref(output: unknown): string | undefined {
   const record = output as Record<string, unknown>;
   const ref = record.job_id ?? record.id ?? record.ref;
   return typeof ref === "string" && ref.trim() ? ref.trim() : undefined;
+}
+
+/**
+ * 从输出对象中提取扣费用户 ID。
+ */
+function read_bill_user_id(output: unknown): string | undefined {
+  if (!output || typeof output !== "object" || Array.isArray(output)) return undefined;
+  const record = output as Record<string, unknown>;
+  const metadata = record.metadata;
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return undefined;
+  const user_id = (metadata as Record<string, unknown>).user_id;
+  return typeof user_id === "string" && user_id.trim() ? user_id.trim() : undefined;
 }

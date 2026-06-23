@@ -19,7 +19,7 @@ import type {
 } from "./charge.js";
 import type {
   AIImageProviderCreateResult,
-  AIImageProviderPersistResult,
+  AIImageProviderFetchResult,
   AIImageProviderResult,
 } from "./job-types.js";
 import type {
@@ -232,17 +232,16 @@ export abstract class Provider {
    image_create?(ctx: Context): Promise<AIImageProviderCreateResult>;
 
    /**
-    * 图片结果持久化 action。
+    * 图片任务抓取 action。
     *
-    * 子类实现图片生成时覆盖，负责把最终结果写入具体实现自己的存储。
-    * AIService 会在该 action 成功后执行 bill。
+    * 子类实现图片生成时覆盖，负责根据 provider 任务状态抓取上游结果。
     */
-   image_persist?(ctx: Context): Promise<AIImageProviderPersistResult>;
+   image_fetch?(ctx: Context): Promise<AIImageProviderFetchResult>;
 
    /**
     * 图片任务查询 action。
     *
-    * 子类实现图片生成时覆盖，负责根据 provider 任务状态读取结果。
+    * 该方法保留为类型兼容，AIService 图片能力默认使用 image_fetch。
     */
    image_result?(ctx: Context): Promise<AIImageProviderResult>;
 
@@ -287,7 +286,7 @@ export abstract class Provider {
        "text",
        "stream",
        "image_create",
-       "image_persist",
+       "image_fetch",
        "image_result",
        "video",
        "tts",

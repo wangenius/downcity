@@ -28,6 +28,8 @@ export interface AsyncJobRecord {
   error?: string | null;
   /** 当前任务状态说明，便于客户端展示或排障。 */
   message?: string | null;
+  /** 建议下一次轮询或后台抓取的间隔毫秒数。 */
+  poll_after_ms?: string | null;
   /** 当前 user_token 绑定的 City ID。 */
   city_id?: string | null;
   /** 当前终端用户 ID。 */

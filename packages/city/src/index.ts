@@ -14,6 +14,7 @@ export { Federation } from "./federation/federation.js";
 export type { FederationOptions, FederationHealthStatus } from "./federation/types.js";
 export type { FederationHandleRequestOptions, FederationRequestExecutionContext } from "./federation/types.js";
 export type { Runtime, EnvProvider, BuiltinTables, TableDef } from "./federation/runtime.js";
+export type { CityQueueAdapter, CityQueueMessage } from "./federation/queue.js";
 
 // ===========================================================================
 // 场景 2：注册 Service / InstallableService / AI 模型
@@ -193,7 +194,7 @@ export type {
 
 export type {
   AIImageProviderCreateResult,
-  AIImageProviderPersistResult,
+  AIImageProviderFetchResult,
   AIImageProviderResult,
 } from "./service/ai/job-types.js";
 

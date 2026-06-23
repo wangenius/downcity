@@ -44,6 +44,8 @@ export async function initialize_federation(params: {
   services: Service[];
   /** City ready 回调 */
   require_ready: () => Promise<{ city: { get(id: string): Promise<{ city_id: string; status: string } | undefined> } }>;
+  /** Federation queue facade */
+  queue?: unknown;
 }): Promise<FederationInitState> {
   const { runtime, services, require_ready } = params;
   const { database, client, env, builtinTables } = runtime;
@@ -89,6 +91,7 @@ export async function initialize_federation(params: {
     service._cityStore = city_store;
     service._raw = runtime.raw;
     service._baseURL = configured_base_url ?? runtime.baseURL;
+    service._queue = params.queue as never;
     await service._onInit();
   }
 

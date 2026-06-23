@@ -18,6 +18,7 @@ import type { EnvProvider } from "../federation/runtime.js";
 import type { CityStore } from "./cities/city-store.js";
 import type { InstructionActionDefinition, InstructionCapable, InstructionDefinition } from "./instruction.js";
 import type { RuntimeMetering } from "../types/Metering.js";
+import type { FederationQueue } from "../federation/queue.js";
 
 // ===========================================================================
 // 鉴权级别
@@ -75,6 +76,8 @@ export interface Context {
    * - 支持 waitUntil 的运行时会继续执行这里传入的 Promise
    */
   waitUntil?(promise: Promise<unknown>): void;
+  /** Federation 级异步队列能力（框架注入） */
+  queue?: FederationQueue;
 }
 
 // ===========================================================================
@@ -169,6 +172,9 @@ export class Service {
 
   /** 服务公网 URL */
   _baseURL?: string;
+
+  /** Federation 级异步队列能力 */
+  _queue?: FederationQueue;
 
   constructor(options: {
     id: string;

@@ -19,6 +19,7 @@ import { build_federation_instruction } from "./federation-instruction.js";
 import { initialize_federation } from "./federation-init.js";
 import { build_federation_router } from "./federation-router.js";
 import { create_federation_runtime } from "./federation-runtime.js";
+import { FederationQueue } from "./queue.js";
 import type { FederationOptions, FederationHealthStatus, FederationHandleRequestOptions } from "./types.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Runtime } from "./runtime.js";
@@ -28,6 +29,7 @@ import type { Database, DbClient } from "../store/db.js";
 
 export class Federation {
   private readonly runtime: Runtime;
+  readonly queue: FederationQueue;
   private readonly services = new Map<string, Service>();
 
   private database?: Database;
@@ -40,6 +42,16 @@ export class Federation {
 
   constructor(options: FederationOptions) {
     this.runtime = create_federation_runtime(options);
+    this.queue = new FederationQueue({
+      ensure_ready: () => this.ensure_ready(),
+      get_services: () => this.getServices(),
+      get_table_map: () => {
+        if (!this.table_map) throw new Error("Federation init has not completed yet");
+        return this.table_map;
+      },
+      get_env: () => this.runtime.env,
+      get_queue: () => this.queue,
+    });
     this.use(new EnvService());
     this.use(new CitiesService());
   }
@@ -136,6 +148,7 @@ export class Federation {
       runtime: this.runtime,
       services: this.getServices(),
       require_ready: () => this.require_ready(),
+      queue: this.queue,
     });
 
     this.database = state.database;

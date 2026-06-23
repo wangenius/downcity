@@ -206,7 +206,7 @@ if (current.status === "succeeded") {
 
 Generated image file-part `url` values are returned exactly as the concrete Provider supplies them. A Provider may return HTTPS URLs, R2/resource URLs, or `data:image/...;base64,...` data URLs.
 
-`image_create()` returns after the task is submitted. A backend worker or admin process should call `/v1/ai/image/persist`; AIService stores the final result in its built-in `async_jobs` table, and `image_result()` reads that saved state.
+`image_create()` returns after the task is submitted. AIService schedules a background `image/fetch` queue task to query upstream status and stores the latest state in the built-in `async_jobs` table. `image_result()` only reads that cached state.
 
 You can also use `messages` for conversational or reference-image workflows:
 
@@ -225,7 +225,7 @@ const job = await client.ai.image_create({
 });
 ```
 
-The low-level contract is intentionally small: the client sends `prompt` / `messages` / `model` / `size` / `ratio` / `quality` / `count` / `provider_options`; the City-side Provider creates, persists, and reads image jobs through its own storage.
+The low-level contract is intentionally small: the client sends `prompt` / `messages` / `model` / `size` / `ratio` / `quality` / `count` / `provider_options`; the City-side Provider creates upstream jobs and implements `image_fetch()` for upstream status, while AIService owns Queue scheduling and Downcity job storage in `async_jobs`.
 
 `video()` still returns AI SDK `UIMessage`. The City-side Provider `video` action should also return `UIMessage`.
 

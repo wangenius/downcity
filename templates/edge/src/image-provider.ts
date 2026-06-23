@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - client.ai.image_create() / image_result() 的统一结果协议是 AI SDK UIMessage。
  * - AIService 使用内置 async_jobs 表持久化任务状态，Provider 不管理任务存储。
- * - image_create() 只创建或启动上游任务；image_persist() 从 AIService 注入的任务上下文读取输入并返回最终结果。
+ * - image_create() 创建或启动上游任务；image_fetch() 从 AIService 注入的任务上下文读取 state 并查询上游结果。
  * - OpenAI / 302、Gemini、Luchi 三种图片 Provider 都继承 Provider 基类。
  * - 不同上游的同步响应、Gemini content parts、Luchi 异步 job 都在这里归一成 file parts。
  * - 第一版只支持 JSON / URL / data URL，不处理 multipart 本地文件上传。
@@ -13,7 +13,7 @@
 import {
   Provider,
   type AIImageProviderCreateResult,
-  type AIImageProviderPersistResult,
+  type AIImageProviderResult,
   type Context,
   buildImageMessage,
   readErrorMessage,
@@ -195,7 +195,7 @@ export class OpenAIImageProvider extends Provider {
     };
   }
 
-  async image_persist(ctx: Context): Promise<AIImageProviderPersistResult> {
+  async image_fetch(ctx: Context): Promise<AIImageProviderResult> {
     const job = readImageJobContext(ctx);
     try {
       const api_key = readRequiredEnv(ctx, this.envKey ?? "");
@@ -232,7 +232,6 @@ export class OpenAIImageProvider extends Provider {
           user_id: job.user_id,
           raw,
         }),
-        billing_ref: `image:${job.job_id}`,
         metadata: {
           provider: this.id,
           provider_options_key: this.provider_options_key,
@@ -243,7 +242,7 @@ export class OpenAIImageProvider extends Provider {
         },
       };
     } catch (error) {
-      return failedPersistResult(job, error);
+      return failedImageFetch(job, error);
     }
   }
 }
@@ -277,7 +276,7 @@ export class GeminiImageProvider extends Provider {
     };
   }
 
-  async image_persist(ctx: Context): Promise<AIImageProviderPersistResult> {
+  async image_fetch(ctx: Context): Promise<AIImageProviderResult> {
     const job = readImageJobContext(ctx);
     try {
       const api_key = readRequiredEnv(ctx, this.envKey ?? "");
@@ -312,7 +311,6 @@ export class GeminiImageProvider extends Provider {
           user_id: job.user_id,
           raw,
         }),
-        billing_ref: `image:${job.job_id}`,
         metadata: {
           provider: this.id,
           upstream_model: job.upstream_model,
@@ -322,7 +320,7 @@ export class GeminiImageProvider extends Provider {
         },
       };
     } catch (error) {
-      return failedPersistResult(job, error);
+      return failedImageFetch(job, error);
     }
   }
 }
@@ -368,7 +366,7 @@ export class LuchiImageProvider extends Provider {
     };
   }
 
-  async image_persist(ctx: Context): Promise<AIImageProviderPersistResult> {
+  async image_fetch(ctx: Context): Promise<AIImageProviderResult> {
     const job = readImageJobContext(ctx);
     const api_key = readRequiredEnv(ctx, this.envKey ?? "");
     const data = await readLuchiJob({
@@ -391,7 +389,6 @@ export class LuchiImageProvider extends Provider {
           job_id: job.job_id,
           raw,
         }),
-        billing_ref: `image:${job.job_id}`,
         metadata: {
           provider: this.id,
           upstream_model: job.upstream_model,
@@ -456,7 +453,7 @@ function readImageJobContext(ctx: Context): RuntimeImageJobContext {
   };
 }
 
-function failedPersistResult(job: RuntimeImageJobContext, error: unknown): AIImageProviderPersistResult {
+function failedImageFetch(job: RuntimeImageJobContext, error: unknown): AIImageProviderResult {
   return {
     job_id: job.job_id,
     status: "failed",

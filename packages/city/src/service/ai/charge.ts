@@ -16,7 +16,7 @@ export interface AIProviderChargeLine {
   /**
    * 可选扣费用户 ID。
    *
-   * 后台任务（例如 image_persist）通常由 admin / queue 触发，没有当前 user。
+   * 图片 result 轮询可能由 admin 或服务端代发，没有当前 user。
    * 这时 bill() 应从已保存任务归属中返回 user_id，AIService 会优先使用它。
    */
   user_id?: string;

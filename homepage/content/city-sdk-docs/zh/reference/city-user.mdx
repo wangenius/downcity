@@ -206,7 +206,7 @@ if (current.status === "succeeded") {
 
 生成图片的 file part `url` 会按具体 Provider 返回的内容原样返回。Provider 可以返回 HTTPS URL、R2/resource URL，或 `data:image/...;base64,...` data URL。
 
-`image_create()` 会在任务提交后立即返回。后台 worker 或 admin 进程应该调用 `/v1/ai/image/persist`；AIService 会把最终结果写入内置 `async_jobs` 表，`image_result()` 只读取已经保存的任务状态。
+`image_create()` 会在任务提交后立即返回。AIService 会调度后台 `image/fetch` queue 任务查询上游状态，并把最新状态写入内置 `async_jobs` 表。`image_result()` 只读取这个缓存状态。
 
 也可以在对话或参考图场景使用 `messages`：
 
@@ -225,7 +225,7 @@ const job = await client.ai.image_create({
 });
 ```
 
-图片任务的底层约定很简单：client 只发送 `prompt` / `messages` / `model` / `size` / `ratio` / `quality` / `count` / `provider_options` 这些输入；City 侧 Provider 通过自己的存储完成创建、持久化和查询。
+图片任务的底层约定很简单：client 只发送 `prompt` / `messages` / `model` / `size` / `ratio` / `quality` / `count` / `provider_options` 这些输入；City 侧 Provider 创建上游任务并实现 `image_fetch()` 查询上游状态，AIService 负责 Queue 调度和把 Downcity 任务状态存入 `async_jobs`。
 
 `video()` 仍然固定返回 AI SDK `UIMessage`。City 侧的 Provider `video` action 也应该返回 `UIMessage`。
 

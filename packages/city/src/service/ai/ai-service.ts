@@ -12,7 +12,6 @@
  * - POST /v1/ai/video            — 视频生成
  * - POST /v1/ai/image/create     — 创建图片生成任务
  * - POST /v1/ai/image/result     — 查询图片生成任务
- * - POST /v1/ai/image/persist    — 后台持久化图片结果（admin）
  * - POST /v1/ai/chat/completions — OpenAI 兼容端点
  * - GET  /v1/ai/models           — 模型列表
  */
@@ -39,7 +38,7 @@ import type {
 import type {
   AIImageJobContext,
   AIImageProviderCreateResult,
-  AIImageProviderPersistResult,
+  AIImageProviderFetchResult,
   AIImageProviderResult,
   UserImageJobCreateResult,
   UserImageJobResult,
@@ -50,9 +49,11 @@ const MODALITIES = ["text", "stream", "video", "tts", "asr"] as const;
 /** 用户侧默认以 text 模态排序模型 */
 const DEFAULT_MODEL_MODE = "text";
 /** 图片任务的内部 action 列表。 */
-const IMAGE_ACTION_MODES = ["image_create", "image_persist"] as const;
+const IMAGE_ACTION_MODES = ["image_create", "image_fetch"] as const;
 /** 图片生成任务在通用 async_jobs 表中的类型。 */
 const IMAGE_GENERATE_JOB_TYPE = "ai.image.generate";
+/** 图片任务后台抓取 action。 */
+const IMAGE_FETCH_ACTION = "image/fetch";
 
 type Modality = (typeof MODALITIES)[number];
 type EnvReader = (key: string) => string | undefined;
@@ -112,6 +113,24 @@ function readNullableString(value: unknown): string | null {
 }
 
 /**
+ * 读取可空数字字符串字段。
+ */
+function readNullableNumberString(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+/**
+ * 读取可选数字。
+ */
+function readOptionalNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string" || !value.trim()) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+/**
  * 读取任务状态。
  */
 function readJobStatus(value: unknown): AsyncJobStatus {
@@ -156,6 +175,7 @@ function rowToAsyncJobRecord(row: Record<string, unknown>): AsyncJobRecord {
     result_json: readNullableString(row.result_json),
     error: readNullableString(row.error),
     message: readNullableString(row.message),
+    poll_after_ms: readNullableNumberString(row.poll_after_ms),
     city_id: readNullableString(row.city_id),
     user_id: readNullableString(row.user_id),
     service_id: readNullableString(row.service_id),
@@ -239,21 +259,6 @@ function isImageProviderResult(value: unknown): value is AIImageProviderResult {
 }
 
 /**
- * 判断 provider 是否返回了图片持久化结果。
- */
-function isImageProviderPersistResult(value: unknown): value is AIImageProviderPersistResult {
-  if (!value || typeof value !== "object") return false;
-  const record = value as { job_id?: unknown; status?: unknown; result?: unknown };
-  if (typeof record.job_id !== "string" || !record.job_id.trim()) return false;
-  if (!isImageJobStatus(record.status)) return false;
-  if (record.status === "succeeded") {
-    const result = isRecord(record.result) ? record.result : undefined;
-    if (!result || result.role !== "assistant" || !Array.isArray(result.parts)) return false;
-  }
-  return true;
-}
-
-/**
  * 判断图片任务状态。
  */
 function isImageJobStatus(value: unknown): boolean {
@@ -291,7 +296,7 @@ export class AIService extends Service {
     this.action("image/result", async (ctx) => this.readImageJob(ctx), {
       auth: ["user", "admin"],
     });
-    this.action("image/persist", async (ctx) => this.persistImageJob(ctx), {
+    this.action(IMAGE_FETCH_ACTION, async (ctx) => this.fetchImageJob(ctx), {
       auth: ["admin"],
     });
 
@@ -363,14 +368,11 @@ export class AIService extends Service {
 
   private getAction(model: ModelConfig, mode?: string): ActionFn | undefined {
     if (mode === "image" || IMAGE_ACTION_MODES.includes(mode as (typeof IMAGE_ACTION_MODES)[number])) {
-      const has_image_actions = Boolean(model.actions.image_create && model.actions.image_persist);
+      const has_image_actions = Boolean(model.actions.image_create && model.actions.image_fetch);
       if (!has_image_actions) return undefined;
       return mode === "image"
         ? model.actions.image_create
         : model.actions[mode as keyof ModelActions];
-    }
-    if (mode === "image_result") {
-      return model.actions.image_result;
     }
     return model.actions[(mode ?? "text") as keyof ModelActions];
   }
@@ -452,11 +454,11 @@ export class AIService extends Service {
 
   private getModelModalities(model: ModelConfig): string[] {
     const modalities = Object.keys(model.actions).filter((key) => model.actions[key] !== undefined);
-    if (modalities.includes("image_create") && modalities.includes("image_persist")) {
+    if (modalities.includes("image_create") && modalities.includes("image_fetch")) {
       modalities.push("image");
     }
     if (!modalities.includes("openai") && this.resolveOpenAIAction(model)) modalities.push("openai");
-    return modalities.filter((mode) => mode !== "image_create" && mode !== "image_persist" && mode !== "image_result");
+    return modalities.filter((mode) => mode !== "image_create" && mode !== "image_fetch" && mode !== "image_result");
   }
 
   private getModelEnvRequirements(model: ModelConfig): AIModelEnvRequirement[] {
@@ -513,6 +515,7 @@ export class AIService extends Service {
         throw httpError(500, "image_create action returned invalid result");
       }
       await this.insertImageJob(ctx, created);
+      await this.enqueueImageFetch(ctx, created.job_id, created.poll_after_ms);
       return created;
     } catch (error) {
       throw imageActionError(error, "image_create action failed");
@@ -522,63 +525,70 @@ export class AIService extends Service {
   private async readImageJob(ctx: Context): Promise<UserImageJobResult> {
     const job = await this.requireImageJob(ctx);
     try {
-      const model_id = readOptionalString(ctx.input.model);
-      const model = model_id ? this.modelMap.get(model_id) : undefined;
-      if (model?.actions.image_result) {
-        this.attachResolvedModel(ctx, model, "image/result");
-        this.attachImageJobContext(ctx, job);
-        const output = await model.actions.image_result(ctx);
-        if (!isImageProviderResult(output)) {
-          throw httpError(500, "image_result action returned invalid result");
-        }
-        return output;
-      }
-      if (job.model_id && this.modelMap.has(job.model_id)) {
-        this.attachResolvedModel(ctx, this.modelMap.get(job.model_id), "image/result");
-      }
-      const output = this.imageJobToResult(job);
-      if (!isImageProviderResult(output)) {
-        throw httpError(500, "image_result action returned invalid result");
-      }
-      return output;
+      return this.imageJobToResult(job);
     } catch (error) {
       throw imageActionError(error, "image_result action failed");
     }
   }
 
   /**
-   * 持久化图片任务结果，并在持久化成功后触发计费。
-   *
-   * 关键点（中文）
-   * - 这个方法供后台 worker / queue / cron 调用，不是前端轮询 API。
-   * - AIService 使用内置 async_jobs 持久化任务，Provider 只负责把上游结果转成固定返回协议。
+   * 后台抓取图片任务状态，并根据结果更新 async_jobs。
    */
-  async persistImageJob(ctx: Context): Promise<AIImageProviderPersistResult> {
+  private async fetchImageJob(ctx: Context): Promise<AIImageProviderFetchResult> {
     const job = await this.requireImageJob(ctx);
-    if (!ctx.input.model && job.model_id) {
-      ctx.input = { ...ctx.input, model: job.model_id };
-    }
-    const resolved = this.resolve({ model: ctx.input.model as string | undefined, mode: "image_persist" }, ctx.env);
-    this.attachResolvedModel(ctx, resolved.model, "image/persist");
-    this.attachImageJobContext(ctx, job);
-    const started_at = Date.now();
     try {
-      const output = await resolved.action(ctx);
-      if (!isImageProviderPersistResult(output)) {
-        throw httpError(500, "image_persist action returned invalid result");
+      if (this.isTerminalImageJob(job)) return this.imageJobToResult(job);
+
+      const model_id = job.model_id ?? readOptionalString(ctx.input.model);
+      if (!model_id) throw httpError(422, "Image job is missing model_id");
+      const model = this.modelMap.get(model_id);
+      if (!model?.actions.image_fetch) {
+        throw httpError(422, `No image_fetch action for model: ${model_id}`);
       }
-      if (output.status === "succeeded") {
+
+      this.attachResolvedModel(ctx, model, IMAGE_FETCH_ACTION);
+      this.attachImageJobContext(ctx, job);
+      const started_at = Date.now();
+      const output = await model.actions.image_fetch(ctx);
+      if (!isImageProviderResult(output)) {
+        throw httpError(500, "image_fetch action returned invalid result");
+      }
+      const should_charge = output.status === "succeeded" && Boolean(output.result) && !job.result_json;
+      if (should_charge) {
         this.attachOutputMetering(ctx, output.result, "image", started_at);
-        await this.updateImageJobFromPersist(ctx, job, output);
-        const charge = resolved.model?.bill?.(ctx, output);
+      }
+      await this.updateImageJobFromFetch(ctx, job, output);
+      if (should_charge) {
+        const charge = model.bill?.(ctx, output);
         await this.handleCharge(ctx, charge, isPromiseLike(charge));
-      } else {
-        await this.updateImageJobFromPersist(ctx, job, output);
+      }
+      if (output.status === "queued" || output.status === "running") {
+        await this.enqueueImageFetch(ctx, job.job_id, output.poll_after_ms);
       }
       return output;
     } catch (error) {
-      throw imageActionError(error, "image_persist action failed");
+      throw imageActionError(error, "image_fetch action failed");
     }
+  }
+
+  /**
+   * 判断图片任务是否已经进入本地终态。
+   */
+  private isTerminalImageJob(job: AsyncJobRecord): boolean {
+    return Boolean((job.status === "succeeded" && job.result_json) || job.status === "failed");
+  }
+
+  /**
+   * 调度下一次图片任务抓取。
+   */
+  private async enqueueImageFetch(ctx: Context, job_id: string, delay_ms?: number): Promise<void> {
+    if (!ctx.queue) return;
+    await ctx.queue.send({
+      service: "ai",
+      action: IMAGE_FETCH_ACTION,
+      input: { job_id },
+      delay_ms,
+    });
   }
 
   /**
@@ -597,6 +607,7 @@ export class AIService extends Service {
       result_json: null,
       error: created.error ?? null,
       message: created.message ?? null,
+      poll_after_ms: created.poll_after_ms ? String(created.poll_after_ms) : null,
       city_id: ctx.city?.city_id ?? null,
       user_id: ctx.user?.user_id ?? null,
       service_id: "ai",
@@ -647,15 +658,15 @@ export class AIService extends Service {
       result: job.status === "succeeded" ? parseImageMessage(job.result_json) : undefined,
       error: job.error ?? undefined,
       message: job.message ?? undefined,
-      poll_after_ms: job.status === "running" || job.status === "queued" ? 2_000 : undefined,
+      poll_after_ms: readOptionalNumber(job.poll_after_ms),
       metadata: parseRecordJson(job.state_json),
     };
   }
 
   /**
-   * 按 persist 输出更新图片任务。
+   * 按 provider fetch 输出更新图片任务。
    */
-  private async updateImageJobFromPersist(ctx: Context, job: AsyncJobRecord, output: AIImageProviderPersistResult): Promise<void> {
+  private async updateImageJobFromFetch(ctx: Context, job: AsyncJobRecord, output: AIImageProviderFetchResult): Promise<void> {
     const table = ctx.db.async_jobs;
     if (!table) throw httpError(500, "AI async_jobs table is not initialized");
     await table.update({
@@ -666,6 +677,7 @@ export class AIService extends Service {
         result_json: output.result ? JSON.stringify(output.result) : job.result_json ?? null,
         error: output.error ?? null,
         message: output.message ?? null,
+        poll_after_ms: output.poll_after_ms ? String(output.poll_after_ms) : null,
         updated_at: new Date().toISOString(),
       },
     });

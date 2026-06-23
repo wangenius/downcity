@@ -30,6 +30,8 @@ export const sqliteAsyncJobs = sqliteTable(DEFAULT_ASYNC_JOBS_TABLE, {
   error: sqliteText("error"),
   /** 当前任务状态说明，便于客户端展示或排障。 */
   message: sqliteText("message"),
+  /** 建议下一次轮询或后台抓取的间隔毫秒数。 */
+  poll_after_ms: sqliteText("poll_after_ms"),
   /** 当前 user_token 绑定的 City ID。 */
   city_id: sqliteText("city_id"),
   /** 当前终端用户 ID。 */
@@ -64,6 +66,8 @@ export const pgAsyncJobs = pgTable(DEFAULT_ASYNC_JOBS_TABLE, {
   error: pgText("error"),
   /** 当前任务状态说明，便于客户端展示或排障。 */
   message: pgText("message"),
+  /** 建议下一次轮询或后台抓取的间隔毫秒数。 */
+  poll_after_ms: pgText("poll_after_ms"),
   /** 当前 user_token 绑定的 City ID。 */
   city_id: pgText("city_id"),
   /** 当前终端用户 ID。 */

@@ -141,6 +141,7 @@ export function build_federation_router(params: {
           env: (key) => runtime.env.get(key),
           service: { id: service.id, name: service.name },
           action: { id: action.id },
+          queue: service._queue,
           started_at: new Date(),
         };
         try {

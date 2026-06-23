@@ -54,7 +54,7 @@ export interface OpenAICompatibleClient {
  *
  * 两条独立通路：
  * - SDK 通路：text / stream / video / tts / asr — 给 User City 用
- * - 图片任务通路：image_create / image_persist / image_result — 给图片任务创建、持久化和查询调用
+ * - 图片任务通路：image_create / image_fetch / image_result — 给图片任务创建、后台抓取和用户查询调用
  * - OpenAI 兼容通路：openai — 给 /chat/completions 端点用
  *
  * 每个 action 接收 Context，返回对应通路的结果。
@@ -67,9 +67,9 @@ export interface ModelActions {
   stream?: ActionFn;
   /** 图片任务创建 action，负责启动 provider 图片生成任务。 */
   image_create?: ActionFn;
-  /** 图片结果持久化 action，成功后由 AIService 触发 bill。 */
-  image_persist?: ActionFn;
-  /** 图片任务查询 action，负责读取 provider 图片生成结果。 */
+  /** 图片任务抓取 action，负责查询上游状态并返回 provider 图片生成结果。 */
+  image_fetch?: ActionFn;
+  /** 图片任务查询 action，通常由 AIService 自己实现为读取 async_jobs。 */
   image_result?: ActionFn;
   /** 视频生成 action */
   video?: ActionFn;

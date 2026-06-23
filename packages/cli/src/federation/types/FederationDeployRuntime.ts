@@ -72,3 +72,26 @@ export interface FederationD1DatabaseSummary {
    */
   status: FederationD1DatabaseStatus;
 }
+
+/**
+ * Queue 准备状态。
+ */
+export type FederationQueueStatus =
+  | "created"
+  | "reused"
+  | "skipped";
+
+/**
+ * Queue 准备结果。
+ */
+export interface FederationQueueSummary {
+  /**
+   * Queue 名称。
+   */
+  name?: string;
+
+  /**
+   * Queue 准备状态。
+   */
+  status: FederationQueueStatus;
+}

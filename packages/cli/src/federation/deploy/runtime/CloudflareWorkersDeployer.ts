@@ -21,6 +21,7 @@ import type {
 } from "@/federation/types/FederationDeployRuntime.js";
 import { resolveCloudflareAccount } from "@/federation/deploy/runtime/CloudflareAccountResolver.js";
 import { resolveD1Database } from "@/federation/deploy/runtime/D1DatabaseResolver.js";
+import { resolveQueue } from "@/federation/deploy/runtime/QueueResolver.js";
 import { writeWranglerConfig } from "@/federation/deploy/runtime/WranglerConfigWriter.js";
 import { runCommand } from "@/federation/deploy/runtime/CommandRunner.js";
 import { bumpProjectPatchVersion } from "@/federation/deploy/runtime/ProjectVersionManager.js";
@@ -80,6 +81,11 @@ export async function deployCloudflareWorkers(
     account_id,
     create_if_missing: options.dry_run !== true,
   });
+  const queue_result = await resolveQueue({
+    config_file,
+    account_id,
+    create_if_missing: options.dry_run !== true,
+  });
 
   const wrangler_result = writeWranglerConfig(
     config_file,
@@ -92,6 +98,14 @@ export async function deployCloudflareWorkers(
       { label: "name", value: d1_result.summary.name ?? "(none)" },
       { label: "id", value: d1_result.summary.id ?? "(none)" },
       { label: "status", value: d1_result.summary.status },
+    ],
+  });
+  emitCliBlock({
+    tone: "success",
+    title: "Queue",
+    facts: [
+      { label: "name", value: queue_result.summary.name ?? "(none)" },
+      { label: "status", value: queue_result.summary.status },
     ],
   });
 

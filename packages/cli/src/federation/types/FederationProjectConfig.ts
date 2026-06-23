@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - `federation.json` 是可提交的 Downcity 部署意图声明。
  * - Cloudflare account、database id、Worker URL 等部署状态不进入项目配置。
- * - `resources.d1` 保存稳定资源名称，Wrangler 配置仍由 CLI 临时生成。
+ * - `resources.d1` / `resources.queue` 保存稳定资源名称，Wrangler 配置仍由 CLI 临时生成。
  */
 
 /** City 项目当前支持的部署目标类型。 */
@@ -23,10 +23,22 @@ export interface FederationProjectD1ResourceConfig {
   name: string;
 }
 
+/** City 项目 Queue 资源配置。 */
+export interface FederationProjectQueueResourceConfig {
+  /** 队列运行时类型，当前支持 Cloudflare Queues。 */
+  type: "queue";
+  /** Worker runtime 中的 Queue binding 名称。 */
+  binding: string;
+  /** Cloudflare Queue 名称。 */
+  name: string;
+}
+
 /** City 项目资源配置。 */
 export interface FederationProjectResourcesConfig {
   /** Cloudflare Workers 目标使用的 D1 数据库资源。 */
   d1?: FederationProjectD1ResourceConfig;
+  /** Cloudflare Workers 目标使用的 Queue 资源。 */
+  queue?: FederationProjectQueueResourceConfig;
 }
 
 /** `city.json` 解析后的配置结构。 */

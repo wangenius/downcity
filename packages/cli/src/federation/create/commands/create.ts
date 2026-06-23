@@ -143,6 +143,7 @@ function createCloudflareWorkersFiles(
 ): Array<{ path: string; content: string }> {
   const package_name = normalizePackageName(name);
   const d1_name = `${name}-db`;
+  const queue_name = `${name}-queue`;
   return [
     {
       path: "federation.json",
@@ -156,6 +157,10 @@ function createCloudflareWorkersFiles(
           d1: {
             binding: "DB",
             name: d1_name,
+          },
+          queue: {
+            binding: "DOWNCITY_QUEUE",
+            name: queue_name,
           },
         },
       }, null, 2)}\n`,

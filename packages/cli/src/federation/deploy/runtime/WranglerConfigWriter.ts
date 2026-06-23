@@ -48,6 +48,18 @@ export function writeWranglerConfig(
     );
   }
 
+  if (config.resources.queue) {
+    lines.push(
+      "",
+      "[[queues.producers]]",
+      `binding = ${tomlString(config.resources.queue.binding)}`,
+      `queue = ${tomlString(config.resources.queue.name)}`,
+      "",
+      "[[queues.consumers]]",
+      `queue = ${tomlString(config.resources.queue.name)}`,
+    );
+  }
+
   lines.push(
     "",
     "[observability]",

@@ -14,6 +14,7 @@ import type {
   FederationProjectConfig,
   FederationProjectConfigFile,
   FederationProjectD1ResourceConfig,
+  FederationProjectQueueResourceConfig,
   FederationProjectResourcesConfig,
 } from "@/federation/types/FederationProjectConfig.js";
 
@@ -116,6 +117,21 @@ function resolveTargetD1Resource(
 }
 
 /**
+ * 解析 target 的默认 Queue。
+ */
+function resolveTargetQueueResource(
+  target: string,
+  project_name: string,
+): FederationProjectQueueResourceConfig | undefined {
+  if (target !== "cloudflare-workers") return undefined;
+  return {
+    type: "queue",
+    binding: "DOWNCITY_QUEUE",
+    name: `${project_name}-queue`,
+  };
+}
+
+/**
  * 解析项目资源配置。
  */
 function resolveProjectResources(
@@ -124,20 +140,34 @@ function resolveProjectResources(
   project_name: string,
 ): FederationProjectResourcesConfig {
   const default_d1 = resolveTargetD1Resource(target, project_name);
+  const default_queue = resolveTargetQueueResource(target, project_name);
   const resources = readOptionalRecord(input, "resources");
   const d1 = readOptionalRecord(resources ?? {}, "d1");
+  const queue = readOptionalRecord(resources ?? {}, "queue");
   const legacy_database = readOptionalRecord(input, "database");
-  const source = d1 ?? legacy_database;
+  const d1_source = d1 ?? legacy_database;
 
   if (!default_d1) return {};
-  if (!source) return { d1: default_d1 };
 
   return {
-    d1: {
-      type: "d1",
-      binding: readOptionalString(source, "binding") ?? default_d1.binding,
-      name: readOptionalString(source, "name") ?? default_d1.name,
-    },
+    d1: d1_source
+      ? {
+          type: "d1",
+          binding: readOptionalString(d1_source, "binding") ?? default_d1.binding,
+          name: readOptionalString(d1_source, "name") ?? default_d1.name,
+        }
+      : default_d1,
+    ...(default_queue
+      ? {
+          queue: queue
+            ? {
+                type: "queue" as const,
+                binding: readOptionalString(queue, "binding") ?? default_queue.binding,
+                name: readOptionalString(queue, "name") ?? default_queue.name,
+              }
+            : default_queue,
+        }
+      : {}),
   };
 }
 

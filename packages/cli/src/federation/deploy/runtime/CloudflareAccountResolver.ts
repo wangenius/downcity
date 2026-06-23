@@ -11,15 +11,12 @@ import { isCancel, select, text } from "@/federation/tui/Prompts.js";
 import { readCloudflareAccountId, writeCloudflareAccountId } from "@/federation/core/session.js";
 import { emitCliBlock } from "@/shared/CliReporter.js";
 import { CliError } from "@/shared/CliError.js";
-import type { FederationProjectDeployEnvFile } from "@/federation/types/FederationProjectConfig.js";
 import { runCommand } from "@/federation/deploy/runtime/CommandRunner.js";
 
 /** Cloudflare account 解析参数。 */
 export interface ResolveCloudflareAccountParams {
   /** City 项目目录。 */
   project_dir: string;
-  /** 当前 City 本地部署环境。 */
-  env_file: FederationProjectDeployEnvFile;
   /** 用户通过命令行或环境变量显式传入的 account id。 */
   account_id?: string;
 }
@@ -28,8 +25,6 @@ export interface ResolveCloudflareAccountParams {
 export interface ResolveCloudflareAccountResult {
   /** Cloudflare account id。 */
   account_id?: string;
-  /** 可能写入 account id 后的本地部署环境。 */
-  env_file: FederationProjectDeployEnvFile;
 }
 
 /**
@@ -43,7 +38,7 @@ export async function resolveCloudflareAccount(
     ?? normalizeAccountId(readCloudflareAccountId());
 
   if (initial_account_id) {
-    return persistCloudflareAccount(params.env_file, initial_account_id);
+    return persistCloudflareAccount(initial_account_id);
   }
 
   let output = await runWranglerWhoami(params.project_dir);
@@ -54,24 +49,14 @@ export async function resolveCloudflareAccount(
 
   const detected_account_id = extractAccountId(output);
   if (detected_account_id) {
-    emitCliBlock({
-      tone: "success",
-      title: "Cloudflare account detected",
-      facts: [{ label: "account", value: detected_account_id }],
-    });
-    return persistCloudflareAccount(params.env_file, detected_account_id);
+    return persistCloudflareAccount(detected_account_id);
   }
 
   if (isWranglerAccountLookupDenied(output)) {
     return await resolveAccountAfterLookupDenied(params);
   }
 
-  emitCliBlock({
-    tone: "success",
-    title: "Wrangler authenticated",
-    note: output.split("\n").slice(0, 3).join(" "),
-  });
-  return { env_file: params.env_file };
+  return {};
 }
 
 /**
@@ -125,20 +110,18 @@ async function resolveAccountAfterLookupDenied(
     const output = await runWranglerWhoami(params.project_dir);
     const account_id = extractAccountId(output);
     if (account_id) {
-      return persistCloudflareAccount(params.env_file, account_id);
+      return persistCloudflareAccount(account_id);
     }
-    return await promptForAccountId(params.env_file);
+    return await promptForAccountId();
   }
 
-  return await promptForAccountId(params.env_file);
+  return await promptForAccountId();
 }
 
 /**
  * 交互式输入 Cloudflare account id。
  */
-async function promptForAccountId(
-  env_file: FederationProjectDeployEnvFile,
-): Promise<ResolveCloudflareAccountResult> {
+async function promptForAccountId(): Promise<ResolveCloudflareAccountResult> {
   const account_id = await text({
     message: "Cloudflare account id",
     placeholder: "32-character account id",
@@ -154,16 +137,13 @@ async function promptForAccountId(
       note: "Cloudflare account id was not provided.",
     });
   }
-  return persistCloudflareAccount(env_file, String(account_id));
+  return persistCloudflareAccount(String(account_id));
 }
 
 /**
  * 保存 Cloudflare account id 到本地 City CLI 状态。
  */
-function persistCloudflareAccount(
-  env_file: FederationProjectDeployEnvFile,
-  account_id: string,
-): ResolveCloudflareAccountResult {
+function persistCloudflareAccount(account_id: string): ResolveCloudflareAccountResult {
   const normalized_account_id = normalizeAccountId(account_id);
   if (!normalized_account_id) {
     throw new CliError({
@@ -175,7 +155,6 @@ function persistCloudflareAccount(
   writeCloudflareAccountId(normalized_account_id);
   return {
     account_id: normalized_account_id,
-    env_file,
   };
 }
 

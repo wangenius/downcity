@@ -172,7 +172,7 @@ export async function runDownfedCli(): Promise<void> {
       },
     ) => {
       await deployFederationProject(source ?? ".", options);
-    }));
+    }, "Downcity CLI"));
 
   program.hook("preAction", (thisCommand) => {
     const opts = thisCommand.optsWithGlobals<{ quiet?: boolean; verbose?: boolean }>();

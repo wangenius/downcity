@@ -2,9 +2,9 @@
  * City 项目部署配置类型。
  *
  * 关键点（中文）
- * - `city.json` 是开发者手写的最小项目声明。
- * - `.env` 只保存 City 项目自身真正需要的部署输入，例如 D1 name。
- * - 配置里不放 Cloudflare token、provider key 或过细的 Worker 选项。
+ * - `federation.json` 是可提交的 Downcity 部署意图声明。
+ * - Cloudflare account、database id、Worker URL 等部署状态不进入项目配置。
+ * - `resources.d1` 保存稳定资源名称，Wrangler 配置仍由 CLI 临时生成。
  */
 
 /** City 项目当前支持的部署目标类型。 */
@@ -13,34 +13,36 @@ export type FederationProjectTarget = "cloudflare-workers";
 /** City 项目当前支持的项目类型。 */
 export type FederationProjectType = "city";
 
-/** City 项目内部解析出的数据库配置。 */
-export interface FederationProjectDatabaseConfig {
+/** City 项目 D1 资源配置。 */
+export interface FederationProjectD1ResourceConfig {
   /** 数据库运行时类型，当前支持 Cloudflare D1。 */
   type: "d1";
   /** Worker runtime 中的数据库 binding 名称，默认 `DB`。 */
   binding: string;
-  /** Cloudflare D1 数据库名称，默认 `${name}-db`。 */
+  /** Cloudflare D1 数据库名称。 */
   name: string;
+}
+
+/** City 项目资源配置。 */
+export interface FederationProjectResourcesConfig {
+  /** Cloudflare Workers 目标使用的 D1 数据库资源。 */
+  d1?: FederationProjectD1ResourceConfig;
 }
 
 /** `city.json` 解析后的配置结构。 */
 export interface FederationProjectConfig {
+  /** 配置 schema 版本，当前为 1。 */
+  schema: 1;
   /** Downcity 项目类型，当前为 `city`。 */
   type: FederationProjectType;
   /** City 项目名称，用于默认 Worker 名称和 CLI 输出。 */
   name: string;
-  /** CLI 根据 target 推导出的入口文件。 */
+  /** City Worker 入口文件路径，相对项目根目录。 */
   entry: string;
   /** City 项目部署目标，例如 `cloudflare-workers`。 */
   target: FederationProjectTarget;
-  /** CLI 根据 target 推导出的数据库配置。 */
-  database?: FederationProjectDatabaseConfig;
-}
-
-/** City 项目本地部署环境。 */
-export interface FederationProjectDeployEnv {
-  /** Cloudflare D1 database name。 */
-  city_d1_database_name?: string;
+  /** City 项目声明的稳定资源。 */
+  resources: FederationProjectResourcesConfig;
 }
 
 /** 已读取并解析完成的 City 项目配置文件。 */
@@ -51,14 +53,6 @@ export interface FederationProjectConfigFile {
   config_path: string;
   /** 解析后的 City 项目配置。 */
   config: FederationProjectConfig;
-}
-
-/** 已读取并解析完成的 City 本地部署环境文件。 */
-export interface FederationProjectDeployEnvFile {
-  /** `.env` 的绝对路径。 */
-  env_path: string;
-  /** 当前部署环境。 */
-  env: FederationProjectDeployEnv;
 }
 
 /** 已解析的部署目标。 */

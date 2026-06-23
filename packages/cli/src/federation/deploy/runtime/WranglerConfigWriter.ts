@@ -10,10 +10,7 @@
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import type {
-  FederationProjectConfigFile,
-  FederationProjectDeployEnvFile,
-} from "@/federation/types/FederationProjectConfig.js";
+import type { FederationProjectConfigFile } from "@/federation/types/FederationProjectConfig.js";
 
 /** 写入 wrangler.toml 的结果。 */
 export interface WranglerConfigWriteResult {
@@ -26,7 +23,6 @@ export interface WranglerConfigWriteResult {
  */
 export function writeWranglerConfig(
   config_file: FederationProjectConfigFile,
-  _env_file: FederationProjectDeployEnvFile,
   database_id?: string,
 ): WranglerConfigWriteResult {
   const config = config_file.config;
@@ -42,12 +38,12 @@ export function writeWranglerConfig(
     "workers_dev = true",
   ];
 
-  if (config.database) {
+  if (config.resources.d1) {
     lines.push(
       "",
       "[[d1_databases]]",
-      `binding = ${tomlString(config.database.binding)}`,
-      `database_name = ${tomlString(config.database.name)}`,
+      `binding = ${tomlString(config.resources.d1.binding)}`,
+      `database_name = ${tomlString(config.resources.d1.name)}`,
       `database_id = ${tomlString(resolved_database_id)}`,
     );
   }

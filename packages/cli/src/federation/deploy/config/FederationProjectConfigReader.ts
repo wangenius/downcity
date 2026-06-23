@@ -2,8 +2,8 @@
  * City 项目配置读取器。
  *
  * 关键点（中文）
- * - `federation.json` 保持极简：type、name、target。
- * - Cloudflare 细节由 CLI 默认处理，不要求开发者写一大段配置。
+ * - `federation.json` 保存可提交的部署意图：type、name、target、entry、resources。
+ * - Cloudflare account、D1 id、Worker URL 等部署状态不进入项目配置。
  * - 部署状态不写回 `federation.json`，避免用户手写协议被机器污染。
  */
 
@@ -13,7 +13,8 @@ import { CliError } from "@/shared/CliError.js";
 import type {
   FederationProjectConfig,
   FederationProjectConfigFile,
-  FederationProjectDatabaseConfig,
+  FederationProjectD1ResourceConfig,
+  FederationProjectResourcesConfig,
 } from "@/federation/types/FederationProjectConfig.js";
 
 const FEDERATION_CONFIG_FILE_NAME = "federation.json";
@@ -67,6 +68,11 @@ function normalizeFederationProjectConfig(
     throw invalidConfig(config_path, `Unsupported type: ${type}`);
   }
 
+  const schema = readOptionalNumber(input, "schema") ?? 1;
+  if (schema !== 1) {
+    throw invalidConfig(config_path, `Unsupported schema: ${schema}`);
+  }
+
   const name = readOptionalString(input, "name") ?? inferProjectName(project_dir);
   const target = readOptionalString(input, "target")
     ?? readOptionalString(input, "runtime")
@@ -74,13 +80,15 @@ function normalizeFederationProjectConfig(
   if (target !== "cloudflare-workers") {
     throw invalidConfig(config_path, `Unsupported target: ${target}`);
   }
+  const entry = readOptionalString(input, "entry") ?? resolveTargetEntry(target);
 
   return {
+    schema,
     type,
     name,
-    entry: resolveTargetEntry(target),
+    entry,
     target,
-    database: resolveTargetDatabase(target, name),
+    resources: resolveProjectResources(input, target, name),
   };
 }
 
@@ -95,15 +103,41 @@ function resolveTargetEntry(target: string): string {
 /**
  * 解析 target 的默认数据库。
  */
-function resolveTargetDatabase(
+function resolveTargetD1Resource(
   target: string,
   project_name: string,
-): FederationProjectDatabaseConfig | undefined {
+): FederationProjectD1ResourceConfig | undefined {
   if (target !== "cloudflare-workers") return undefined;
   return {
     type: "d1",
     binding: "DB",
     name: `${project_name}-db`,
+  };
+}
+
+/**
+ * 解析项目资源配置。
+ */
+function resolveProjectResources(
+  input: Record<string, unknown>,
+  target: string,
+  project_name: string,
+): FederationProjectResourcesConfig {
+  const default_d1 = resolveTargetD1Resource(target, project_name);
+  const resources = readOptionalRecord(input, "resources");
+  const d1 = readOptionalRecord(resources ?? {}, "d1");
+  const legacy_database = readOptionalRecord(input, "database");
+  const source = d1 ?? legacy_database;
+
+  if (!default_d1) return {};
+  if (!source) return { d1: default_d1 };
+
+  return {
+    d1: {
+      type: "d1",
+      binding: readOptionalString(source, "binding") ?? default_d1.binding,
+      name: readOptionalString(source, "name") ?? default_d1.name,
+    },
   };
 }
 
@@ -149,4 +183,28 @@ function readOptionalString(
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed || undefined;
+}
+
+/**
+ * 读取可选数字。
+ */
+function readOptionalNumber(
+  input: Record<string, unknown>,
+  key: string,
+): number | undefined {
+  const value = input[key];
+  if (typeof value !== "number" || !Number.isInteger(value)) return undefined;
+  return value;
+}
+
+/**
+ * 读取可选对象。
+ */
+function readOptionalRecord(
+  input: Record<string, unknown>,
+  key: string,
+): Record<string, unknown> | undefined {
+  const value = input[key];
+  if (!isRecord(value)) return undefined;
+  return value;
 }

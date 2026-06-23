@@ -1,5 +1,13 @@
 {
+  "schema": 1,
   "type": "city",
   "name": "downcity",
-  "target": "cloudflare-workers"
+  "target": "cloudflare-workers",
+  "entry": "src/index.ts",
+  "resources": {
+    "d1": {
+      "binding": "DB",
+      "name": "downcity-db"
+    }
+  }
 }

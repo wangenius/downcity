@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 从零搭建一个可部署的 City 项目，而不是让用户手写底层部署文件。
  * - Git URL 只在 create 阶段 clone 到本地；deploy 阶段只处理本地项目。
- * - `federation.json` 只写项目类型和部署目标，其他文件由 CLI 生成。
+ * - `federation.json` 写入可提交的部署意图和稳定资源声明。
  * - 当前先生成 Cloudflare Workers 项目骨架，后续可扩展更多 target。
  */
 
@@ -142,10 +142,23 @@ function createCloudflareWorkersFiles(
   target: string,
 ): Array<{ path: string; content: string }> {
   const package_name = normalizePackageName(name);
+  const d1_name = `${name}-db`;
   return [
     {
       path: "federation.json",
-      content: `${JSON.stringify({ type: "city", name, target }, null, 2)}\n`,
+      content: `${JSON.stringify({
+        schema: 1,
+        type: "city",
+        name,
+        target,
+        entry: "src/index.ts",
+        resources: {
+          d1: {
+            binding: "DB",
+            name: d1_name,
+          },
+        },
+      }, null, 2)}\n`,
     },
     {
       path: "package.json",
@@ -187,14 +200,6 @@ function createCloudflareWorkersFiles(
         },
         include: ["src/**/*.ts"],
       }, null, 2)}\n`,
-    },
-    {
-      path: ".env.example",
-      content: [
-        "# Local deploy values.",
-        `CITY_D1_DATABASE_NAME=${name}-db`,
-        "",
-      ].join("\n"),
     },
     {
       path: "src/index.ts",

@@ -11,7 +11,6 @@ import { CliError } from "@/shared/CliError.js";
 import type { FederationDeployOptions } from "@/federation/types/FederationProjectConfig.js";
 import { readFederationProjectConfig } from "@/federation/deploy/config/FederationProjectConfigReader.js";
 import { deployCloudflareWorkers } from "@/federation/deploy/runtime/CloudflareWorkersDeployer.js";
-import { loadFederationProjectEnv } from "@/federation/deploy/config/FederationProjectEnvLoader.js";
 import { resolveFederationDeployTarget } from "@/federation/deploy/config/FederationDeployTargetResolver.js";
 
 /** Commander 传入的原始 deploy 选项。 */
@@ -48,7 +47,6 @@ export async function deployFederationProject(
   };
   const target = await resolveFederationDeployTarget(options.source);
   const config_file = readFederationProjectConfig(target.project_dir);
-  loadFederationProjectEnv(config_file.project_dir);
 
   switch (config_file.config.target) {
     case "cloudflare-workers":

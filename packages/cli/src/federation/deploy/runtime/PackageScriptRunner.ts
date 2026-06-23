@@ -9,8 +9,11 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { emitCliBlock } from "@/shared/CliReporter.js";
 import { runCommand } from "@/federation/deploy/runtime/CommandRunner.js";
+import type {
+  FederationPackageDeployScriptsResult,
+  FederationPackageScriptResult,
+} from "@/federation/types/FederationDeployRuntime.js";
 
 /** package.json 中和部署相关的脚本信息。 */
 interface PackageScripts {
@@ -30,25 +33,47 @@ export async function runPackageDeployScripts(params: {
   skip_build: boolean;
   /** 是否跳过 typecheck。 */
   skip_typecheck: boolean;
-}): Promise<void> {
+}): Promise<FederationPackageDeployScriptsResult> {
   const scripts = readPackageScripts(params.project_dir);
-  if (!params.skip_build && scripts.build) {
-    await runPackageScript(params.project_dir, "build");
-  } else {
-    emitCliBlock({
-      tone: "info",
-      title: params.skip_build ? "Build skipped" : "No build script",
-    });
+  const build = await resolvePackageScriptResult({
+    project_dir: params.project_dir,
+    script_name: "build",
+    exists: scripts.build,
+    skipped: params.skip_build,
+  });
+  const typecheck = await resolvePackageScriptResult({
+    project_dir: params.project_dir,
+    script_name: "typecheck",
+    exists: scripts.typecheck,
+    skipped: params.skip_typecheck,
+  });
+  return { build, typecheck };
+}
+
+/**
+ * 解析并执行单个 package script。
+ */
+async function resolvePackageScriptResult(params: {
+  /** City 项目目录。 */
+  project_dir: string;
+  /** package script 名称。 */
+  script_name: "build" | "typecheck";
+  /** package.json 是否包含该 script。 */
+  exists: boolean;
+  /** 是否被命令行选项跳过。 */
+  skipped: boolean;
+}): Promise<FederationPackageScriptResult> {
+  const command = `pnpm ${params.script_name}`;
+  if (params.skipped) {
+    return { command, status: "skipped" };
   }
 
-  if (!params.skip_typecheck && scripts.typecheck) {
-    await runPackageScript(params.project_dir, "typecheck");
-  } else {
-    emitCliBlock({
-      tone: "info",
-      title: params.skip_typecheck ? "Typecheck skipped" : "No typecheck script",
-    });
+  if (!params.exists) {
+    return { command, status: "missing" };
   }
+
+  await runPackageScript(params.project_dir, params.script_name);
+  return { command, status: "passed" };
 }
 
 /**
@@ -80,14 +105,10 @@ async function runPackageScript(
   project_dir: string,
   script_name: "build" | "typecheck",
 ): Promise<void> {
-  emitCliBlock({
-    tone: "info",
-    title: `Running ${script_name}`,
-    facts: [{ label: "command", value: `pnpm ${script_name}` }],
-  });
   await runCommand({
     label: script_name,
     command: `pnpm ${script_name}`,
     cwd: project_dir,
+    capture: true,
   });
 }

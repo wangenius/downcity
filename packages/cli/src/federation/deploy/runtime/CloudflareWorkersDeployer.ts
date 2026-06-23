@@ -3,8 +3,8 @@
  *
  * 关键点（中文）
  * - `city deploy` 的用户心智是“部署一个 City 项目”，不是配置 Cloudflare 工程。
- * - 构建和类型检查从 package.json 自动推断，`federation.json` 保持最小。
- * - D1 等部署绑定写入项目 `.env`，Worker URL 回写到 City 自己的 server 配置。
+ * - 构建和类型检查从 package.json 自动推断，稳定资源由 `federation.json` 声明。
+ * - D1 database id 与 Worker URL 都是部署状态，不写入项目配置。
  */
 
 import { rmSync } from "node:fs";
@@ -16,9 +16,9 @@ import type {
   FederationDeployOptions,
   FederationProjectConfigFile,
 } from "@/federation/types/FederationProjectConfig.js";
-import {
-  readFederationProjectDeployEnv,
-} from "@/federation/deploy/config/FederationProjectEnvLoader.js";
+import type {
+  FederationPackageScriptResult,
+} from "@/federation/types/FederationDeployRuntime.js";
 import { resolveCloudflareAccount } from "@/federation/deploy/runtime/CloudflareAccountResolver.js";
 import { resolveD1Database } from "@/federation/deploy/runtime/D1DatabaseResolver.js";
 import { writeWranglerConfig } from "@/federation/deploy/runtime/WranglerConfigWriter.js";
@@ -33,16 +33,13 @@ export async function deployCloudflareWorkers(
   config_file: FederationProjectConfigFile,
   options: FederationDeployOptions,
 ): Promise<void> {
-  let env_file = readFederationProjectDeployEnv(config_file.project_dir);
-
   emitCliBlock({
     tone: "accent",
-    title: "City project",
+    title: "Project",
     facts: [
       { label: "name", value: config_file.config.name },
       { label: "target", value: config_file.config.target },
-      { label: "source", value: options.source },
-      { label: "dir", value: config_file.project_dir },
+      { label: "source", value: config_file.project_dir },
     ],
   });
 
@@ -53,18 +50,16 @@ export async function deployCloudflareWorkers(
 
   const account_result = await resolveCloudflareAccount({
     project_dir: config_file.project_dir,
-    env_file,
     account_id: options.account_id,
   });
   const account_id = account_result.account_id;
-  env_file = account_result.env_file;
 
   const version_bump =
     options.dry_run === true ? undefined : bumpProjectPatchVersion(config_file.project_dir);
   if (version_bump) {
     emitCliBlock({
       tone: "success",
-      title: "Project version bumped",
+      title: "Version",
       facts: [
         { label: "from", value: version_bump.previous_version },
         { label: "to", value: version_bump.next_version },
@@ -72,29 +67,32 @@ export async function deployCloudflareWorkers(
     });
   }
 
-  await runPackageDeployScripts({
+  const scripts_result = await runPackageDeployScripts({
     project_dir: config_file.project_dir,
     skip_build: options.skip_build,
     skip_typecheck: options.skip_typecheck,
   });
+  emitPackageScriptSummary("Build", scripts_result.build);
+  emitPackageScriptSummary("Typecheck", scripts_result.typecheck);
 
   const d1_result = await resolveD1Database({
     config_file,
-    env_file,
     account_id,
     create_if_missing: options.dry_run !== true,
   });
-  env_file = d1_result.env_file;
 
   const wrangler_result = writeWranglerConfig(
     config_file,
-    env_file,
     d1_result.resolved_database_id,
   );
   emitCliBlock({
     tone: "success",
-    title: "Wrangler config generated",
-    facts: [{ label: "file", value: wrangler_result.config_path }],
+    title: "D1 Database",
+    facts: [
+      { label: "name", value: d1_result.summary.name ?? "(none)" },
+      { label: "id", value: d1_result.summary.id ?? "(none)" },
+      { label: "status", value: d1_result.summary.status },
+    ],
   });
 
   let output = "";
@@ -112,20 +110,66 @@ export async function deployCloudflareWorkers(
 
   emitCliBlock({
     tone: "success",
-    title: options.dry_run ? "Worker dry-run completed" : "Worker deployed",
+    title: "Wrangler",
+    facts: [
+      { label: "config", value: wrangler_result.config_path },
+      { label: "status", value: options.dry_run ? "dry-run" : "deployed" },
+    ],
+  });
+
+  emitCliBlock({
+    tone: "success",
+    title: "Deployment",
     facts: [
       { label: "worker", value: config_file.config.name },
       ...(worker_url ? [{ label: "url", value: worker_url }] : []),
+      { label: "status", value: options.dry_run ? "dry-run" : "success" },
     ],
   });
 
   if (worker_url && !options.dry_run) {
-    registerDeployedServer(config_file.config.name, worker_url);
+    const active_server = registerDeployedServer(config_file.config.name, worker_url);
+    emitCliBlock({
+      tone: "success",
+      title: "Active Server",
+      facts: [
+        { label: "name", value: active_server.name },
+        { label: "url", value: active_server.url },
+        { label: "status", value: "connected" },
+      ],
+    });
+  } else {
+    emitCliBlock({
+      tone: "info",
+      title: "Active Server",
+      facts: [
+        { label: "name", value: config_file.config.name },
+        ...(worker_url ? [{ label: "url", value: worker_url }] : []),
+        { label: "status", value: "skipped" },
+      ],
+    });
   }
 
   if (options.verify && !options.dry_run) {
     await verifyWorker(worker_url ?? readVerifyBaseUrl());
   }
+}
+
+/**
+ * 输出 package script 执行摘要。
+ */
+function emitPackageScriptSummary(
+  title: "Build" | "Typecheck",
+  result: FederationPackageScriptResult,
+): void {
+  emitCliBlock({
+    tone: result.status === "passed" ? "success" : "info",
+    title,
+    facts: [
+      { label: "command", value: result.command },
+      { label: "status", value: result.status },
+    ],
+  });
 }
 
 /**
@@ -195,7 +239,7 @@ function extractWorkerUrl(output: string): string | undefined {
 /**
  * 把部署出的 Worker 自动注册为当前 City server。
  */
-function registerDeployedServer(name: string, worker_url: string): void {
+function registerDeployedServer(name: string, worker_url: string): { name: string; url: string } {
   const existing_server = readServer(worker_url);
   const active_server = readActiveServer();
   const preserved_admin_secret_key = existing_server?.admin_secret_key
@@ -207,16 +251,10 @@ function registerDeployedServer(name: string, worker_url: string): void {
     base_url: worker_url,
     admin_secret_key: preserved_admin_secret_key,
   });
-
-  emitCliBlock({
-    tone: "success",
-    title: "City server connected",
-    facts: [
-      { label: "name", value: name },
-      { label: "url", value: worker_url },
-    ],
-    note: "The deployed Worker is now the active City server.",
-  });
+  return {
+    name,
+    url: worker_url,
+  };
 }
 
 /**

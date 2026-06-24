@@ -259,7 +259,7 @@ export interface ImagePluginOptions {
   ) => Promise<ImagePluginJobCreateResult> | ImagePluginJobCreateResult;
   /** 查询图片生成任务，通常传入 `(input) => city.ai.image_result(input)`。 */
   image_result?: (
-    input: Pick<ImagePluginJobResultInput, "job_id">,
+    input: ImagePluginJobResultInput,
   ) => Promise<ImagePluginJobResult> | ImagePluginJobResult;
   /** 列出可用图片模型，通常传入 `async () => city.ai.listModels().then((catalog) => catalog.forModality("image"))`。 */
   list_models?: () => Promise<ImagePluginModel[]> | ImagePluginModel[];

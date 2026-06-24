@@ -514,6 +514,7 @@ export class ImagePlugin extends BasePlugin {
       "  - 默认读取一次。`queued` / `running` 时保存好 `job_id`，下一轮再查，不要在同一轮里反复轮询。",
       "  - 想直接等到出图，可以传 `until_done: true`，可选 `max_wait_ms`（默认 60000，最长 600000）与 `poll_interval_ms`（默认 1500）。超时仍未完成会返回最后一次的中间状态。",
       "  - `succeeded`：返回的图片 file part 会自动落盘并附加到下一条 assistant 消息，无需自己再拼图。",
+      "  - 回复用户时，可以在消息中使用 Markdown 图片语法 `![](url)` 渲染图片。",
       "  - `failed`：把 `error` 信息如实回报给用户，不要编造图片结果。",
       "",
       "## Flow",

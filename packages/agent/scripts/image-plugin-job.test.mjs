@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 插件只暴露 image_create / image_result 两个任务 action。
- * - image_result 只读取一次当前状态，不在 plugin 层等待终态。
+ * - image_result 默认只读取一次当前状态；传 until_done=true 时会在 plugin 层等待终态。
  * - 成功图片仍以 UIMessage 返回，后续由 plugin bridge 落盘 file parts。
  */
 

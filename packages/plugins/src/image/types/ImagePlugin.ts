@@ -147,6 +147,38 @@ export interface ImagePluginJobResultInput {
 }
 
 /**
+ * ImagePlugin 可见模型信息。
+ */
+export interface ImagePluginModel {
+  /** 模型唯一 ID，用于 `image_create` / `generate` payload 的 `model` 字段。 */
+  id: string;
+  /** 模型展示名称。 */
+  name: string;
+  /** 模型说明文本。 */
+  description?: string;
+  /** 模型支持的能力列表，例如 `image`。 */
+  modalities: string[];
+  /** 模型标签。 */
+  tags?: string[];
+  /** 模型元数据。 */
+  meta?: JsonObject;
+  /** 当前模型是否为目录全局默认模型。 */
+  is_default?: boolean;
+  /** 当前模型作为默认模型负责的 modality 列表。 */
+  default_modalities?: string[];
+}
+
+/**
+ * ImagePlugin 模型列表结果。
+ */
+export interface ImagePluginModelsResult {
+  /** 可用于图片生成的模型列表。 */
+  items: ImagePluginModel[];
+  /** 图片能力默认模型 ID。 */
+  default_model_id?: string;
+}
+
+/**
  * ImagePlugin 构造参数。
  */
 export interface ImagePluginOptions {
@@ -164,6 +196,8 @@ export interface ImagePluginOptions {
   image_result?: (
     input: Pick<ImagePluginJobResultInput, "job_id">,
   ) => Promise<ImagePluginJobResult> | ImagePluginJobResult;
+  /** 列出可用图片模型，通常传入 `async () => city.ai.listModels().then((catalog) => catalog.forModality("image"))`。 */
+  list_models?: () => Promise<ImagePluginModel[]> | ImagePluginModel[];
   /** 图片任务最大等待时间，默认 300000ms。 */
   timeout_ms?: number;
   /** 轮询间隔下限，默认 100ms。 */

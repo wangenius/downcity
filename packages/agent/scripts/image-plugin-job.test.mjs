@@ -84,6 +84,44 @@ test("ImagePlugin image_create returns image job", async () => {
   assert.equal(result.data.status, "queued");
 });
 
+test("ImagePlugin models lists image-capable models", async () => {
+  const plugin = new ImagePlugin({
+    list_models: () => [
+      {
+        id: "text_1",
+        name: "Text",
+        description: "text only",
+        modalities: ["text"],
+        tags: ["general"],
+        meta: {},
+      },
+      {
+        id: "image_1",
+        name: "Image",
+        description: "image model",
+        modalities: ["image"],
+        tags: ["creative"],
+        meta: { provider: "test" },
+        default_modalities: ["image"],
+      },
+    ],
+    image_create: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
+    image_result: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
+  });
+
+  const result = await plugin.actions.models.execute({
+    context: {},
+    payload: {},
+    pluginName: "image",
+    actionName: "models",
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.data.default_model_id, "image_1");
+  assert.deepEqual(result.data.items.map((item) => item.id), ["image_1"]);
+  assert.equal(result.data.items[0].meta.provider, "test");
+});
+
 test("ImagePlugin image_result waits by default and returns final message", async () => {
   const calls = [];
   const message = create_image_message();

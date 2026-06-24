@@ -18,6 +18,8 @@ import type {
   ImagePluginJobCreateResult,
   ImagePluginJobResult,
   ImagePluginJobResultInput,
+  ImagePluginModel,
+  ImagePluginModelsResult,
   ImagePluginOptions,
   ImagePluginResult,
 } from "@/image/types/ImagePlugin.js";
@@ -118,6 +120,75 @@ function normalize_boolean(value: unknown, fallback: boolean): boolean {
 }
 
 /**
+ * 归一化模型元数据为 JSON 对象。
+ */
+function normalize_json_object(value: unknown): JsonObject | undefined {
+  const record = to_record(value);
+  if (!record) return undefined;
+  return record as JsonObject;
+}
+
+/**
+ * 归一化图片模型信息，确保 action 返回纯 JSON。
+ */
+function normalize_image_model(value: ImagePluginModel): ImagePluginModel | null {
+  const record = to_record(value);
+  if (!record) return null;
+  const id = typeof record.id === "string" ? record.id.trim() : "";
+  if (!id) return null;
+  const modalities = Array.isArray(record.modalities)
+    ? record.modalities
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+    : [];
+  if (!modalities.includes("image")) return null;
+  const tags = Array.isArray(record.tags)
+    ? record.tags.map((item) => String(item || "").trim()).filter(Boolean)
+    : undefined;
+  const default_modalities = Array.isArray(record.default_modalities)
+    ? record.default_modalities
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+    : undefined;
+  const meta = normalize_json_object(record.meta);
+  return {
+    id,
+    name: typeof record.name === "string" && record.name.trim()
+      ? record.name.trim()
+      : id,
+    ...(typeof record.description === "string"
+      ? { description: record.description }
+      : {}),
+    modalities,
+    ...(tags && tags.length > 0 ? { tags } : {}),
+    ...(meta ? { meta } : {}),
+    ...(typeof record.is_default === "boolean"
+      ? { is_default: record.is_default }
+      : {}),
+    ...(default_modalities && default_modalities.length > 0
+      ? { default_modalities }
+      : {}),
+  };
+}
+
+/**
+ * 归一化模型列表结果。
+ */
+function normalize_image_models(values: ImagePluginModel[]): ImagePluginModelsResult {
+  const items = values
+    .map((item) => normalize_image_model(item))
+    .filter((item): item is ImagePluginModel => item !== null);
+  const default_model_id =
+    items.find((item) => item.default_modalities?.includes("image"))?.id ??
+    items.find((item) => item.is_default)?.id ??
+    items[0]?.id;
+  return {
+    items,
+    ...(default_model_id ? { default_model_id } : {}),
+  };
+}
+
+/**
  * 校验任务创建结果。
  */
 function validate_created_job(value: ImagePluginJobCreateResult): void {
@@ -167,6 +238,7 @@ export class ImagePlugin extends BasePlugin {
 
   private readonly image_create: NonNullable<ImagePluginOptions["image_create"]>;
   private readonly image_result: NonNullable<ImagePluginOptions["image_result"]>;
+  private readonly list_models?: ImagePluginOptions["list_models"];
   private readonly timeout_ms: number;
   private readonly min_poll_interval_ms: number;
   private readonly max_poll_interval_ms: number;
@@ -190,6 +262,7 @@ export class ImagePlugin extends BasePlugin {
     ).trim();
     this.image_create = options.image_create;
     this.image_result = options.image_result;
+    this.list_models = options.list_models;
     this.timeout_ms = normalize_positive_number(
       options.timeout_ms,
       DEFAULT_TIMEOUT_MS,
@@ -229,6 +302,7 @@ export class ImagePlugin extends BasePlugin {
       "Payload rules:",
       "- `prompt` is required unless `messages` provides the full multimodal image context.",
       "- Optional common fields: `messages`, `size`, `aspect_ratio`, `ratio`, `quality`, `n`, `count`, `seed`, `provider_options`.",
+      "- To choose a model, call `models` and pass the selected model `id` as payload `model`.",
       "- Preserve the user's creative intent; do not over-rewrite the prompt unless clarification is necessary.",
       "- For a two-step flow, call `image_create` first, then call `image_result` with `job_id`; `image_result` waits until the job finishes by default.",
       "- `generate` is a convenience action that creates the job and waits for the final image in one call.",
@@ -367,6 +441,32 @@ export class ImagePlugin extends BasePlugin {
    * 显式 action 集合。
    */
   readonly actions = {
+    models: {
+      execute: async () => {
+        try {
+          if (!this.list_models) {
+            return {
+              success: false,
+              error: "ImagePlugin list_models is not configured",
+              message: "ImagePlugin list_models is not configured",
+            };
+          }
+          const models = await this.list_models();
+          const result = normalize_image_models(models);
+          return {
+            success: true,
+            data: result as unknown as JsonObject,
+            message: "image models listed",
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: String(error),
+            message: String(error),
+          };
+        }
+      },
+    },
     image_create: {
       execute: async ({ payload }: { payload: JsonValue }) => {
         try {

@@ -24,7 +24,7 @@ import {
   WebPlugin,
   WorkboardPlugin,
 } from "@downcity/plugins";
-import type { ImagePluginInput } from "@downcity/plugins";
+import type { ImagePluginInput, ImagePluginModel } from "@downcity/plugins";
 import type { AsrPluginInput } from "@downcity/plugins";
 import type { TtsPluginInput } from "@downcity/plugins";
 import { CityUserManager } from "@/city/shared/CityUserManager.js";
@@ -150,6 +150,19 @@ export async function createCityBuiltinPlugins(input: {
       includeChatAccounts: true,
     }),
     new ImagePlugin({
+      list_models: async () => {
+        const catalog = await client.ai.listModels();
+        return catalog.forModality("image").map((model): ImagePluginModel => ({
+          id: model.id,
+          name: model.name,
+          description: model.description,
+          modalities: model.modalities,
+          tags: model.tags,
+          meta: JSON.parse(JSON.stringify(model.meta ?? {})),
+          is_default: model.is_default,
+          default_modalities: model.default_modalities,
+        }));
+      },
       image_create: async (image_input: ImagePluginInput) =>
         await client.ai.image_create(image_input),
       image_result: async (image_input) =>

@@ -14,6 +14,8 @@ import type {
   PluginActionResult,
   AgentPlugins,
   PluginAvailability,
+  PluginActionReadView,
+  PluginReadView,
   PluginView,
 } from "@/plugin/types/Plugin.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
@@ -129,6 +131,60 @@ export class PluginRegistry implements AgentPlugins {
   }
 
   /**
+   * 读取 action metadata。
+   */
+  private readAction(
+    actionName: string,
+    action: NonNullable<Plugin["actions"]>[string],
+  ): PluginActionReadView {
+    return {
+      name: actionName,
+      description: String(action.description || "").trim(),
+      has_input_schema: Boolean(action.input_schema),
+      ...(action.input_schema?.json_schema
+        ? { input_schema: action.input_schema.json_schema }
+        : {}),
+      ...(action.examples ? { examples: action.examples } : {}),
+      allow_when_disabled: action.allowWhenDisabled === true,
+      has_command: Boolean(action.command),
+      has_api: Boolean(action.api),
+    };
+  }
+
+  /**
+   * 读取 plugin / action metadata。
+   */
+  read(params: {
+    plugin?: string;
+    action?: string;
+  }): PluginReadView | { plugins: PluginView[] } {
+    const pluginName = String(params.plugin || "").trim();
+    if (!pluginName) {
+      return { plugins: this.list() };
+    }
+    const plugin = this.get(pluginName);
+    if (!plugin) {
+      return {
+        name: pluginName,
+        title: pluginName,
+        description: "",
+        actions: [],
+      };
+    }
+    const actionName = String(params.action || "").trim();
+    const actions = Object.entries(plugin.actions || {})
+      .filter(([name]) => !actionName || name === actionName)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([name, action]) => this.readAction(name, action));
+    return {
+      name: plugin.name,
+      title: String(plugin.title || plugin.name || "").trim(),
+      description: String(plugin.description || "").trim(),
+      actions,
+    };
+  }
+
+  /**
    * 检查 plugin 可用性。
    */
   async availability(pluginName: string): Promise<PluginAvailability> {
@@ -159,6 +215,28 @@ export class PluginRegistry implements AgentPlugins {
       enabled: true,
       available: true,
       reasons: [],
+    };
+  }
+
+  /**
+   * 按 action schema 校验 payload。
+   */
+  private parseActionPayload(params: {
+    pluginName: string;
+    actionName: string;
+    payload: JsonValue;
+    action: NonNullable<Plugin["actions"]>[string];
+  }): PluginActionResult<JsonValue> | { input: JsonValue } {
+    const schema = params.action.input_schema?.zod;
+    if (!schema) return { input: params.payload };
+    const parsed = schema.safeParse(params.payload);
+    if (parsed.success) {
+      return { input: parsed.data as JsonValue };
+    }
+    return {
+      success: false,
+      error: `Invalid payload for ${params.pluginName}.${params.actionName}: ${parsed.error.message}`,
+      message: `Invalid payload for ${params.pluginName}.${params.actionName}`,
     };
   }
 
@@ -208,9 +286,19 @@ export class PluginRegistry implements AgentPlugins {
     }
 
     try {
+      const parsed_payload = this.parseActionPayload({
+        pluginName: plugin.name,
+        actionName,
+        payload: (params.payload ?? {}) as JsonValue,
+        action,
+      });
+      if (!("input" in parsed_payload)) {
+        return parsed_payload;
+      }
       return await action.execute({
         context,
-        payload: (params.payload ?? {}) as JsonValue,
+        payload: parsed_payload.input,
+        input: parsed_payload.input,
         pluginName: plugin.name,
         actionName,
       });

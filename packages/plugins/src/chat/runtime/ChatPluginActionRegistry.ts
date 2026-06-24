@@ -9,6 +9,8 @@
 
 import type { Command } from "commander";
 import type { PluginActions } from "@downcity/agent/internal/plugin/types/Plugin.js";
+import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
+import { z } from "zod";
 import type {
   ChatCloseActionPayload,
   ChatConfigurationActionPayload,
@@ -101,7 +103,12 @@ export function createChatPluginActions(params: {
   channelState: ChatChannelState;
 }): PluginActions {
   return {
-    status: {
+    status: createAction({
+      description: "查看 chat 渠道连接状态。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {}, additionalProperties: true },
+      },
       command: {
         description: "查看 chat 渠道连接状态",
         configure(command: Command) {
@@ -113,11 +120,16 @@ export function createChatPluginActions(params: {
         return executeChatStatusAction({
           state: params.channelState,
           context: actionParams.context,
-          payload: actionParams.payload as ChatStatusActionPayload,
+          payload: actionParams.input as ChatStatusActionPayload,
         });
       },
-    },
-    test: {
+    }),
+    test: createAction({
+      description: "测试 chat 渠道连通性。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {}, additionalProperties: true },
+      },
       command: {
         description: "测试 chat 渠道连通性",
         configure(command: Command) {
@@ -129,11 +141,16 @@ export function createChatPluginActions(params: {
         return executeChatTestAction({
           state: params.channelState,
           context: actionParams.context,
-          payload: actionParams.payload as ChatTestActionPayload,
+          payload: actionParams.input as ChatTestActionPayload,
         });
       },
-    },
-    reconnect: {
+    }),
+    reconnect: createAction({
+      description: "重连 chat 渠道（默认全部）。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {}, additionalProperties: true },
+      },
       command: {
         description: "重连 chat 渠道（默认全部）",
         configure(command: Command) {
@@ -145,11 +162,16 @@ export function createChatPluginActions(params: {
         return executeChatReconnectAction({
           state: params.channelState,
           context: actionParams.context,
-          payload: actionParams.payload as ChatReconnectActionPayload,
+          payload: actionParams.input as ChatReconnectActionPayload,
         });
       },
-    },
-    open: {
+    }),
+    open: createAction({
+      description: "打开（启用）指定 chat 渠道。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {}, additionalProperties: true },
+      },
       command: {
         description: "打开 chat 渠道（enabled=true，已配置则尝试启动）",
         configure(command: Command) {
@@ -161,11 +183,16 @@ export function createChatPluginActions(params: {
         return executeChatOpenAction({
           state: params.channelState,
           context: actionParams.context,
-          payload: actionParams.payload as ChatOpenActionPayload,
+          payload: actionParams.input as ChatOpenActionPayload,
         });
       },
-    },
-    close: {
+    }),
+    close: createAction({
+      description: "关闭（禁用）指定 chat 渠道。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {}, additionalProperties: true },
+      },
       command: {
         description: "关闭 chat 渠道（enabled=false，并停止运行）",
         configure(command: Command) {
@@ -177,11 +204,16 @@ export function createChatPluginActions(params: {
         return executeChatCloseAction({
           state: params.channelState,
           context: actionParams.context,
-          payload: actionParams.payload as ChatCloseActionPayload,
+          payload: actionParams.input as ChatCloseActionPayload,
         });
       },
-    },
-    configuration: {
+    }),
+    configuration: createAction({
+      description: "查看 chat 渠道配置元信息。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {}, additionalProperties: true },
+      },
       command: {
         description: "查看 chat 渠道配置元信息（字段、类型、说明）",
         configure(command: Command) {
@@ -192,11 +224,16 @@ export function createChatPluginActions(params: {
       execute: async (actionParams) => {
         return executeChatConfigurationAction({
           context: actionParams.context,
-          payload: actionParams.payload as ChatConfigurationActionPayload,
+          payload: actionParams.input as ChatConfigurationActionPayload,
         });
       },
-    },
-    configure: {
+    }),
+    configure: createAction({
+      description: "更新 chat 渠道运行态参数。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {}, additionalProperties: true },
+      },
       command: {
         description: "更新 chat 渠道运行态参数（可选立即重载）",
         configure(command: Command) {
@@ -214,11 +251,16 @@ export function createChatPluginActions(params: {
         return executeChatConfigureAction({
           state: params.channelState,
           context: actionParams.context,
-          payload: actionParams.payload as ChatConfigureActionPayload,
+          payload: actionParams.input as ChatConfigureActionPayload,
         });
       },
-    },
-    list: {
+    }),
+    list: createAction({
+      description: "列出当前 agent 已记录的 chat 会话。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {}, additionalProperties: true },
+      },
       command: {
         description: "列出当前 agent 已记录的 chat 会话（chatTitle/chatKey）",
         configure(command: Command) {
@@ -232,11 +274,16 @@ export function createChatPluginActions(params: {
       execute: async (actionParams) => {
         return executeChatListAction({
           context: actionParams.context,
-          payload: actionParams.payload as ChatListActionPayload,
+          payload: actionParams.input as ChatListActionPayload,
         });
       },
-    },
-    info: {
+    }),
+    info: createAction({
+      description: "查看指定 chat 会话的路由/路径/上下文快照。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {}, additionalProperties: true },
+      },
       command: {
         description: "查看指定 chat 会话信息（路由/本地路径/上下文快照）",
         configure(command: Command) {
@@ -249,11 +296,16 @@ export function createChatPluginActions(params: {
       execute: async (actionParams) => {
         return executeChatInfoAction({
           context: actionParams.context,
-          payload: actionParams.payload as ChatInfoActionPayload,
+          payload: actionParams.input as ChatInfoActionPayload,
         });
       },
-    },
-    send: {
+    }),
+    send: createAction({
+      description: "向目标 chatKey 发送消息（支持文本/附件/延迟）。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {}, additionalProperties: true },
+      },
       command: {
         description: "发送消息到目标 chatKey",
         configure(command: Command) {
@@ -274,11 +326,16 @@ export function createChatPluginActions(params: {
       execute: async (actionParams) => {
         return executeChatSendAction({
           context: actionParams.context,
-          payload: actionParams.payload as ChatSendActionPayload,
+          payload: actionParams.input as ChatSendActionPayload,
         });
       },
-    },
-    react: {
+    }),
+    react: createAction({
+      description: "给目标消息贴表情（当前仅 Telegram 支持）。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {}, additionalProperties: true },
+      },
       command: {
         description: "给目标消息贴表情（当前仅 Telegram 支持）",
         configure(command: Command) {
@@ -297,11 +354,16 @@ export function createChatPluginActions(params: {
       execute: async (actionParams) => {
         return executeChatReactAction({
           context: actionParams.context,
-          payload: actionParams.payload as ChatReactActionPayload,
+          payload: actionParams.input as ChatReactActionPayload,
         });
       },
-    },
-    context: {
+    }),
+    context: createAction({
+      description: "查看当前会话上下文快照。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {}, additionalProperties: true },
+      },
       command: {
         description: "查看当前会话上下文快照",
         configure(command: Command) {
@@ -318,11 +380,16 @@ export function createChatPluginActions(params: {
       execute: async (actionParams) => {
         return executeChatContextAction({
           context: actionParams.context,
-          payload: actionParams.payload as ChatSessionActionPayload,
+          payload: actionParams.input as ChatSessionActionPayload,
         });
       },
-    },
-    delete: {
+    }),
+    delete: createAction({
+      description: "彻底删除指定 chat 会话（映射+历史+context）。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {}, additionalProperties: true },
+      },
       command: {
         description: "彻底删除指定 chat 会话（映射+历史+context）",
         configure(command: Command) {
@@ -335,11 +402,16 @@ export function createChatPluginActions(params: {
       execute: async (actionParams) => {
         return executeChatDeleteAction({
           context: actionParams.context,
-          payload: actionParams.payload as ChatDeleteActionPayload,
+          payload: actionParams.input as ChatDeleteActionPayload,
         });
       },
-    },
-    history: {
+    }),
+    history: createAction({
+      description: "读取 chat 历史消息。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {}, additionalProperties: true },
+      },
       command: {
         description: "读取 chat 历史消息（默认最近 30 条）",
         configure(command: Command) {
@@ -359,9 +431,9 @@ export function createChatPluginActions(params: {
       execute: async (actionParams) => {
         return executeChatHistoryAction({
           context: actionParams.context,
-          payload: actionParams.payload as ChatHistoryActionPayload,
+          payload: actionParams.input as ChatHistoryActionPayload,
         });
       },
-    },
+    }),
   };
 }

@@ -24,9 +24,12 @@ export type {
   PluginActionApi,
   PluginActionCommand,
   PluginActionCommandInput,
+  PluginActionExample,
   PluginActionInvokeParams,
   PluginActionInvokePort,
   PluginActionInvokeResult,
+  PluginActionInputSchema,
+  PluginActionMetadata,
   PluginActionResult,
   PluginActions,
 } from "@/types/plugin/PluginAction.js";
@@ -38,8 +41,10 @@ export type {
   PluginHooks,
   PluginPipelineHook,
   AgentPlugins,
+  PluginActionReadView,
   PluginResolveHook,
   PluginResolves,
+  PluginReadView,
   PluginView,
 } from "@/types/plugin/PluginRuntime.js";
 export type {

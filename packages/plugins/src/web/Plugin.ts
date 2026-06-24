@@ -9,6 +9,8 @@
  */
 
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
+import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
+import { z } from "zod";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type {
   JsonObject,
@@ -136,7 +138,39 @@ export class WebPlugin extends BasePlugin {
    * WebPlugin 对外 action。
    */
   readonly actions = {
-    install: {
+    install: createAction({
+      description: "安装联网相关 skill / CLI 依赖（web-access、agent-browser）。",
+      input_schema: {
+        zod: z.object({
+          target: z.enum(["web-access", "agent-browser", "all"]).optional(),
+          scope: z.enum(["user", "project"]).optional(),
+          yes: z.boolean().optional(),
+          agent: z.string().optional(),
+        }),
+        json_schema: {
+          type: "object",
+          properties: {
+            target: {
+              type: "string",
+              enum: ["web-access", "agent-browser", "all"],
+              description: "要安装的联网能力",
+            },
+            scope: {
+              type: "string",
+              enum: ["user", "project"],
+              description: "安装作用域",
+            },
+            yes: { type: "boolean", description: "跳过确认" },
+            agent: { type: "string", description: "skill installer 目标 agent" },
+          },
+        },
+      },
+      examples: [
+        {
+          title: "用户级安装全部联网能力",
+          payload: { target: "all", scope: "user" },
+        },
+      ],
       allowWhenDisabled: true,
       command: {
         description: "安装联网相关 skill / CLI 依赖",
@@ -162,12 +196,12 @@ export class WebPlugin extends BasePlugin {
           } satisfies JsonObject;
         },
       },
-      execute: async ({ context, payload }) => {
+      execute: async ({ context, input }) => {
         const data = await installWebPluginTargets({
           context,
           payload:
-            payload && typeof payload === "object" && !Array.isArray(payload)
-              ? (payload as WebPluginInstallPayload)
+            input && typeof input === "object" && !Array.isArray(input)
+              ? (input as WebPluginInstallPayload)
               : undefined,
         });
         return {
@@ -176,7 +210,7 @@ export class WebPlugin extends BasePlugin {
           message: "web dependencies installed",
         };
       },
-    },
+    }),
   };
 
   /**

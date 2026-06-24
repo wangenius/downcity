@@ -72,6 +72,14 @@ export type {
 
 // Plugin 作者 API
 export { BasePlugin } from "./plugin/core/BasePlugin.js";
+export {
+  createAction,
+  createPlugin,
+} from "./plugin/core/PluginActionFactory.js";
+export type {
+  CreatePluginActionOptions,
+  CreatePluginOptions,
+} from "./plugin/core/PluginActionFactory.js";
 
 // Session 与即时执行集成
 export { Executor } from "./executor/Executor.js";
@@ -229,6 +237,9 @@ export type {
   PluginActionApi,
   PluginActionCommand,
   PluginActionCommandInput,
+  PluginActionExample,
+  PluginActionInputSchema,
+  PluginActionMetadata,
   PluginActionResult,
   PluginActions,
   PluginAvailability,

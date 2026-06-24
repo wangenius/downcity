@@ -12,6 +12,8 @@ import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/commo
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { PluginActions } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
+import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
+import { z } from "zod";
 import {
   digestMemoryAction,
   readMemoryAction,
@@ -124,7 +126,13 @@ export class MemoryPlugin extends BasePlugin {
    * 当前 plugin action 定义表。
    */
   readonly actions: PluginActions = {
-    status: {
+    status: createAction({
+      description: "查看 memory wiki 状态（wiki/source/working）。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {} },
+      },
+      examples: [{ title: "查看状态", payload: {} }],
       command: {
         description: "查看 memory wiki 状态（wiki/source/working）",
         mapInput() {
@@ -135,8 +143,30 @@ export class MemoryPlugin extends BasePlugin {
         const state = this.getOrCreateRuntimeState(params.context);
         return await statusMemoryAction(params.context, state);
       },
-    },
-    search: {
+    }),
+    search: createAction({
+      description: "检索 memory wiki，可选择是否扩展到 source 层。",
+      input_schema: {
+        zod: z.object({
+          query: z.string(),
+          maxResults: z.number().optional(),
+          minScore: z.number().optional(),
+          includeSources: z.boolean().optional(),
+        }),
+        json_schema: {
+          type: "object",
+          required: ["query"],
+          properties: {
+            query: { type: "string", description: "检索关键词" },
+            maxResults: { type: "number", description: "返回条数上限" },
+            minScore: { type: "number", description: "最小相关分数" },
+            includeSources: { type: "boolean", description: "是否包含 source 层" },
+          },
+        },
+      },
+      examples: [
+        { title: "搜索记忆", payload: { query: "用户偏好" } },
+      ],
       command: {
         description: "检索 memory wiki",
         configure(command: Command) {
@@ -163,7 +193,7 @@ export class MemoryPlugin extends BasePlugin {
         },
       },
       execute: async (params) => {
-        const body = readBodyObject(params.payload);
+        const body = readBodyObject(params.input);
         const state = this.getOrCreateRuntimeState(params.context);
         return await searchMemoryAction(params.context, state, {
           query: readString(body, "query"),
@@ -172,8 +202,28 @@ export class MemoryPlugin extends BasePlugin {
           includeSources: readOptionalBoolean(body, "includeSources"),
         });
       },
-    },
-    read: {
+    }),
+    read: createAction({
+      description: "读取 memory wiki/source 文件片段。",
+      input_schema: {
+        zod: z.object({
+          path: z.string(),
+          from: z.number().optional(),
+          lines: z.number().optional(),
+        }),
+        json_schema: {
+          type: "object",
+          required: ["path"],
+          properties: {
+            path: { type: "string", description: "记忆文件路径（相对项目根目录）" },
+            from: { type: "number", description: "起始行（1-based）" },
+            lines: { type: "number", description: "读取行数" },
+          },
+        },
+      },
+      examples: [
+        { title: "读取整页", payload: { path: ".downcity/memory/wiki/index.md" } },
+      ],
       command: {
         description: "读取 memory wiki/source 文件片段",
         configure(command: Command) {
@@ -196,15 +246,37 @@ export class MemoryPlugin extends BasePlugin {
         },
       },
       execute: async (params) => {
-        const body = readBodyObject(params.payload);
+        const body = readBodyObject(params.input);
         return await readMemoryAction(params.context, {
           path: readString(body, "path"),
           from: readOptionalNumber(body, "from"),
           lines: readOptionalNumber(body, "lines"),
         });
       },
-    },
-    remember: {
+    }),
+    remember: createAction({
+      description: "把事实/偏好/决策记入 memory wiki。",
+      input_schema: {
+        zod: z.object({
+          content: z.string(),
+          topic: z.string().optional(),
+          path: z.string().optional(),
+          source: z.string().optional(),
+        }),
+        json_schema: {
+          type: "object",
+          required: ["content"],
+          properties: {
+            content: { type: "string", description: "需要记住的内容" },
+            topic: { type: "string", description: "记忆主题" },
+            path: { type: "string", description: "目标 wiki page 路径" },
+            source: { type: "string", description: "来源说明" },
+          },
+        },
+      },
+      examples: [
+        { title: "记住偏好", payload: { content: "用户偏好简短回答", topic: "user-prefs" } },
+      ],
       command: {
         description: "把事实/偏好/决策记入 memory wiki",
         configure(command: Command) {
@@ -231,7 +303,7 @@ export class MemoryPlugin extends BasePlugin {
         },
       },
       execute: async (params) => {
-        const body = readBodyObject(params.payload);
+        const body = readBodyObject(params.input);
         return await rememberMemoryAction(params.context, this.options, {
           content: readString(body, "content"),
           topic: readOptionalString(body, "topic"),
@@ -239,8 +311,26 @@ export class MemoryPlugin extends BasePlugin {
           source: readOptionalString(body, "source"),
         });
       },
-    },
-    digest: {
+    }),
+    digest: createAction({
+      description: "把 session 提炼进 memory wiki。",
+      input_schema: {
+        zod: z.object({
+          sessionId: z.string(),
+          maxMessages: z.number().optional(),
+        }),
+        json_schema: {
+          type: "object",
+          required: ["sessionId"],
+          properties: {
+            sessionId: { type: "string", description: "会话 ID" },
+            maxMessages: { type: "number", description: "提取消息窗口" },
+          },
+        },
+      },
+      examples: [
+        { title: "提炼会话", payload: { sessionId: "sess-1" } },
+      ],
       command: {
         description: "把 session 提炼进 memory wiki",
         configure(command: Command) {
@@ -259,14 +349,37 @@ export class MemoryPlugin extends BasePlugin {
         },
       },
       execute: async (params) => {
-        const body = readBodyObject(params.payload);
+        const body = readBodyObject(params.input);
         return await digestMemoryAction(params.context, this.options, {
           sessionId: readString(body, "sessionId"),
           maxMessages: readOptionalNumber(body, "maxMessages"),
         });
       },
-    },
-    revise: {
+    }),
+    revise: createAction({
+      description: "基于新证据修订 memory wiki page。",
+      input_schema: {
+        zod: z.object({
+          path: z.string(),
+          instruction: z.string(),
+          evidence: z.string().optional(),
+        }),
+        json_schema: {
+          type: "object",
+          required: ["path", "instruction"],
+          properties: {
+            path: { type: "string", description: "目标 wiki page 路径" },
+            instruction: { type: "string", description: "修订指令" },
+            evidence: { type: "string", description: "新证据" },
+          },
+        },
+      },
+      examples: [
+        {
+          title: "修订条目",
+          payload: { path: "wiki/preferences.md", instruction: "替换最新偏好" },
+        },
+      ],
       command: {
         description: "基于新证据修订 memory wiki page",
         configure(command: Command) {
@@ -287,14 +400,14 @@ export class MemoryPlugin extends BasePlugin {
         },
       },
       execute: async (params) => {
-        const body = readBodyObject(params.payload);
+        const body = readBodyObject(params.input);
         return await reviseMemoryAction(params.context, this.options, {
           path: readString(body, "path"),
           instruction: readString(body, "instruction"),
           evidence: readOptionalString(body, "evidence"),
         });
       },
-    },
+    }),
   };
 
   /**

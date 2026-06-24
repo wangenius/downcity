@@ -135,9 +135,23 @@ export async function runLocalPluginAction(params: {
   }
 
   try {
+    const payload = (params.payload ?? {}) as JsonValue;
+    const schema = action.input_schema?.zod;
+    const parsed_payload = schema ? schema.safeParse(payload) : null;
+    if (parsed_payload && !parsed_payload.success) {
+      return {
+        success: false,
+        error: `Invalid payload for ${plugin.name}.${actionName}: ${parsed_payload.error.message}`,
+        message: `Invalid payload for ${plugin.name}.${actionName}`,
+      };
+    }
+    const input_payload = parsed_payload?.success
+      ? parsed_payload.data as JsonValue
+      : payload;
     return await action.execute({
       context: context as unknown as AgentContext,
-      payload: (params.payload ?? {}) as JsonValue,
+      payload: input_payload,
+      input: input_payload,
       pluginName: plugin.name,
       actionName,
     });

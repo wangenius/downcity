@@ -21,6 +21,16 @@ export interface PluginCallInput {
 }
 
 /**
+ * plugin_read 输入。
+ */
+export interface PluginReadInput {
+  /** 要读取的 plugin 名称；不传则列出 plugin 概览。 */
+  plugin?: string;
+  /** 要读取的 action 名称；仅在 plugin 存在时生效。 */
+  action?: string;
+}
+
+/**
  * plugin_call 产生的 assistant 文件摘要。
  */
 export interface PluginCallToolFileResult {
@@ -56,4 +66,16 @@ export interface PluginCallToolResult {
   error?: string;
   /** 返回给模型读取的短摘要数据。 */
   data?: JsonObject;
+}
+
+/**
+ * plugin_read 返回给模型的 metadata。
+ */
+export interface PluginReadToolResult {
+  /** 调用是否成功。 */
+  success: boolean;
+  /** 人类可读消息。 */
+  message: string;
+  /** 读取到的 metadata。 */
+  data: JsonObject;
 }

@@ -8,9 +8,19 @@
  */
 
 import { tool } from "ai";
-import type { PluginCallInput } from "@/executor/tools/plugin/types/PluginTool.js";
-import { invokePluginCallTool, setPluginToolRuntime } from "./PluginToolBridge.js";
-import { plugin_call_input_schema } from "./PluginToolSchemas.js";
+import type {
+  PluginCallInput,
+  PluginReadInput,
+} from "@/executor/tools/plugin/types/PluginTool.js";
+import {
+  invokePluginCallTool,
+  invokePluginReadTool,
+  setPluginToolRuntime,
+} from "./PluginToolBridge.js";
+import {
+  plugin_call_input_schema,
+  plugin_read_input_schema,
+} from "./PluginToolSchemas.js";
 
 export { setPluginToolRuntime } from "./PluginToolBridge.js";
 
@@ -19,9 +29,19 @@ export { setPluginToolRuntime } from "./PluginToolBridge.js";
  */
 export const plugin_call = tool({
   description:
-    "Call a registered agent plugin action. Use this for plugin capabilities such as image generation. Generated files may be attached to the final assistant message automatically.",
+    "Call a registered agent plugin action. Use plugin_read first when you need the action list, input schema, or examples. Generated files may be attached to the final assistant message automatically.",
   inputSchema: plugin_call_input_schema,
   execute: async (input) => await invokePluginCallTool(input as PluginCallInput),
+});
+
+/**
+ * `plugin_read`：读取已注册 plugin / action metadata。
+ */
+export const plugin_read = tool({
+  description:
+    "Read registered agent plugin metadata, including action names, descriptions, input schemas, and examples. Use this before plugin_call when the payload shape is unclear.",
+  inputSchema: plugin_read_input_schema,
+  execute: async (input) => await invokePluginReadTool(input as PluginReadInput),
 });
 
 /**
@@ -29,4 +49,5 @@ export const plugin_call = tool({
  */
 export const plugin_tools = {
   plugin_call,
+  plugin_read,
 };

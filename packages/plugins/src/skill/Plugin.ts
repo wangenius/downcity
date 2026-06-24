@@ -8,8 +8,11 @@
  */
 
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
+import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
+import { z } from "zod";
 import type { Plugin } from "@downcity/agent/internal/plugin/types/Plugin.js";
 import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import type { PluginActionResult } from "@downcity/agent/internal/types/plugin/PluginAction.js";
 import type {
   SkillPluginFindPayload,
   SkillPluginInstallPayload,
@@ -104,7 +107,26 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
       return [SKILL_PLUGIN_PROMPT, dynamicText].filter(Boolean).join("\n\n");
     },
     actions: {
-      [SKILL_PLUGIN_ACTIONS.find]: {
+      [SKILL_PLUGIN_ACTIONS.find]: createAction({
+        description: "查找 `list` 中不存在的未学会 skills（缺失时再 install）",
+        input_schema: {
+          zod: z.object({
+            query: z.string(),
+          }),
+          json_schema: {
+            type: "object",
+            required: ["query"],
+            properties: {
+              query: { type: "string", description: "Skill 查询词" },
+            },
+          },
+        },
+        examples: [
+          {
+            title: "查找 skill",
+            payload: { query: "web-search" },
+          },
+        ],
         command: {
           description: "查找 `list` 中不存在的未学会 skills（缺失时再 install）",
           configure(command) {
@@ -116,8 +138,8 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
             return { query };
           },
         },
-        async execute(params) {
-          const payload = params.payload as SkillPluginFindPayload;
+        async execute(params): Promise<PluginActionResult<JsonObject>> {
+          const payload = params.input as SkillPluginFindPayload;
           const rootPath = params.context.rootPath;
           const exactLearned = findLearnedSkillExact(
             rootPath,
@@ -134,7 +156,7 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
                 nextAction: "lookup",
                 learnedSkill: exactLearned,
                 learnedHints: [],
-              },
+              } as JsonObject,
             };
           }
 
@@ -154,11 +176,36 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
               nextAction: "install",
               learnedSkill: null,
               learnedHints,
-            },
+            } as JsonObject,
           };
         },
-      },
-      [SKILL_PLUGIN_ACTIONS.install]: {
+      }),
+      [SKILL_PLUGIN_ACTIONS.install]: createAction({
+        description: "安装 `list` 中不存在的 skill（完成后请先 lookup）",
+        input_schema: {
+          zod: z.object({
+            spec: z.string(),
+            global: z.boolean().optional(),
+            yes: z.boolean().optional(),
+            agent: z.string().optional(),
+          }),
+          json_schema: {
+            type: "object",
+            required: ["spec"],
+            properties: {
+              spec: { type: "string", description: "Skill 安装 spec" },
+              global: { type: "boolean", description: "是否全局安装" },
+              yes: { type: "boolean", description: "跳过确认" },
+              agent: { type: "string", description: "指定 agent" },
+            },
+          },
+        },
+        examples: [
+          {
+            title: "安装 skill",
+            payload: { spec: "web-search", global: true, yes: true },
+          },
+        ],
         command: {
           description: "安装 `list` 中不存在的 skill（完成后请先 lookup）",
           configure(command) {
@@ -179,8 +226,8 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
             };
           },
         },
-        async execute(params) {
-          const payload = params.payload as SkillPluginInstallPayload;
+        async execute(params): Promise<PluginActionResult<JsonObject>> {
+          const payload = params.input as SkillPluginInstallPayload;
           const rootPath = params.context.rootPath;
           const queryFromSpec = inferSkillQueryFromSpec(payload.spec);
           const beforeList = listSkills(rootPath, options).skills;
@@ -201,7 +248,7 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
                 queryFromSpec,
                 addedSkills: [],
                 learnedSkill: learnedBefore,
-              },
+              } as JsonObject,
             };
           }
 
@@ -228,11 +275,25 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
               queryFromSpec,
               addedSkills,
               learnedSkill: learnedAfter || null,
-            },
+            } as JsonObject,
           };
         },
-      },
-      [SKILL_PLUGIN_ACTIONS.list]: {
+      }),
+      [SKILL_PLUGIN_ACTIONS.list]: createAction({
+        description: "列出当前已学会（本地可发现）的 skills",
+        input_schema: {
+          zod: z.object({}).passthrough(),
+          json_schema: {
+            type: "object",
+            properties: {},
+          },
+        },
+        examples: [
+          {
+            title: "列出 skills",
+            payload: {},
+          },
+        ],
         command: {
           description: "列出当前已学会（本地可发现）的 skills",
           mapInput() {
@@ -242,14 +303,33 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
         api: {
           method: "GET",
         },
-        execute(params) {
+        execute(params): PluginActionResult<JsonObject> {
           return {
             success: true,
-            data: listSkills(params.context.rootPath, options),
+            data: listSkills(params.context.rootPath, options) as unknown as JsonObject,
           };
         },
-      },
-      [SKILL_PLUGIN_ACTIONS.lookup]: {
+      }),
+      [SKILL_PLUGIN_ACTIONS.lookup]: createAction({
+        description: "读取已学会 skill 内容（SKILL.md）",
+        input_schema: {
+          zod: z.object({
+            name: z.string(),
+          }),
+          json_schema: {
+            type: "object",
+            required: ["name"],
+            properties: {
+              name: { type: "string", description: "Skill 名称" },
+            },
+          },
+        },
+        examples: [
+          {
+            title: "读取 skill",
+            payload: { name: "web-search" },
+          },
+        ],
         command: {
           description: "读取已学会 skill 内容（SKILL.md）",
           configure(command) {
@@ -270,8 +350,8 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
             return { name };
           },
         },
-        async execute(params) {
-          const payload = params.payload as SkillPluginLookupPayload;
+        async execute(params): Promise<PluginActionResult<JsonObject>> {
+          const payload = params.input as SkillPluginLookupPayload;
           const result = await lookupSkill({
             projectRoot: params.context.rootPath,
             request: {
@@ -316,10 +396,10 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
                 toolOutputMessage:
                   "skill lookup success; content injected as <skill> user message.",
               },
-            },
+            } as JsonObject,
           };
         },
-      },
+      }),
     },
   };
 }

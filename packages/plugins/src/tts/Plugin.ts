@@ -8,6 +8,8 @@
  */
 
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
+import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
+import { z } from "zod";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type {
   JsonObject,
@@ -227,11 +229,43 @@ export class TtsPlugin extends BasePlugin {
    * 显式 action 集合。
    */
   readonly actions = {
-    synthesize: {
-      execute: async ({ payload }: { payload: JsonValue }) => {
+    synthesize: createAction({
+      description:
+        "Synthesize speech from text. Returns a UIMessage whose audio file part is auto-saved under the project resources directory.",
+      input_schema: {
+        zod: z
+          .object({
+            text: z.string(),
+            language: z.string().optional(),
+            voice: z.string().optional(),
+            format: z.string().optional(),
+            speed: z.number().optional(),
+            provider_options: z.record(z.string(), z.unknown()).optional(),
+          })
+          .passthrough(),
+        json_schema: {
+          type: "object",
+          required: ["text"],
+          properties: {
+            text: { type: "string", description: "需要合成的文本" },
+            language: { type: "string", description: "语言代码（可选）" },
+            voice: { type: "string", description: "音色（可选）" },
+            format: { type: "string", description: "音频格式（可选）" },
+            speed: { type: "number", description: "语速（可选）" },
+          },
+        },
+      },
+      examples: [
+        { title: "默认音色", payload: { text: "你好，世界" } },
+        {
+          title: "指定音色",
+          payload: { text: "Welcome back", voice: "alloy", format: "mp3" },
+        },
+      ],
+      execute: async ({ input }: { input: JsonValue }) => {
         try {
-          const input = normalize_tts_payload(payload);
-          const message = await this.synthesize(input);
+          const synth_input = normalize_tts_payload(input);
+          const message = await this.synthesize(synth_input);
           return {
             success: true,
             data: message as unknown as JsonObject,
@@ -245,6 +279,6 @@ export class TtsPlugin extends BasePlugin {
           };
         }
       },
-    },
+    }),
   };
 }

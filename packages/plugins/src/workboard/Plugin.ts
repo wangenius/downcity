@@ -8,6 +8,8 @@
  */
 
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
+import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
+import { z } from "zod";
 import type {
   PluginActions,
   PluginHttpDefinition,
@@ -56,7 +58,13 @@ export class WorkboardPlugin extends BasePlugin {
    * Workboard 对外 action。
    */
   readonly actions: PluginActions = {
-    snapshot: {
+    snapshot: createAction({
+      description: "读取 workboard 当前的结构化运行态快照。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {} },
+      },
+      examples: [{ title: "读取快照", payload: {} }],
       execute: async ({ context }) => {
         const response = await readWorkboardSnapshot(context);
         return {
@@ -66,7 +74,7 @@ export class WorkboardPlugin extends BasePlugin {
           } as unknown as JsonValue,
         };
       },
-    },
+    }),
   };
 
   /**

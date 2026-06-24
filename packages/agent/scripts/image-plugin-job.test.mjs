@@ -14,6 +14,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { ImagePlugin } from "../../plugins/bin/index.js";
+import { createAgentPluginRegistry } from "../bin/agent/local/AgentPluginFactory.js";
 
 function create_image_message() {
   return {
@@ -32,6 +33,13 @@ function create_image_message() {
 
 function create_context(rootPath = process.cwd()) {
   return { rootPath };
+}
+
+function create_registry(plugin, rootPath = process.cwd()) {
+  return createAgentPluginRegistry({
+    plugins: [plugin],
+    get_context: () => create_context(rootPath),
+  });
 }
 
 test("ImagePlugin exposes only job-style image actions", async () => {
@@ -105,6 +113,26 @@ test("ImagePlugin models lists image-capable models", async () => {
   assert.equal(result.data.default_model_id, "image_1");
   assert.deepEqual(result.data.items.map((item) => item.id), ["image_1"]);
   assert.equal(result.data.items[0].meta.provider, "test");
+});
+
+test("ImagePlugin exposes action metadata through plugin registry", async () => {
+  const plugin = new ImagePlugin({
+    image_create: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
+    image_result: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
+  });
+  const registry = create_registry(plugin);
+
+  const metadata = registry.read({
+    plugin: "image",
+    action: "image_create",
+  });
+
+  assert.equal(metadata.name, "image");
+  assert.equal(metadata.actions.length, 1);
+  assert.equal(metadata.actions[0].name, "image_create");
+  assert.equal(metadata.actions[0].has_input_schema, true);
+  assert.match(metadata.actions[0].description, /Create an async image job/);
+  assert.equal(metadata.actions[0].examples[0].payload.prompt.includes("rainy city"), true);
 });
 
 test("ImagePlugin image_result reads pending state once", async () => {
@@ -181,6 +209,23 @@ test("ImagePlugin image_result reports failed terminal job", async () => {
   assert.equal(result.success, false);
   assert.match(result.error, /provider failed/);
   assert.equal(result.data.job_id, "img_1");
+});
+
+test("ImagePlugin image_result payload is schema validated by registry", async () => {
+  const plugin = new ImagePlugin({
+    image_create: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
+    image_result: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
+  });
+  const registry = create_registry(plugin);
+
+  const result = await registry.runAction({
+    plugin: "image",
+    action: "image_result",
+    payload: {},
+  });
+
+  assert.equal(result.success, false);
+  assert.match(result.error, /Invalid payload/);
 });
 
 test("ImagePlugin image_create converts local content image paths", async () => {

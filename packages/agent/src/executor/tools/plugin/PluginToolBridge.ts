@@ -15,6 +15,8 @@ import type {
   PluginCallInput,
   PluginCallToolFileResult,
   PluginCallToolResult,
+  PluginReadInput,
+  PluginReadToolResult,
 } from "@/executor/tools/plugin/types/PluginTool.js";
 import { materializeAssistantFileParts } from "@executor/messages/AssistantFileResource.js";
 import {
@@ -203,6 +205,34 @@ export async function invokePluginCallTool(
       assistant_file_count: 0,
       message: String(error),
       error: String(error),
+    };
+  }
+}
+
+/**
+ * 读取 plugin / action metadata。
+ */
+export async function invokePluginReadTool(
+  input: PluginReadInput,
+): Promise<PluginReadToolResult> {
+  try {
+    const runtime = require_plugin_tool_runtime();
+    const data = runtime.read({
+      plugin: typeof input.plugin === "string" ? input.plugin : undefined,
+      action: typeof input.action === "string" ? input.action : undefined,
+    });
+    return {
+      success: true,
+      message: "plugin metadata read",
+      data: data as unknown as JsonObject,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: String(error),
+      data: {
+        error: String(error),
+      },
     };
   }
 }

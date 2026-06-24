@@ -9,6 +9,8 @@
 
 import path from "node:path";
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
+import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
+import { z } from "zod";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type {
   JsonObject,
@@ -267,11 +269,41 @@ export class AsrPlugin extends BasePlugin {
    * 显式 action 集合。
    */
   readonly actions = {
-    transcribe: {
-      execute: async ({ payload }: { payload: JsonValue }) => {
+    transcribe: createAction({
+      description:
+        "Transcribe a voice or audio source into text. Provide one of audio_path / url / data_url.",
+      input_schema: {
+        zod: z
+          .object({
+            audio_path: z.string().optional(),
+            url: z.string().optional(),
+            data_url: z.string().optional(),
+            language: z.string().optional(),
+            media_type: z.string().optional(),
+            file_name: z.string().optional(),
+            provider_options: z.record(z.string(), z.unknown()).optional(),
+          })
+          .passthrough(),
+        json_schema: {
+          type: "object",
+          properties: {
+            audio_path: { type: "string", description: "本地音频绝对/相对路径" },
+            url: { type: "string", description: "在线音频 URL" },
+            data_url: { type: "string", description: "data: URL 形式音频" },
+            language: { type: "string", description: "目标语言代码（可选）" },
+            media_type: { type: "string", description: "媒体类型（可选）" },
+            file_name: { type: "string", description: "文件名（可选）" },
+          },
+        },
+      },
+      examples: [
+        { title: "本地音频", payload: { audio_path: "./input.wav" } },
+        { title: "远程 URL", payload: { url: "https://example.com/a.mp3" } },
+      ],
+      execute: async ({ input }: { input: JsonValue }) => {
         try {
-          const input = normalize_asr_payload(payload);
-          const result = await this.transcribe(input);
+          const transcribe_input = normalize_asr_payload(input);
+          const result = await this.transcribe(transcribe_input);
           return {
             success: true,
             data: result as unknown as JsonObject,
@@ -285,6 +317,6 @@ export class AsrPlugin extends BasePlugin {
           };
         }
       },
-    },
+    }),
   };
 }

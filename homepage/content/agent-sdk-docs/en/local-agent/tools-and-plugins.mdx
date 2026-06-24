@@ -63,6 +63,64 @@ const agent = new Agent({
 
 Registered plugin actions can be called through `agent.plugins.runAction(...)`, and plugin `system(context)` text is injected into session prompts.
 
+## plugin action metadata
+
+Plugins with actions automatically give the Agent two built-in tools:
+
+- `plugin_read`: reads registered plugin actions, input schemas, and examples
+- `plugin_call`: executes a plugin action
+
+When the model is unsure how to call an action, it should call `plugin_read({ plugin, action })` first, then call `plugin_call(...)`. `plugin_call` validates payloads against the action `input_schema` before execution.
+
+Custom plugins can declare action metadata with `createPlugin` / `createAction`:
+
+```ts
+import { Agent, createAction, createPlugin } from "@downcity/agent";
+import { z } from "zod";
+
+const demo_plugin = createPlugin({
+  name: "demo",
+  title: "Demo",
+  description: "Demo actions",
+  actions: {
+    echo: createAction({
+      description: "Echo text",
+      input_schema: {
+        zod: z.object({
+          text: z.string(),
+        }),
+        json_schema: {
+          type: "object",
+          required: ["text"],
+          properties: {
+            text: { type: "string" },
+          },
+        },
+      },
+      examples: [
+        {
+          title: "Echo text",
+          payload: { text: "hello" },
+        },
+      ],
+      execute: async ({ input }) => ({
+        success: true,
+        data: { text: input.text },
+        message: "echoed",
+      }),
+    }),
+  },
+});
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  plugins: [demo_plugin],
+});
+```
+
+The `zod` schema handles runtime validation. `json_schema` and `examples` are returned by `plugin_read` for the model or UI. Existing `class extends BasePlugin` plugins still work, and can gradually move individual actions to `createAction(...)`.
+
 ## ChatPlugin
 
 Use `ChatPlugin` when you want the SDK runtime to own long-lived chat channels:
@@ -115,7 +173,16 @@ const agent = new Agent({
 });
 ```
 
-After registration, the Agent automatically gets the built-in `plugin_call` tool. The model can use the job-style actions directly:
+After registration, the Agent automatically gets the built-in `plugin_read` / `plugin_call` tools. The model can inspect action metadata first:
+
+```ts
+await plugin_read({
+  plugin: "image",
+  action: "image_create",
+});
+```
+
+Then it can use the job-style actions directly:
 
 ```ts
 const job = await plugin_call({

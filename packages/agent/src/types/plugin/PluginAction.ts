@@ -8,8 +8,9 @@
 
 import type { Command } from "commander";
 import type { Context as HonoContext } from "hono";
+import type { z } from "zod";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
-import type { JsonValue } from "@/types/common/Json.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 
 /**
  * Plugin action 调用参数。
@@ -94,12 +95,50 @@ export interface PluginActionApi<P extends JsonValue = JsonValue> {
 }
 
 /**
+ * Plugin Action 示例。
+ */
+export interface PluginActionExample<P extends JsonValue = JsonValue> {
+  /** 示例标题。 */
+  title: string;
+  /** 示例说明。 */
+  description?: string;
+  /** 示例 payload。 */
+  payload: P;
+}
+
+/**
+ * Plugin Action 输入 schema。
+ *
+ * 关键点（中文）
+ * - 优先支持 Zod，运行时用 safeParse 做校验。
+ * - `json_schema` 用于给模型或 UI 读取；没有时仍可依赖 description/examples。
+ */
+export interface PluginActionInputSchema<P extends JsonValue = JsonValue> {
+  /** Zod schema，负责运行时校验与 TypeScript 推导。 */
+  zod?: z.ZodTypeAny;
+  /** 面向模型和 UI 的 JSON Schema 描述。 */
+  json_schema?: JsonObject;
+}
+
+/**
+ * Plugin Action 元数据。
+ */
+export interface PluginActionMetadata<P extends JsonValue = JsonValue> {
+  /** Action 用途说明。 */
+  description?: string;
+  /** Action 输入 schema。 */
+  input_schema?: PluginActionInputSchema<P>;
+  /** Action 调用示例。 */
+  examples?: PluginActionExample<P>[];
+}
+
+/**
  * Plugin Action 定义。
  */
 export interface PluginAction<
   P extends JsonValue = JsonValue,
   R extends JsonValue = JsonValue,
-> {
+> extends PluginActionMetadata<P> {
   /**
    * disabled 状态下是否仍允许执行。
    *
@@ -118,6 +157,8 @@ export interface PluginAction<
     context: AgentContext;
     /** 输入 payload。 */
     payload: P;
+    /** 已通过 schema 校验后的输入。 */
+    input: P;
     /** 当前插件名称。 */
     pluginName: string;
     /** 当前 Action 名称。 */

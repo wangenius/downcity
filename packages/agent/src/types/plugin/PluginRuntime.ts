@@ -12,6 +12,7 @@ import type {
 } from "@/types/runtime/agent/AgentContext.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { PluginActionResult } from "@/types/plugin/PluginAction.js";
+import type { PluginActionExample } from "@/types/plugin/PluginAction.js";
 
 /**
  * Plugin 概览视图。
@@ -40,6 +41,42 @@ export interface PluginView {
 }
 
 /**
+ * Plugin Action 读取视图。
+ */
+export interface PluginActionReadView {
+  /** Action 名称。 */
+  name: string;
+  /** Action 用途说明。 */
+  description: string;
+  /** 是否声明输入 schema。 */
+  has_input_schema: boolean;
+  /** JSON Schema 形式的输入说明。 */
+  input_schema?: JsonValue;
+  /** Action 调用示例。 */
+  examples?: PluginActionExample[];
+  /** disabled 状态下是否仍允许执行。 */
+  allow_when_disabled: boolean;
+  /** 是否声明 CLI command。 */
+  has_command: boolean;
+  /** 是否声明 HTTP API。 */
+  has_api: boolean;
+}
+
+/**
+ * Plugin 读取视图。
+ */
+export interface PluginReadView {
+  /** Plugin 稳定名称。 */
+  name: string;
+  /** Plugin 展示标题。 */
+  title: string;
+  /** Plugin 用途说明。 */
+  description: string;
+  /** Action 列表或指定 action。 */
+  actions: PluginActionReadView[];
+}
+
+/**
  * Plugin 可用性结果。
  */
 export interface PluginAvailability {
@@ -57,6 +94,13 @@ export interface PluginAvailability {
 export interface AgentPlugins {
   /** 列出全部已注册 plugin。 */
   list(): PluginView[];
+  /** 读取 plugin / action metadata。 */
+  read(params: {
+    /** Plugin 名称。 */
+    plugin?: string;
+    /** Action 名称。 */
+    action?: string;
+  }): PluginReadView | { plugins: PluginView[] };
   /** 检查指定 plugin 可用性。 */
   availability(pluginName: string): Promise<PluginAvailability>;
   /** 运行指定 plugin action。 */

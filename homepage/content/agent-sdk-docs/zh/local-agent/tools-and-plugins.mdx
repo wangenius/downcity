@@ -108,6 +108,64 @@ const plugins = agent.plugins.list();
 
 当前本地 SDK 会接通 plugin registry、`AgentContext.plugins`，并在 session prompt 中注入已注册 plugin 的 `system(context)` 文本。
 
+## plugin action metadata
+
+带 action 的 plugin 会让 Agent 自动获得两个内置 tool：
+
+- `plugin_read`：读取已注册 plugin 的 action、参数 schema 和示例
+- `plugin_call`：执行指定 plugin action
+
+如果模型不确定某个 action 怎么传参数，应该先调用 `plugin_read({ plugin, action })`，再调用 `plugin_call(...)`。`plugin_call` 在执行前会按 action 的 `input_schema` 校验 payload。
+
+自定义 plugin 可以用 `createPlugin` / `createAction` 声明 action metadata：
+
+```ts
+import { Agent, createAction, createPlugin } from "@downcity/agent";
+import { z } from "zod";
+
+const demo_plugin = createPlugin({
+  name: "demo",
+  title: "Demo",
+  description: "Demo actions",
+  actions: {
+    echo: createAction({
+      description: "回显一段文本",
+      input_schema: {
+        zod: z.object({
+          text: z.string(),
+        }),
+        json_schema: {
+          type: "object",
+          required: ["text"],
+          properties: {
+            text: { type: "string" },
+          },
+        },
+      },
+      examples: [
+        {
+          title: "回显文本",
+          payload: { text: "hello" },
+        },
+      ],
+      execute: async ({ input }) => ({
+        success: true,
+        data: { text: input.text },
+        message: "echoed",
+      }),
+    }),
+  },
+});
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  plugins: [demo_plugin],
+});
+```
+
+`zod` schema 负责运行时校验；`json_schema` 和 `examples` 用于 `plugin_read` 返回给模型或 UI。旧的 `class extends BasePlugin` 写法仍然可用，也可以只在 `actions` 里逐步换成 `createAction(...)`。
+
 ## ImagePlugin
 
 如果你希望 Agent 在对话过程中自己触发生图，可以把图片能力包装成 `ImagePlugin`：
@@ -133,7 +191,16 @@ const agent = new Agent({
 });
 ```
 
-注册后，Agent 会自动获得一个内置的 `plugin_call` tool。模型可以直接使用任务式 action：
+注册后，Agent 会自动获得内置的 `plugin_read` / `plugin_call` tool。模型可以先读取 action metadata：
+
+```ts
+await plugin_read({
+  plugin: "image",
+  action: "image_create",
+});
+```
+
+然后使用任务式 action：
 
 ```ts
 const job = await plugin_call({

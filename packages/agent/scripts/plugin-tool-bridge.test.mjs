@@ -14,9 +14,13 @@ import fs from "node:fs/promises";
 
 import {
   invokePluginCallTool,
+  invokePluginReadTool,
   setPluginToolRuntime,
 } from "../bin/executor/tools/plugin/PluginToolBridge.js";
 import { withSessionRunScope } from "../bin/executor/SessionRunScope.js";
+import { createAction, createPlugin } from "../bin/plugin/core/PluginActionFactory.js";
+import { createAgentPluginRegistry } from "../bin/agent/local/AgentPluginFactory.js";
+import { z } from "zod";
 
 function create_run_context(project_root) {
   return {
@@ -36,6 +40,7 @@ test("invokePluginCallTool returns absolute paths for materialized file parts", 
 
   setPluginToolRuntime({
     list: () => [],
+    read: () => ({ plugins: [] }),
     availability: async () => ({ enabled: true, available: true, reasons: [] }),
     runAction: async () => ({
       success: true,
@@ -85,4 +90,110 @@ test("invokePluginCallTool returns absolute paths for materialized file parts", 
   const pending_parts = run_context.pendingAssistantFileParts;
   assert.equal(pending_parts.length, 1);
   assert.equal(pending_parts[0].url, result.files[0].url);
+});
+
+test("invokePluginReadTool returns plugin action metadata", async () => {
+  setPluginToolRuntime({
+    list: () => [],
+    read: () => ({
+      name: "image",
+      title: "Image",
+      description: "Create images",
+      actions: [
+        {
+          name: "image_create",
+          description: "Create image job",
+          has_input_schema: true,
+          input_schema: {
+            type: "object",
+            properties: {
+              prompt: { type: "string" },
+            },
+          },
+          examples: [
+            {
+              title: "Text-only image",
+              payload: { prompt: "draw" },
+            },
+          ],
+          allow_when_disabled: false,
+          has_command: false,
+          has_api: false,
+        },
+      ],
+    }),
+    availability: async () => ({ enabled: true, available: true, reasons: [] }),
+    runAction: async () => ({ success: false, error: "not used" }),
+    pipeline: async (_, value) => value,
+    guard: async () => {},
+    effect: async () => {},
+    resolve: async () => {
+      throw new Error("not implemented");
+    },
+  });
+
+  const result = await invokePluginReadTool({
+    plugin: "image",
+    action: "image_create",
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.data.name, "image");
+  assert.equal(result.data.actions[0].name, "image_create");
+  assert.equal(result.data.actions[0].has_input_schema, true);
+  assert.equal(result.data.actions[0].examples[0].payload.prompt, "draw");
+});
+
+test("PluginRegistry validates action payload with metadata schema", async () => {
+  const plugin = createPlugin({
+    name: "demo",
+    title: "Demo",
+    description: "Demo plugin",
+    actions: {
+      echo: createAction({
+        description: "Echo text",
+        input_schema: {
+          zod: z.object({
+            text: z.string(),
+          }),
+          json_schema: {
+            type: "object",
+            required: ["text"],
+            properties: {
+              text: { type: "string" },
+            },
+          },
+        },
+        execute: async ({ input }) => ({
+          success: true,
+          data: { text: input.text },
+          message: "echoed",
+        }),
+      }),
+    },
+  });
+  const registry = createAgentPluginRegistry({
+    plugins: [plugin],
+    get_context: () => ({ rootPath: process.cwd() }),
+  });
+
+  const metadata = registry.read({ plugin: "demo", action: "echo" });
+  assert.equal(metadata.actions[0].description, "Echo text");
+  assert.equal(metadata.actions[0].has_input_schema, true);
+
+  const invalid = await registry.runAction({
+    plugin: "demo",
+    action: "echo",
+    payload: {},
+  });
+  assert.equal(invalid.success, false);
+  assert.match(invalid.error, /Invalid payload/);
+
+  const valid = await registry.runAction({
+    plugin: "demo",
+    action: "echo",
+    payload: { text: "hello" },
+  });
+  assert.equal(valid.success, true);
+  assert.equal(valid.data.text, "hello");
 });

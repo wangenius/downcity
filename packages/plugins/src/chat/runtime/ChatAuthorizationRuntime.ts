@@ -12,6 +12,8 @@ import type {
   PluginHooks,
   PluginResolves,
 } from "@downcity/agent/internal/plugin/types/Plugin.js";
+import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
+import { z } from "zod";
 import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
 import { CHAT_PLUGIN_POINTS } from "@/chat/runtime/PluginPoints.js";
 import type { ChatDispatchChannel } from "@/chat/types/ChatDispatcher.js";
@@ -162,7 +164,12 @@ export function createChatAuthorizationResolves(): PluginResolves {
  */
 export function createChatAuthorizationActions(): PluginActions {
   return {
-    [CHAT_AUTHORIZATION_ACTIONS.snapshot]: {
+    [CHAT_AUTHORIZATION_ACTIONS.snapshot]: createAction({
+      description: "读取 chat 授权快照（catalog/config/users/chats）。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {} },
+      },
       execute: async ({ context }) => {
         const snapshot = await readAuthorizationSnapshot({
           context,
@@ -172,19 +179,36 @@ export function createChatAuthorizationActions(): PluginActions {
           data: toSnapshotData(snapshot),
         };
       },
-    },
-    [CHAT_AUTHORIZATION_ACTIONS.readConfig]: {
+    }),
+    [CHAT_AUTHORIZATION_ACTIONS.readConfig]: createAction({
+      description: "读取当前 chat 授权配置。",
+      input_schema: {
+        zod: z.object({}).passthrough(),
+        json_schema: { type: "object", properties: {} },
+      },
       execute: async ({ context }) => {
         return {
           success: true,
           data: readChatAuthorizationConfig(context) as unknown as JsonValue,
         };
       },
-    },
-    [CHAT_AUTHORIZATION_ACTIONS.writeConfig]: {
-      execute: async ({ context, payload }) => {
+    }),
+    [CHAT_AUTHORIZATION_ACTIONS.writeConfig]: createAction({
+      description: "写入 chat 授权配置（整体覆盖）。",
+      input_schema: {
+        zod: z.object({
+          config: z.record(z.string(), z.unknown()).optional(),
+        }),
+        json_schema: {
+          type: "object",
+          properties: {
+            config: { type: "object", description: "授权配置" },
+          },
+        },
+      },
+      execute: async ({ context, input }) => {
         const body = toRecord(
-          payload,
+          input,
         ) as unknown as ChatAuthorizationWriteConfigPayload;
         const nextConfig =
           body.config && typeof body.config === "object" && !Array.isArray(body.config)
@@ -199,11 +223,28 @@ export function createChatAuthorizationActions(): PluginActions {
           data: readChatAuthorizationConfig(context) as unknown as JsonValue,
         };
       },
-    },
-    [CHAT_AUTHORIZATION_ACTIONS.setUserRole]: {
-      execute: async ({ context, payload }) => {
+    }),
+    [CHAT_AUTHORIZATION_ACTIONS.setUserRole]: createAction({
+      description: "为某个渠道用户设置角色。",
+      input_schema: {
+        zod: z.object({
+          channel: z.enum(["telegram", "feishu", "qq"]),
+          userId: z.string(),
+          roleId: z.string(),
+        }),
+        json_schema: {
+          type: "object",
+          required: ["channel", "userId", "roleId"],
+          properties: {
+            channel: { type: "string", enum: ["telegram", "feishu", "qq"] },
+            userId: { type: "string" },
+            roleId: { type: "string" },
+          },
+        },
+      },
+      execute: async ({ context, input }) => {
         const body = toRecord(
-          payload,
+          input,
         ) as unknown as ChatAuthorizationSetUserRolePayload;
         const channel = toChannel(body.channel);
         if (!channel) {
@@ -224,6 +265,6 @@ export function createChatAuthorizationActions(): PluginActions {
           data: readChatAuthorizationConfig(context) as unknown as JsonValue,
         };
       },
-    },
+    }),
   };
 }

@@ -10,11 +10,22 @@ import { z } from "zod";
 
 export const plugin_call_input_schema = z.object({
   plugin: z.string().describe("Registered plugin name to call, for example image."),
-  action: z.string().describe("Plugin action name to execute, for example generate."),
+  action: z.string().describe("Plugin action name to execute, for example image_create."),
   payload: z
     .object({})
     .passthrough()
     .optional()
     .default({})
     .describe("JSON payload passed to the plugin action."),
+});
+
+export const plugin_read_input_schema = z.object({
+  plugin: z
+    .string()
+    .optional()
+    .describe("Registered plugin name to inspect. Omit to list plugins."),
+  action: z
+    .string()
+    .optional()
+    .describe("Plugin action name to inspect. Requires plugin."),
 });

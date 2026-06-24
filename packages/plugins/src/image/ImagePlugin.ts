@@ -9,6 +9,8 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { z } from "zod";
+import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type {
@@ -45,6 +47,39 @@ const IMAGE_MEDIA_TYPES: Record<string, string> = {
   ".png": "image/png",
   ".webp": "image/webp",
 };
+
+const IMAGE_TEXT_CONTENT_SCHEMA = z.object({
+  type: z.literal("text"),
+  text: z.string(),
+});
+
+const IMAGE_FILE_CONTENT_SCHEMA = z.object({
+  type: z.literal("image"),
+  url: z.string(),
+  media_type: z.string().optional(),
+});
+
+const IMAGE_CREATE_INPUT_SCHEMA = z.object({
+  model: z.string().optional(),
+  prompt: z.string().optional(),
+  content: z.array(z.union([
+    IMAGE_TEXT_CONTENT_SCHEMA,
+    IMAGE_FILE_CONTENT_SCHEMA,
+  ])).optional(),
+  n: z.number().optional(),
+  count: z.number().optional(),
+  size: z.string().optional(),
+  aspect_ratio: z.string().optional(),
+  ratio: z.string().optional(),
+  quality: z.string().optional(),
+  seed: z.number().optional(),
+  client_job_id: z.string().optional(),
+  provider_options: z.object({}).passthrough().optional(),
+}).passthrough();
+
+const IMAGE_RESULT_INPUT_SCHEMA = z.object({
+  job_id: z.string(),
+}).passthrough();
 
 /**
  * 判断值是否为普通对象。
@@ -428,7 +463,9 @@ export class ImagePlugin extends BasePlugin {
    * 显式 action 集合。
    */
   readonly actions = {
-    models: {
+    models: createAction({
+      description: "List image-capable models available to ImagePlugin.",
+      input_schema: z.object({}).passthrough(),
       execute: async () => {
         try {
           if (!this.list_models) {
@@ -453,8 +490,75 @@ export class ImagePlugin extends BasePlugin {
           };
         }
       },
-    },
-    image_create: {
+    }),
+    image_create: createAction({
+      description:
+        "Create an async image job. Use prompt for text-only generation, or content for reference images and edits.",
+      input_schema: {
+        zod: IMAGE_CREATE_INPUT_SCHEMA,
+        json_schema: {
+          type: "object",
+          additionalProperties: true,
+          properties: {
+            model: { type: "string", description: "Image model id." },
+            prompt: {
+              type: "string",
+              description: "Text-only image prompt. Ignored when content is present.",
+            },
+            content: {
+              type: "array",
+              description: "Multimodal content for image edits or reference images.",
+              items: {
+                oneOf: [
+                  {
+                    type: "object",
+                    required: ["type", "text"],
+                    properties: {
+                      type: { const: "text" },
+                      text: { type: "string" },
+                    },
+                  },
+                  {
+                    type: "object",
+                    required: ["type", "url"],
+                    properties: {
+                      type: { const: "image" },
+                      url: {
+                        type: "string",
+                        description:
+                          "Online URL, absolute local path, or path relative to the Agent project root.",
+                      },
+                      media_type: { type: "string" },
+                    },
+                  },
+                ],
+              },
+            },
+            aspect_ratio: { type: "string", description: "Aspect ratio, for example 16:9." },
+            size: { type: "string", description: "Image size, for example 1024x1024." },
+            quality: { type: "string", description: "Image quality." },
+            seed: { type: "number", description: "Random seed." },
+          },
+        },
+      },
+      examples: [
+        {
+          title: "Text-only image",
+          payload: {
+            prompt: "A cinematic illustration of a rainy city corner at night",
+            aspect_ratio: "16:9",
+          },
+        },
+        {
+          title: "Edit image with local reference",
+          payload: {
+            content: [
+              { type: "text", text: "Change this image to a white studio background" },
+              { type: "image", url: "./input.png" },
+            ],
+          },
+        },
+      ],
       execute: async ({ context, payload }: { context: AgentContext; payload: JsonValue }) => {
         try {
           const input = normalize_image_payload(payload);
@@ -474,8 +578,30 @@ export class ImagePlugin extends BasePlugin {
           };
         }
       },
-    },
-    image_result: {
+    }),
+    image_result: createAction({
+      description: "Read the current state of an async image job once.",
+      input_schema: {
+        zod: IMAGE_RESULT_INPUT_SCHEMA,
+        json_schema: {
+          type: "object",
+          required: ["job_id"],
+          properties: {
+            job_id: {
+              type: "string",
+              description: "Image job id returned by image_create.",
+            },
+          },
+        },
+      },
+      examples: [
+        {
+          title: "Read image job",
+          payload: {
+            job_id: "img_123",
+          },
+        },
+      ],
       execute: async ({ payload }: { payload: JsonValue }) => {
         try {
           const input = normalize_image_result_payload(payload);
@@ -507,6 +633,6 @@ export class ImagePlugin extends BasePlugin {
           };
         }
       },
-    },
+    }),
   };
 }

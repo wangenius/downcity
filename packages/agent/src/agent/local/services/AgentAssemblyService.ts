@@ -184,6 +184,7 @@ export class AgentAssemblyService {
     });
     const plugins = plugin_registry;
     if (this.should_register_plugin_call_tool(plugin_instances)) {
+      tools.plugin_read = tools.plugin_read || plugin_tools.plugin_read;
       tools.plugin_call = tools.plugin_call || plugin_tools.plugin_call;
     }
     const resolve_session_model = this.resolve_session_model;

@@ -21,6 +21,22 @@ export interface PluginCallInput {
 }
 
 /**
+ * plugin_call 产生的 assistant 文件摘要。
+ */
+export interface PluginCallToolFileResult {
+  /** 文件在本轮 assistant 文件列表中的顺序。 */
+  index: number;
+  /** 文件 MIME 类型，例如 `image/png`。 */
+  media_type: string;
+  /** 原始文件名；若上游未提供则为空字符串。 */
+  filename: string;
+  /** 持久化到历史消息中的资源 URL，通常为 `resources://.downcity/resources/...`。 */
+  url: string;
+  /** 当前机器可直接打开的绝对文件路径。 */
+  path: string;
+}
+
+/**
  * plugin_call 返回给模型的摘要结果。
  */
 export interface PluginCallToolResult {
@@ -32,6 +48,8 @@ export interface PluginCallToolResult {
   action: string;
   /** 本次 action 产生并写入 assistant 消息的 file part 数量。 */
   assistant_file_count: number;
+  /** 本次 action 产生的文件摘要，包含可直接打开的绝对路径。 */
+  files?: PluginCallToolFileResult[];
   /** 人类可读消息。 */
   message: string;
   /** 错误信息。 */

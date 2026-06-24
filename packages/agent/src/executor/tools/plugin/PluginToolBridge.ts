@@ -4,14 +4,16 @@
  * 关键点（中文）
  * - tool 层不直接持有 agent 或 plugin registry，只通过装配期注入的 AgentPlugins 调用 action。
  * - 如果 action 返回 AI SDK UIMessage，则抽取 file parts 并入最终 assistant 消息。
- * - 返回给模型的 tool result 只保留短摘要，避免 data URL 等大内容污染上下文。
+ * - 返回给模型的 tool result 只保留短摘要和本地绝对路径，避免 data URL 等大内容污染上下文。
  */
 
+import path from "node:path";
 import type { FileUIPart } from "ai";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { AgentPlugins } from "@/plugin/types/Plugin.js";
 import type {
   PluginCallInput,
+  PluginCallToolFileResult,
   PluginCallToolResult,
 } from "@/executor/tools/plugin/types/PluginTool.js";
 import { materializeAssistantFileParts } from "@executor/messages/AssistantFileResource.js";
@@ -70,26 +72,56 @@ function extract_assistant_file_parts(data: JsonValue | undefined): FileUIPart[]
 }
 
 /**
+ * 解析当前项目根目录，保持与 assistant 文件落盘逻辑一致。
+ */
+function resolve_project_root(project_root: string | undefined): string {
+  const raw = String(project_root || "").trim();
+  return path.resolve(raw || process.cwd());
+}
+
+/**
+ * 将 `resources://` URL 转成本机绝对路径。
+ */
+function resolve_resources_file_path(
+  project_root: string,
+  raw_url: string,
+): string {
+  const prefix = "resources://";
+  const raw = String(raw_url || "").trim();
+  if (!raw.startsWith(prefix)) return "";
+  const relative = raw.slice(prefix.length).replace(/^\/+/, "");
+  if (!relative) return "";
+
+  const file_path = path.resolve(project_root, relative);
+  const rel = path.relative(project_root, file_path);
+  if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) return "";
+  return file_path;
+}
+
+/**
+ * 构建返回给模型和用户可见的文件摘要。
+ */
+function summarize_materialized_files(
+  parts: FileUIPart[],
+  project_root: string,
+): PluginCallToolFileResult[] {
+  return parts.map((part, index) => ({
+    index,
+    media_type: part.mediaType,
+    filename: typeof part.filename === "string" ? part.filename : "",
+    url: String(part.url || ""),
+    path: resolve_resources_file_path(project_root, String(part.url || "")),
+  }));
+}
+
+/**
  * 生成给模型读取的短摘要。
  */
-function summarize_action_data(data: JsonValue | undefined): JsonObject {
+function summarize_action_data(data: JsonValue | undefined): JsonObject | undefined {
   const message = to_json_object(data);
   const parts: unknown[] = Array.isArray(message?.parts) ? message.parts : [];
-  const file_parts = parts.filter(is_file_part);
   if (parts.length > 0) {
-    return {
-      kind: "ui_message",
-      role: typeof message?.role === "string" ? message.role : "assistant",
-      part_count: parts.length,
-      file_count: file_parts.length,
-      files: file_parts.map((part, index) => ({
-        index,
-        mediaType: part.mediaType,
-        filename: typeof part.filename === "string" ? part.filename : "",
-        // 关键点（中文）：不把 data URL 或长 URL 原样返回给模型，完整内容只进入 assistant file part。
-        has_url: Boolean(part.url),
-      })),
-    };
+    return undefined;
   }
   if (data === undefined) return {};
   return {
@@ -135,29 +167,33 @@ export async function invokePluginCallTool(
       action,
       payload,
     });
+    const project_root = resolve_project_root(getSessionRunContext()?.projectRoot);
     const raw_file_parts = result.success
       ? extract_assistant_file_parts(result.data)
       : [];
     const file_parts =
       raw_file_parts.length > 0
         ? await materializeAssistantFileParts({
-            projectRoot: getSessionRunContext()?.projectRoot,
+            projectRoot: project_root,
             parts: raw_file_parts,
           })
         : [];
+    const files = summarize_materialized_files(file_parts, project_root);
     if (file_parts.length > 0) {
       enqueueAssistantFileParts(file_parts);
     }
+    const data = summarize_action_data(result.data);
     return {
       success: result.success,
       plugin,
       action,
       assistant_file_count: file_parts.length,
+      ...(files.length > 0 ? { files } : {}),
       message:
         String(result.message || result.error || "").trim() ||
         (result.success ? "plugin action completed" : "plugin action failed"),
       ...(result.error ? { error: result.error } : {}),
-      data: summarize_action_data(result.data),
+      ...(data === undefined ? {} : { data }),
     };
   } catch (error) {
     return {

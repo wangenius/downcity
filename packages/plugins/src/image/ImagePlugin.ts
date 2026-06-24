@@ -242,6 +242,7 @@ export class ImagePlugin extends BasePlugin {
   private readonly timeout_ms: number;
   private readonly min_poll_interval_ms: number;
   private readonly max_poll_interval_ms: number;
+  private default_model_id?: string;
 
   constructor(options: ImagePluginOptions) {
     super();
@@ -313,7 +314,7 @@ export class ImagePlugin extends BasePlugin {
   private async generate_image(
     input: ImagePluginInput,
   ): Promise<ImagePluginResult> {
-    const created = await this.image_create(input);
+    const created = await this.image_create(await this.with_default_model(input));
     validate_created_job(created);
     const current = await this.wait_for_image_result({
       job_id: created.job_id,
@@ -323,6 +324,23 @@ export class ImagePlugin extends BasePlugin {
       throw new Error(`Image job ${created.job_id} succeeded without result`);
     }
     return normalize_image_result(current.result);
+  }
+
+  /**
+   * 当调用方未显式指定模型时，使用模型目录中的图片默认模型。
+   */
+  private async with_default_model(input: ImagePluginInput): Promise<ImagePluginInput> {
+    if (typeof input.model === "string" && input.model.trim()) return input;
+    const default_model_id = await this.resolve_default_model_id();
+    return default_model_id ? { ...input, model: default_model_id } : input;
+  }
+
+  private async resolve_default_model_id(): Promise<string | undefined> {
+    if (this.default_model_id) return this.default_model_id;
+    if (!this.list_models) return undefined;
+    const result = normalize_image_models(await this.list_models());
+    this.default_model_id = result.default_model_id;
+    return this.default_model_id;
   }
 
   /**
@@ -471,7 +489,7 @@ export class ImagePlugin extends BasePlugin {
       execute: async ({ payload }: { payload: JsonValue }) => {
         try {
           const input = normalize_image_payload(payload);
-          const created = await this.image_create(input);
+          const created = await this.image_create(await this.with_default_model(input));
           validate_created_job(created);
           return {
             success: true,

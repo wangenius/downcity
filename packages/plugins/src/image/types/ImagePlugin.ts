@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这里仅定义图片 plugin 对图片能力的最低层协议，不绑定 city 或任意上游 provider。
- * - 图片生成结果使用 AI SDK UIMessage，保证 session 落盘格式与现有消息系统一致。
+ * - 图片成功结果使用 AI SDK UIMessage，保证 session 落盘格式与现有消息系统一致。
  * - 字段保持 JSON 可序列化，便于通过 plugin action 与 tool bridge 传递。
  */
 
@@ -24,15 +24,13 @@ export interface ImagePluginTextContent {
 }
 
 /**
- * 图片生成参考图片内容片段。
+ * 图片生成图片内容片段。
  */
 export interface ImagePluginFileContent {
   /** 内容类型，固定为图片。 */
   type: "image";
-  /** 远程图片 URL。 */
-  url?: string;
-  /** data URL 图片内容。 */
-  data_url?: string;
+  /** 图片地址，支持 http(s) URL、本地绝对路径或相对项目根目录的路径。 */
+  url: string;
   /** 图片 MIME 类型，例如 `image/png`。 */
   media_type?: string;
 }
@@ -45,13 +43,27 @@ export type ImagePluginContent =
   | ImagePluginFileContent;
 
 /**
- * 图片生成上下文消息。
+ * ImagePlugin 内部解析后的图片内容片段。
  */
-export interface ImagePluginMessage {
-  /** 消息角色。 */
-  role: "system" | "user" | "assistant";
-  /** 该消息内的文本与图片内容。 */
-  content: ImagePluginContent[];
+export type ImagePluginResolvedContent =
+  | ImagePluginContent
+  | {
+    /** 内容类型，固定为图片。 */
+    type: "image";
+    /** 本地图片由 ImagePlugin 读取后转换得到的 data URL。 */
+    data_url: string;
+    /** 图片 MIME 类型，例如 `image/png`。 */
+    media_type: string;
+  };
+
+/**
+ * ImagePlugin 内部解析后的图片消息。
+ */
+export interface ImagePluginResolvedMessage {
+  /** 消息角色。ImagePlugin 目前只会生成单条 user 消息。 */
+  role: "user";
+  /** 已解析的文本与图片内容。 */
+  content: ImagePluginResolvedContent[];
 }
 
 /**
@@ -62,8 +74,8 @@ export interface ImagePluginInput {
   model?: string;
   /** 单句快捷提示词。 */
   prompt?: string;
-  /** 多轮或多模态图片生成上下文。 */
-  messages?: ImagePluginMessage[];
+  /** 简单多模态内容。带参考图或改图时使用。 */
+  content?: ImagePluginContent[];
   /** 生成图片数量。 */
   n?: number;
   /** 生成图片数量，兼容部分上游使用的 count 命名。 */
@@ -83,11 +95,48 @@ export interface ImagePluginInput {
   /** Provider 私有参数，例如 `{ openai: {...}, gemini: {...}, luchi: {...} }`。 */
   provider_options?: JsonObject;
   /** 允许外部 image 函数接收其他 JSON 可序列化参数。 */
-  [key: string]: JsonValue | ImagePluginMessage[] | undefined;
+  [key: string]: JsonValue | ImagePluginContent[] | undefined;
 }
 
 /**
- * ImagePlugin 生成结果。
+ * ImagePlugin 传给 image_create 回调的已解析输入。
+ *
+ * 关键点（中文）
+ * - Agent 公开 payload 只使用 `prompt` 或 `content`。
+ * - 当公开 payload 使用 `content` 时，ImagePlugin 会把本地图片读取为 data URL，并把内容转成 `messages`。
+ * - 这个类型只描述 ImagePlugin 到 City / provider adapter 的内部边界，不是 Agent 调用 payload。
+ */
+export interface ImagePluginResolvedInput {
+  /** 图片模型引用。 */
+  model?: string;
+  /** 单句快捷提示词。纯文本生成时保留。 */
+  prompt?: string;
+  /** 已解析后的多模态消息。带参考图或改图时由 `content` 转换得到。 */
+  messages?: ImagePluginResolvedMessage[];
+  /** 生成图片数量。 */
+  n?: number;
+  /** 生成图片数量，兼容部分上游使用的 count 命名。 */
+  count?: number;
+  /** 图片尺寸，例如 `1024x1024`。 */
+  size?: string;
+  /** 图片宽高比，例如 `1:1`。 */
+  aspect_ratio?: string;
+  /** 图片宽高比，兼容部分上游使用的 ratio 命名。 */
+  ratio?: string;
+  /** 图片质量，例如 `standard`、`hd`、`ultra`、`4k`。 */
+  quality?: string;
+  /** 随机种子。 */
+  seed?: number;
+  /** 业务侧任务 ID，用于 provider 侧幂等、追踪和恢复。 */
+  client_job_id?: string;
+  /** Provider 私有参数，例如 `{ openai: {...}, gemini: {...}, luchi: {...} }`。 */
+  provider_options?: JsonObject;
+  /** 允许外部 image 函数接收其他 JSON 可序列化参数。 */
+  [key: string]: JsonValue | ImagePluginResolvedMessage[] | undefined;
+}
+
+/**
+ * ImagePlugin 图片成功结果。
  */
 export type ImagePluginResult = UIMessage;
 
@@ -136,21 +185,13 @@ export interface ImagePluginJobResult {
 export interface ImagePluginJobResultInput {
   /** 图片任务 ID，由 `image_create` 返回。 */
   job_id: string;
-  /** 是否持续轮询直到任务进入成功或失败终态，默认由 action 决定。 */
-  until_finish?: boolean;
-  /** 单次查询最大等待时间，单位毫秒。 */
-  timeout_ms?: number;
-  /** 轮询间隔下限，单位毫秒。 */
-  min_poll_interval_ms?: number;
-  /** 轮询间隔上限，单位毫秒。 */
-  max_poll_interval_ms?: number;
 }
 
 /**
  * ImagePlugin 可见模型信息。
  */
 export interface ImagePluginModel {
-  /** 模型唯一 ID，用于 `image_create` / `generate` payload 的 `model` 字段。 */
+  /** 模型唯一 ID，用于 `image_create` payload 的 `model` 字段。 */
   id: string;
   /** 模型展示名称。 */
   name: string;
@@ -190,7 +231,7 @@ export interface ImagePluginOptions {
   description?: string;
   /** 创建图片生成任务，通常传入 `(input) => city.ai.image_create(input)`。 */
   image_create?: (
-    input: ImagePluginInput,
+    input: ImagePluginResolvedInput,
   ) => Promise<ImagePluginJobCreateResult> | ImagePluginJobCreateResult;
   /** 查询图片生成任务，通常传入 `(input) => city.ai.image_result(input)`。 */
   image_result?: (
@@ -198,10 +239,4 @@ export interface ImagePluginOptions {
   ) => Promise<ImagePluginJobResult> | ImagePluginJobResult;
   /** 列出可用图片模型，通常传入 `async () => city.ai.listModels().then((catalog) => catalog.forModality("image"))`。 */
   list_models?: () => Promise<ImagePluginModel[]> | ImagePluginModel[];
-  /** 图片任务最大等待时间，默认 300000ms。 */
-  timeout_ms?: number;
-  /** 轮询间隔下限，默认 100ms。 */
-  min_poll_interval_ms?: number;
-  /** 轮询间隔上限，默认 10000ms。 */
-  max_poll_interval_ms?: number;
 }

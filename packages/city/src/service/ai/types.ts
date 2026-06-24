@@ -163,4 +163,11 @@ export interface AIServiceOptions {
    * Provider 可以直接返回最终扣费金额，AIService 会通过该 bridge 完成扣费。
    */
   balance?: AIBalanceBridge;
+  /**
+   * 图片异步任务允许保持 queued/running 的最长时间，单位毫秒。
+   *
+   * 超过该时间后，AIService 会把任务标记为 failed，并写入 upstream timeout。
+   * 设为 0 或负数会回退到默认值。
+   */
+  image_max_pending_duration_ms?: number;
 }

@@ -65,8 +65,8 @@ test("invokePluginCallTool returns absolute paths for materialized file parts", 
   const result = await withSessionRunScope({ runContext: run_context }, () =>
     invokePluginCallTool({
       plugin: "image",
-      action: "generate",
-      payload: { prompt: "draw" },
+      action: "image_result",
+      payload: { job_id: "img_1" },
     }),
   );
 

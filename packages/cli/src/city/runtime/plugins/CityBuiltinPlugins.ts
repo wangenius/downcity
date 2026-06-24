@@ -24,7 +24,7 @@ import {
   WebPlugin,
   WorkboardPlugin,
 } from "@downcity/plugins";
-import type { ImagePluginInput, ImagePluginModel } from "@downcity/plugins";
+import type { ImagePluginModel, ImagePluginResolvedInput } from "@downcity/plugins";
 import type { AsrPluginInput } from "@downcity/plugins";
 import type { TtsPluginInput } from "@downcity/plugins";
 import { CityUserManager } from "@/city/shared/CityUserManager.js";
@@ -163,7 +163,7 @@ export async function createCityBuiltinPlugins(input: {
           default_modalities: model.default_modalities,
         }));
       },
-      image_create: async (image_input: ImagePluginInput) =>
+      image_create: async (image_input: ImagePluginResolvedInput) =>
         await client.ai.image_create(image_input),
       image_result: async (image_input) =>
         await client.ai.image_result(image_input),

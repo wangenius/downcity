@@ -1,14 +1,17 @@
 /**
- * @file 验证 ImagePlugin 对 Agent 保持直接生图体验。
+ * @file 验证 ImagePlugin 的两步式图片任务协议。
  *
  * 关键点（中文）
- * - 插件暴露 image_create / image_result 两个任务 action，并保留 generate 便捷 action。
- * - image_result 默认轮询到终态，成功后返回 UIMessage 方便 tool bridge 自动挂载图片。
- * - 成功后返回 UIMessage，后续由 plugin bridge 落盘 file parts。
+ * - 插件只暴露 image_create / image_result 两个任务 action。
+ * - image_result 只读取一次当前状态，不在 plugin 层等待终态。
+ * - 成功图片仍以 UIMessage 返回，后续由 plugin bridge 落盘 file parts。
  */
 
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 
 import { ImagePlugin } from "../../plugins/bin/index.js";
 
@@ -27,38 +30,20 @@ function create_image_message() {
   };
 }
 
-test("ImagePlugin generate creates and polls image jobs", async () => {
-  const calls = [];
-  const message = create_image_message();
+function create_context(rootPath = process.cwd()) {
+  return { rootPath };
+}
+
+test("ImagePlugin exposes only job-style image actions", async () => {
   const plugin = new ImagePlugin({
-    min_poll_interval_ms: 1,
-    image_create: (input) => {
-      calls.push(["create", input.prompt]);
-      return { job_id: "img_1", status: "queued", poll_after_ms: 1 };
-    },
-    image_result: (input) => {
-      calls.push(["result", input.job_id]);
-      return calls.length === 2
-        ? { job_id: input.job_id, status: "running", poll_after_ms: 1 }
-        : { job_id: input.job_id, status: "succeeded", result: message, poll_after_ms: 1 };
-    },
+    image_create: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
+    image_result: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
   });
 
-  const result = await plugin.actions.generate.execute({
-    context: {},
-    payload: { prompt: "draw" },
-    pluginName: "image",
-    actionName: "generate",
-  });
-
-  assert.equal(result.success, true);
-  assert.equal(result.data.role, "assistant");
-  assert.equal(result.data.parts[0].type, "file");
-  assert.deepEqual(calls, [
-    ["create", "draw"],
-    ["result", "img_1"],
-    ["result", "img_1"],
-  ]);
+  assert.equal("image_create" in plugin.actions, true);
+  assert.equal("image_result" in plugin.actions, true);
+  assert.equal("models" in plugin.actions, true);
+  assert.equal("generate" in plugin.actions, false);
 });
 
 test("ImagePlugin image_create returns image job", async () => {
@@ -73,7 +58,7 @@ test("ImagePlugin image_create returns image job", async () => {
   });
 
   const result = await plugin.actions.image_create.execute({
-    context: {},
+    context: create_context(),
     payload: { prompt: "draw" },
     pluginName: "image",
     actionName: "image_create",
@@ -110,7 +95,7 @@ test("ImagePlugin models lists image-capable models", async () => {
   });
 
   const result = await plugin.actions.models.execute({
-    context: {},
+    context: create_context(),
     payload: {},
     pluginName: "image",
     actionName: "models",
@@ -122,22 +107,49 @@ test("ImagePlugin models lists image-capable models", async () => {
   assert.equal(result.data.items[0].meta.provider, "test");
 });
 
-test("ImagePlugin image_result waits by default and returns final message", async () => {
+test("ImagePlugin image_result reads pending state once", async () => {
   const calls = [];
-  const message = create_image_message();
   const plugin = new ImagePlugin({
-    min_poll_interval_ms: 1,
     image_create: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
     image_result: (input) => {
       calls.push(input.job_id);
-      return calls.length === 1
-        ? { job_id: input.job_id, status: "running", poll_after_ms: 1 }
-        : { job_id: input.job_id, status: "succeeded", result: message, poll_after_ms: 1 };
+      return {
+        job_id: input.job_id,
+        status: "running",
+        message: "upstream pending",
+        poll_after_ms: 1,
+      };
     },
   });
 
   const result = await plugin.actions.image_result.execute({
-    context: {},
+    context: create_context(),
+    payload: { job_id: "img_1" },
+    pluginName: "image",
+    actionName: "image_result",
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.data.job_id, "img_1");
+  assert.equal(result.data.status, "running");
+  assert.equal(result.data.message, "upstream pending");
+  assert.deepEqual(calls, ["img_1"]);
+});
+
+test("ImagePlugin image_result returns final message when succeeded", async () => {
+  const message = create_image_message();
+  const plugin = new ImagePlugin({
+    image_create: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
+    image_result: (input) => ({
+      job_id: input.job_id,
+      status: "succeeded",
+      result: message,
+      poll_after_ms: 1,
+    }),
+  });
+
+  const result = await plugin.actions.image_result.execute({
+    context: create_context(),
     payload: { job_id: "img_1" },
     pluginName: "image",
     actionName: "image_result",
@@ -146,36 +158,10 @@ test("ImagePlugin image_result waits by default and returns final message", asyn
   assert.equal(result.success, true);
   assert.equal(result.data.role, "assistant");
   assert.equal(result.data.parts[0].type, "file");
-  assert.deepEqual(calls, ["img_1", "img_1"]);
 });
 
-test("ImagePlugin image_result can read once without waiting", async () => {
-  const calls = [];
+test("ImagePlugin image_result reports failed terminal job", async () => {
   const plugin = new ImagePlugin({
-    min_poll_interval_ms: 1,
-    image_create: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
-    image_result: (input) => {
-      calls.push(input.job_id);
-      return { job_id: input.job_id, status: "running", poll_after_ms: 1 };
-    },
-  });
-
-  const result = await plugin.actions.image_result.execute({
-    context: {},
-    payload: { job_id: "img_1", until_finish: false },
-    pluginName: "image",
-    actionName: "image_result",
-  });
-
-  assert.equal(result.success, true);
-  assert.equal(result.data.job_id, "img_1");
-  assert.equal(result.data.status, "running");
-  assert.deepEqual(calls, ["img_1"]);
-});
-
-test("ImagePlugin image_result reports failed terminal job by default", async () => {
-  const plugin = new ImagePlugin({
-    min_poll_interval_ms: 1,
     image_create: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
     image_result: (input) => ({
       job_id: input.job_id,
@@ -186,7 +172,7 @@ test("ImagePlugin image_result reports failed terminal job by default", async ()
   });
 
   const result = await plugin.actions.image_result.execute({
-    context: {},
+    context: create_context(),
     payload: { job_id: "img_1" },
     pluginName: "image",
     actionName: "image_result",
@@ -194,22 +180,132 @@ test("ImagePlugin image_result reports failed terminal job by default", async ()
 
   assert.equal(result.success, false);
   assert.match(result.error, /provider failed/);
+  assert.equal(result.data.job_id, "img_1");
 });
 
-test("ImagePlugin generate reports image failure", async () => {
+test("ImagePlugin image_create converts local content image paths", async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-image-plugin-content-"));
+  try {
+    await fs.writeFile(path.join(tempDir, "input.png"), Buffer.from("png"));
+    let captured_input;
+    const plugin = new ImagePlugin({
+      image_create: (input) => {
+        captured_input = input;
+        return { job_id: "img_1", status: "queued", poll_after_ms: 1 };
+      },
+      image_result: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
+    });
+
+    const result = await plugin.actions.image_create.execute({
+      context: create_context(tempDir),
+      payload: {
+        content: [
+          { type: "text", text: "change background" },
+          { type: "image", url: "./input.png" },
+        ],
+      },
+      pluginName: "image",
+      actionName: "image_create",
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(captured_input.messages[0].content[0].text, "change background");
+    assert.match(captured_input.messages[0].content[1].data_url, /^data:image\/png;base64,/);
+    assert.equal(captured_input.messages[0].content[1].media_type, "image/png");
+    assert.equal("content" in captured_input, false);
+    assert.equal("prompt" in captured_input, false);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("ImagePlugin image_create uses content instead of prompt when both exist", async () => {
+  let captured_input;
   const plugin = new ImagePlugin({
-    min_poll_interval_ms: 1,
-    image_create: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
-    image_result: () => ({ job_id: "img_1", status: "failed", error: "provider failed", poll_after_ms: 1 }),
+    image_create: (input) => {
+      captured_input = input;
+      return { job_id: "img_1", status: "queued", poll_after_ms: 1 };
+    },
+    image_result: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
   });
 
-  const result = await plugin.actions.generate.execute({
-    context: {},
-    payload: { prompt: "draw" },
+  const result = await plugin.actions.image_create.execute({
+    context: create_context(),
+    payload: {
+      prompt: "ignore this prompt",
+      content: [{ type: "text", text: "use this content" }],
+    },
     pluginName: "image",
-    actionName: "generate",
+    actionName: "image_create",
   });
 
-  assert.equal(result.success, false);
-  assert.match(result.error, /provider failed/);
+  assert.equal(result.success, true);
+  assert.equal(captured_input.messages[0].content[0].text, "use this content");
+  assert.equal("prompt" in captured_input, false);
+});
+
+test("ImagePlugin image_create keeps remote content image URLs", async () => {
+  let captured_input;
+  const plugin = new ImagePlugin({
+    image_create: (input) => {
+      captured_input = input;
+      return { job_id: "img_1", status: "queued", poll_after_ms: 1 };
+    },
+    image_result: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
+  });
+
+  const result = await plugin.actions.image_create.execute({
+    context: create_context(),
+    payload: {
+      content: [
+        { type: "text", text: "use this style" },
+        { type: "image", url: "https://example.com/input.webp", media_type: "image/webp" },
+      ],
+    },
+    pluginName: "image",
+    actionName: "image_create",
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(captured_input.messages[0].content[1].url, "https://example.com/input.webp");
+  assert.equal(captured_input.messages[0].content[1].media_type, "image/webp");
+});
+
+test("ImagePlugin image_create rejects legacy messages and data URLs", async () => {
+  const plugin = new ImagePlugin({
+    image_create: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
+    image_result: () => ({ job_id: "img_1", status: "queued", poll_after_ms: 1 }),
+  });
+
+  const messages_result = await plugin.actions.image_create.execute({
+    context: create_context(),
+    payload: {
+      messages: [
+        {
+          role: "user",
+          content: [{ type: "text", text: "legacy" }],
+        },
+      ],
+    },
+    pluginName: "image",
+    actionName: "image_create",
+  });
+
+  assert.equal(messages_result.success, false);
+  assert.match(messages_result.error, /messages is not supported/);
+
+  const data_url_result = await plugin.actions.image_create.execute({
+    context: create_context(),
+    payload: {
+      content: [
+        { type: "text", text: "edit this" },
+        { type: "image", url: "data:image/png;base64,cG5n" },
+      ],
+    },
+    pluginName: "image",
+    actionName: "image_create",
+  });
+
+  assert.equal(data_url_result.success, false);
+  assert.match(data_url_result.error, /does not accept data URLs/);
 });

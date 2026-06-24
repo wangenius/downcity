@@ -109,10 +109,12 @@ export type {
   ImagePluginJobResult,
   ImagePluginJobResultInput,
   ImagePluginJobStatus,
-  ImagePluginMessage,
   ImagePluginModel,
   ImagePluginModelsResult,
   ImagePluginOptions,
+  ImagePluginResolvedContent,
+  ImagePluginResolvedInput,
+  ImagePluginResolvedMessage,
   ImagePluginResult,
   ImagePluginTextContent,
 } from "./image/types/ImagePlugin.js";

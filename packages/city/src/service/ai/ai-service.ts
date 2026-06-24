@@ -54,6 +54,10 @@ const IMAGE_ACTION_MODES = ["image_create", "image_fetch"] as const;
 const IMAGE_GENERATE_JOB_TYPE = "ai.image.generate";
 /** 图片任务后台抓取 action。 */
 const IMAGE_FETCH_ACTION = "image/fetch";
+/** 图片任务默认最长 pending 时间：2 小时。 */
+const DEFAULT_IMAGE_MAX_PENDING_DURATION_MS = 2 * 60 * 60 * 1000;
+/** 图片任务 pending 超时错误。 */
+const IMAGE_PENDING_TIMEOUT_ERROR = "upstream timeout";
 
 type Modality = (typeof MODALITIES)[number];
 type EnvReader = (key: string) => string | undefined;
@@ -128,6 +132,15 @@ function readOptionalNumber(value: unknown): number | undefined {
   if (typeof value !== "string" || !value.trim()) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+/**
+ * 读取正数配置。
+ */
+function normalizePositiveNumber(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : fallback;
 }
 
 /**
@@ -277,10 +290,16 @@ export class AIService extends Service {
 
   /** AI 专用余额桥接。 */
   private readonly balance?: AIBalanceBridge;
+  /** 图片异步任务允许保持 queued/running 的最长时间。 */
+  private readonly image_max_pending_duration_ms: number;
 
   constructor(options: AIServiceOptions = {}) {
     super({ id: "ai", name: "AI", tables: { async_jobs: sqliteAsyncJobs } });
     this.balance = options.balance;
+    this.image_max_pending_duration_ms = normalizePositiveNumber(
+      options.image_max_pending_duration_ms,
+      DEFAULT_IMAGE_MAX_PENDING_DURATION_MS,
+    );
 
     // 为每个 modality 注册 routing action
     for (const modality of MODALITIES) {
@@ -538,6 +557,11 @@ export class AIService extends Service {
     const job = await this.requireImageJob(ctx);
     try {
       if (this.isTerminalImageJob(job)) return this.imageJobToResult(job);
+      if (this.isImageJobPendingTimedOut(job)) {
+        const output = this.createImageJobPendingTimeoutResult(job);
+        await this.updateImageJobFromFetch(ctx, job, output);
+        return output;
+      }
 
       const model_id = job.model_id ?? readOptionalString(ctx.input.model);
       if (!model_id) throw httpError(422, "Image job is missing model_id");
@@ -576,6 +600,33 @@ export class AIService extends Service {
    */
   private isTerminalImageJob(job: AsyncJobRecord): boolean {
     return Boolean((job.status === "succeeded" && job.result_json) || job.status === "failed");
+  }
+
+  /**
+   * 判断图片任务是否超过平台允许的 pending 时间。
+   */
+  private isImageJobPendingTimedOut(job: AsyncJobRecord): boolean {
+    if (job.status !== "queued" && job.status !== "running") return false;
+    const created_at = Date.parse(job.created_at);
+    if (!Number.isFinite(created_at)) return false;
+    return Date.now() - created_at >= this.image_max_pending_duration_ms;
+  }
+
+  /**
+   * 构造 pending 超时后的统一失败结果。
+   */
+  private createImageJobPendingTimeoutResult(job: AsyncJobRecord): AIImageProviderFetchResult {
+    return {
+      job_id: job.job_id,
+      status: "failed",
+      message: IMAGE_PENDING_TIMEOUT_ERROR,
+      error: IMAGE_PENDING_TIMEOUT_ERROR,
+      metadata: {
+        ...parseRecordJson(job.state_json),
+        timeout_reason: IMAGE_PENDING_TIMEOUT_ERROR,
+        max_pending_duration_ms: this.image_max_pending_duration_ms,
+      },
+    };
   }
 
   /**

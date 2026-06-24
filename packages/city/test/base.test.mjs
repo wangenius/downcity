@@ -1245,6 +1245,95 @@ test("Federation AI image jobs can advance through result polling", async () => 
   }
 })
 
+test("Federation AI image jobs fail after max pending duration", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-image-job-timeout-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+    const queueMessages = useMemoryQueue(base)
+    let fetchCalls = 0
+
+    const ai = new AIService({
+      image_max_pending_duration_ms: 10,
+    })
+    ai.use({
+      id: "timeout-image",
+      name: "Timeout Image",
+      default: ["image"],
+      actions: {
+        image_create: async () => ({
+          job_id: "img_timeout_1",
+          status: "running",
+          message: "running",
+          poll_after_ms: 10,
+          metadata: { upstream_job_id: "up_timeout_1" },
+        }),
+        image_fetch: async (ctx) => {
+          fetchCalls += 1
+          return {
+            job_id: String(ctx.input.job_id),
+            status: "running",
+            message: "still running",
+            poll_after_ms: 10,
+            metadata: { upstream_job_id: "up_timeout_1" },
+          }
+        },
+      },
+    })
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    const createResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ prompt: "draw" }),
+    }))
+    assert.equal(createResponse.status, 200)
+    const created = await createResponse.json()
+    assert.equal(created.status, "running")
+
+    const oldIso = new Date(Date.now() - 60_000).toISOString()
+    db.raw
+      .prepare("UPDATE async_jobs SET created_at = ?, updated_at = ? WHERE job_id = ? AND job_type = ?")
+      .run(oldIso, oldIso, created.job_id, "ai.image.generate")
+
+    await base.queue.call(queueMessages.shift())
+    assert.equal(fetchCalls, 0)
+
+    const result = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ job_id: created.job_id }),
+    }))
+    assert.equal(result.status, 200)
+    assert.deepEqual(await result.json(), {
+      job_id: created.job_id,
+      status: "failed",
+      error: "upstream timeout",
+      message: "upstream timeout",
+      metadata: {
+        upstream_job_id: "up_timeout_1",
+        timeout_reason: "upstream timeout",
+        max_pending_duration_ms: 10,
+      },
+    })
+    assert.equal(queueMessages.length, 0)
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
 test("Federation exposes service env requirements and env catalog", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-core-services-env-"))

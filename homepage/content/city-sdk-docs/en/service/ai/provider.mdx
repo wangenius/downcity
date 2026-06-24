@@ -91,7 +91,27 @@ description: Provider is an abstract base class for AI upstreams. Subclass it to
 
 `@downcity/city` does not ship concrete image provider factories. City provides the `Provider` abstraction, `AIService` registration, and the unified `client.ai.image_create()` / `client.ai.image_result()` job contract.
 
-Image job storage is owned by `AIService`: it declares the built-in `async_jobs` table, and Federation creates that table automatically during service initialization. A Provider only creates upstream work, queries upstream status, and converts the final result into the fixed protocol.
+Image job storage is owned by `AIService`: it declares the built-in `async_jobs` table, and Federation creates that table automatically during service initialization. A Provider only creates upstream work, queries upstream status, and normalizes upstream responses into the fixed protocol.
+
+Normalization means the Provider must not pass an upstream raw response to AIService and expect AIService to guess fields. Different upstreams may put status in `status`, `data.status`, or `result.status`; others may represent pending or success with `status_code + err + data`. The Provider must translate those shapes inside `image_fetch()` into the only result shape Downcity understands:
+
+```ts
+type AIImageProviderFetchResult = {
+  job_id: string;
+  status: "queued" | "running" | "succeeded" | "failed";
+  result?: UIMessage;
+  error?: string;
+  message?: string;
+  poll_after_ms?: number;
+  metadata?: Record<string, unknown>;
+};
+```
+
+For example, when an upstream returns `result pending`, the Provider should return `status: "running"`, a clear `message`, the next `poll_after_ms`, and a raw response summary in `metadata.raw` or an equivalent field. When the upstream succeeds, the Provider must return `status: "succeeded"` and an AI SDK `UIMessage` with file parts that can be materialized. When the upstream fails, the Provider must return `status: "failed"` and a user-visible `error`.
+
+In short: AIService owns job storage, Queue scheduling, state caching, and billing; the Provider owns upstream protocol parsing, pending/succeeded/failed mapping, usage extraction, and image result conversion.
+
+AIService also provides a platform-level pending fallback for image jobs: when a job stays `queued` or `running` longer than `image_max_pending_duration_ms`, it is marked `failed`, and both `error` and `message` are set to `upstream timeout`. The default is 2 hours. Providers do not need to decide whether the Downcity job has timed out; while the upstream is still pending, keep returning `queued` or `running`.
 
 ### Complete Example
 

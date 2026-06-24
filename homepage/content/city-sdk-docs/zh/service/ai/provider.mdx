@@ -91,7 +91,27 @@ description: Provider 是第三方 AI 提供商的基类，通过子类化声明
 
 `@downcity/city` 不内置 OpenAI、DeepSeek 或其他具体图片 Provider 构造器。City 包提供 `Provider` 抽象、`AIService` 注册机制，以及 `client.ai.image_create()` / `client.ai.image_result()` 的统一任务协议。
 
-图片任务存储由 `AIService` 负责：它内置声明 `async_jobs` 表，Federation 初始化 Service 时会自动建表。Provider 只负责创建上游任务、查询上游状态，并把最终结果转换成固定协议返回。
+图片任务存储由 `AIService` 负责：它内置声明 `async_jobs` 表，Federation 初始化 Service 时会自动建表。Provider 只负责创建上游任务、查询上游状态，并把上游响应归一化成固定协议返回。
+
+归一化的意思是：Provider 不能把上游原始响应直接交给 AIService 猜字段。不同上游可能把状态放在 `status`、`data.status`、`result.status`，也可能用 `status_code + err + data` 表示 pending 或成功。Provider 必须在 `image_fetch()` 内把这些结构翻译成 Downcity 唯一认可的结果：
+
+```ts
+type AIImageProviderFetchResult = {
+  job_id: string;
+  status: "queued" | "running" | "succeeded" | "failed";
+  result?: UIMessage;
+  error?: string;
+  message?: string;
+  poll_after_ms?: number;
+  metadata?: Record<string, unknown>;
+};
+```
+
+例如，上游返回 `result pending` 时，Provider 应返回 `status: "running"`、明确的 `message`、下一次 `poll_after_ms`，并在 `metadata.raw` 或类似字段保留原始响应摘要；上游成功时，Provider 必须返回 `status: "succeeded"` 和可落盘的 AI SDK `UIMessage` file parts；上游失败时，Provider 必须返回 `status: "failed"` 和可展示的 `error`。
+
+一句话：AIService 管 job 存储、Queue 调度、状态缓存和计费；Provider 管上游协议解析、pending/succeeded/failed 映射、usage 提取和图片结果转换。
+
+AIService 还会为图片任务提供平台级 pending 兜底：任务保持 `queued` 或 `running` 超过 `image_max_pending_duration_ms` 后，会被标记为 `failed`，`error` 和 `message` 都是 `upstream timeout`。默认值是 2 小时。Provider 不需要自己判断 Downcity 任务是否超时，只需要在上游仍未完成时持续返回 `queued` 或 `running`。
 
 ### 完整示例
 

@@ -2,11 +2,13 @@
  * ImagePlugin：图片生成插件。
  *
  * 关键点（中文）
- * - 对 Agent 只暴露同步体验的 `generate` action。
+ * - 对 Agent 暴露 `image_create` / `image_result` 两步式任务 action。
  * - City / provider 的图片能力通过 image_create / image_result 任务函数注入。
- * - action 返回 AI SDK UIMessage，后续由 plugin tool bridge 抽取 file parts 写回 assistant 消息。
+ * - 成功结果返回 AI SDK UIMessage，后续由 plugin tool bridge 抽取 file parts 写回 assistant 消息。
  */
 
+import fs from "node:fs/promises";
+import path from "node:path";
 import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type {
@@ -18,9 +20,12 @@ import type {
   ImagePluginJobCreateResult,
   ImagePluginJobResult,
   ImagePluginJobResultInput,
+  ImagePluginContent,
   ImagePluginModel,
   ImagePluginModelsResult,
   ImagePluginOptions,
+  ImagePluginResolvedContent,
+  ImagePluginResolvedInput,
   ImagePluginResult,
 } from "@/image/types/ImagePlugin.js";
 
@@ -28,9 +33,18 @@ const DEFAULT_IMAGE_PLUGIN_NAME = "image";
 const DEFAULT_IMAGE_PLUGIN_TITLE = "Image";
 const DEFAULT_IMAGE_PLUGIN_DESCRIPTION =
   "Generate images and return them as assistant file parts.";
-const DEFAULT_TIMEOUT_MS = 300_000;
-const DEFAULT_MIN_POLL_INTERVAL_MS = 100;
-const DEFAULT_MAX_POLL_INTERVAL_MS = 10_000;
+const HTTP_URL_RE = /^https?:\/\//i;
+const DEFAULT_IMAGE_MEDIA_TYPE = "image/png";
+
+const IMAGE_MEDIA_TYPES: Record<string, string> = {
+  ".apng": "image/apng",
+  ".avif": "image/avif",
+  ".gif": "image/gif",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".webp": "image/webp",
+};
 
 /**
  * 判断值是否为普通对象。
@@ -51,6 +65,139 @@ function normalize_image_payload(
     throw new TypeError("ImagePlugin image payload must be an object");
   }
   return { ...record } as ImagePluginInput;
+}
+
+/**
+ * 根据文件扩展名推断图片 MIME 类型。
+ */
+function infer_image_media_type(file_path: string, fallback?: string): string {
+  if (fallback && fallback.trim()) return fallback.trim();
+  const ext = path.extname(file_path).toLowerCase();
+  return IMAGE_MEDIA_TYPES[ext] ?? DEFAULT_IMAGE_MEDIA_TYPE;
+}
+
+/**
+ * 解析图片本地路径。
+ */
+function resolve_image_file_path(root_path: string, image_url: string): string {
+  const raw = image_url.trim();
+  if (!raw) throw new TypeError("ImagePlugin image content url is required");
+  return path.isAbsolute(raw) ? raw : path.resolve(root_path, raw);
+}
+
+/**
+ * 把本地图片读取为 data URL。
+ */
+async function local_image_to_data_url(input: {
+  /**
+   * 当前 Agent 项目根目录。
+   */
+  root_path: string;
+  /**
+   * 本地绝对路径或相对路径。
+   */
+  image_url: string;
+  /**
+   * 可选 MIME 类型。
+   */
+  media_type?: string;
+}): Promise<{ data_url: string; media_type: string }> {
+  const file_path = resolve_image_file_path(input.root_path, input.image_url);
+  const media_type = infer_image_media_type(file_path, input.media_type);
+  const bytes = await fs.readFile(file_path);
+  return {
+    data_url: `${media_type.includes("/") ? `data:${media_type};base64,` : "data:image/png;base64,"}${bytes.toString("base64")}`,
+    media_type,
+  };
+}
+
+/**
+ * 归一化单个图片内容片段。
+ */
+async function normalize_image_content_part(
+  context: AgentContext,
+  part: ImagePluginContent,
+): Promise<ImagePluginResolvedContent> {
+  if (part.type === "text") return part;
+  const url = String(part.url || "").trim();
+  if (!url) throw new TypeError("ImagePlugin image content url is required");
+  if (url.startsWith("data:")) {
+    throw new TypeError(
+      "ImagePlugin content image url does not accept data URLs; pass an online URL or a local file path",
+    );
+  }
+  if (HTTP_URL_RE.test(url)) {
+    return {
+      type: "image",
+      url,
+      ...(part.media_type ? { media_type: part.media_type } : {}),
+    };
+  }
+  const local = await local_image_to_data_url({
+    root_path: context.rootPath,
+    image_url: url,
+    media_type: part.media_type,
+  });
+  return {
+    type: "image",
+    data_url: local.data_url,
+    media_type: local.media_type,
+  };
+}
+
+/**
+ * 拒绝旧版或内部协议字段，避免 Agent 继续依赖兼容层。
+ */
+function assert_public_image_create_input(input: ImagePluginInput): void {
+  const record = input as Record<string, unknown>;
+  if ("messages" in record) {
+    throw new TypeError("ImagePlugin image_create uses prompt or content; messages is not supported");
+  }
+  const content = record.content;
+  if (!Array.isArray(content)) return;
+  for (const part of content) {
+    const part_record = to_record(part);
+    if (part_record && "data_url" in part_record) {
+      throw new TypeError(
+        "ImagePlugin content image uses url only; data_url is not supported",
+      );
+    }
+  }
+}
+
+/**
+ * 复制公开输入中的通用字段，剥离 Agent 不应传给下游的公开 content。
+ */
+function copy_resolved_image_input(input: ImagePluginInput): ImagePluginResolvedInput {
+  const { content: _content, messages: _messages, ...rest } = input as ImagePluginInput & {
+    /** 旧版字段，显式丢弃。 */
+    messages?: unknown;
+  };
+  return rest as ImagePluginResolvedInput;
+}
+
+/**
+ * 把 Agent 友好的公开输入转成 City 图片任务使用的输入。
+ */
+async function normalize_image_create_input(
+  context: AgentContext,
+  input: ImagePluginInput,
+): Promise<ImagePluginResolvedInput> {
+  assert_public_image_create_input(input);
+  if (!Array.isArray(input.content)) return copy_resolved_image_input(input);
+  const content = await Promise.all(
+    input.content.map((part) => normalize_image_content_part(context, part)),
+  );
+  const { prompt: _prompt, ...rest } = copy_resolved_image_input(input);
+  return {
+    ...rest,
+    messages: [
+      {
+        role: "user",
+        content,
+      },
+    ],
+  };
 }
 
 /**
@@ -82,41 +229,6 @@ function normalize_image_result(result: ImagePluginResult): ImagePluginResult {
     throw new TypeError("ImagePlugin image provider must return an AI SDK UIMessage");
   }
   return result;
-}
-
-/**
- * 等待指定毫秒数。
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * 限制轮询间隔，避免服务端异常值导致过快或过慢轮询。
- */
-function clamp_poll_interval(
-  value: unknown,
-  min_ms: number,
-  max_ms: number,
-): number {
-  const n = typeof value === "number" && Number.isFinite(value) ? value : min_ms;
-  return Math.max(min_ms, Math.min(max_ms, n));
-}
-
-/**
- * 归一化正数配置。
- */
-function normalize_positive_number(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0
-    ? value
-    : fallback;
-}
-
-/**
- * 读取可选布尔值。
- */
-function normalize_boolean(value: unknown, fallback: boolean): boolean {
-  return typeof value === "boolean" ? value : fallback;
 }
 
 /**
@@ -239,9 +351,6 @@ export class ImagePlugin extends BasePlugin {
   private readonly image_create: NonNullable<ImagePluginOptions["image_create"]>;
   private readonly image_result: NonNullable<ImagePluginOptions["image_result"]>;
   private readonly list_models?: ImagePluginOptions["list_models"];
-  private readonly timeout_ms: number;
-  private readonly min_poll_interval_ms: number;
-  private readonly max_poll_interval_ms: number;
   private default_model_id?: string;
 
   constructor(options: ImagePluginOptions) {
@@ -264,18 +373,6 @@ export class ImagePlugin extends BasePlugin {
     this.image_create = options.image_create;
     this.image_result = options.image_result;
     this.list_models = options.list_models;
-    this.timeout_ms = normalize_positive_number(
-      options.timeout_ms,
-      DEFAULT_TIMEOUT_MS,
-    );
-    this.min_poll_interval_ms = normalize_positive_number(
-      options.min_poll_interval_ms,
-      DEFAULT_MIN_POLL_INTERVAL_MS,
-    );
-    this.max_poll_interval_ms = normalize_positive_number(
-      options.max_poll_interval_ms,
-      DEFAULT_MAX_POLL_INTERVAL_MS,
-    );
   }
 
   /**
@@ -285,51 +382,23 @@ export class ImagePlugin extends BasePlugin {
     return [
       "# Image Plugin",
       "",
-      "Use this plugin only when the user asks to generate, create, draw, render, edit, transform, or stylize an image.",
-      "Do not call it for ordinary image analysis or questions about an existing image unless the user asks for a new/edited image output.",
-      "",
-      "Call through `plugin_call`:",
-      "",
-      "```ts",
-      "plugin_call({",
-      `  plugin: "${this.name}",`,
-      '  action: "generate",',
-      "  payload: {",
-      '    prompt: "...",',
-      "  },",
-      "});",
-      "```",
-      "",
-      "Payload rules:",
-      "- `prompt` is required unless `messages` provides the full multimodal image context.",
-      "- Optional common fields: `messages`, `size`, `aspect_ratio`, `ratio`, `quality`, `n`, `count`, `seed`, `provider_options`.",
-      "- To choose a model, call `models` and pass the selected model `id` as payload `model`.",
-      "- Preserve the user's creative intent; do not over-rewrite the prompt unless clarification is necessary.",
-      "- For a two-step flow, call `image_create` first, then call `image_result` with `job_id`; `image_result` waits until the job finishes by default.",
-      "- `generate` is a convenience action that creates the job and waits for the final image in one call.",
-      "- Generated image file parts are saved under project `.downcity/resources` and attached to the final assistant message automatically.",
+      "Use this plugin only when the user asks to create or edit an image.",
+      "Use `prompt` for text-only image generation.",
+      "Use `content` for image editing or reference images: `[{ type: \"text\", text }, { type: \"image\", url }]`.",
+      "If `content` is present, it is used instead of `prompt`.",
+      "Do not pass `messages` or data URLs.",
+      "`url` may be an online URL, an absolute local path, or a path relative to the Agent project root.",
+      "Flow: call `models` if you need a model id, call `image_create`, then call `image_result` with `job_id`.",
+      "If `image_result` returns `queued` or `running`, keep the `job_id` and check again later.",
     ].join("\n");
-  }
-
-  private async generate_image(
-    input: ImagePluginInput,
-  ): Promise<ImagePluginResult> {
-    const created = await this.image_create(await this.with_default_model(input));
-    validate_created_job(created);
-    const current = await this.wait_for_image_result({
-      job_id: created.job_id,
-      poll_after_ms: created.poll_after_ms,
-    });
-    if (!current.result) {
-      throw new Error(`Image job ${created.job_id} succeeded without result`);
-    }
-    return normalize_image_result(current.result);
   }
 
   /**
    * 当调用方未显式指定模型时，使用模型目录中的图片默认模型。
    */
-  private async with_default_model(input: ImagePluginInput): Promise<ImagePluginInput> {
+  private async with_default_model(
+    input: ImagePluginResolvedInput,
+  ): Promise<ImagePluginResolvedInput> {
     if (typeof input.model === "string" && input.model.trim()) return input;
     const default_model_id = await this.resolve_default_model_id();
     return default_model_id ? { ...input, model: default_model_id } : input;
@@ -344,115 +413,15 @@ export class ImagePlugin extends BasePlugin {
   }
 
   /**
-   * 查询图片任务，按需等待终态。
+   * 查询图片任务当前状态。
    */
-  private async read_image_result(
-    input: ImagePluginJobResultInput,
-    options: {
-      /**
-       * 默认是否等待终态。
-       */
-      default_until_finish: boolean;
-    },
-  ): Promise<ImagePluginJobResult> {
-    const timeout_ms = normalize_positive_number(input.timeout_ms, this.timeout_ms);
-    const min_poll_interval_ms = normalize_positive_number(
-      input.min_poll_interval_ms,
-      this.min_poll_interval_ms,
-    );
-    const max_poll_interval_ms = normalize_positive_number(
-      input.max_poll_interval_ms,
-      this.max_poll_interval_ms,
-    );
-    const until_finish = normalize_boolean(
-      input.until_finish,
-      options.default_until_finish,
-    );
-    const first = await this.image_result({ job_id: input.job_id });
-    validate_job_result(first);
-    if (!until_finish || first.status === "succeeded") {
-      if (first.status === "succeeded" && first.result) {
-        normalize_image_result(first.result);
-      }
-      return first;
+  private async read_image_result(input: ImagePluginJobResultInput): Promise<ImagePluginJobResult> {
+    const current = await this.image_result({ job_id: input.job_id });
+    validate_job_result(current);
+    if (current.status === "succeeded" && current.result) {
+      normalize_image_result(current.result);
     }
-    if (first.status === "failed") {
-      throw new Error(
-        `Image job failed: ${first.error ?? first.message ?? input.job_id}`,
-      );
-    }
-    return await this.wait_for_image_result({
-      job_id: input.job_id,
-      poll_after_ms: first.poll_after_ms,
-      timeout_ms,
-      min_poll_interval_ms,
-      max_poll_interval_ms,
-    });
-  }
-
-  /**
-   * 轮询图片任务直到成功或失败。
-   */
-  private async wait_for_image_result(input: {
-    /**
-     * 图片任务 ID。
-     */
-    job_id: string;
-    /**
-     * 首次建议轮询间隔。
-     */
-    poll_after_ms?: number;
-    /**
-     * 最大等待时间。
-     */
-    timeout_ms?: number;
-    /**
-     * 轮询间隔下限。
-     */
-    min_poll_interval_ms?: number;
-    /**
-     * 轮询间隔上限。
-     */
-    max_poll_interval_ms?: number;
-  }): Promise<ImagePluginJobResult> {
-    const timeout_ms = normalize_positive_number(input.timeout_ms, this.timeout_ms);
-    const min_poll_interval_ms = normalize_positive_number(
-      input.min_poll_interval_ms,
-      this.min_poll_interval_ms,
-    );
-    const max_poll_interval_ms = normalize_positive_number(
-      input.max_poll_interval_ms,
-      this.max_poll_interval_ms,
-    );
-    const deadline = Date.now() + timeout_ms;
-    let poll_after_ms = input.poll_after_ms;
-
-    while (Date.now() < deadline) {
-      await sleep(
-        clamp_poll_interval(
-          poll_after_ms,
-          min_poll_interval_ms,
-          max_poll_interval_ms,
-        ),
-      );
-      const current = await this.image_result({ job_id: input.job_id });
-      validate_job_result(current);
-      poll_after_ms = current.poll_after_ms;
-      if (current.status === "succeeded") {
-        if (!current.result) {
-          throw new Error(`Image job ${input.job_id} succeeded without result`);
-        }
-        normalize_image_result(current.result);
-        return current;
-      }
-      if (current.status === "failed") {
-        throw new Error(
-          `Image job failed: ${current.error ?? current.message ?? input.job_id}`,
-        );
-      }
-    }
-
-    throw new Error(`Image job timed out: ${input.job_id}`);
+    return current;
   }
 
   /**
@@ -486,10 +455,11 @@ export class ImagePlugin extends BasePlugin {
       },
     },
     image_create: {
-      execute: async ({ payload }: { payload: JsonValue }) => {
+      execute: async ({ context, payload }: { context: AgentContext; payload: JsonValue }) => {
         try {
           const input = normalize_image_payload(payload);
-          const created = await this.image_create(await this.with_default_model(input));
+          const normalized_input = await normalize_image_create_input(context, input);
+          const created = await this.image_create(await this.with_default_model(normalized_input));
           validate_created_job(created);
           return {
             success: true,
@@ -509,9 +479,15 @@ export class ImagePlugin extends BasePlugin {
       execute: async ({ payload }: { payload: JsonValue }) => {
         try {
           const input = normalize_image_result_payload(payload);
-          const current = await this.read_image_result(input, {
-            default_until_finish: true,
-          });
+          const current = await this.read_image_result(input);
+          if (current.status === "failed") {
+            return {
+              success: false,
+              data: current as unknown as JsonObject,
+              error: current.error ?? current.message ?? input.job_id,
+              message: current.error ?? current.message ?? "image job failed",
+            };
+          }
           const data = current.status === "succeeded" && current.result
             ? current.result as unknown as JsonObject
             : current as unknown as JsonObject;
@@ -522,25 +498,6 @@ export class ImagePlugin extends BasePlugin {
               current.status === "succeeded"
                 ? "image generated"
                 : `image job ${current.status}`,
-          };
-        } catch (error) {
-          return {
-            success: false,
-            error: String(error),
-            message: String(error),
-          };
-        }
-      },
-    },
-    generate: {
-      execute: async ({ payload }: { payload: JsonValue }) => {
-        try {
-          const input = normalize_image_payload(payload);
-          const message = await this.generate_image(input);
-          return {
-            success: true,
-            data: message as unknown as JsonObject,
-            message: "image generated",
           };
         } catch (error) {
           return {

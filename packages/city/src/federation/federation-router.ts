@@ -142,6 +142,7 @@ export function build_federation_router(params: {
           service: { id: service.id, name: service.name },
           action: { id: action.id },
           queue: service._queue,
+          storage: runtime.storage ?? service._storage,
           started_at: new Date(),
         };
         try {

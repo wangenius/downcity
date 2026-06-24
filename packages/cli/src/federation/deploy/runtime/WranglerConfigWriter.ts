@@ -60,6 +60,23 @@ export function writeWranglerConfig(
     );
   }
 
+  if (config.resources.storage) {
+    lines.push(
+      "",
+      "[[r2_buckets]]",
+      `binding = ${tomlString(config.resources.storage.binding)}`,
+      `bucket_name = ${tomlString(config.resources.storage.name)}`,
+    );
+  }
+
+  if (config.resources.storage?.public_url_prefix) {
+    lines.push(
+      "",
+      "[vars]",
+      `DOWNCITY_STORAGE_PUBLIC_URL_PREFIX = ${tomlString(config.resources.storage.public_url_prefix)}`,
+    );
+  }
+
   lines.push(
     "",
     "[observability]",

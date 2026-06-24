@@ -140,20 +140,90 @@ async function read_remote_resource(raw_url: string): Promise<{
   filename?: string;
   bytes: Buffer;
 }> {
-  const response = await fetch(raw_url);
-  if (!response.ok) {
-    throw new Error(`Failed to download assistant file resource: ${response.status}`);
+  const result = await fetch_with_retry(raw_url);
+  if (!result.ok) {
+    throw new Error(
+      `Failed to download assistant file resource: ${result.status} :: url=${raw_url}`,
+    );
   }
-  const array_buffer = await response.arrayBuffer();
+  const array_buffer = await result.arrayBuffer();
   const bytes = Buffer.from(array_buffer);
   if (bytes.length === 0) {
-    throw new Error("Downloaded assistant file resource is empty");
+    throw new Error(`Downloaded assistant file resource is empty :: url=${raw_url}`);
   }
   return {
-    mediaType: response.headers.get("content-type")?.split(";")[0]?.trim(),
+    mediaType: result.headers.get("content-type")?.split(";")[0]?.trim(),
     filename: filename_from_url(raw_url),
     bytes,
   };
+}
+
+/**
+ * 带重试的 fetch 远程资源。
+ *
+ * 关键点（中文）
+ * - 对 transient 网络错误（fetch failed / UND_ERR_* / ECONNRESET 等）做 2 次指数退避重试。
+ * - 最终失败时把 error.cause 链展开到 message，方便定位是代理问题、DNS 问题还是上游问题。
+ */
+async function fetch_with_retry(
+  raw_url: string,
+): Promise<Response> {
+  const delays_ms = [250, 1_000];
+  const attempts = delays_ms.length + 1;
+  let last_error: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await fetch(raw_url);
+    } catch (error) {
+      last_error = error;
+      if (!is_transient_fetch_error(error) || attempt === attempts - 1) {
+        throw enrich_fetch_error(error, raw_url);
+      }
+      const delay_ms = delays_ms[attempt] ?? 1_000;
+      await new Promise((resolve) => setTimeout(resolve, delay_ms));
+    }
+  }
+  throw enrich_fetch_error(last_error, raw_url);
+}
+
+function is_transient_fetch_error(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const text = `${error.message} ${describe_error_cause(error)}`;
+  return /fetch failed|UND_ERR|ECONN(RESET|REFUSED|ABORTED)|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|socket hang up/i.test(
+    text,
+  );
+}
+
+function enrich_fetch_error(error: unknown, url: string): Error {
+  if (!(error instanceof Error)) {
+    return new Error(`Download failed: ${String(error)} :: url=${url}`);
+  }
+  const cause_text = describe_error_cause(error);
+  const enriched = new Error(
+    `${error.message}${cause_text ? ` :: cause=${cause_text}` : ""} :: url=${url}`,
+    error.cause ? { cause: error.cause } : undefined,
+  );
+  enriched.stack = error.stack;
+  return enriched;
+}
+
+function describe_error_cause(error: Error): string {
+  const parts: string[] = [];
+  let current: unknown = (error as { cause?: unknown }).cause;
+  let depth = 0;
+  while (current && depth < 3) {
+    if (current instanceof Error) {
+      const code = (current as { code?: unknown }).code;
+      const code_text = typeof code === "string" && code ? `[${code}] ` : "";
+      parts.push(`${code_text}${current.message || current.name}`.trim());
+      current = (current as { cause?: unknown }).cause;
+    } else {
+      parts.push(String(current));
+      break;
+    }
+    depth += 1;
+  }
+  return parts.filter(Boolean).join(" -> ");
 }
 
 async function read_local_resource(
@@ -191,19 +261,55 @@ async function materialize_file_part(params: {
   if (raw_url.startsWith("resources://")) return params.part;
 
   const parsed_data_url = parse_data_url(raw_url);
-  const source = parsed_data_url
-    ? {
-        mediaType: parsed_data_url.media_type,
+  if (parsed_data_url) {
+    const media_type =
+      String(params.part.mediaType || parsed_data_url.media_type || "").trim() ||
+      "application/octet-stream";
+    const file_path = await write_resource_file({
+      projectRoot: params.projectRoot,
+      mediaType: media_type,
+      filename:
+        typeof params.part.filename === "string" ? params.part.filename : undefined,
+      bytes: parsed_data_url.bytes,
+    });
+    return {
+      ...params.part,
+      mediaType: media_type,
+      url: to_resources_url(params.projectRoot, file_path),
+    };
+  }
+
+  if (raw_url.startsWith("http://") || raw_url.startsWith("https://")) {
+    try {
+      const source = await read_remote_resource(raw_url);
+      const media_type =
+        String(params.part.mediaType || source.mediaType || "").trim() ||
+        "application/octet-stream";
+      const file_path = await write_resource_file({
+        projectRoot: params.projectRoot,
+        mediaType: media_type,
         filename:
           typeof params.part.filename === "string"
             ? params.part.filename
-            : undefined,
-        bytes: parsed_data_url.bytes,
-      }
-    : raw_url.startsWith("http://") || raw_url.startsWith("https://")
-      ? await read_remote_resource(raw_url)
-      : await read_local_resource(params.projectRoot, raw_url);
+            : source.filename,
+        bytes: source.bytes,
+      });
+      return {
+        ...params.part,
+        mediaType: media_type,
+        url: to_resources_url(params.projectRoot, file_path),
+      };
+    } catch (error) {
+      // 关键点（中文）：远程下载失败时保留原始 URL，不让整张图导致 action 失败。
+      // 这样图片至少以链接形式存在，用户可手动点击或后续再试。
+      console.warn(
+        `[AssistantFileResource] remote download failed, keeping original url :: ${describe_error_cause(error instanceof Error ? error : new Error(String(error)))} :: url=${raw_url}`,
+      );
+      return params.part;
+    }
+  }
 
+  const source = await read_local_resource(params.projectRoot, raw_url);
   const media_type =
     String(params.part.mediaType || source.mediaType || "").trim() ||
     "application/octet-stream";
@@ -216,7 +322,6 @@ async function materialize_file_part(params: {
         : source.filename,
     bytes: source.bytes,
   });
-
   return {
     ...params.part,
     mediaType: media_type,

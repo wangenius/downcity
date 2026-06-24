@@ -16,6 +16,7 @@ import type {
   FederationProjectD1ResourceConfig,
   FederationProjectQueueResourceConfig,
   FederationProjectResourcesConfig,
+  FederationProjectStorageResourceConfig,
 } from "@/federation/types/FederationProjectConfig.js";
 
 const FEDERATION_CONFIG_FILE_NAME = "federation.json";
@@ -132,6 +133,22 @@ function resolveTargetQueueResource(
 }
 
 /**
+ * 解析 target 的默认存储资源。
+ */
+function resolveTargetStorageResource(
+  target: string,
+  project_name: string,
+): FederationProjectStorageResourceConfig | undefined {
+  if (target !== "cloudflare-workers") return undefined;
+  return {
+    type: "r2",
+    binding: "DOWNCITY_STORAGE",
+    name: `${project_name}-storage`,
+    public_url_prefix: "",
+  };
+}
+
+/**
  * 解析项目资源配置。
  */
 function resolveProjectResources(
@@ -141,9 +158,11 @@ function resolveProjectResources(
 ): FederationProjectResourcesConfig {
   const default_d1 = resolveTargetD1Resource(target, project_name);
   const default_queue = resolveTargetQueueResource(target, project_name);
+  const default_storage = resolveTargetStorageResource(target, project_name);
   const resources = readOptionalRecord(input, "resources");
   const d1 = readOptionalRecord(resources ?? {}, "d1");
   const queue = readOptionalRecord(resources ?? {}, "queue");
+  const storage = readOptionalRecord(resources ?? {}, "storage");
   const legacy_database = readOptionalRecord(input, "database");
   const d1_source = d1 ?? legacy_database;
 
@@ -164,8 +183,18 @@ function resolveProjectResources(
                 type: "queue" as const,
                 binding: readOptionalString(queue, "binding") ?? default_queue.binding,
                 name: readOptionalString(queue, "name") ?? default_queue.name,
-              }
+          }
             : default_queue,
+        }
+      : {}),
+    ...(default_storage && storage
+      ? {
+          storage: {
+            type: "r2" as const,
+            binding: readOptionalString(storage, "binding") ?? default_storage.binding,
+            name: readOptionalString(storage, "name") ?? default_storage.name,
+            public_url_prefix: readOptionalString(storage, "public_url_prefix") ?? default_storage.public_url_prefix,
+          },
         }
       : {}),
   };

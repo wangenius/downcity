@@ -66,6 +66,10 @@ type ResolvedProviderOutput = {
   output: unknown;
   charge?: AIProviderChargeLine | Promise<AIProviderChargeLine | undefined>;
 };
+type StoredImagePart = Record<string, unknown> & {
+  type: "file";
+  url: string;
+};
 
 /**
  * 判断一个值是否为 HTTP Response。
@@ -243,6 +247,32 @@ function countImageOutputs(output: unknown): number | undefined {
     return type === "file" && media_type.startsWith("image/");
   }).length;
   return count > 0 ? count : undefined;
+}
+
+/**
+ * 判断 file part URL 是否是可转存的远程 URL。
+ */
+function isStorableRemoteFilePart(part: unknown): part is StoredImagePart {
+  if (!isRecord(part)) return false;
+  if (part.type !== "file") return false;
+  const url = readOptionalString(part.url);
+  return Boolean(url && /^https?:\/\//iu.test(url));
+}
+
+/**
+ * 读取 file part 的媒体类型。
+ */
+function readFilePartMediaType(part: Record<string, unknown>): string {
+  return readOptionalString(part.mediaType)
+    ?? readOptionalString(part.media_type)
+    ?? "application/octet-stream";
+}
+
+/**
+ * 读取 file part 的建议文件名。
+ */
+function readFilePartFilename(part: Record<string, unknown>): string | undefined {
+  return readOptionalString(part.filename);
 }
 
 /**
@@ -577,19 +607,20 @@ export class AIService extends Service {
       if (!isImageProviderResult(output)) {
         throw httpError(500, "image_fetch action returned invalid result");
       }
+      const stored_output = await this.normalizeImageResultStorage(ctx, output);
       const should_charge = output.status === "succeeded" && Boolean(output.result) && !job.result_json;
       if (should_charge) {
-        this.attachOutputMetering(ctx, output.result, "image", started_at);
+        this.attachOutputMetering(ctx, stored_output.result, "image", started_at);
       }
-      await this.updateImageJobFromFetch(ctx, job, output);
+      await this.updateImageJobFromFetch(ctx, job, stored_output);
       if (should_charge) {
-        const charge = model.bill?.(ctx, output);
+        const charge = model.bill?.(ctx, stored_output);
         await this.handleCharge(ctx, charge, isPromiseLike(charge));
       }
-      if (output.status === "queued" || output.status === "running") {
-        await this.enqueueImageFetch(ctx, job.job_id, output.poll_after_ms);
+      if (stored_output.status === "queued" || stored_output.status === "running") {
+        await this.enqueueImageFetch(ctx, job.job_id, stored_output.poll_after_ms);
       }
-      return output;
+      return stored_output;
     } catch (error) {
       throw imageActionError(error, "image_fetch action failed");
     }
@@ -640,6 +671,70 @@ export class AIService extends Service {
       input: { job_id },
       delay_ms,
     });
+  }
+
+  /**
+   * 将图片结果里的外部 file URL 归一到 Federation 默认存储。
+   *
+   * 关键说明（中文）
+   * - 只处理 succeeded 结果，queued/running/failed 保持原样。
+   * - 已经属于当前 storage 的 URL 直接跳过，避免重复转存。
+   * - 转存失败时保留源地址，不影响图片任务成功写入。
+   */
+  private async normalizeImageResultStorage(
+    ctx: Context,
+    output: AIImageProviderFetchResult,
+  ): Promise<AIImageProviderFetchResult> {
+    if (!ctx.storage || output.status !== "succeeded" || !output.result) return output;
+    const result = output.result as { parts?: unknown[] };
+    if (!Array.isArray(result.parts)) return output;
+
+    let changed = false;
+    const next_parts: unknown[] = [];
+    for (const part of result.parts) {
+      if (!isStorableRemoteFilePart(part)) {
+        next_parts.push(part);
+        continue;
+      }
+
+      const source_url = part.url;
+      if (ctx.storage.owns(source_url)) {
+        next_parts.push(part);
+        continue;
+      }
+
+      try {
+        const stored = await ctx.storage.store({
+          source_url,
+          media_type: readFilePartMediaType(part),
+          filename: readFilePartFilename(part),
+        });
+        const stored_url = readOptionalString(stored.url);
+        if (!stored_url) {
+          next_parts.push(part);
+          continue;
+        }
+        next_parts.push({
+          ...part,
+          url: stored_url,
+        });
+        changed = true;
+      } catch (error) {
+        console.warn(
+          `[AIService] storage store failed, keeping source url :: ${error instanceof Error ? error.message : String(error)} :: url=${source_url}`,
+        );
+        next_parts.push(part);
+      }
+    }
+
+    if (!changed) return output;
+    return {
+      ...output,
+      result: {
+        ...output.result,
+        parts: next_parts as typeof output.result.parts,
+      },
+    };
   }
 
   /**

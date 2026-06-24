@@ -33,12 +33,26 @@ export interface FederationProjectQueueResourceConfig {
   name: string;
 }
 
+/** City 项目默认存储资源配置。 */
+export interface FederationProjectStorageResourceConfig {
+  /** 存储运行时类型，当前支持 Cloudflare R2。 */
+  type: "r2";
+  /** Worker runtime 中的存储 binding 名称，默认 `DOWNCITY_STORAGE`。 */
+  binding: string;
+  /** Cloudflare R2 bucket 名称。 */
+  name: string;
+  /** R2 bucket 的公开访问前缀，例如 `https://images.example.com`。 */
+  public_url_prefix: string;
+}
+
 /** City 项目资源配置。 */
 export interface FederationProjectResourcesConfig {
   /** Cloudflare Workers 目标使用的 D1 数据库资源。 */
   d1?: FederationProjectD1ResourceConfig;
   /** Cloudflare Workers 目标使用的 Queue 资源。 */
   queue?: FederationProjectQueueResourceConfig;
+  /** Cloudflare Workers 目标使用的默认存储资源。 */
+  storage?: FederationProjectStorageResourceConfig;
 }
 
 /** `city.json` 解析后的配置结构。 */

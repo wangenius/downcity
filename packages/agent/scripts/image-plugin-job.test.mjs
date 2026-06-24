@@ -354,3 +354,76 @@ test("ImagePlugin image_create rejects legacy messages and data URLs", async () 
   assert.equal(data_url_result.success, false);
   assert.match(data_url_result.error, /does not accept data URLs/);
 });
+
+test("ImagePlugin image_result polls until terminal when until_done=true", async () => {
+  const calls = [];
+  let next_status = "running";
+  const message = create_image_message();
+  const plugin = new ImagePlugin({
+    image_create: () => ({ job_id: "img_wait", status: "queued", poll_after_ms: 1 }),
+    image_result: (input) => {
+      calls.push(input.job_id);
+      if (calls.length >= 3) {
+        next_status = "succeeded";
+      }
+      if (next_status === "succeeded") {
+        return {
+          job_id: input.job_id,
+          status: "succeeded",
+          result: message,
+          poll_after_ms: 1,
+        };
+      }
+      return {
+        job_id: input.job_id,
+        status: "running",
+        message: "still going",
+        poll_after_ms: 1,
+      };
+    },
+  });
+
+  const result = await plugin.actions.image_result.execute({
+    context: create_context(),
+    payload: {
+      job_id: "img_wait",
+      until_done: true,
+      max_wait_ms: 500,
+      poll_interval_ms: 5,
+    },
+    pluginName: "image",
+    actionName: "image_result",
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.data.role, "assistant");
+  assert.ok(calls.length >= 3);
+});
+
+test("ImagePlugin image_result returns last status when max_wait_ms elapses", async () => {
+  const plugin = new ImagePlugin({
+    image_create: () => ({ job_id: "img_timeout", status: "queued", poll_after_ms: 1 }),
+    image_result: (input) => ({
+      job_id: input.job_id,
+      status: "running",
+      message: "always pending",
+      poll_after_ms: 1,
+    }),
+  });
+
+  const result = await plugin.actions.image_result.execute({
+    context: create_context(),
+    payload: {
+      job_id: "img_timeout",
+      until_done: true,
+      max_wait_ms: 30,
+      poll_interval_ms: 5,
+    },
+    pluginName: "image",
+    actionName: "image_result",
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.data.status, "running");
+  assert.equal(result.data.message, "always pending");
+});

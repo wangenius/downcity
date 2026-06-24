@@ -185,6 +185,30 @@ export interface ImagePluginJobResult {
 export interface ImagePluginJobResultInput {
   /** 图片任务 ID，由 `image_create` 返回。 */
   job_id: string;
+  /**
+   * 是否阻塞等待任务到达终态（`succeeded` / `failed`）。
+   *
+   * 关键点（中文）
+   * - 默认 false：行为与历史一致，调用一次 provider 即返回。
+   * - true：plugin 内部按 `poll_interval_ms` 节奏轮询，直到任务终止或 `max_wait_ms` 到期。
+   */
+  until_done?: boolean;
+  /**
+   * 轮询的总等待上限（毫秒）。
+   *
+   * 关键点（中文）
+   * - 仅当 `until_done` 为 true 时生效。
+   * - 默认 60_000；命中上限后返回当前最后一次状态，不抛错。
+   */
+  max_wait_ms?: number;
+  /**
+   * 单次轮询之间的等待间隔（毫秒）。
+   *
+   * 关键点（中文）
+   * - 仅当 `until_done` 为 true 时生效。
+   * - 默认 1500；若 provider 返回 `poll_after_ms`，则取两者较大值。
+   */
+  poll_interval_ms?: number;
 }
 
 /**

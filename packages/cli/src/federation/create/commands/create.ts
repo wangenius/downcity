@@ -144,6 +144,7 @@ function createCloudflareWorkersFiles(
   const package_name = normalizePackageName(name);
   const d1_name = `${name}-db`;
   const queue_name = `${name}-queue`;
+  const storage_name = `${name}-storage`;
   return [
     {
       path: "federation.json",
@@ -161,6 +162,12 @@ function createCloudflareWorkersFiles(
           queue: {
             binding: "DOWNCITY_QUEUE",
             name: queue_name,
+          },
+          storage: {
+            type: "r2",
+            binding: "DOWNCITY_STORAGE",
+            name: storage_name,
+            public_url_prefix: "",
           },
         },
       }, null, 2)}\n`,
@@ -226,7 +233,7 @@ function createWorkerEntrypoint(): string {
  */
 
 import { drizzle } from "drizzle-orm/d1";
-import { Federation } from "@downcity/city";
+import { Federation, R2Storage } from "@downcity/city";
 import {
   accountsService,
   balanceService,
@@ -235,6 +242,8 @@ import {
 
 export interface Env {
   DB: D1Database;
+  DOWNCITY_STORAGE: R2Bucket;
+  DOWNCITY_STORAGE_PUBLIC_URL_PREFIX?: string;
 }
 
 let federation_promise: Promise<Federation> | undefined;
@@ -250,9 +259,14 @@ async function init_federation(env: Env): Promise<Federation> {
   const db = drizzle(env.DB);
   const federation = new Federation({
     db,
-    dialect: "sqlite",
-    raw: env.DB,
   });
+  const storage_public_url_prefix = env.DOWNCITY_STORAGE_PUBLIC_URL_PREFIX?.trim();
+  if (storage_public_url_prefix) {
+    federation.storage(R2Storage({
+      bucket: env.DOWNCITY_STORAGE,
+      public_url_prefix: storage_public_url_prefix,
+    }));
+  }
 
   federation.use(accountsService());
   federation.use(balanceService());

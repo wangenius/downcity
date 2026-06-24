@@ -119,10 +119,28 @@ The host runtime only needs to create the database object:
 - Cloudflare Workers can use `drizzle-orm/d1`
 - Federation writes required runtime env into the built-in `env` table on boot
 
+## Default Storage
+
+When a Federation needs to move runtime files into first-party storage, register a default storage backend:
+
+```ts
+import { Federation, R2Storage } from "@downcity/city";
+
+const base = new Federation({ db });
+
+base.storage(R2Storage({
+  bucket: env.DOWNCITY_STORAGE,
+  public_url_prefix: env.DOWNCITY_STORAGE_PUBLIC_URL_PREFIX,
+}));
+```
+
+Services can then access it through `ctx.storage`. Built-in AI image jobs use this storage after `image_fetch` succeeds to move remote file part URLs into your own bucket. If storage fails, the original upstream URL is kept and the image job still succeeds.
+
 ## Common API surface
 
 - `new Federation({ db })`
 - `base.use(...)`
+- `base.storage(...)`
 - `base.router()`
 - `base.handleRequest(request)`
 - `base.health()`

@@ -796,6 +796,174 @@ test("Federation AI image jobs return provider result as-is", async () => {
   }
 })
 
+test("Federation AI image jobs store remote file parts through federation storage", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-image-job-storage-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+    const queueMessages = useMemoryQueue(base)
+    const stored = []
+    base.storage({
+      id: "mock",
+      owns(url) {
+        return String(url).startsWith("https://storage.example.com/")
+      },
+      async store(input) {
+        stored.push(input)
+        return { url: "https://storage.example.com/generated.png" }
+      },
+    })
+
+    const message = {
+      id: "msg_image_storage",
+      role: "assistant",
+      parts: [
+        { type: "file", mediaType: "image/png", filename: "generated.png", url: "https://cdn.example.com/generated.png" },
+        { type: "file", mediaType: "image/png", url: "https://storage.example.com/already.png" },
+      ],
+    }
+
+    const ai = new AIService()
+    ai.use({
+      id: "stored-image",
+      name: "Stored Image",
+      default: ["image"],
+      actions: {
+        image_create: async () => ({
+          job_id: "img_storage_1",
+          status: "running",
+          poll_after_ms: 2000,
+        }),
+        image_fetch: async (ctx) => ({
+          job_id: String(ctx.input.job_id),
+          status: "succeeded",
+          result: message,
+          message: "succeeded",
+        }),
+      },
+    })
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    const createResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ prompt: "draw" }),
+    }))
+
+    assert.equal(createResponse.status, 200)
+    const created = await createResponse.json()
+    await base.queue.call(queueMessages.shift())
+
+    const resultResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ job_id: created.job_id }),
+    }))
+
+    assert.equal(resultResponse.status, 200)
+    const body = await resultResponse.json()
+    assert.deepEqual(stored, [{
+      source_url: "https://cdn.example.com/generated.png",
+      media_type: "image/png",
+      filename: "generated.png",
+    }])
+    assert.equal(body.result.parts[0].url, "https://storage.example.com/generated.png")
+    assert.equal(body.result.parts[1].url, "https://storage.example.com/already.png")
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("Federation AI image jobs keep source URL when storage fails", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-image-job-storage-fail-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+    const queueMessages = useMemoryQueue(base)
+    base.storage({
+      id: "mock",
+      owns() {
+        return false
+      },
+      async store() {
+        throw new Error("storage offline")
+      },
+    })
+
+    const message = {
+      id: "msg_image_storage_fail",
+      role: "assistant",
+      parts: [{ type: "file", mediaType: "image/png", url: "https://cdn.example.com/generated.png" }],
+    }
+
+    const ai = new AIService()
+    ai.use({
+      id: "storage-fail-image",
+      name: "Storage Fail Image",
+      default: ["image"],
+      actions: {
+        image_create: async () => ({
+          job_id: "img_storage_fail_1",
+          status: "running",
+        }),
+        image_fetch: async (ctx) => ({
+          job_id: String(ctx.input.job_id),
+          status: "succeeded",
+          result: message,
+          message: "succeeded",
+        }),
+      },
+    })
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    const createResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ prompt: "draw" }),
+    }))
+
+    assert.equal(createResponse.status, 200)
+    const created = await createResponse.json()
+    await base.queue.call(queueMessages.shift())
+
+    const resultResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ job_id: created.job_id }),
+    }))
+
+    assert.equal(resultResponse.status, 200)
+    const body = await resultResponse.json()
+    assert.equal(body.result.parts[0].url, "https://cdn.example.com/generated.png")
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
 test("Federation AI image direct endpoint is not exposed", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-image-direct-"))

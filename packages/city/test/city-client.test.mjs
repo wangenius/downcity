@@ -516,3 +516,54 @@ function streamResponse(chunks) {
   const e = new TextEncoder()
   return { ok: true, status: 200, body: new ReadableStream({ start(c) { for (const chunk of chunks) c.enqueue(e.encode(`data: ${JSON.stringify(chunk)}\n\n`)); c.close() } }), async json() { return {} }, async text() { return "" } }
 }
+
+test("AIInvoker fetch retries transient 'fetch failed' errors", async () => {
+  let calls = 0
+  const msg = { id: "m", role: "assistant", parts: [{ type: "text", text: "ok", state: "done" }] }
+  const client = new City({
+    role: "user",
+    federation_url: "https://api.example.com/base/",
+    city_id: "city_demo",
+    user_token: "ub_test",
+    fetch: async () => {
+      calls += 1
+      if (calls < 3) {
+        const cause = new Error("other side closed")
+        cause.code = "UND_ERR_SOCKET"
+        const err = new TypeError("fetch failed")
+        err.cause = cause
+        throw err
+      }
+      return json(msg)
+    },
+  })
+  const result = await client.ai.text({ prompt: "hi" })
+  assert.deepEqual(result, msg)
+  assert.equal(calls, 3)
+})
+
+test("AIInvoker fetch surfaces cause chain when retries exhausted", async () => {
+  const client = new City({
+    role: "user",
+    federation_url: "https://api.example.com/base/",
+    city_id: "city_demo",
+    user_token: "ub_test",
+    fetch: async () => {
+      const cause = new Error("other side closed")
+      cause.code = "UND_ERR_SOCKET"
+      const err = new TypeError("fetch failed")
+      err.cause = cause
+      throw err
+    },
+  })
+  let captured
+  try {
+    await client.ai.text({ prompt: "hi" })
+  } catch (error) {
+    captured = error
+  }
+  assert.ok(captured instanceof Error)
+  assert.match(captured.message, /fetch failed/)
+  assert.match(captured.message, /cause=UND_ERR_SOCKET other side closed/)
+  assert.match(captured.message, /POST https:\/\/api\.example\.com\/base\/v1\/ai\/text/)
+})

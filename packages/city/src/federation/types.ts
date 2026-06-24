@@ -5,6 +5,7 @@
  */
 
 import type { Database } from "../store/db.js";
+import type { FederationStorage } from "./storage.js";
 
 /**
  * 单次请求的运行时执行上下文。
@@ -58,4 +59,12 @@ export interface FederationOptions {
    * - 支持的底层 client 通过 `db.$client` 暴露给 accounts 等需要原始连接的 service。
    */
   db: Database & { $client?: unknown; dialect?: unknown };
+  /**
+   * Federation 默认存储后端。
+   *
+   * 关键说明（中文）
+   * - 可直接通过构造函数传入，也可在创建后调用 `federation.storage(...)` 注册。
+   * - Service 通过 `ctx.storage` 使用该能力，避免业务模块绑定具体云厂商。
+   */
+  storage?: FederationStorage;
 }

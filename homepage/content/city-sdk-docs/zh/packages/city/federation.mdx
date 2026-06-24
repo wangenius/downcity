@@ -141,12 +141,30 @@ export default {
 
 这就是为什么同一套 runtime 模型可以复用到不同宿主环境，而不是每换一个平台就重写一套后端。
 
+## 默认 Storage
+
+如果你的 Federation 需要把运行期产生的外部文件转存到自有存储，可以注册默认 storage：
+
+```ts
+import { Federation, R2Storage } from "@downcity/city";
+
+const base = new Federation({ db });
+
+base.storage(R2Storage({
+  bucket: env.DOWNCITY_STORAGE,
+  public_url_prefix: env.DOWNCITY_STORAGE_PUBLIC_URL_PREFIX,
+}));
+```
+
+注册后，service 可以通过 `ctx.storage` 访问这套能力。内置 AI 图片任务会在 `image_fetch` 成功后自动把远程 file part URL 转存到默认 storage；如果转存失败，会保留上游原始 URL，不会让图片任务失败。
+
 ## 常用 API / 入口
 
 这一页最相关的 Federation API 是：
 
 - `new Federation({ db })`：创建 Federation 实例
 - `base.use(...)`：挂 service、AIService 和官方服务
+- `base.storage(...)`：注册默认文件存储后端
 - `base.router()`：拿到底层 HTTP router
 - `base.handleRequest(request)`：处理单次请求
 - `base.health()`：触发初始化并返回健康信息

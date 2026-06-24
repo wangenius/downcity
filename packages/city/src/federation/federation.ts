@@ -21,6 +21,7 @@ import { build_federation_router } from "./federation-router.js";
 import { create_federation_runtime } from "./federation-runtime.js";
 import { FederationQueue } from "./queue.js";
 import type { FederationOptions, FederationHealthStatus, FederationHandleRequestOptions } from "./types.js";
+import type { FederationStorage } from "./storage.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Runtime } from "./runtime.js";
 import type { CityTableApi } from "../store/table-api.js";
@@ -51,9 +52,18 @@ export class Federation {
       },
       get_env: () => this.runtime.env,
       get_queue: () => this.queue,
+      get_storage: () => this.runtime.storage,
     });
     this.use(new EnvService());
     this.use(new CitiesService());
+  }
+
+  /**
+   * 注册 Federation 默认存储后端。
+   */
+  storage(storage: FederationStorage): this {
+    this.runtime.storage = storage;
+    return this;
   }
 
   /**

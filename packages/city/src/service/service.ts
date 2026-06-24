@@ -19,6 +19,7 @@ import type { CityStore } from "./cities/city-store.js";
 import type { InstructionActionDefinition, InstructionCapable, InstructionDefinition } from "./instruction.js";
 import type { RuntimeMetering } from "../types/Metering.js";
 import type { FederationQueue } from "../federation/queue.js";
+import type { FederationStorage } from "../federation/storage.js";
 
 // ===========================================================================
 // 鉴权级别
@@ -78,6 +79,8 @@ export interface Context {
   waitUntil?(promise: Promise<unknown>): void;
   /** Federation 级异步队列能力（框架注入） */
   queue?: FederationQueue;
+  /** Federation 默认存储能力（框架注入） */
+  storage?: FederationStorage;
 }
 
 // ===========================================================================
@@ -175,6 +178,9 @@ export class Service {
 
   /** Federation 级异步队列能力 */
   _queue?: FederationQueue;
+
+  /** Federation 默认存储能力 */
+  _storage?: FederationStorage;
 
   constructor(options: {
     id: string;

@@ -37,6 +37,68 @@ const DEFAULT_IMAGE_PLUGIN_DESCRIPTION =
   "Generate images and return them as assistant file parts.";
 const HTTP_URL_RE = /^https?:\/\//i;
 const DEFAULT_IMAGE_MEDIA_TYPE = "image/png";
+/**
+ * `image_result` 阻塞等待时的默认参数。
+ *
+ * 关键点（中文）
+ * - DEFAULT_IMAGE_WAIT_MS：总等待上限（毫秒），避免 agent 单次调用挂太久。
+ * - DEFAULT_IMAGE_POLL_MS：相邻两次轮询的最小间隔（毫秒）。
+ * - MAX_IMAGE_WAIT_MS：用户参数硬上限，防止异常值导致 agent 永远等下去。
+ */
+const DEFAULT_IMAGE_WAIT_MS = 60_000;
+const DEFAULT_IMAGE_POLL_MS = 1_500;
+const MAX_IMAGE_WAIT_MS = 10 * 60_000;
+
+/**
+ * 判断任务状态是否已到达终态。
+ */
+function is_terminal_status(status: string | undefined): boolean {
+  return status === "succeeded" || status === "failed";
+}
+
+/**
+ * sleep 工具。
+ */
+function delay_ms(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
+}
+
+/**
+ * 把外部传入的等待参数夹到合法区间。
+ */
+function clamp_wait_ms(value: number): number {
+  if (!Number.isFinite(value) || value < 0) return 0;
+  if (value > MAX_IMAGE_WAIT_MS) return MAX_IMAGE_WAIT_MS;
+  return Math.floor(value);
+}
+
+/**
+ * 把异常完整描述为字符串，保留 `error.cause` 链上的诊断信息。
+ *
+ * 关键点（中文）
+ * - Node fetch 抛出的 `TypeError: fetch failed` 把真正的根因放在 `error.cause`；
+ *   `String(error)` 只会拿到 message，会让上层只看到一个干瘪的 "fetch failed"。
+ * - 这里递归读取 cause 链，并取每一层的 `code` + `message`，方便在 agent 输出里直接定位问题。
+ */
+function describe_error(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const parts: string[] = [error.message || error.name || "Error"];
+  let current: unknown = (error as { cause?: unknown }).cause;
+  let depth = 0;
+  while (current && depth < 3) {
+    if (current instanceof Error) {
+      const code = (current as { code?: unknown }).code;
+      const code_text = typeof code === "string" && code ? `[${code}] ` : "";
+      parts.push(`${code_text}${current.message || current.name}`.trim());
+      current = (current as { cause?: unknown }).cause;
+    } else {
+      parts.push(String(current));
+      break;
+    }
+    depth += 1;
+  }
+  return parts.filter(Boolean).join(" :: ");
+}
 
 const IMAGE_MEDIA_TYPES: Record<string, string> = {
   ".apng": "image/apng",
@@ -79,6 +141,9 @@ const IMAGE_CREATE_INPUT_SCHEMA = z.object({
 
 const IMAGE_RESULT_INPUT_SCHEMA = z.object({
   job_id: z.string(),
+  until_done: z.boolean().optional(),
+  max_wait_ms: z.number().optional(),
+  poll_interval_ms: z.number().optional(),
 }).passthrough();
 
 /**
@@ -249,9 +314,22 @@ function normalize_image_result_payload(
   if (!job_id) {
     throw new TypeError("ImagePlugin.image_result payload must include job_id");
   }
+  const until_done = record.until_done === true;
+  const max_wait_ms =
+    typeof record.max_wait_ms === "number" && Number.isFinite(record.max_wait_ms)
+      ? Math.max(0, Math.floor(record.max_wait_ms as number))
+      : undefined;
+  const poll_interval_ms =
+    typeof record.poll_interval_ms === "number" &&
+    Number.isFinite(record.poll_interval_ms)
+      ? Math.max(0, Math.floor(record.poll_interval_ms as number))
+      : undefined;
   return {
     ...record,
     job_id,
+    ...(until_done ? { until_done: true } : {}),
+    ...(max_wait_ms !== undefined ? { max_wait_ms } : {}),
+    ...(poll_interval_ms !== undefined ? { poll_interval_ms } : {}),
   } as ImagePluginJobResultInput;
 }
 
@@ -417,14 +495,34 @@ export class ImagePlugin extends BasePlugin {
     return [
       "# Image Plugin",
       "",
-      "Use this plugin only when the user asks to create or edit an image.",
-      "Use `prompt` for text-only image generation.",
-      "Use `content` for image editing or reference images: `[{ type: \"text\", text }, { type: \"image\", url }]`.",
-      "If `content` is present, it is used instead of `prompt`.",
-      "Do not pass `messages` or data URLs.",
-      "`url` may be an online URL, an absolute local path, or a path relative to the Agent project root.",
-      "Flow: call `models` if you need a model id, call `image_create`, then call `image_result` with `job_id`.",
-      "If `image_result` returns `queued` or `running`, keep the `job_id` and check again later.",
+      "Use this plugin only when the user asks to create, edit, or otherwise produce an image.",
+      "Do not call it for ordinary text answers, even if the message mentions visual ideas.",
+      "",
+      "## Actions",
+      "",
+      "- `models`：列出当前可用的图片模型，返回 `{ models, default_model_id }`。",
+      "  仅当你需要让用户挑模型，或当前没有默认模型可用时才调用。",
+      "- `image_create`：创建一个异步图片任务，返回 `{ job_id, status }`。",
+      "  - 纯文本生成：填 `prompt`（字符串）。",
+      "  - 编辑 / 参考图：填 `content`，格式：",
+      "    `[{ type: \"text\", text }, { type: \"image\", url }]`。可以多段文本和多张图任意顺序混排。",
+      "  - 同时给了 `content` 和 `prompt` 时，`content` 生效，`prompt` 被忽略。",
+      "  - `url` 支持三种写法：在线 URL、绝对本地路径、相对 Agent 项目根目录的相对路径。",
+      "    不要传 base64 / data URL，也不要再用旧的 `messages` 字段。",
+      "  - 可选参数：`model`、`aspect_ratio`（如 `16:9`）、`size`（如 `1024x1024`）、`quality`、`seed`。",
+      "- `image_result`：用 `job_id` 读取任务状态。",
+      "  - 默认读取一次。`queued` / `running` 时保存好 `job_id`，下一轮再查，不要在同一轮里反复轮询。",
+      "  - 想直接等到出图，可以传 `until_done: true`，可选 `max_wait_ms`（默认 60000，最长 600000）与 `poll_interval_ms`（默认 1500）。超时仍未完成会返回最后一次的中间状态。",
+      "  - `succeeded`：返回的图片 file part 会自动落盘并附加到下一条 assistant 消息，无需自己再拼图。",
+      "  - `failed`：把 `error` 信息如实回报给用户，不要编造图片结果。",
+      "",
+      "## Flow",
+      "",
+      "1. 需要选模型时先 `models`，否则直接进入第 2 步。",
+      "2. `image_create` 拿到 `job_id`。",
+      "3. `image_result` 查询；短任务可加 `until_done: true` 一次拿结果，长任务保存 `job_id` 下一轮再查。",
+      "",
+      "如有疑问可用 `plugin_read { plugin: \"image\", action: \"...\" }` 查看每个 action 完整的输入 schema 与示例。",
     ].join("\n");
   }
 
@@ -450,8 +548,40 @@ export class ImagePlugin extends BasePlugin {
   /**
    * 查询图片任务当前状态。
    */
-  private async read_image_result(input: ImagePluginJobResultInput): Promise<ImagePluginJobResult> {
-    const current = await this.image_result({ job_id: input.job_id });
+  private async read_image_result(
+    input: ImagePluginJobResultInput,
+  ): Promise<ImagePluginJobResult> {
+    const first = await this.fetch_job_once(input.job_id);
+    if (!input.until_done) return first;
+    if (is_terminal_status(first.status)) return first;
+
+    const deadline =
+      Date.now() + clamp_wait_ms(input.max_wait_ms ?? DEFAULT_IMAGE_WAIT_MS);
+    const base_interval = clamp_wait_ms(
+      input.poll_interval_ms ?? DEFAULT_IMAGE_POLL_MS,
+    );
+    let current = first;
+    while (Date.now() < deadline) {
+      const provider_hint =
+        typeof current.poll_after_ms === "number" && current.poll_after_ms > 0
+          ? Math.floor(current.poll_after_ms)
+          : 0;
+      const wait_ms = Math.max(base_interval, provider_hint);
+      const remaining = Math.max(0, deadline - Date.now());
+      const sleep_ms = Math.min(wait_ms, remaining);
+      if (sleep_ms === 0) break;
+      await delay_ms(sleep_ms);
+      current = await this.fetch_job_once(input.job_id);
+      if (is_terminal_status(current.status)) return current;
+    }
+    return current;
+  }
+
+  /**
+   * 拉取一次任务状态并校验。
+   */
+  private async fetch_job_once(job_id: string): Promise<ImagePluginJobResult> {
+    const current = await this.image_result({ job_id });
     validate_job_result(current);
     if (current.status === "succeeded" && current.result) {
       normalize_image_result(current.result);
@@ -485,8 +615,8 @@ export class ImagePlugin extends BasePlugin {
         } catch (error) {
           return {
             success: false,
-            error: String(error),
-            message: String(error),
+            error: describe_error(error),
+            message: describe_error(error),
           };
         }
       },
@@ -573,14 +703,15 @@ export class ImagePlugin extends BasePlugin {
         } catch (error) {
           return {
             success: false,
-            error: String(error),
-            message: String(error),
+            error: describe_error(error),
+            message: describe_error(error),
           };
         }
       },
     }),
     image_result: createAction({
-      description: "Read the current state of an async image job once.",
+      description:
+        "Read an async image job. By default reads once; pass until_done=true to block-wait until succeeded/failed or max_wait_ms times out.",
       input_schema: {
         zod: IMAGE_RESULT_INPUT_SCHEMA,
         json_schema: {
@@ -591,6 +722,21 @@ export class ImagePlugin extends BasePlugin {
               type: "string",
               description: "Image job id returned by image_create.",
             },
+            until_done: {
+              type: "boolean",
+              description:
+                "If true, the plugin internally polls until the job reaches a terminal state (succeeded/failed) or max_wait_ms elapses.",
+            },
+            max_wait_ms: {
+              type: "number",
+              description:
+                "Total wait budget in milliseconds when until_done is true. Default 60000, hard cap 600000.",
+            },
+            poll_interval_ms: {
+              type: "number",
+              description:
+                "Minimum delay between polls in milliseconds when until_done is true. Default 1500. Provider poll_after_ms overrides when larger.",
+            },
           },
         },
       },
@@ -599,6 +745,14 @@ export class ImagePlugin extends BasePlugin {
           title: "Read image job",
           payload: {
             job_id: "img_123",
+          },
+        },
+        {
+          title: "Wait until done",
+          payload: {
+            job_id: "img_123",
+            until_done: true,
+            max_wait_ms: 30000,
           },
         },
       ],
@@ -628,8 +782,8 @@ export class ImagePlugin extends BasePlugin {
         } catch (error) {
           return {
             success: false,
-            error: String(error),
-            message: String(error),
+            error: describe_error(error),
+            message: describe_error(error),
           };
         }
       },

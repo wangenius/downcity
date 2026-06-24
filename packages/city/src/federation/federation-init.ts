@@ -92,6 +92,7 @@ export async function initialize_federation(params: {
     service._raw = runtime.raw;
     service._baseURL = configured_base_url ?? runtime.baseURL;
     service._queue = params.queue as never;
+    service._storage = runtime.storage;
     await service._onInit();
   }
 

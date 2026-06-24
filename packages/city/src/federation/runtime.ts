@@ -15,6 +15,7 @@ import type { EnvEntry, EnvUpsertInput } from "../service/env/types.js";
 import type { EnvStore } from "../service/env/env-store.js";
 import type { AnySQLiteTable } from "drizzle-orm/sqlite-core";
 import type { AnyPgTable } from "drizzle-orm/pg-core";
+import type { FederationStorage } from "./storage.js";
 
 /** 表定义类型（SQLite 或 Postgres） */
 export type TableDef = AnySQLiteTable | AnyPgTable;
@@ -144,4 +145,13 @@ export interface Runtime {
    * 用于 OAuth callback、邮件链接等。
    */
   baseURL?: string;
+
+  /**
+   * Federation 默认存储后端。
+   *
+   * 关键说明（中文）
+   * - 用于把运行期产生的外部资源转存到自有存储。
+   * - 未配置时相关 Service 保持原始 URL 行为。
+   */
+  storage?: FederationStorage;
 }

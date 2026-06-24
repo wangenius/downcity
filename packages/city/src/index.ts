@@ -15,6 +15,14 @@ export type { FederationOptions, FederationHealthStatus } from "./federation/typ
 export type { FederationHandleRequestOptions, FederationRequestExecutionContext } from "./federation/types.js";
 export type { Runtime, EnvProvider, BuiltinTables, TableDef } from "./federation/runtime.js";
 export type { CityQueueAdapter, CityQueueMessage } from "./federation/queue.js";
+export { R2Storage } from "./federation/storage.js";
+export type {
+  FederationStorage,
+  FederationStorageStoreInput,
+  FederationStorageStoreResult,
+  R2BucketLike,
+  R2StorageOptions,
+} from "./federation/storage.js";
 
 // ===========================================================================
 // 场景 2：注册 Service / InstallableService / AI 模型

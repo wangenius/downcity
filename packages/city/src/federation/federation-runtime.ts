@@ -33,6 +33,7 @@ export function create_federation_runtime(options: FederationOptions): Runtime {
     env: new DatabaseEnvProvider(),
     builtinTables: builtin_tables,
     raw: options.db.$client,
+    storage: options.storage,
   };
 }
 

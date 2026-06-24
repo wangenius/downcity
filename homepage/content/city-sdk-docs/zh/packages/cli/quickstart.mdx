@@ -131,6 +131,25 @@ fed query POST /v1/ai/image/result --data '{"job_id":"..."}'
 
 默认输出会展示 status、headers，并对 JSON body 做 pretty print。加 `--raw` 可以只输出原始响应 body。临时 header 使用 `--header key:value`，JSON 字符串 body 使用 `--data` / `-d`，也可以用 `--file` 从文件读取 JSON body。非 2xx 响应仍会展示 upstream 的 status、headers、body，方便直接排查路径、auth、env 或模型解析错误。
 
+## federation.json 里的默认存储
+
+`city create` 生成的 Cloudflare Workers 项目可以在 `federation.json` 里声明默认 storage。当前支持 R2：
+
+```json
+{
+  "resources": {
+    "storage": {
+      "type": "r2",
+      "binding": "DOWNCITY_STORAGE",
+      "name": "downcity-storage",
+      "public_url_prefix": "https://images.example.com"
+    }
+  }
+}
+```
+
+部署时 CLI 会把它写入临时 `wrangler.toml` 的 `[[r2_buckets]]`，并把 `public_url_prefix` 写成 Worker var。Worker 里注册 `R2Storage` 后，AI 图片任务成功结果会优先返回自有存储 URL；如果转存失败，会保留上游原始 URL。
+
 ## 一个最常见的上手流程
 
 ```bash

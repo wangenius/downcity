@@ -10,6 +10,7 @@ import type { Action } from "../service/action.js";
 import type { Context, Service } from "../service/service.js";
 import { InstallableService } from "../service/installable-service.js";
 import type { EnvProvider } from "./runtime.js";
+import type { FederationStorage } from "./storage.js";
 
 /** Queue 消息。 */
 export interface CityQueueMessage {
@@ -41,6 +42,8 @@ interface FederationQueueDeps {
   get_env(): EnvProvider;
   /** Queue 自身 facade。 */
   get_queue(): FederationQueue;
+  /** 获取 Federation 默认 storage。 */
+  get_storage(): FederationStorage | undefined;
 }
 
 /**
@@ -102,6 +105,7 @@ export class FederationQueue {
       service: { id: service.id, name: service.name },
       action: { id: action.id },
       queue: this.deps.get_queue(),
+      storage: this.deps.get_storage(),
       started_at: new Date(),
     };
   }

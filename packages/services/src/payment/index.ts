@@ -1,18 +1,18 @@
 /**
  * Payment 子模块公共入口。
  *
- * 关键点（中文）
- * - PaymentService class 在 service.ts
- * - 路由注册逻辑在 routes.ts
- * - provider 工厂函数在 providers.ts
+ * 关键说明（中文）
+ * - PaymentService 实现位于 service.ts
+ * - 路由注册逻辑位于 routes.ts
+ * - 各 provider 工厂位于 providers/ 目录下
  */
 
 export { PaymentService } from "./service.js";
 export type { PaymentServiceOptions } from "./types.js";
-export { paymentPayments, paymentEvents } from "./schema.js";
+export { paymentEvents, paymentPayments } from "./schema.js";
 export {
   creemPaymentProvider,
   dodoPaymentProvider,
   stripePaymentProvider,
   waffoPaymentProvider,
-} from "./providers.js";
+} from "./providers/index.js";

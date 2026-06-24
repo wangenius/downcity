@@ -3,10 +3,10 @@
  *
  * 关键说明（中文）
  * - 不依赖 Creem SDK，统一走官方 HTTP API
- * - 创建 Checkout 使用 JSON body，兼容 Node 与 Worker
- * - webhook 验签使用 Web Crypto API，便于 Cloudflare Workers 运行
+ * - webhook 验签使用 Web Crypto API，兼容 Cloudflare Workers
  */
 
+import { normalizeOptionalText, normalizeRequired } from "../../helpers.js";
 import type {
   CreemCheckoutSessionResult,
   CreemCreateCheckoutSessionInput,
@@ -26,15 +26,15 @@ export function normalizeCreemApiBaseURL(value: string | undefined): string {
  * 创建 Creem Checkout Session。
  */
 export async function createCreemCheckoutSession(
-  apiKey: string,
-  apiBaseURL: string,
+  api_key: string,
+  api_base_url: string,
   input: CreemCreateCheckoutSessionInput,
 ): Promise<CreemCheckoutSessionResult> {
-  const response = await fetch(`${normalizeCreemApiBaseURL(apiBaseURL)}/checkouts`, {
+  const response = await fetch(`${normalizeCreemApiBaseURL(api_base_url)}/checkouts`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-api-key": normalizeRequired(apiKey, "Creem API key"),
+      "x-api-key": normalizeRequired(api_key, "Creem API key"),
     },
     body: JSON.stringify({
       product_id: input.product_id,
@@ -60,25 +60,10 @@ export async function createCreemCheckoutSession(
     throw new Error(message || "Creem checkout session creation failed");
   }
 
-  const checkoutId = normalizeRequired(payload.id ?? payload.checkout_id, "Creem checkout id");
-  const checkoutURL = normalizeRequired(payload.checkout_url ?? payload.url, "Creem checkout url");
   return {
-    checkout_id: checkoutId,
-    checkout_url: checkoutURL,
+    checkout_id: normalizeRequired(payload.id ?? payload.checkout_id, "Creem checkout id"),
+    checkout_url: normalizeRequired(payload.checkout_url ?? payload.url, "Creem checkout url"),
   };
-}
-
-/**
- * 读取支付 provider 需要的 USD cents 金额。
- */
-function readTopupAmountUsdCents(topup: { amount?: unknown; amount_usd_cents?: unknown }): number {
-  const direct = Number(topup.amount_usd_cents);
-  if (Number.isSafeInteger(direct) && direct > 0) return direct;
-  const fallback = Math.round(Number(topup.amount) / 10_000);
-  if (!Number.isSafeInteger(fallback) || fallback <= 0) {
-    throw new TypeError("topup amount_usd_cents must be a positive integer");
-  }
-  return fallback;
 }
 
 /**
@@ -96,7 +81,11 @@ export function parseCreemWebhookEvent(raw: string): CreemWebhookEvent {
  * - Creem 当前 webhook header 使用 `creem-signature`
  * - 签名值是 raw body 基于 webhook secret 的 HMAC-SHA256 hex
  */
-export async function verifyCreemSignature(raw: string, header: string | null, secret: string): Promise<boolean> {
+export async function verifyCreemSignature(
+  raw: string,
+  header: string | null,
+  secret: string,
+): Promise<boolean> {
   const signature = normalizeOptionalText(header);
   if (!signature) return false;
 
@@ -117,28 +106,34 @@ export async function verifyCreemSignature(raw: string, header: string | null, s
 }
 
 /**
- * 规范化非空字符串。
- */
-export function normalizeRequired(value: unknown, label: string): string {
-  const normalized = String(value ?? "").trim();
-  if (!normalized) throw new TypeError(`${label} is required`);
-  return normalized;
-}
-
-/**
- * 规范化可选字符串。
- */
-export function normalizeOptionalText(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-/**
- * 规范化 metadata 对象。
+ * 读取 metadata 对象。
  */
 export function readMetadata(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
+}
+
+/**
+ * 读取 Creem webhook 事件对象。
+ */
+export function readCreemEventObject(event: Record<string, unknown>): Record<string, unknown> {
+  const direct = readMetadata(event.object);
+  if (Object.keys(direct).length > 0) return direct;
+  return readMetadata((event.data as { object?: unknown } | undefined)?.object);
+}
+
+/**
+ * 读取支付 provider 需要的 USD cents 金额。
+ */
+function readTopupAmountUsdCents(topup: { amount?: unknown; amount_usd_cents?: unknown }): number {
+  const direct = Number(topup.amount_usd_cents);
+  if (Number.isSafeInteger(direct) && direct > 0) return direct;
+  const fallback = Math.round(Number(topup.amount) / 10_000);
+  if (!Number.isSafeInteger(fallback) || fallback <= 0) {
+    throw new TypeError("topup amount_usd_cents must be a positive integer");
+  }
+  return fallback;
 }
 
 /**

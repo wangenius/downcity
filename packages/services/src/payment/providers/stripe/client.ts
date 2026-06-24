@@ -4,9 +4,10 @@
  * 关键说明（中文）
  * - 不直接依赖 Stripe SDK，统一走官方 HTTP API
  * - 创建 Checkout 使用 form-urlencoded，兼容 Node 与 Worker
- * - webhook 验签继续使用 Web Crypto API
+ * - webhook 验签使用 Web Crypto API，支持 Cloudflare Workers
  */
 
+import { normalizeOptionalText, normalizeRequired } from "../../helpers.js";
 import type {
   StripeCheckoutSessionResult,
   StripeCreateCheckoutSessionInput,
@@ -26,8 +27,8 @@ export function normalizeStripeApiBaseURL(value: string | undefined): string {
  * 创建 Stripe Checkout Session。
  */
 export async function createStripeCheckoutSession(
-  secretKey: string,
-  apiBaseURL: string,
+  secret_key: string,
+  api_base_url: string,
   input: StripeCreateCheckoutSessionInput,
 ): Promise<StripeCheckoutSessionResult> {
   const body = new URLSearchParams();
@@ -46,10 +47,10 @@ export async function createStripeCheckoutSession(
   body.set("payment_intent_data[metadata][topup_id]", input.topup.topup_id);
   body.set("payment_intent_data[metadata][user_id]", input.topup.user_id);
 
-  const response = await fetch(`${normalizeStripeApiBaseURL(apiBaseURL)}/checkout/sessions`, {
+  const response = await fetch(`${normalizeStripeApiBaseURL(api_base_url)}/checkout/sessions`, {
     method: "POST",
     headers: {
-      authorization: `Bearer ${normalizeRequired(secretKey, "Stripe secret key")}`,
+      authorization: `Bearer ${normalizeRequired(secret_key, "Stripe secret key")}`,
       "content-type": "application/x-www-form-urlencoded",
     },
     body,
@@ -65,26 +66,11 @@ export async function createStripeCheckoutSession(
     throw new Error(message || "Stripe checkout session creation failed");
   }
 
-  const sessionId = normalizeRequired(payload.id, "Stripe checkout session id");
-  const checkoutURL = normalizeRequired(payload.url, "Stripe checkout session url");
   return {
-    session_id: sessionId,
-    checkout_url: checkoutURL,
+    session_id: normalizeRequired(payload.id, "Stripe checkout session id"),
+    checkout_url: normalizeRequired(payload.url, "Stripe checkout session url"),
     payment_intent_id: normalizeOptionalText(payload.payment_intent),
   };
-}
-
-/**
- * 读取支付 provider 需要的 USD cents 金额。
- */
-function readTopupAmountUsdCents(topup: { amount?: unknown; amount_usd_cents?: unknown }): number {
-  const direct = Number(topup.amount_usd_cents);
-  if (Number.isSafeInteger(direct) && direct > 0) return direct;
-  const fallback = Math.round(Number(topup.amount) / 10_000);
-  if (!Number.isSafeInteger(fallback) || fallback <= 0) {
-    throw new TypeError("topup amount_usd_cents must be a positive integer");
-  }
-  return fallback;
 }
 
 /**
@@ -98,7 +84,11 @@ export function parseStripeWebhookEvent(raw: string): StripeWebhookEvent {
 /**
  * 验证 Stripe webhook 签名。
  */
-export async function verifyStripeSignature(raw: string, header: string | null, secret: string): Promise<boolean> {
+export async function verifyStripeSignature(
+  raw: string,
+  header: string | null,
+  secret: string,
+): Promise<boolean> {
   const parts = Object.fromEntries(String(header ?? "").split(",").map((part) => {
     const [key, value] = part.split("=");
     return [key, value];
@@ -129,28 +119,25 @@ export async function verifyStripeSignature(raw: string, header: string | null, 
 }
 
 /**
- * 规范化非空字符串。
- */
-export function normalizeRequired(value: unknown, label: string): string {
-  const normalized = String(value ?? "").trim();
-  if (!normalized) throw new TypeError(`${label} is required`);
-  return normalized;
-}
-
-/**
- * 规范化可选字符串。
- */
-export function normalizeOptionalText(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-/**
- * 规范化 metadata 对象。
+ * 读取 metadata 对象。
  */
 export function readMetadata(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
+}
+
+/**
+ * 读取支付 provider 需要的 USD cents 金额。
+ */
+function readTopupAmountUsdCents(topup: { amount?: unknown; amount_usd_cents?: unknown }): number {
+  const direct = Number(topup.amount_usd_cents);
+  if (Number.isSafeInteger(direct) && direct > 0) return direct;
+  const fallback = Math.round(Number(topup.amount) / 10_000);
+  if (!Number.isSafeInteger(fallback) || fallback <= 0) {
+    throw new TypeError("topup amount_usd_cents must be a positive integer");
+  }
+  return fallback;
 }
 
 /**

@@ -11,7 +11,7 @@ import {
   creemPaymentProvider,
   PaymentService,
   type PaymentCheckoutCreateResult,
-} from "../../src/index.js";
+} from "../../../../src/index.js";
 
 const readTopup = async (topup_id: string) => ({
   topup_id,

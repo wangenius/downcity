@@ -6,12 +6,12 @@ import os from "node:os"
 import path from "node:path"
 import test from "node:test"
 import { Federation } from "@downcity/city"
-import { createSqliteDb } from "../payment-stripe/sqlite-db.mjs"
-import { creemPaymentProvider, PaymentService } from "../../bin/index.js"
+import { createSqliteDb } from "../../sqlite-db.mjs"
+import { PaymentService, stripePaymentProvider } from "../../../../bin/index.js"
 
-test("paymentService lists enabled Creem payment method for guests", async () => {
+test("paymentService lists enabled payment methods for guests", async () => {
   const cwd = process.cwd()
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-creem-methods-"))
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-payment-service-methods-"))
 
   try {
     process.chdir(tempDir)
@@ -20,9 +20,8 @@ test("paymentService lists enabled Creem payment method for guests", async () =>
     const base = new Federation({ db })
     base.use(new PaymentService({
       providers: [
-        creemPaymentProvider({
-          api_key: "creem_test",
-          product_id: "prod_test",
+        stripePaymentProvider({
+          secret_key: "sk_test",
           currency: "usd",
         }),
       ],
@@ -34,10 +33,10 @@ test("paymentService lists enabled Creem payment method for guests", async () =>
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), {
       items: [{
-        id: "creem",
+        id: "stripe",
         type: "checkout",
         enabled: true,
-        label: "Creem",
+        label: "Stripe",
         service: "payment",
         action: "checkout/create",
         requires_user: true,
@@ -50,9 +49,9 @@ test("paymentService lists enabled Creem payment method for guests", async () =>
   }
 })
 
-test("paymentService marks Creem disabled when required config is missing", async () => {
+test("paymentService marks payment methods as disabled when Stripe is not configured", async () => {
   const cwd = process.cwd()
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-creem-methods-disabled-"))
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-payment-service-methods-disabled-"))
 
   try {
     process.chdir(tempDir)
@@ -61,7 +60,7 @@ test("paymentService marks Creem disabled when required config is missing", asyn
     const base = new Federation({ db })
     base.use(new PaymentService({
       providers: [
-        creemPaymentProvider({
+        stripePaymentProvider({
           currency: "usd",
         }),
       ],
@@ -73,10 +72,10 @@ test("paymentService marks Creem disabled when required config is missing", asyn
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), {
       items: [{
-        id: "creem",
+        id: "stripe",
         type: "checkout",
         enabled: false,
-        label: "Creem",
+        label: "Stripe",
         service: "payment",
         action: "checkout/create",
         requires_user: true,
@@ -92,8 +91,8 @@ test("paymentService marks Creem disabled when required config is missing", asyn
 
 test("paymentService creates checkout sessions and finishes topups through webhook", async () => {
   const cwd = process.cwd()
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-creem-service-"))
-  const creemStub = await createCreemStub()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-payment-service-"))
+  const stripeStub = await createStripeStub()
 
   try {
     process.chdir(tempDir)
@@ -106,11 +105,11 @@ test("paymentService creates checkout sessions and finishes topups through webho
 
       finishTopup: (id, extra) => balance.finishTopup(id, extra),
       providers: [
-        creemPaymentProvider({
-          api_key: "creem_test",
-          product_id: "prod_test",
-          webhook_secret: "whsec_creem",
-          api_base_url: creemStub.baseURL,
+        stripePaymentProvider({
+          secret_key: "sk_test",
+          webhook_secret: "whsec_test",
+          api_base_url: stripeStub.baseURL,
+          item_name: "Downcity Recharge",
           currency: "usd",
         }),
       ],
@@ -130,11 +129,13 @@ test("paymentService creates checkout sessions and finishes topups through webho
     }))).json()
 
     const topup = await balance.createTopup("user_1", 50, { note: "recharge" })
+    assert.equal(topup.status, "pending")
+
     const checkoutResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
       path: "/v1/payment/checkout/create",
       body: {
-        method_id: "creem",
+        method_id: "stripe",
         topup_id: topup.topup_id,
       },
     }))
@@ -142,19 +143,17 @@ test("paymentService creates checkout sessions and finishes topups through webho
     const checkout = await checkoutResponse.json()
     assert.equal(checkout.status, "pending")
     assert.equal(checkout.topup_id, topup.topup_id)
-    assert.equal(checkout.provider, "creem")
-    assert.equal(checkout.provider_session_id, "ch_test_checkout")
-    assert.equal(checkout.checkout_url, "https://checkout.creem.test/ch_test_checkout")
-    assert.equal(creemStub.lastBody().product_id, "prod_test")
-    assert.equal(creemStub.lastBody().success_url, "https://base.example.com/v1/payment/redirect/success")
-    assert.equal(creemStub.lastBody().request_id, checkout.payment_id)
-    assert.equal(creemStub.lastBody().metadata.topup_id, topup.topup_id)
+    assert.equal(checkout.provider, "stripe")
+    assert.equal(checkout.provider_session_id, "cs_test_checkout")
+    assert.equal(checkout.checkout_url, "https://checkout.stripe.test/cs_test_checkout")
+    assert.equal(stripeStub.lastParams()?.get("success_url"), "https://base.example.com/v1/payment/redirect/success")
+    assert.equal(stripeStub.lastParams()?.get("cancel_url"), "https://base.example.com/v1/payment/redirect/cancel")
 
     const duplicateCheckoutResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
       path: "/v1/payment/checkout/create",
       body: {
-        method_id: "creem",
+        method_id: "stripe",
         topup_id: topup.topup_id,
       },
     }))
@@ -162,64 +161,67 @@ test("paymentService creates checkout sessions and finishes topups through webho
     const duplicateCheckout = await duplicateCheckoutResponse.json()
     assert.equal(duplicateCheckout.payment_id, checkout.payment_id)
 
-    const invalidWebhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=creem", {
+    const invalidWebhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=stripe", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "creem-signature": "bad",
+        "stripe-signature": "t=1700000000,v1=bad",
       },
       body: JSON.stringify({
         id: "evt_invalid",
-        eventType: "checkout.completed",
+        type: "checkout.session.completed",
       }),
     }))
     assert.equal(invalidWebhookResponse.status, 400)
 
     const completedPayload = JSON.stringify({
       id: "evt_checkout_completed",
-      eventType: "checkout.completed",
-      object: {
-        id: "ch_test_checkout",
-        order_id: "ord_test_order",
-        metadata: {
-          payment_id: checkout.payment_id,
-          topup_id: topup.topup_id,
-          user_id: "user_1",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_test_checkout",
+          payment_intent: "pi_test_payment",
+          client_reference_id: topup.topup_id,
+          metadata: {
+            payment_id: checkout.payment_id,
+            topup_id: topup.topup_id,
+            user_id: "user_1",
+          },
         },
       },
     })
-    const webhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=creem", {
+    const webhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=stripe", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "creem-signature": creemSignature(completedPayload, "whsec_creem"),
+        "stripe-signature": stripeSignature(completedPayload, "whsec_test"),
       },
       body: completedPayload,
     }))
     assert.equal(webhookResponse.status, 200)
     assert.deepEqual(await webhookResponse.json(), {
       received: true,
-      event_id: "creem:evt_checkout_completed",
-      provider: "creem",
+      event_id: "stripe:evt_checkout_completed",
+      provider: "stripe",
       sync_status: "applied",
     })
 
     const afterTopup = await balance.read("user_1")
     assert.equal(afterTopup.balance, 50_000_000)
 
-    const repeatedWebhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=creem", {
+    const repeatedWebhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=stripe", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "creem-signature": creemSignature(completedPayload, "whsec_creem"),
+        "stripe-signature": stripeSignature(completedPayload, "whsec_test"),
       },
       body: completedPayload,
     }))
     assert.equal(repeatedWebhookResponse.status, 200)
     assert.deepEqual(await repeatedWebhookResponse.json(), {
       received: true,
-      event_id: "creem:evt_checkout_completed",
-      provider: "creem",
+      event_id: "stripe:evt_checkout_completed",
+      provider: "stripe",
       sync_status: "applied",
     })
     assert.equal((await balance.read("user_1")).balance, 50_000_000)
@@ -233,8 +235,8 @@ test("paymentService creates checkout sessions and finishes topups through webho
     const myPayments = await myPaymentsResponse.json()
     assert.equal(myPayments.items.length, 1)
     assert.equal(myPayments.items[0].status, "paid")
-    assert.equal(myPayments.items[0].provider, "creem")
-    assert.equal(myPayments.items[0].provider_order_id, "ord_test_order")
+    assert.equal(myPayments.items[0].provider, "stripe")
+    assert.equal(myPayments.items[0].provider_payment_id, "pi_test_payment")
 
     const allPaymentsResponse = await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/payment/payments",
@@ -244,16 +246,16 @@ test("paymentService creates checkout sessions and finishes topups through webho
     const allPayments = await allPaymentsResponse.json()
     assert.equal(allPayments.items.length, 1)
   } finally {
-    await creemStub.close()
+    await stripeStub.close()
     process.chdir(cwd)
     await fs.rm(tempDir, { recursive: true, force: true })
   }
 })
 
-test("paymentService falls back to request origin for redirect URLs and exposes HTML pages", async () => {
+test("paymentService falls back to DOWNCITY_CITY_BASE_URL for redirect URLs and exposes HTML pages", async () => {
   const cwd = process.cwd()
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-creem-redirect-"))
-  const creemStub = await createCreemStub()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-payment-service-redirect-"))
+  const stripeStub = await createStripeStub()
 
   try {
     process.chdir(tempDir)
@@ -266,76 +268,10 @@ test("paymentService falls back to request origin for redirect URLs and exposes 
 
       finishTopup: (id, extra) => balance.finishTopup(id, extra),
       providers: [
-        creemPaymentProvider({
-          api_key: "creem_test",
-          product_id: "prod_test",
-          webhook_secret: "whsec_creem",
-          api_base_url: creemStub.baseURL,
-        }),
-      ],
-    }))
-
-    await base.health()
-    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-
-    const city = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/cities/create",
-      body: { name: "Demo" },
-    }))).json()
-    const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
-      path: "/v1/cities/tokens/apply",
-      body: { city_id: city.city_id, user_id: "user_2" },
-    }))).json()
-
-    const topup = await balance.createTopup("user_2", 80, { note: "redirect fallback" })
-    const checkoutResponse = await base.handleRequest(userRequest({
-      token: tokenBody.user_token,
-      path: "/v1/payment/checkout/create",
-      body: { method_id: "creem", topup_id: topup.topup_id },
-      origin: "https://runtime.example.com",
-    }))
-    assert.equal(checkoutResponse.status, 200)
-    assert.equal(
-      creemStub.lastBody().success_url,
-      "https://runtime.example.com/v1/payment/redirect/success",
-    )
-    const successPage = await base.handleRequest(new Request("https://runtime.example.com/v1/payment/redirect/success"))
-    assert.equal(successPage.status, 200)
-    assert.match(successPage.headers.get("content-type") || "", /^text\/html\b/)
-    assert.match(await successPage.text(), /Payment completed/)
-
-    const cancelPage = await base.handleRequest(new Request("https://runtime.example.com/v1/payment/redirect/cancel"))
-    assert.equal(cancelPage.status, 200)
-    assert.match(cancelPage.headers.get("content-type") || "", /^text\/html\b/)
-    assert.match(await cancelPage.text(), /Payment canceled/)
-  } finally {
-    await creemStub.close()
-    process.chdir(cwd)
-    await fs.rm(tempDir, { recursive: true, force: true })
-  }
-})
-
-test("paymentService marks failed and expired payments without crediting balance", async () => {
-  const cwd = process.cwd()
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-creem-status-"))
-  const creemStub = await createCreemStub()
-
-  try {
-    process.chdir(tempDir)
-
-    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new Federation({ db })
-    const balance = createBalanceBridge()
-    base.use(new PaymentService({
-      readTopup: (id) => balance.readTopup(id),
-
-      finishTopup: (id, extra) => balance.finishTopup(id, extra),
-      providers: [
-        creemPaymentProvider({
-          api_key: "creem_test",
-          product_id: "prod_test",
-          webhook_secret: "whsec_creem",
-          api_base_url: creemStub.baseURL,
+        stripePaymentProvider({
+          secret_key: "sk_test",
+          webhook_secret: "whsec_test",
+          api_base_url: stripeStub.baseURL,
         }),
       ],
     }))
@@ -353,64 +289,197 @@ test("paymentService marks failed and expired payments without crediting balance
       body: { city_id: city.city_id, user_id: "user_3" },
     }))).json()
 
-    const expiredTopup = await balance.createTopup("user_3", 30, { note: "expired" })
+    const topup = await balance.createTopup("user_3", 80, { note: "redirect fallback" })
+    const checkoutResponse = await base.handleRequest(userRequest({
+      token: tokenBody.user_token,
+      path: "/v1/payment/checkout/create",
+      body: { method_id: "stripe", topup_id: topup.topup_id },
+    }))
+    assert.equal(checkoutResponse.status, 200)
+    assert.equal(
+      stripeStub.lastParams()?.get("success_url"),
+      "https://base.example.com/v1/payment/redirect/success",
+    )
+    assert.equal(
+      stripeStub.lastParams()?.get("cancel_url"),
+      "https://base.example.com/v1/payment/redirect/cancel",
+    )
+
+    const successPage = await base.handleRequest(new Request("https://base.example.com/v1/payment/redirect/success"))
+    assert.equal(successPage.status, 200)
+    assert.match(successPage.headers.get("content-type") || "", /^text\/html\b/)
+    assert.match(await successPage.text(), /Payment completed/)
+
+    const cancelPage = await base.handleRequest(new Request("https://base.example.com/v1/payment/redirect/cancel"))
+    assert.equal(cancelPage.status, 200)
+    assert.match(cancelPage.headers.get("content-type") || "", /^text\/html\b/)
+    assert.match(await cancelPage.text(), /Payment canceled/)
+  } finally {
+    await stripeStub.close()
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("paymentService derives redirect URLs from request origin without base-url env", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-payment-service-request-origin-"))
+  const stripeStub = await createStripeStub()
+
+  try {
+    process.chdir(tempDir)
+
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db })
+    const balance = createBalanceBridge()
+    base.use(new PaymentService({
+      readTopup: (id) => balance.readTopup(id),
+
+      finishTopup: (id, extra) => balance.finishTopup(id, extra),
+      providers: [
+        stripePaymentProvider({
+          secret_key: "sk_test",
+          webhook_secret: "whsec_test",
+          api_base_url: stripeStub.baseURL,
+        }),
+      ],
+    }))
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+
+    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/cities/create",
+      body: { name: "Demo" },
+    }))).json()
+    const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/cities/tokens/apply",
+      body: { city_id: city.city_id, user_id: "user_4" },
+    }))).json()
+
+    const topup = await balance.createTopup("user_4", 120, { note: "request origin fallback" })
+    const checkoutResponse = await base.handleRequest(userRequest({
+      token: tokenBody.user_token,
+      path: "/v1/payment/checkout/create",
+      body: { method_id: "stripe", topup_id: topup.topup_id },
+      origin: "https://runtime.example.com",
+    }))
+    assert.equal(checkoutResponse.status, 200)
+    assert.equal(
+      stripeStub.lastParams()?.get("success_url"),
+      "https://runtime.example.com/v1/payment/redirect/success",
+    )
+    assert.equal(
+      stripeStub.lastParams()?.get("cancel_url"),
+      "https://runtime.example.com/v1/payment/redirect/cancel",
+    )
+  } finally {
+    await stripeStub.close()
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("paymentService marks failed and expired payments without crediting balance", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-payment-service-status-"))
+  const stripeStub = await createStripeStub()
+
+  try {
+    process.chdir(tempDir)
+
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db })
+    const balance = createBalanceBridge()
+    base.use(new PaymentService({
+      readTopup: (id) => balance.readTopup(id),
+
+      finishTopup: (id, extra) => balance.finishTopup(id, extra),
+      providers: [
+        stripePaymentProvider({
+          secret_key: "sk_test",
+          webhook_secret: "whsec_test",
+          api_base_url: stripeStub.baseURL,
+        }),
+      ],
+    }))
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
+
+    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/cities/create",
+      body: { name: "Demo" },
+    }))).json()
+    const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
+      path: "/v1/cities/tokens/apply",
+      body: { city_id: city.city_id, user_id: "user_2" },
+    }))).json()
+
+    const expiredTopup = await balance.createTopup("user_2", 30, { note: "expired" })
     const expiredCheckout = await (await base.handleRequest(userRequest({
       token: tokenBody.user_token,
       path: "/v1/payment/checkout/create",
-      body: { method_id: "creem", topup_id: expiredTopup.topup_id },
+      body: { method_id: "stripe", topup_id: expiredTopup.topup_id },
     }))).json()
 
     const expiredPayload = JSON.stringify({
       id: "evt_checkout_expired",
-      eventType: "checkout.expired",
-      object: {
-        id: "ch_test_checkout",
-        metadata: {
-          payment_id: expiredCheckout.payment_id,
-          topup_id: expiredTopup.topup_id,
-          user_id: "user_3",
+      type: "checkout.session.expired",
+      data: {
+        object: {
+          id: "cs_test_checkout",
+          client_reference_id: expiredTopup.topup_id,
+          metadata: {
+            payment_id: expiredCheckout.payment_id,
+            topup_id: expiredTopup.topup_id,
+            user_id: "user_2",
+          },
         },
       },
     })
-    const expiredResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=creem", {
+    const expiredResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=stripe", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "creem-signature": creemSignature(expiredPayload, "whsec_creem"),
+        "stripe-signature": stripeSignature(expiredPayload, "whsec_test"),
       },
       body: expiredPayload,
     }))
     assert.equal(expiredResponse.status, 200)
 
-    const failedTopup = await balance.createTopup("user_3", 45, { note: "failed" })
-    creemStub.setNextSession({
-      id: "ch_test_failed",
-      checkout_url: "https://checkout.creem.test/ch_test_failed",
+    const failedTopup = await balance.createTopup("user_2", 45, { note: "failed" })
+    stripeStub.setNextSession({
+      id: "cs_test_failed",
+      url: "https://checkout.stripe.test/cs_test_failed",
+      payment_intent: "pi_test_failed",
     })
     const failedCheckout = await (await base.handleRequest(userRequest({
       token: tokenBody.user_token,
       path: "/v1/payment/checkout/create",
-      body: { method_id: "creem", topup_id: failedTopup.topup_id },
+      body: { method_id: "stripe", topup_id: failedTopup.topup_id },
     }))).json()
 
     const failedPayload = JSON.stringify({
-      id: "evt_checkout_failed",
-      eventType: "checkout.failed",
-      object: {
-        id: "ch_test_failed",
-        order_id: "ord_test_failed",
-        metadata: {
-          payment_id: failedCheckout.payment_id,
-          topup_id: failedTopup.topup_id,
-          user_id: "user_3",
+      id: "evt_payment_failed",
+      type: "payment_intent.payment_failed",
+      data: {
+        object: {
+          id: "pi_test_failed",
+          metadata: {
+            payment_id: failedCheckout.payment_id,
+            topup_id: failedTopup.topup_id,
+            user_id: "user_2",
+          },
         },
       },
     })
-    const failedResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=creem", {
+    const failedResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=stripe", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "creem-signature": creemSignature(failedPayload, "whsec_creem"),
+        "stripe-signature": stripeSignature(failedPayload, "whsec_test"),
       },
       body: failedPayload,
     }))
@@ -425,18 +494,20 @@ test("paymentService marks failed and expired payments without crediting balance
     const failedRecord = payments.items.find((item) => item.payment_id === failedCheckout.payment_id)
     assert.equal(expiredRecord.status, "expired")
     assert.equal(failedRecord.status, "failed")
-    assert.equal((await balance.read("user_3")).balance, 0)
+    assert.equal((await balance.read("user_2")).balance, 0)
   } finally {
-    await creemStub.close()
+    await stripeStub.close()
     process.chdir(cwd)
     await fs.rm(tempDir, { recursive: true, force: true })
   }
 })
 
-function creemSignature(payload, secret) {
-  return createHmac("sha256", secret)
-    .update(payload)
+function stripeSignature(payload, secret) {
+  const timestamp = "1700000000"
+  const signature = createHmac("sha256", secret)
+    .update(`${timestamp}.${payload}`)
     .digest("hex")
+  return `t=${timestamp},v1=${signature}`
 }
 
 function adminRequest(adminSecret, { path: pathname, method = "POST", body }) {
@@ -467,30 +538,33 @@ async function readEnvValue(base, key) {
   return rows[0]?.value ?? ""
 }
 
-async function createCreemStub() {
+async function createStripeStub() {
   let nextSession = {
-    id: "ch_test_checkout",
-    checkout_url: "https://checkout.creem.test/ch_test_checkout",
+    id: "cs_test_checkout",
+    url: "https://checkout.stripe.test/cs_test_checkout",
+    payment_intent: "",
   }
-  let lastBody = null
+  let lastParams = null
 
   const server = http.createServer(async (request, response) => {
-    if (request.method === "POST" && request.url === "/checkouts") {
+    if (request.method === "POST" && request.url === "/checkout/sessions") {
       const chunks = []
       for await (const chunk of request) chunks.push(chunk)
       const body = Buffer.concat(chunks).toString("utf8")
-      lastBody = JSON.parse(body || "{}")
-      assert.equal(request.headers["x-api-key"], "creem_test")
-      assert.equal(lastBody.product_id, "prod_test")
+      const params = new URLSearchParams(body)
+      assert.equal(params.get("mode"), "payment")
+      lastParams = new URLSearchParams(body)
       const current = nextSession
       nextSession = {
         id: current.id,
-        checkout_url: current.checkout_url,
+        url: current.url,
+        payment_intent: current.payment_intent,
       }
       response.writeHead(200, { "content-type": "application/json" })
       response.end(JSON.stringify({
         id: current.id,
-        checkout_url: current.checkout_url,
+        url: current.url,
+        payment_intent: current.payment_intent,
       }))
       return
     }
@@ -508,13 +582,13 @@ async function createCreemStub() {
     setNextSession(session) {
       nextSession = session
     },
-    lastBody() {
-      return lastBody
+    lastParams() {
+      return lastParams ? new URLSearchParams(lastParams.toString()) : null
     },
     async close() {
       await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
     },
-  }
+    }
 }
 
 function createBalanceBridge() {

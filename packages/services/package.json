@@ -45,7 +45,7 @@
     "build": "rm -rf bin tsconfig.tsbuildinfo && tsc",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
-    "test": "tsc && tsc -p tsconfig.test.json && node --test test/**/*.test.mjs",
+    "test": "tsc && tsc -p tsconfig.test.json && node --test $(find test -name \"*.test.mjs\")",
     "prepack": "npm run build && node ../../scripts/rewrite-workspace-dependencies.mjs prepare ./package.json",
     "postpack": "node ../../scripts/rewrite-workspace-dependencies.mjs restore ./package.json",
     "version:patch": "node ../../scripts/bump-package-version.mjs ./package.json"

@@ -6,8 +6,8 @@ import os from "node:os"
 import path from "node:path"
 import test from "node:test"
 import { Federation } from "@downcity/city"
-import { createSqliteDb } from "../payment-stripe/sqlite-db.mjs"
-import { PaymentService, waffoPaymentProvider } from "../../bin/index.js"
+import { createSqliteDb } from "../../sqlite-db.mjs"
+import { PaymentService, waffoPaymentProvider } from "../../../../bin/index.js"
 
 test("paymentService lists enabled Waffo payment method for guests", async () => {
   const cwd = process.cwd()

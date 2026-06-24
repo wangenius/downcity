@@ -17,6 +17,7 @@ import type {
   ImagePluginInput,
   ImagePluginJobCreateResult,
   ImagePluginJobResult,
+  ImagePluginJobResultInput,
   ImagePluginOptions,
   ImagePluginResult,
 } from "@/image/types/ImagePlugin.js";
@@ -45,9 +46,29 @@ function normalize_image_payload(
 ): ImagePluginInput {
   const record = to_record(payload ?? {});
   if (!record) {
-    throw new TypeError("ImagePlugin.generate payload must be an object");
+    throw new TypeError("ImagePlugin image payload must be an object");
   }
   return { ...record } as ImagePluginInput;
+}
+
+/**
+ * 归一化图片任务查询 payload。
+ */
+function normalize_image_result_payload(
+  payload: JsonValue | undefined,
+): ImagePluginJobResultInput {
+  const record = to_record(payload ?? {});
+  if (!record) {
+    throw new TypeError("ImagePlugin.image_result payload must be an object");
+  }
+  const job_id = typeof record.job_id === "string" ? record.job_id.trim() : "";
+  if (!job_id) {
+    throw new TypeError("ImagePlugin.image_result payload must include job_id");
+  }
+  return {
+    ...record,
+    job_id,
+  } as ImagePluginJobResultInput;
 }
 
 /**
@@ -87,6 +108,13 @@ function normalize_positive_number(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0
     ? value
     : fallback;
+}
+
+/**
+ * 读取可选布尔值。
+ */
+function normalize_boolean(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback;
 }
 
 /**
@@ -202,6 +230,8 @@ export class ImagePlugin extends BasePlugin {
       "- `prompt` is required unless `messages` provides the full multimodal image context.",
       "- Optional common fields: `messages`, `size`, `aspect_ratio`, `ratio`, `quality`, `n`, `count`, `seed`, `provider_options`.",
       "- Preserve the user's creative intent; do not over-rewrite the prompt unless clarification is necessary.",
+      "- For a two-step flow, call `image_create` first, then call `image_result` with `job_id`; `image_result` waits until the job finishes by default.",
+      "- `generate` is a convenience action that creates the job and waits for the final image in one call.",
       "- Generated image file parts are saved under project `.downcity/resources` and attached to the final assistant message automatically.",
     ].join("\n");
   }
@@ -211,40 +241,179 @@ export class ImagePlugin extends BasePlugin {
   ): Promise<ImagePluginResult> {
     const created = await this.image_create(input);
     validate_created_job(created);
-    const deadline = Date.now() + this.timeout_ms;
-    let poll_after_ms = created.poll_after_ms;
+    const current = await this.wait_for_image_result({
+      job_id: created.job_id,
+      poll_after_ms: created.poll_after_ms,
+    });
+    if (!current.result) {
+      throw new Error(`Image job ${created.job_id} succeeded without result`);
+    }
+    return normalize_image_result(current.result);
+  }
+
+  /**
+   * 查询图片任务，按需等待终态。
+   */
+  private async read_image_result(
+    input: ImagePluginJobResultInput,
+    options: {
+      /**
+       * 默认是否等待终态。
+       */
+      default_until_finish: boolean;
+    },
+  ): Promise<ImagePluginJobResult> {
+    const timeout_ms = normalize_positive_number(input.timeout_ms, this.timeout_ms);
+    const min_poll_interval_ms = normalize_positive_number(
+      input.min_poll_interval_ms,
+      this.min_poll_interval_ms,
+    );
+    const max_poll_interval_ms = normalize_positive_number(
+      input.max_poll_interval_ms,
+      this.max_poll_interval_ms,
+    );
+    const until_finish = normalize_boolean(
+      input.until_finish,
+      options.default_until_finish,
+    );
+    const first = await this.image_result({ job_id: input.job_id });
+    validate_job_result(first);
+    if (!until_finish || first.status === "succeeded") {
+      if (first.status === "succeeded" && first.result) {
+        normalize_image_result(first.result);
+      }
+      return first;
+    }
+    if (first.status === "failed") {
+      throw new Error(
+        `Image job failed: ${first.error ?? first.message ?? input.job_id}`,
+      );
+    }
+    return await this.wait_for_image_result({
+      job_id: input.job_id,
+      poll_after_ms: first.poll_after_ms,
+      timeout_ms,
+      min_poll_interval_ms,
+      max_poll_interval_ms,
+    });
+  }
+
+  /**
+   * 轮询图片任务直到成功或失败。
+   */
+  private async wait_for_image_result(input: {
+    /**
+     * 图片任务 ID。
+     */
+    job_id: string;
+    /**
+     * 首次建议轮询间隔。
+     */
+    poll_after_ms?: number;
+    /**
+     * 最大等待时间。
+     */
+    timeout_ms?: number;
+    /**
+     * 轮询间隔下限。
+     */
+    min_poll_interval_ms?: number;
+    /**
+     * 轮询间隔上限。
+     */
+    max_poll_interval_ms?: number;
+  }): Promise<ImagePluginJobResult> {
+    const timeout_ms = normalize_positive_number(input.timeout_ms, this.timeout_ms);
+    const min_poll_interval_ms = normalize_positive_number(
+      input.min_poll_interval_ms,
+      this.min_poll_interval_ms,
+    );
+    const max_poll_interval_ms = normalize_positive_number(
+      input.max_poll_interval_ms,
+      this.max_poll_interval_ms,
+    );
+    const deadline = Date.now() + timeout_ms;
+    let poll_after_ms = input.poll_after_ms;
 
     while (Date.now() < deadline) {
       await sleep(
         clamp_poll_interval(
           poll_after_ms,
-          this.min_poll_interval_ms,
-          this.max_poll_interval_ms,
+          min_poll_interval_ms,
+          max_poll_interval_ms,
         ),
       );
-      const current = await this.image_result({ job_id: created.job_id });
+      const current = await this.image_result({ job_id: input.job_id });
       validate_job_result(current);
       poll_after_ms = current.poll_after_ms;
       if (current.status === "succeeded") {
         if (!current.result) {
-          throw new Error(`Image job ${created.job_id} succeeded without result`);
+          throw new Error(`Image job ${input.job_id} succeeded without result`);
         }
-        return normalize_image_result(current.result);
+        normalize_image_result(current.result);
+        return current;
       }
       if (current.status === "failed") {
         throw new Error(
-          `Image job failed: ${current.error ?? current.message ?? created.job_id}`,
+          `Image job failed: ${current.error ?? current.message ?? input.job_id}`,
         );
       }
     }
 
-    throw new Error(`Image job timed out: ${created.job_id}`);
+    throw new Error(`Image job timed out: ${input.job_id}`);
   }
 
   /**
    * 显式 action 集合。
    */
   readonly actions = {
+    image_create: {
+      execute: async ({ payload }: { payload: JsonValue }) => {
+        try {
+          const input = normalize_image_payload(payload);
+          const created = await this.image_create(input);
+          validate_created_job(created);
+          return {
+            success: true,
+            data: created as unknown as JsonObject,
+            message: "image job created",
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: String(error),
+            message: String(error),
+          };
+        }
+      },
+    },
+    image_result: {
+      execute: async ({ payload }: { payload: JsonValue }) => {
+        try {
+          const input = normalize_image_result_payload(payload);
+          const current = await this.read_image_result(input, {
+            default_until_finish: true,
+          });
+          const data = current.status === "succeeded" && current.result
+            ? current.result as unknown as JsonObject
+            : current as unknown as JsonObject;
+          return {
+            success: true,
+            data,
+            message:
+              current.status === "succeeded"
+                ? "image generated"
+                : `image job ${current.status}`,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: String(error),
+            message: String(error),
+          };
+        }
+      },
+    },
     generate: {
       execute: async ({ payload }: { payload: JsonValue }) => {
         try {

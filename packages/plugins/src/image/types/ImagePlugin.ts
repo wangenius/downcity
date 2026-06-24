@@ -131,6 +131,22 @@ export interface ImagePluginJobResult {
 }
 
 /**
+ * 图片任务查询输入。
+ */
+export interface ImagePluginJobResultInput {
+  /** 图片任务 ID，由 `image_create` 返回。 */
+  job_id: string;
+  /** 是否持续轮询直到任务进入成功或失败终态，默认由 action 决定。 */
+  until_finish?: boolean;
+  /** 单次查询最大等待时间，单位毫秒。 */
+  timeout_ms?: number;
+  /** 轮询间隔下限，单位毫秒。 */
+  min_poll_interval_ms?: number;
+  /** 轮询间隔上限，单位毫秒。 */
+  max_poll_interval_ms?: number;
+}
+
+/**
  * ImagePlugin 构造参数。
  */
 export interface ImagePluginOptions {
@@ -145,9 +161,9 @@ export interface ImagePluginOptions {
     input: ImagePluginInput,
   ) => Promise<ImagePluginJobCreateResult> | ImagePluginJobCreateResult;
   /** 查询图片生成任务，通常传入 `(input) => city.ai.image_result(input)`。 */
-  image_result?: (input: {
-    job_id: string;
-  }) => Promise<ImagePluginJobResult> | ImagePluginJobResult;
+  image_result?: (
+    input: Pick<ImagePluginJobResultInput, "job_id">,
+  ) => Promise<ImagePluginJobResult> | ImagePluginJobResult;
   /** 图片任务最大等待时间，默认 300000ms。 */
   timeout_ms?: number;
   /** 轮询间隔下限，默认 100ms。 */

@@ -111,7 +111,28 @@ const agent = new Agent({
 });
 ```
 
-After registration, the Agent automatically gets the built-in `plugin_call` tool. The model calls a single image generation action:
+After registration, the Agent automatically gets the built-in `plugin_call` tool. The model can use the job-style actions directly:
+
+```ts
+const job = await plugin_call({
+  plugin: "image",
+  action: "image_create",
+  payload: {
+    prompt: "A cinematic illustration of a rainy city corner at night",
+    aspect_ratio: "16:9",
+  },
+});
+
+await plugin_call({
+  plugin: "image",
+  action: "image_result",
+  payload: {
+    job_id: job.data.job_id,
+  },
+});
+```
+
+`image_result` waits until the job finishes by default. For a single-call flow, use `generate`:
 
 ```ts
 plugin_call({
@@ -124,7 +145,7 @@ plugin_call({
 });
 ```
 
-`ImagePlugin` is provider-agnostic. It does not know about City, OpenAI, or DeepSeek directly. Pass `image_create` and `image_result` job functions, and the plugin will poll until the job returns an AI SDK `UIMessage`.
+`ImagePlugin` is provider-agnostic. It does not know about City, OpenAI, or DeepSeek directly. Pass `image_create` and `image_result` job functions, and the plugin action will poll until the job returns an AI SDK `UIMessage`.
 
 Generated image file parts are always materialized under `.downcity/resources/`, referenced as `resources://.downcity/resources/...`, and merged into the final assistant message automatically.
 

@@ -107,6 +107,7 @@ export type {
   ImagePluginInput,
   ImagePluginJobCreateResult,
   ImagePluginJobResult,
+  ImagePluginJobResultInput,
   ImagePluginJobStatus,
   ImagePluginMessage,
   ImagePluginOptions,

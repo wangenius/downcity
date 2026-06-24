@@ -129,7 +129,28 @@ const agent = new Agent({
 });
 ```
 
-注册后，Agent 会自动获得一个内置的 `plugin_call` tool。模型只需要调用一个生图 action：
+注册后，Agent 会自动获得一个内置的 `plugin_call` tool。模型可以直接使用任务式 action：
+
+```ts
+const job = await plugin_call({
+  plugin: "image",
+  action: "image_create",
+  payload: {
+    prompt: "一张雨夜城市街角的电影感插画",
+    aspect_ratio: "16:9",
+  },
+});
+
+await plugin_call({
+  plugin: "image",
+  action: "image_result",
+  payload: {
+    job_id: job.data.job_id,
+  },
+});
+```
+
+`image_result` 默认会等待任务进入终态。如果想用单次调用，也可以继续使用 `generate`：
 
 ```ts
 plugin_call({
@@ -142,7 +163,7 @@ plugin_call({
 });
 ```
 
-`ImagePlugin` 不直接绑定 City，也不关心 OpenAI、DeepSeek 等 provider 的具体协议。传入 `image_create` 和 `image_result` 任务函数后，插件会自己轮询，直到任务返回 AI SDK `UIMessage`。
+`ImagePlugin` 不直接绑定 City，也不关心 OpenAI、DeepSeek 等 provider 的具体协议。传入 `image_create` 和 `image_result` 任务函数后，插件 action 会自己轮询，直到任务返回 AI SDK `UIMessage`。
 
 生成图片的 file parts 会统一落盘到 `.downcity/resources/`，以 `resources://.downcity/resources/...` 引用，并自动合并进最终 assistant message。
 

@@ -19,12 +19,14 @@ import { createVersionBanner } from "@/shared/IndexSupport.js";
 import { setCliVerbosity } from "@/shared/CliReporter.js";
 import { deployFederationProject } from "@/federation/deploy/commands/deploy.js";
 import { createFederationProject } from "@/federation/create/commands/create.js";
+import { run_federation_query_command } from "@/federation/query/commands/query.js";
 import { readActiveServer } from "@/federation/core/session.js";
 import {
   prompt_add_federation_server,
   prompt_select_active_federation_server,
 } from "@/federation/server/FederationServerManager.js";
 import { open_federation_server_workspace } from "@/federation/server/FederationServerWorkspace.js";
+import { CliError } from "@/shared/CliError.js";
 import { helpText, langOptionText, resolveCliLocale, setCliLocale, t } from "@/shared/CliLocale.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -78,7 +80,6 @@ export async function runDownfedCli(): Promise<void> {
 
   const server_program = program
     .command("server")
-    .alias("fed")
     .description(t({
       zh: "配置并管理已部署 Federation",
       en: "configure and manage deployed Federations",
@@ -110,6 +111,8 @@ export async function runDownfedCli(): Promise<void> {
     .action(createVersionBanner(packageJson.version, async () => {
       await prompt_add_federation_server();
     }));
+
+  register_root_federation_query_command(program);
 
   program
     .command("create [dir]")
@@ -189,4 +192,61 @@ export async function runDownfedCli(): Promise<void> {
   }
 
   await program.parseAsync(process.argv);
+}
+
+function register_root_federation_query_command(program: Command): void {
+  program
+    .command("query <method> <path>")
+    .description(t({
+      zh: "请求当前 active Federation 的 HTTP API",
+      en: "query the HTTP API of the active Federation",
+    }))
+    .option("--raw", t({
+      zh: "只输出原始响应 body",
+      en: "print the raw response body only",
+    }))
+    .option("--header <header>", t({
+      zh: "临时请求头，格式 key:value，可重复使用",
+      en: "temporary request header in key:value format; repeatable",
+    }), collect_query_header, [] as string[])
+    .option("-d, --data <json>", t({
+      zh: "JSON 字符串请求体",
+      en: "JSON string request body",
+    }))
+    .option("--file <path>", t({
+      zh: "从文件读取 JSON 请求体",
+      en: "read JSON request body from a file",
+    }))
+    .helpOption("--help", helpText())
+    .action(async (
+      method: string,
+      path: string,
+      options: {
+        raw?: boolean;
+        header?: string[];
+        data?: string;
+        file?: string;
+      },
+    ) => {
+      try {
+        await run_federation_query_command(method, path, options);
+      } catch (error) {
+        if (error instanceof CliError) {
+          render_query_cli_error(error);
+          process.exitCode = error.exitCode;
+          return;
+        }
+        throw error;
+      }
+    });
+}
+
+function collect_query_header(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
+function render_query_cli_error(error: CliError): void {
+  console.error(error.message);
+  if (error.note) console.error(error.note);
+  if (error.fix) console.error(`fix: ${error.fix}`);
 }

@@ -117,6 +117,20 @@ fed server manage
 
 直接运行 `fed` 会优先显示已保存的 Federation 列表。选中某个 Federation 会直接进入它的 admin 工作区。编辑、移除、更新 admin key 都收在进入后的 `更多` 里。
 
+当你需要直接查看当前 Federation 的 HTTP 原始响应时，使用 `fed query`：
+
+```bash
+fed query GET /health
+fed query GET /v1/ai/models
+fed query POST /v1/ai/text --data '{"prompt":"hello","model":"deepseek-v4-flash"}'
+fed query POST /v1/ai/image/create -d '{"prompt":"sky city","model":"glm-image"}'
+fed query POST /v1/ai/image/result --data '{"job_id":"..."}'
+```
+
+`fed query` 会自动使用 active Federation，自动带上 `Authorization: Bearer <admin_secret_key>`，并默认补 `content-type: application/json`。请求路径可以写成 `/v1/...`；完整 URL 也可以使用，但只允许和当前 active Federation 相同的 origin。
+
+默认输出会展示 status、headers，并对 JSON body 做 pretty print。加 `--raw` 可以只输出原始响应 body。临时 header 使用 `--header key:value`，JSON 字符串 body 使用 `--data` / `-d`，也可以用 `--file` 从文件读取 JSON body。非 2xx 响应仍会展示 upstream 的 status、headers、body，方便直接排查路径、auth、env 或模型解析错误。
+
 ## 一个最常见的上手流程
 
 ```bash

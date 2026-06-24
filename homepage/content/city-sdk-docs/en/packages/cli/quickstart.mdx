@@ -117,6 +117,20 @@ fed server manage
 
 Opening `fed` without arguments shows the saved Federation list first. Select a Federation to enter its admin workspace. Edit, remove, and admin-key updates live inside that workspace under `More`.
 
+Use `fed query` when you need to inspect the live HTTP response from the active Federation:
+
+```bash
+fed query GET /health
+fed query GET /v1/ai/models
+fed query POST /v1/ai/text --data '{"prompt":"hello","model":"deepseek-v4-flash"}'
+fed query POST /v1/ai/image/create -d '{"prompt":"sky city","model":"glm-image"}'
+fed query POST /v1/ai/image/result --data '{"job_id":"..."}'
+```
+
+`fed query` automatically uses the active Federation, sends `Authorization: Bearer <admin_secret_key>`, and defaults to `content-type: application/json`. Paths can be written as `/v1/...`; full URLs are accepted only when they use the same origin as the active Federation.
+
+By default, JSON responses are pretty-printed with status and headers. Add `--raw` to print only the raw response body. Use `--header key:value` for temporary headers, `--data` / `-d` for a JSON string body, or `--file` to read the JSON body from a file. Non-2xx responses still print the upstream status, headers, and body so path, auth, env, and model-resolution errors remain visible.
+
 ## A common first workflow
 
 ```bash

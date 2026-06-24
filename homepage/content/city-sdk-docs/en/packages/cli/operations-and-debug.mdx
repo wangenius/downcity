@@ -1,9 +1,9 @@
 ---
 title: Operations and Debugging
-description: "The boundary between downcity, Admin City, and direct database inspection, and when the CLI is the better tool."
+description: "The boundary between fed, city, Admin City, and direct database inspection, and when the CLI is the better tool."
 ---
 
-The CLI and `Admin City` can both help you manage City, but they are better at different kinds of operational work.
+The CLI and `Admin City` can both help you debug Downcity, but they fit different work: `fed/downfed` manages Federation, `city/downcity` manages local Agents and local Federation connections, and `Admin City` is for trusted programmatic management.
 
 ## The simplest rule first
 
@@ -50,7 +50,7 @@ city agent list
 
 ## A common debugging chain
 
-1. confirm City is connected to the database you think it is
+1. confirm Federation is connected to the database you think it is
 2. confirm the expected models and tables exist
 3. confirm the service actually wrote data
 4. only then suspect deeper business logic
@@ -68,7 +68,7 @@ A good first reaction is not "change code" but "confirm facts":
 
 Check these facts first:
 
-- did the webhook reach City?
+- did the webhook reach Federation?
 - was the webhook event persisted?
 - did the entitlement become active?
 
@@ -91,6 +91,6 @@ In many cases the CLI is already enough to narrow the problem sharply.
 
 ## Read next
 
-- For the basic agent entry, read [City CLI Quickstart](/en/city-sdk-docs/packages/cli/quickstart)
+- For the basic `fed` / `city` entries, read [CLI Quickstart](/en/city-sdk-docs/packages/cli/quickstart)
 - For model and table inspection, read [Models and Tables](/en/city-sdk-docs/packages/cli/models-and-tables)
 - For the data layer behind those facts, read [Store and Table](/en/city-sdk-docs/packages/city/store-and-table)

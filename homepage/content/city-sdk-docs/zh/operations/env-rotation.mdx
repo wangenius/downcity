@@ -3,11 +3,11 @@ title: env 与 key 轮换
 description: provider key 和 Downcity key 的维护方式。
 ---
 
-City 集中管理 key 的好处是：多个产品不需要分别更新配置。
+Federation 集中管理 key 的好处是：多个产品不需要分别更新配置。
 
 ## provider key
 
-provider key 可以通过 Runtime env 管理，并保存到 City 数据库：
+provider key 可以通过 Runtime env 管理，并保存到 Federation 数据库：
 
 ```ts
 await admin.env.upsert({
@@ -16,7 +16,7 @@ await admin.env.upsert({
 });
 ```
 
-轮换后，所有接入该 City 的 service handler 都会读取到新值。数据库中的 env 值优先于 `.env`。
+轮换后，所有接入该 Federation 的 service handler 都会读取到新值。数据库中的 env 值优先于 `.env`。
 
 ## Downcity 自己的 key
 
@@ -27,11 +27,11 @@ Downcity 自己维护两类关键密钥：
 
 ### admin secret
 
-`DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` 用于 `Admin City` 管理 City。
+`DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` 用于 `Admin City` 管理 Federation。
 
 ### token signing key
 
-`DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY` 用于 City 内部签发和校验 `user_token`。
+`DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY` 用于 Federation 内部签发和校验 `user_token`。
 
 ## 轮换时要注意什么
 

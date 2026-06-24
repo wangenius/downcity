@@ -149,7 +149,7 @@ So:
 
 ## `env`
 
-`admin.env` manages runtime env values. Provider keys written here are stored in the City database and take priority at runtime.
+`admin.env` manages runtime env values. Provider keys written here are stored in the Federation database and take priority at runtime.
 
 If you need to inspect which provider env keys a code-registered model depends on, read the same model catalog directly through `admin.listModels()`, then compare it with `admin.env.list()`:
 
@@ -193,11 +193,11 @@ OPENAI_BASE_URL=https://api.openai.com/v1
 await admin.env.refresh();
 ```
 
-When env values are changed through `admin.env.upsert()`, `remove()`, `import()`, or the city CLI, the current Runtime cache is updated automatically.
+When env values are changed through `admin.env.upsert()`, `remove()`, `import()`, or the fed admin workspace, the current Runtime cache is updated automatically.
 
-If you bypass the Admin API and edit the database `env` table directly, call `admin.env.refresh()`, run `city env refresh`, or run `Refresh runtime cache` from the city CLI Env menu.
+If you bypass the Admin API and edit the database `env` table directly, call `admin.env.refresh()` or run `Refresh runtime cache` from the fed admin workspace Env menu.
 
-These changes are written to the `env` table in the City database. Both business env values and system-level secrets are managed from this City-owned table, so you no longer need to patch Worker or Node host env manually.
+These changes are written to the `env` table in the Federation database. Both business env values and system-level secrets are managed from this Federation-owned table, so you no longer need to patch Worker or Node host env manually.
 
 ## `cities`
 

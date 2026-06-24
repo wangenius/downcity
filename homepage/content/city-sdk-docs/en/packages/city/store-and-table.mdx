@@ -1,13 +1,13 @@
 ---
 title: Store and Table
-description: "The City data layer, table capabilities, and why city, env, and usage facts eventually live in the store layer."
+description: "The Federation data layer, table capabilities, and why city, env, and usage facts eventually live in the store layer."
 ---
 
 Downcity is often seen through AI calls, but its long-term reliability depends on a clear data layer.
 
 ## What this concept means
 
-Many City capabilities are not just in-memory state. They must persist as data facts:
+Many Federation capabilities are not just in-memory state. They must persist as data facts:
 
 - whether a city is active
 - which token belongs to whom
@@ -20,13 +20,13 @@ That is why `@downcity/city` has not only routes and services, but also a store 
 ## When you need to care about this layer directly
 
 - you are checking whether a service actually wrote its tables
-- you want your own business data to interact with City data
+- you want your own business data to interact with Federation data
 - you need controlled trusted-side reads or writes
 - you are debugging operations and need facts, not only HTTP responses
 
 ## What `base.table()` represents
 
-`base.table(name)` is City's controlled exposure of table capability inside one runtime and lifecycle.
+`base.table(name)` is Federation's controlled exposure of table capability inside one runtime and lifecycle.
 
 ## Minimal example: reading and writing tables
 
@@ -48,7 +48,7 @@ const draftNotes = await notes.select({
 
 ## What tables you usually encounter
 
-### Built-in City tables
+### Built-in Federation tables
 
 - `cities`
 - `env`
@@ -98,7 +98,7 @@ await notes.delete({ id: "note_1" });
 
 ## Common misunderstandings
 
-### City is not only an API proxy
+### Federation is not only an API proxy
 
 Many management and city capabilities depend on persistent data facts behind the route layer.
 
@@ -112,6 +112,6 @@ City-side callers should continue to use `User City` and `Admin City`, not raw t
 
 ## Read next
 
-- For how the database is wired in, read [City](/en/city-sdk-docs/packages/city/federation)
-- For terminal inspection of these tables, read [City CLI](/en/city-sdk-docs/packages/cli)
+- For how the database is wired in, read [Federation](/en/city-sdk-docs/packages/city/federation)
+- For terminal inspection of these tables, read [CLI](/en/city-sdk-docs/packages/cli)
 - For service-specific data expectations, read the relevant service package docs together with this page

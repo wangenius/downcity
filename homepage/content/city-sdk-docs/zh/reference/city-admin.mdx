@@ -149,7 +149,7 @@ router.post("/login", async (c) => {
 
 ## `env`
 
-`admin.env` 负责 Runtime env 管理。写入的 provider key 会保存到 City 数据库，Runtime 读取时优先使用数据库值。
+`admin.env` 负责 Runtime env 管理。写入的 provider key 会保存到 Federation 数据库，Runtime 读取时优先使用数据库值。
 
 如果你想确认某个代码注册模型依赖哪些 provider env，可以直接通过 `admin.listModels()` 读取同一份模型目录，再和 `admin.env.list()` 对照：
 
@@ -193,11 +193,11 @@ OPENAI_BASE_URL=https://api.openai.com/v1
 await admin.env.refresh();
 ```
 
-通过 `admin.env.upsert()`、`remove()`、`import()` 或 city CLI 修改 env 时，当前 Runtime cache 会自动更新。
+通过 `admin.env.upsert()`、`remove()`、`import()` 或 fed admin 工作区修改 env 时，当前 Runtime cache 会自动更新。
 
-如果你绕过 Admin API 直接修改数据库里的 `env` 表，需要调用 `admin.env.refresh()`，执行 `city env refresh`，或在 city CLI 的 Env 菜单执行 `Refresh runtime cache`。
+如果你绕过 Admin API 直接修改数据库里的 `env` 表，需要调用 `admin.env.refresh()`，或在 fed admin 工作区的 Env 菜单执行 `Refresh runtime cache`。
 
-这些修改会写入 City 数据库的 `env` 表。业务 env 和系统级 secret 都以 City 这张表为准，不需要再去手动改 Worker / Node 宿主 env。
+这些修改会写入 Federation 数据库的 `env` 表。业务 env 和系统级 secret 都以 Federation 这张表为准，不需要再去手动改 Worker / Node 宿主 env。
 
 ## `cities`
 

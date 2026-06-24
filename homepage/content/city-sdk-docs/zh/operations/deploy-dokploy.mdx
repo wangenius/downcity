@@ -1,11 +1,11 @@
 ---
 title: Dokploy 部署
-description: 用持久化 City 数据库把 Downcity Node 街区部署到 Dokploy。
+description: 用持久化 Federation 数据库把 Downcity Node 街区部署到 Dokploy。
 ---
 
-Node 街区是 Downcity City Infra 的标准 Docker / Dokploy 部署形态。
+Node 街区是 Downcity Federation Infra 的标准 Docker / Dokploy 部署形态。
 
-它运行 `templates/node`，暴露 City HTTP API，并把 SQLite 数据保存在持久化 `/data` volume 里。适合给产品、应用、Agent 或内部工具提供一套长期运行的城市服务层。
+它运行 `templates/node`，暴露 Federation HTTP API，并把 SQLite 数据保存在持久化 `/data` volume 里。适合给产品、应用、Agent 或内部工具提供一套长期运行的服务层。
 
 ## Dokploy 配置
 
@@ -33,11 +33,11 @@ PORT=43127
 DOWNCITY_CITY_DATABASE_URL=file:/data/downcity.sqlite
 ```
 
-`/data` 必须是持久化 volume。city、model、用户、session、usage、payment 和 City env 都会保存在这个 SQLite 数据库里。
+`/data` 必须是持久化 volume。city、model、用户、session、usage、payment 和 Federation env 都会保存在这个 SQLite 数据库里。
 
 ## 域名路径
 
-Node 街区默认监听 `43127`，City API 直接挂在服务根路径下：
+Node 街区默认监听 `43127`，Federation API 直接挂在服务根路径下：
 
 ```txt
 GET  /health
@@ -52,7 +52,7 @@ POST /v1/ai/text
 base_url=https://base.example.com
 ```
 
-如果 Stripe redirect URL 没有直接配置，可以把 `DOWNCITY_CITY_BASE_URL` 写入 City env，让支付页自动推导默认 success / cancel URL：
+如果 Stripe redirect URL 没有直接配置，可以把 `DOWNCITY_CITY_BASE_URL` 写入 Federation env，让支付页自动推导默认 success / cancel URL：
 
 ```bash
 curl -X POST https://base.example.com/v1/env/upsert \
@@ -63,7 +63,7 @@ curl -X POST https://base.example.com/v1/env/upsert \
 
 ## Provider Key
 
-Provider API key 不建议写在 Dokploy env 里。部署完成后，通过 Admin API 写入 City 数据库：
+Provider API key 不建议写在 Dokploy env 里。部署完成后，通过 Admin API 写入 Federation 数据库：
 
 ```bash
 curl -X POST https://base.example.com/v1/env/upsert \
@@ -77,7 +77,7 @@ curl -X POST https://base.example.com/v1/env/upsert \
   -d '{"key":"DEEPSEEK_API_KEY","value":"your_api_key"}'
 ```
 
-运行时 `ctx.env.OPENAI_API_KEY` 和 `ctx.env.DEEPSEEK_API_KEY` 会优先从 City 数据库读取。
+运行时 `ctx.env.OPENAI_API_KEY` 和 `ctx.env.DEEPSEEK_API_KEY` 会优先从 Federation 数据库读取。
 
 ## 验证
 

@@ -3,7 +3,7 @@ title: Token Model
 description: How `admin_secret_key` and `user_token` work together.
 ---
 
-Downcity uses `admin_secret_key` to manage City, and `user_token` to let end-user clients call services.
+Downcity uses `admin_secret_key` to manage Federation, and `user_token` to let end-user clients call services.
 
 <div className="dc-doc-flow" aria-label="Boundary between admin_secret_key and user_token">
   <div className="dc-doc-lane">
@@ -32,7 +32,7 @@ Downcity uses `admin_secret_key` to manage City, and `user_token` to let end-use
 
 ## user_token
 
-`user_token` is the call credential used by the end user or product client. `Admin City` requests it from City using `city_id + user_id`.
+`user_token` is the call credential used by the end user or product client. `Admin City` requests it from Federation using `city_id + user_id`.
 
 - `city_id`
 - `user_id`
@@ -43,7 +43,7 @@ The client only carries `user_token` and `city_id`. It never touches provider ke
 
 ## admin_secret_key
 
-`DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` is used to manage City: create cities, manage env, and issue `user_token` for users under a given city. City generates it automatically and writes it into `.env` on first startup.
+`DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` is used to manage Federation: create cities, manage env, and issue `user_token` for users under a given city. Federation generates it automatically and writes it into Federation env on first startup.
 
 ```ts
 const client = new City({

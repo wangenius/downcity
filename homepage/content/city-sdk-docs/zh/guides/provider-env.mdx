@@ -1,9 +1,9 @@
 ---
 title: Provider 环境变量
-description: 如何在 City 运行环境中配置 Provider API Key。
+description: 如何在 Federation 运行环境中配置 Provider API Key。
 ---
 
-所有 Provider 需要的 API Key 都通过 City 自己的 env 表统一管理。
+所有 Provider 需要的 API Key 都通过 Federation 自己的 env 表统一管理。
 
 ## 声明环境变量
 
@@ -65,6 +65,6 @@ async text(ctx: Context) {
 }
 ```
 
-`ctx.env(key)` 从 City 当前运行时绑定的 env 表读取。AIService 的自动透传 handler 也通过 `ctx.env(envKey)` 读取 API Key。
+`ctx.env(key)` 从 Federation 当前运行时绑定的 env 表读取。AIService 的自动透传 handler 也通过 `ctx.env(envKey)` 读取 API Key。
 
 详见 [HTTP API - env 管理](/zh/city-sdk-docs/reference/http-api#管理端请求格式)。

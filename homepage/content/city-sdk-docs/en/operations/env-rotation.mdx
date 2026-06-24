@@ -7,7 +7,7 @@ The main benefit of managing keys in the Federation is that many products do not
 
 ## provider keys
 
-Provider keys can be managed through Runtime env and saved into the City database:
+Provider keys can be managed through Runtime env and saved into the Federation database:
 
 ```ts
 await admin.env.upsert({
@@ -27,11 +27,11 @@ Downcity maintains two critical keys of its own:
 
 ### admin secret
 
-`DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` is used by `Admin City` to manage City.
+`DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` is used by `Admin City` to manage Federation.
 
 ### token signing key
 
-`DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY` is used internally by City to issue and validate `user_token`.
+`DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY` is used internally by Federation to issue and validate `user_token`.
 
 ## What to watch during rotation
 

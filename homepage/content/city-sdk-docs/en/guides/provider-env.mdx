@@ -1,9 +1,9 @@
 ---
 title: Provider Environment Variables
-description: How to configure provider API keys in the City environment.
+description: How to configure provider API keys in the Federation environment.
 ---
 
-All provider API keys are managed through City's own env table.
+All provider API keys are managed through Federation's own env table.
 
 ## Declare environment variables
 
@@ -65,6 +65,6 @@ async text(ctx: Context) {
 }
 ```
 
-`ctx.env(key)` reads from City's active env table. AIService automatic passthrough also reads the API key through `ctx.env(envKey)`.
+`ctx.env(key)` reads from Federation's active env table. AIService automatic passthrough also reads the API key through `ctx.env(envKey)`.
 
 See also [HTTP API - admin env management](/en/city-sdk-docs/reference/http-api#admin-request-format).

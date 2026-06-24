@@ -1,95 +1,66 @@
 ---
-title: "City CLI"
-description: "Manage City models and tables from the terminal for setup, debugging, and routine operations."
+title: "CLI"
+description: "Separate fed/downfed from city/downcity: one manages Federation infrastructure, the other manages local Agent state and Federation login."
 ---
 
-`downcity` is the global installation package for Downcity's CLI products. It installs two commands: `city` for City administration and `city` for local Agent hosting.
+The `downcity` package installs two command families:
 
-If `Admin City` owns "trusted programmatic calls", `city` owns "a human operating City directly from the terminal".
+- `fed` / `downfed`: manages Federation infrastructure, including project scaffolding, Worker deploys, saved admin connections, and direct Federation HTTP queries.
+- `city` / `downcity`: manages local Agents, local plugins, chat/gateway, and the local user's membership and login state for a Federation.
 
-## How to read this section
+Use `fed` when you are deploying or operating the shared backend. Use `city` when you are connecting, signing in, running Agents, or working from a local user workspace.
+
+## How To Read This Section
 
 The recommended order is:
 
-1. Start with [Quickstart](/en/city-sdk-docs/packages/cli/quickstart) to learn how the CLI connects to your City database.
-2. Continue with [Models and tables](/en/city-sdk-docs/packages/cli/models-and-tables) for the most common table inspection and model-management workflows.
-3. Finish with [Operations and debugging](/en/city-sdk-docs/packages/cli/operations-and-debug) to connect routine checks, incident diagnosis, and manual fixes.
+1. Start with [Quickstart](/en/city-sdk-docs/packages/cli/quickstart) to separate the `fed` and `city` entry points.
+2. For Federation deploys, read [Deploy to Cloudflare Workers](/en/city-sdk-docs/operations/deploy-cloudflare-workers).
+3. For local Agent or Federation-login debugging, read [Operations and Debugging](/en/city-sdk-docs/packages/cli/operations-and-debug).
 
-## Use it when
+## fed / downfed
 
-- you want to inspect which tables exist in the City database
-- you need to add, update, or remove entries in `downcity_models`
-- you want to debug runtime data directly from the terminal
-
-## Install
+`fed` is for Federation operators. Common commands:
 
 ```bash
-npm i -g downcity
+fed
+fed create .
+fed deploy
+fed deploy --dry-run
+fed deploy --verify
+fed server add
+fed server manage
+fed query GET /health
 ```
 
-## Default usage
+It owns the shared backend surface: Federation projects, Cloudflare Workers deploys, D1 / Queue / R2 resources, the admin workspace, and HTTP debugging.
+
+## city / downcity
+
+`city` is for the local workspace and Agent runtime. Common commands:
 
 ```bash
 city
+city federation status
+city federation join <url>
+city federation login
+city agent create .
+city agent list
+city agent start
+city agent chat
 ```
 
-In an interactive terminal, the default `city` entry opens the full-screen City TUI dashboard. In non-interactive environments it prints help instead.
+It owns local state: selecting a Federation, storing user login state, running local Agents, and managing plugins plus chat/gateway.
 
-The CLI also supports language switching:
+## Boundaries
 
-```bash
-city --lang en
-city --lang zh --help
-DC_CLI_LANG=zh city
-```
+- Do not use `city deploy` to deploy a Federation; the deploy entry is `fed deploy`.
+- Do not use `city create` to scaffold a Federation project; the scaffold entry is `fed create`.
+- Do not use `fed` as the local Agent manager; Agent commands live under `city agent ...`.
+- Programmatic management should still use `Admin City`; CLI is best for human terminal workflows.
 
-In interactive mode, `city` also lets you change the default language from the menu and persists that selection locally. Resolution priority is `--lang` first, then the persisted interactive preference, then `DC_CLI_LANG`, `LC_ALL`, `LC_MESSAGES`, and `LANG`.
+## Read Next
 
-If no City is connected yet, the dashboard first guides you to add one. After that, you can:
-
-- manage multiple City servers from `Manage Servers`
-- enter the Admin flow for env / models / cities / payment
-- enter the User flow for login, recharge, and service calls
-
-## Scriptable city commands
-
-```bash
-city manage
-city create .
-city deploy
-city deploy --dry-run
-city deploy --verify
-city env refresh
-```
-
-These commands manage City projects, deployment, and Federation env cache.
-
-## Boundary with `city city`
-
-`city city` is a City command group. Use it when a local Federation or agent needs to select a City base and store a City user login:
-
-```bash
-city city use
-city city login
-city city status
-```
-
-So the short version is:
-
-- `city`: operate City from the terminal
-- `city city`: connect City and local agents to a City base
-
-## Boundaries with other packages
-
-- It does not replace `Admin City` from [@downcity/city](/en/city-sdk-docs/packages/city/federation).
-- It does not replace the runtime capabilities in [@downcity/city](/en/city-sdk-docs/packages/city).
-- It is better for human-operated inspection and maintenance than for code you embed into a city.
-
-- `Admin City` is for trusted programmatic calls
-- `city` is for human-operated terminal workflows
-
-## Read next
-
-- To connect the CLI first, read [Quickstart](/en/city-sdk-docs/packages/cli/quickstart)
-- To manage `downcity_models` and inspect data, read [Models and tables](/en/city-sdk-docs/packages/cli/models-and-tables)
-- To learn the troubleshooting workflow, read [Operations and debugging](/en/city-sdk-docs/packages/cli/operations-and-debug)
+- To deploy a Federation, read [Deploy to Cloudflare Workers](/en/city-sdk-docs/operations/deploy-cloudflare-workers)
+- To understand local connections, read [CLI Quickstart](/en/city-sdk-docs/packages/cli/quickstart)
+- To understand the data layer, read [Store and Table](/en/city-sdk-docs/packages/city/store-and-table)

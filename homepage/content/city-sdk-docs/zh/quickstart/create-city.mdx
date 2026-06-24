@@ -11,7 +11,7 @@ description: 初始化 Downcity 服务端 Federation，准备默认数据库和 
 pnpm add @downcity/city drizzle-orm better-sqlite3
 ```
 
-准备好数据库即可。Federation 首次启动时会自动补齐 `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY`、`DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY` 和 `BETTER_AUTH_SECRET`。provider key 则在启动后通过 City CLI / Admin API 写入：
+准备好数据库即可。Federation 首次启动时会自动补齐 `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY`、`DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY` 和 `BETTER_AUTH_SECRET`。provider key 则在启动后通过 Admin API 或 `fed` 的 admin workspace 写入：
 
 ```bash
 OPENAI_API_KEY="..."

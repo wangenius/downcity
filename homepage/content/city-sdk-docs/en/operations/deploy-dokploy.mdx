@@ -1,11 +1,11 @@
 ---
 title: Deploy With Dokploy
-description: Deploy the Downcity Node block to Dokploy with a persistent City database.
+description: Deploy the Downcity Node block to Dokploy with a persistent Federation database.
 ---
 
-The Node block is the standard Docker / Dokploy deployment shape for Downcity City Infra.
+The Node block is the standard Docker / Dokploy deployment shape for Downcity Federation Infra.
 
-It runs `templates/node`, exposes the City HTTP API, and stores SQLite data in a persistent `/data` volume. Use it when you want a long-running city service layer for cities, apps, agents, or internal tools.
+It runs `templates/node`, exposes the Federation HTTP API, and stores SQLite data in a persistent `/data` volume. Use it when you want a long-running service layer for cities, apps, agents, or internal tools.
 
 ## Dokploy Settings
 
@@ -33,11 +33,11 @@ PORT=43127
 DOWNCITY_CITY_DATABASE_URL=file:/data/downcity.sqlite
 ```
 
-`/data` must stay persistent. Cities, models, users, sessions, usage, payments, and City env entries are stored in that SQLite database.
+`/data` must stay persistent. Cities, models, users, sessions, usage, payments, and Federation env entries are stored in that SQLite database.
 
 ## Domain Path
 
-The Node block listens on `43127`, and the City API is mounted at the service root:
+The Node block listens on `43127`, and the Federation API is mounted at the service root:
 
 ```txt
 GET  /health
@@ -52,7 +52,7 @@ If your domain is `https://base.example.com`, product-side SDKs and trusted back
 base_url=https://base.example.com
 ```
 
-If Stripe redirect URLs are not configured directly, write `DOWNCITY_CITY_BASE_URL` into City env so payment pages can derive default success and cancel URLs:
+If Stripe redirect URLs are not configured directly, write `DOWNCITY_CITY_BASE_URL` into Federation env so payment pages can derive default success and cancel URLs:
 
 ```bash
 curl -X POST https://base.example.com/v1/env/upsert \
@@ -63,7 +63,7 @@ curl -X POST https://base.example.com/v1/env/upsert \
 
 ## Provider Keys
 
-Provider API keys should not be stored in Dokploy env. After deployment, write them into the City database through the Admin API:
+Provider API keys should not be stored in Dokploy env. After deployment, write them into the Federation database through the Admin API:
 
 ```bash
 curl -X POST https://base.example.com/v1/env/upsert \
@@ -77,7 +77,7 @@ curl -X POST https://base.example.com/v1/env/upsert \
   -d '{"key":"DEEPSEEK_API_KEY","value":"your_api_key"}'
 ```
 
-At runtime, `ctx.env.OPENAI_API_KEY` and `ctx.env.DEEPSEEK_API_KEY` are read from the City database first.
+At runtime, `ctx.env.OPENAI_API_KEY` and `ctx.env.DEEPSEEK_API_KEY` are read from the Federation database first.
 
 ## Verify
 

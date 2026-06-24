@@ -1,97 +1,66 @@
 ---
-title: "City CLI"
-description: "用终端管理 City 的模型和数据表，适合初始化、排查和日常运维。"
+title: "CLI"
+description: "区分 fed/downfed 与 city/downcity：一个管理 Federation 基础设施，一个管理本机 Agent 与 Federation 登录态。"
 ---
 
-`downcity` 是 Downcity 的全局安装聚合包。它会安装两个命令：`city` 负责 City 管理，`city` 负责本机 Agent 宿主。
+`downcity` 包会安装两组命令：
 
-如果说 `Admin City` 负责“程序里的可信调用”，那 `city` 负责“人坐在终端前的直接操作”。
+- `fed` / `downfed`：管理 Federation 基础设施，例如创建项目、部署 Worker、保存 admin 连接、直接请求 Federation HTTP API。
+- `city` / `downcity`：管理本机 Agent、本地插件、chat/gateway，以及本机加入和登录某个 Federation 的用户态连接。
+
+如果你要部署一套共享后端，用 `fed`。如果你要让本机 Agent 连接、登录、运行和对话，用 `city`。
 
 ## 这组文档怎么读
 
 建议按下面顺序读：
 
-1. 先读 [快速开始](/zh/city-sdk-docs/packages/cli/quickstart)，先知道怎么连到 City 数据库。
-2. 再读 [模型与数据表管理](/zh/city-sdk-docs/packages/cli/models-and-tables)，理解最常见的表查看和模型维护动作。
-3. 最后读 [运维与排查](/zh/city-sdk-docs/packages/cli/operations-and-debug)，把日常检查、故障定位和人工修复串起来。
+1. 先读 [快速开始](/zh/city-sdk-docs/packages/cli/quickstart)，先分清 `fed` 和 `city` 的入口。
+2. 要部署 Federation，读 [部署到 Cloudflare Workers](/zh/city-sdk-docs/operations/deploy-cloudflare-workers)。
+3. 要排查本机 Agent 或 Federation 登录态，读 [运维与排查](/zh/city-sdk-docs/packages/cli/operations-and-debug)。
 
-## 适合什么时候用
+## fed / downfed
 
-- 你想直接查看 City 数据库里有哪些表
-- 你要增删改查 `downcity_models`
-- 你要在本地排查 runtime 数据是否写对了
-
-## 安装
+`fed` 面向 Federation 管理者。常用命令：
 
 ```bash
-npm i -g downcity
+fed
+fed create .
+fed deploy
+fed deploy --dry-run
+fed deploy --verify
+fed server add
+fed server manage
+fed query GET /health
 ```
 
-## 默认用法
+它负责的是共享后端本身：Federation 项目、Cloudflare Workers 部署、D1 / Queue / R2 资源、admin 工作区和 HTTP 调试。
+
+## city / downcity
+
+`city` 面向本机工作区和 Agent。常用命令：
 
 ```bash
 city
+city federation status
+city federation join <url>
+city federation login
+city agent create .
+city agent list
+city agent start
+city agent chat
 ```
 
-在交互式终端里，默认 `city` 会进入全屏 City TUI dashboard；在非交互环境里，它会输出帮助信息。
+它负责的是本机状态：选择哪个 Federation、保存用户登录态、运行本机 Agent、管理插件和 chat/gateway。
 
-CLI 也支持语言切换：
+## 边界
 
-```bash
-city --lang en
-city --lang zh --help
-DC_CLI_LANG=zh city
-```
-
-在交互模式下，`city` 也可以直接从菜单修改默认语言，并把选择持久化到本地。语言解析优先级是：先读 `--lang`，再读交互菜单里保存的默认语言，最后再读 `DC_CLI_LANG`、`LC_ALL`、`LC_MESSAGES`、`LANG`。
-
-如果还没有连接任何 City，dashboard 会先引导你添加一个 City；之后你可以：
-
-- 通过 `Manage Servers` 管理多个 City server
-- 进入 Admin 流程管理 env / models / cities / payment
-- 进入 User 流程登录、充值和调用服务
-
-## 可脚本化的 city 命令
-
-```bash
-city manage
-city create .
-city deploy
-city deploy --dry-run
-city deploy --verify
-city env refresh
-```
-
-这些命令负责 City 项目、部署，以及 Federation env cache。
-
-## 和 `city city` 的边界
-
-`city city` 是 City 的命令组。当本机 Federation 或 agent 需要选择 City base、保存 City user 登录态时，使用它：
-
-```bash
-city city use
-city city login
-city city status
-```
-
-一句话区分：
-
-- `city`：人在终端里直接操作 City
-- `city city`：让 City 和本地 agent 连接到某个 City base
-
-## 它和其他 package 的边界
-
-- 不替代 [@downcity/city](/zh/city-sdk-docs/packages/city/federation) 里的 `Admin City`
-- 不替代 [@downcity/city](/zh/city-sdk-docs/packages/city) 的运行时能力
-- 更适合“人工排查”和“初始化运维”，而不是嵌进产品代码里
-
-更准确地说：
-
-- `Admin City` 负责程序里的可信调用
-- `city` 负责终端里的人工运维和排查
+- 不要用 `city deploy` 部署 Federation；部署入口是 `fed deploy`。
+- 不要用 `city create` 创建 Federation 项目；创建入口是 `fed create`。
+- 不要把 `fed` 当成本机 Agent 管理器；Agent 入口是 `city agent ...`。
+- 程序化管理仍然优先使用 `Admin City`，CLI 更适合人坐在终端前操作。
 
 ## 下一步读什么
 
-- 想先接上数据库，读 [快速开始](/zh/city-sdk-docs/packages/cli/quickstart)
-- 想维护 `downcity_models` 和表数据，读 [模型与数据表管理](/zh/city-sdk-docs/packages/cli/models-and-tables)
-- 想看故障处理方式，读 [运维与排查](/zh/city-sdk-docs/packages/cli/operations-and-debug)
+- 要部署 Federation，读 [部署到 Cloudflare Workers](/zh/city-sdk-docs/operations/deploy-cloudflare-workers)
+- 要理解本机连接，读 [CLI 快速开始](/zh/city-sdk-docs/packages/cli/quickstart)
+- 要理解数据层，读 [Store 与 Table](/zh/city-sdk-docs/packages/city/store-and-table)

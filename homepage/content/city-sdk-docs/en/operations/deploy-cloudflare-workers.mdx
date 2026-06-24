@@ -1,11 +1,11 @@
 ---
 title: Deploy to Cloudflare Workers
-description: Deploy a City project to Workers + D1 with city deploy.
+description: Deploy a Federation project to Workers, D1, Queue, and R2 with fed deploy.
 ---
 
-This page is the operational path for deploying a City project to Cloudflare Workers.
+This page is the operational path for deploying a Federation project to Cloudflare Workers.
 
-If you only want to understand how City is wired to Workers and D1, read [Cloudflare Workers](/en/city-sdk-docs/guides/cloudflare-workers) first. This page focuses on production steps: `city.json`, local project creation, local deploys, D1, admin key retrieval, env setup, OAuth callbacks, and health checks.
+If you only want to understand how Federation is wired to Workers, read [Cloudflare Workers](/en/city-sdk-docs/guides/cloudflare-workers) first. This page focuses on production steps: `federation.json`, local project creation, local deploys, D1 / Queue / R2, admin key retrieval, env setup, OAuth callbacks, and health checks.
 
 ## Prerequisites
 
@@ -15,27 +15,27 @@ If you only want to understand how City is wired to Workers and D1, read [Cloudf
 Downcity does not deploy Workers automatically after `git push`. Deployment is explicit:
 
 ```bash
-city deploy
+fed deploy
 ```
 
-## 1. Create a City project
+## 1. Create a Federation project
 
 Developers normally start from an empty directory:
 
 ```bash
 mkdir my-city
 cd my-city
-city create .
+fed create .
 ```
 
-`city create .` interactively asks for the City name and deploy target, then generates the project skeleton:
+`fed create .` interactively asks for the Federation name and deploy target, then generates the project skeleton:
 
-- `city.json`
+- `federation.json`
 - `src/index.ts`
 - `package.json`
 - `tsconfig.json`
 
-The generated `city.json` only stores basic project information:
+The generated `federation.json` only stores basic project information:
 
 ```json
 {
@@ -48,41 +48,51 @@ The generated `city.json` only stores basic project information:
     "d1": {
       "binding": "DB",
       "name": "my-city-db"
+    },
+    "queue": {
+      "binding": "DOWNCITY_QUEUE",
+      "name": "my-city-queue"
+    },
+    "storage": {
+      "type": "r2",
+      "binding": "DOWNCITY_STORAGE",
+      "name": "my-city-storage",
+      "public_url_prefix": "https://images.example.com"
     }
   }
 }
 ```
 
-`type` says this is a City project, and `target` declares where it deploys. The current target is `cloudflare-workers`, which means Cloudflare Edge Workers. `entry` and `resources.d1` are commit-safe deployment intent; the D1 database id, Cloudflare account, Worker URL, and Wrangler config are handled by `city deploy` at deploy time instead of being written into `city.json`.
+`type` says this is a Federation project, and `target` declares where it deploys. The current target is `cloudflare-workers`, which means Cloudflare Edge Workers. `entry` and `resources` are commit-safe deployment intent; the D1 database id, Cloudflare account, Worker URL, and Wrangler config are handled by `fed deploy` at deploy time instead of being written into `federation.json`.
 
-If the City template already lives in a Git repository, use `city create` to bring it local first:
+If the City template already lives in a Git repository, use `fed create` to bring it local first:
 
 ```bash
-city create https://github.com/example/my-city.git
+fed create https://github.com/example/my-city.git
 cd my-city
 ```
 
-`city deploy` does not deploy remote URLs directly. It only deploys local City projects, so `.env` and deploy results have a clear project owner.
+`fed deploy` does not deploy remote URLs directly. It only deploys local Federation projects, so `.env` and deploy results have a clear project owner.
 
 ## 2. Deploy the current directory
 
-Inside the City project directory:
+Inside the Federation project directory:
 
 ```bash
-city deploy
+fed deploy
 ```
 
-When `city.json` uses the `cloudflare-workers` target, `city deploy` checks Cloudflare auth automatically. If Wrangler is not logged in, it opens Wrangler login. If Wrangler is logged in but Cloudflare cannot return an account automatically, City prompts you to refresh login or enter the Cloudflare account id once. The account id is saved to the project `.env` and reused by later deploys.
+When `federation.json` uses the `cloudflare-workers` target, `fed deploy` checks Cloudflare auth automatically. If Wrangler is not logged in, it opens Wrangler login. If Wrangler is logged in but Cloudflare cannot return an account automatically, the CLI prompts you to refresh login or enter the Cloudflare account id once. The account id is saved to local CLI state and reused by later deploys.
 
 You can also pass a local directory:
 
 ```bash
-city deploy ./my-city
+fed deploy ./my-city
 ```
 
-## 3. D1 resource config
+## 3. Resource Config
 
-D1 name lives in `federation.json` under `resources.d1.name`:
+Cloudflare Workers currently supports three resource declarations:
 
 ```json
 {
@@ -90,19 +100,31 @@ D1 name lives in `federation.json` under `resources.d1.name`:
     "d1": {
       "binding": "DB",
       "name": "my-city-db"
+    },
+    "queue": {
+      "binding": "DOWNCITY_QUEUE",
+      "name": "my-city-queue"
+    },
+    "storage": {
+      "type": "r2",
+      "binding": "DOWNCITY_STORAGE",
+      "name": "my-city-storage",
+      "public_url_prefix": "https://images.example.com"
     }
   }
 }
 ```
 
-If it is omitted, `city deploy` uses the default D1 name `${name}-db` from `city.json.name`. During deployment, it reuses a D1 database with that name; if none exists and this is not `--dry-run`, it creates one automatically. The D1 database id is Cloudflare deploy state and is not written back to project config.
+If D1 / Queue are omitted, `fed deploy` uses the default names `${name}-db` and `${name}-queue` from `federation.json.name`. Storage is enabled only when `resources.storage` exists.
 
-Cloudflare account is not part of the City project config. `city deploy` reuses Wrangler login first; only when Cloudflare cannot resolve the account automatically does City prompt once and save it into local City CLI state.
+During deployment, `fed deploy` reuses same-name D1 databases, Queues, and R2 buckets. If a declared resource is missing and this is not `--dry-run`, it creates the resource automatically. The D1 database id is Cloudflare deploy state and is not written back to project config.
+
+Cloudflare account is not part of the Federation project config. `fed deploy` reuses Wrangler login first; only when Cloudflare cannot resolve the account automatically does the CLI prompt once and save it into local fed CLI state.
 
 You can also pass the account id for one deploy:
 
 ```bash
-city deploy --account-id <your-cloudflare-account-id>
+fed deploy --account-id <your-cloudflare-account-id>
 ```
 
 ## 4. Dry-run
@@ -110,49 +132,51 @@ city deploy --account-id <your-cloudflare-account-id>
 Before publishing, check the bundle and Wrangler config:
 
 ```bash
-city deploy --dry-run
+fed deploy --dry-run
 ```
 
 For another directory:
 
 ```bash
-city deploy ./my-city --dry-run
+fed deploy ./my-city --dry-run
 ```
 
 ## 5. Deploy flow
 
-`city deploy` runs these steps:
+`fed deploy` runs these steps:
 
-- reads `city.json` from the target directory
-- checks the target platform identity from `city.json.target`; Cloudflare Workers opens Wrangler login or guides account selection when needed
+- reads `federation.json` from the target directory
+- checks the target platform identity from `federation.json.target`; Cloudflare Workers opens Wrangler login or guides account selection when needed
 - if this is not `--dry-run`, automatically bumps `package.json.version` by one patch version before deployment
 - runs `pnpm build` if package.json has a `build` script
 - runs `pnpm typecheck` if package.json has a `typecheck` script
 - prepares D1 for the `cloudflare-workers` target by looking up `resources.d1.name`, and creates it automatically when missing
+- prepares Queue by looking up `resources.queue.name`, and creates it automatically when missing
+- if `resources.storage` is declared, prepares an R2 bucket by looking up `resources.storage.name`, and creates it automatically when missing
 - generates Wrangler config temporarily instead of writing it into the project directory
 - runs `wrangler deploy --config <generated-wrangler.toml>`
-- automatically registers the deployed Worker URL as the current City server
+- automatically registers the deployed Worker URL as the current Federation
 - requests Worker `/health` when `--verify` is passed
 
-Deploy output is grouped by stage: `Project`, `Version`, `Build`, `Typecheck`, `D1 Database`, `Wrangler`, `Deployment`, and `Active Server`.
+Deploy output is grouped by stage: `Project`, `Version`, `Build`, `Typecheck`, `D1 Database`, `Queue`, `Storage`, `Wrangler`, `Deployment`, and `Active Server`.
 
-`city.json` stays as the commit-safe project declaration. Business secrets, provider keys, and service env should be written into City's own env table instead of `city.json`.
+`federation.json` stays as the commit-safe project declaration. Business secrets, provider keys, and service env should be written into Federation's own env table instead of `federation.json`.
 
-`city deploy --dry-run` and `city deploy --verify-only` do not change the project version.
+`fed deploy --dry-run` and `fed deploy --verify-only` do not change the project version.
 
 ## 6. Developer edge starter
 
 The Downcity repository keeps `templates/edge` as a developer-friendly starter project:
 
 ```bash
-city deploy templates/edge --verify
+fed deploy templates/edge --verify
 ```
 
 This starter is useful for local experiments and custom deployments. Downcity's private official production Worker implementation lives outside the public repository.
 
-## 7. Initialize City
+## 7. Initialize Federation
 
-Call `/health` once after deployment. This lets the Worker boot City and create the built-in `env` / `cities` tables.
+Call `/health` once after deployment. This lets the Worker boot Federation and create the built-in `env` / `cities` tables.
 
 ```bash
 curl https://my-city.<your-subdomain>.workers.dev/health
@@ -169,18 +193,18 @@ Expected shape:
 
 ## 8. Retrieve the admin key
 
-On first boot, City stores `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` in its own `env` table. For Workers + D1, retrieve it from the remote D1 database:
+On first boot, Federation stores `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` in its own `env` table. For Workers + D1, retrieve it from the remote D1 database:
 
 ```bash
 npx wrangler d1 execute my-city-db --remote \
   --command "SELECT value FROM env WHERE key='DOWNCITY_FEDERATION_ADMIN_SECRET_KEY'"
 ```
 
-Keep this key in a trusted place. It is the credential used by `Admin City`, City CLI, or direct admin HTTP calls.
+Keep this key in a trusted place. It is the credential used by `Admin City`, fed CLI, or direct admin HTTP calls.
 
 ## 9. Write provider and service env
 
-Provider keys and service secrets should be written into City's env table instead of public clients.
+Provider keys and service secrets should be written into the Federation env table instead of public clients.
 
 Example:
 
@@ -217,10 +241,10 @@ The callback domain must match the public domain users actually visit. If you la
 
 ## 11. Verify
 
-If a City server is already connected, run only the health check:
+If a Federation is already connected, run only the health check:
 
 ```bash
-city deploy --verify-only
+fed deploy --verify-only
 ```
 
 You can also check manually:
@@ -235,7 +259,7 @@ curl https://my-city.<your-subdomain>.workers.dev/health
 After code changes:
 
 ```bash
-city deploy --verify
+fed deploy --verify
 ```
 
 Runtime env lives in D1, so redeploying the Worker does not erase provider keys, OAuth secrets, cities, balances, usage records, or Stripe payment records.

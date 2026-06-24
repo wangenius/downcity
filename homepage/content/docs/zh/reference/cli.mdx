@@ -7,9 +7,9 @@ description: Downcity 命令行参考文档的位置
 
 Downcity docs 解释设计模型、运行边界和配置语义。
 
-统一的 `downcity` 命令（别名 `city`）既负责本机 Agent 宿主，也负责 City 管理。精确参数以本机安装的 CLI help 为准；City 侧能力详见 City SDK 文档。
+`downcity` / `city` 负责本机 Agent 宿主、本机项目管理，以及连接到某个 Federation。Federation 创建、部署和基础设施运维由 `fed` / `downfed` 负责；精确参数以本机安装的 CLI help 为准，SDK 侧 CLI 边界详见 City SDK 文档。
 
-- [City CLI](/zh/city-sdk-docs/packages/cli)
+- [CLI：fed 与 city](/zh/city-sdk-docs/packages/cli)
 
 ## 本地帮助
 
@@ -17,7 +17,7 @@ Downcity docs 解释设计模型、运行边界和配置语义。
 
 ## 交互式 TUI
 
-不带子命令运行 `city` 或 `downcity` 时，现在默认进入交互式 TUI。`city` 会先显示 City 列表，选择某个 City 后直接进入该 City 的 admin 管理；两个 CLI 都保持同一套稳定布局：左侧 sidebar 承载菜单层级，顶部显示 breadcrumb，loading、输入表单、表格、JSON、消息与选择详情都在右侧 section 内完成，直到你主动退出 TUI。
+不带子命令运行 `city` 或 `downcity` 时，现在默认进入交互式 TUI。`city` 侧聚焦本机 Agent 与 Federation 连接状态；`fed` 侧聚焦 Federation 管理与部署。两个 CLI 都保持同一套稳定布局：左侧 sidebar 承载菜单层级，顶部显示 breadcrumb，loading、输入表单、表格、JSON、消息与选择详情都在右侧 section 内完成，直到你主动退出 TUI。
 
 ## CLI 语言切换
 

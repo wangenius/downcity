@@ -34,7 +34,7 @@ accounts service 读取下面两个环境变量：
 - `AppID` -> `WECHAT_CLIENT_ID`
 - `AppSecret` -> `WECHAT_CLIENT_SECRET`
 
-写进 City 运行环境。
+写进 Federation env。
 
 ## 回调地址怎么填
 
@@ -130,4 +130,4 @@ const user = new City({
 
 - 想看 OAuth 整体链路，继续读 [OAuth 与 Session](/zh/services-sdk-docs/accounts/oauth-and-session)
 - 想看完整接入流程，读 [Accounts 服务](/zh/services-sdk-docs/accounts)
-- 部署后记得通过 Downcity CLI / Admin API 把 `WECHAT_CLIENT_ID` 和 `WECHAT_CLIENT_SECRET` 写进 City env
+- 部署后记得通过 Admin API 或 `fed` 的 admin workspace 把 `WECHAT_CLIENT_ID` 和 `WECHAT_CLIENT_SECRET` 写进 Federation env

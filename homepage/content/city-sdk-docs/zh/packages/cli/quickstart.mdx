@@ -148,7 +148,7 @@ fed query POST /v1/ai/image/result --data '{"job_id":"..."}'
 }
 ```
 
-部署时 CLI 会把它写入临时 `wrangler.toml` 的 `[[r2_buckets]]`，并把 `public_url_prefix` 写成 Worker var。Worker 里注册 `R2Storage` 后，AI 图片任务成功结果会优先返回自有存储 URL；如果转存失败，会保留上游原始 URL。
+部署时 CLI 会先检查同名 R2 bucket 是否存在；不存在且不是 dry-run 时会自动创建。随后 CLI 会把它写入临时 `wrangler.toml` 的 `[[r2_buckets]]`，并把 `public_url_prefix` 写成 Worker var。Worker 里注册 `R2Storage` 后，AI 图片任务成功结果会优先返回自有存储 URL；如果转存失败，会保留上游原始 URL。
 
 ## 一个最常见的上手流程
 

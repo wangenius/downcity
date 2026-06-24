@@ -96,3 +96,32 @@ export interface FederationQueueSummary {
    */
   status: FederationQueueStatus;
 }
+
+/**
+ * Storage 准备状态。
+ */
+export type FederationStorageStatus =
+  | "created"
+  | "reused"
+  | "pending"
+  | "skipped";
+
+/**
+ * Storage 准备结果。
+ */
+export interface FederationStorageSummary {
+  /**
+   * 存储资源名称。
+   */
+  name?: string;
+
+  /**
+   * 存储资源类型。
+   */
+  type?: "r2";
+
+  /**
+   * 存储资源准备状态。
+   */
+  status: FederationStorageStatus;
+}

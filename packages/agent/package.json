@@ -27,7 +27,6 @@
     "@ai-sdk/openai-compatible": "^2.0.48",
     "@downcity/shell": "workspace:^",
     "@downcity/type": "workspace:*",
-    "@larksuiteoapi/node-sdk": "^1.66.0",
     "ai": "^6.0.193",
     "commander": "^15.0.0",
     "dotenv": "^17.4.2",

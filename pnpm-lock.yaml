@@ -180,9 +180,6 @@ importers:
       '@downcity/type':
         specifier: workspace:*
         version: link:../type
-      '@larksuiteoapi/node-sdk':
-        specifier: ^1.66.0
-        version: 1.66.0
       ai:
         specifier: ^6.0.193
         version: 6.0.193(zod@4.4.3)

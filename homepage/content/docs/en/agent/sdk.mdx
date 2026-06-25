@@ -1,0 +1,93 @@
+---
+title: Agent SDK
+description: How to use the Agent SDK directly in your code
+---
+
+# Agent SDK
+
+The Agent SDK (`@downcity/agent`) is the core runtime for executing agent work. Everything else — the CLI, the console, the plugins — sits on top of it or connects to it.
+
+## Creating an Agent
+
+```ts
+import { Agent } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  model: myModel,
+  tools: [myTool],
+  plugins: [myPlugin],
+  env: { ... },
+});
+```
+
+## Constructor options
+
+- `id` — stable agent identifier. Used for session storage and runtime directories.
+- `path` — project directory. The Agent reads `PROFILE.md`, `SOUL.md`, and `.env` from here.
+- `model` — the live model instance. Passed directly, not looked up from a catalog.
+- `tools` — array of tool instances available to the agent.
+- `plugins` — array of plugin instances to load at startup.
+- `env` — host-provided environment variables, overlaid with project `.env`.
+- `start` — optional HTTP server config (port, host).
+- `execution` — optional execution binding config.
+
+## Model
+
+The model is the most important dependency. It can be:
+
+- Passed directly to the constructor
+- Set per-session via `session.set({ model })`
+- Resolved from `downcity.json` when the CLI manages the project
+
+## Tools
+
+Tools are functions the Agent can call during execution. They are attached explicitly:
+
+```ts
+const agent = new Agent({
+  tools: [searchTool, calculatorTool],
+});
+```
+
+## Plugins
+
+Plugins extend the Agent with capabilities like chat, tasks, memory, and shell. They are attached explicitly:
+
+```ts
+const agent = new Agent({
+  plugins: [chatPlugin, memoryPlugin],
+});
+```
+
+## Environment variables
+
+The Agent merges two env layers at startup:
+
+1. Host-provided env (from `new Agent({ env })` or the CLI runtime).
+2. Project-root `.env` (overlays the host layer).
+
+Runtime metadata vars such as `DC_AGENT_ID`, `DC_AGENT_PATH`, and `DC_SESSION_ID` are injected for the current command context.
+
+## Starting the Agent
+
+```ts
+await agent.start();
+```
+
+This loads plugins, initializes sessions, and starts the HTTP server if configured.
+
+## Stopping the Agent
+
+```ts
+await agent.stop();
+```
+
+This gracefully shuts down plugins, persists state, and cleans up resources.
+
+Continue with:
+
+- [Agent CLI](/en/docs/agent/cli)
+- [Agent Profile](/en/docs/agent/profile)
+- [Agent Lifecycle](/en/docs/agent/lifecycle)

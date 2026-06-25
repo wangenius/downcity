@@ -1,0 +1,32 @@
+---
+title: Shell 插件
+description: Shell 插件如何安全地执行本地命令
+---
+
+# Shell 插件
+
+Shell 插件让 Agent 在沙箱环境中执行本地命令。它适用于文件操作、脚本执行和系统集成。
+
+## 功能
+
+- 代表 Agent 执行 Shell 命令
+- 沙箱执行以防止有害操作
+- 捕获 stdout、stderr 和退出码
+- 支持超时和取消
+
+## 安全
+
+默认情况下，Shell 插件在受限环境中运行命令。危险操作（删除系统文件、修改系统配置）会被阻止，除非显式允许。
+
+## 使用场景
+
+- 运行构建脚本
+- 文件系统操作
+- 查询系统状态
+- 执行项目特定工具
+
+继续阅读：
+
+- [Chat 插件](/zh/docs/plugin/chat)
+- [Task 插件](/zh/docs/plugin/task)
+- [Agent Plugins Docs](/zh/plugins-docs)

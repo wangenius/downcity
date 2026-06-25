@@ -1,0 +1,54 @@
+---
+title: Chat Plugin
+description: How the Chat plugin connects agents to messaging channels
+---
+
+# Chat Plugin
+
+The Chat plugin connects your Agent to messaging channels like Telegram, Feishu, and QQ. It handles incoming messages, routes them to the Agent session, and sends replies back to the channel.
+
+## What it does
+
+- Listens to incoming messages from configured channels
+- Creates or reuses sessions per conversation
+- Routes user messages to the Agent
+- Sends Agent replies back to the channel
+
+## Configuration
+
+Channels are configured under `plugins.chat.channels` in `downcity.json`:
+
+```json
+{
+  "plugins": {
+    "chat": {
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "channelAccountId": "telegram-main"
+        },
+        "feishu": {
+          "enabled": true,
+          "channelAccountId": "feishu-work"
+        }
+      }
+    }
+  }
+}
+```
+
+## Channel accounts
+
+The actual bot credentials live in `~/.downcity/downcity.db` (managed by City). The project only references them by `channelAccountId`.
+
+## Supported channels
+
+- Telegram
+- Feishu (Lark)
+- QQ
+
+Continue with:
+
+- [Task Plugin](/en/docs/plugin/task)
+- [Memory Plugin](/en/docs/plugin/memory)
+- [Agent Plugins Docs](/en/plugins-docs)

@@ -1,0 +1,31 @@
+---
+title: Memory 插件
+description: Memory 插件如何持久化会话历史和上下文
+---
+
+# Memory 插件
+
+Memory 插件持久化 Agent 的会话历史和长期上下文。没有它，Agent 每次重启都会从零开始。
+
+## 功能
+
+- 存储会话消息和对话线程
+- 为长期对话提供上下文检索
+- 支持不同的记忆后端（本地文件、数据库）
+- 支持跨会话的连续性
+
+## 记忆类型
+
+- **短期记忆** — 当前会话上下文
+- **长期记忆** — 跨会话持久化的事实和用户偏好
+- **工作记忆** — 当前任务的临时数据
+
+## 配置
+
+Memory 插件通常默认启用。你可以在 `downcity.json` 或通过插件构造参数配置存储后端。
+
+继续阅读：
+
+- [Chat 插件](/zh/docs/plugin/chat)
+- [Task 插件](/zh/docs/plugin/task)
+- [Agent Plugins Docs](/zh/plugins-docs)

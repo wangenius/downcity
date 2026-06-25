@@ -1,0 +1,42 @@
+---
+title: Usage & Billing
+
+description: How City tracks usage, manages balance, and handles billing
+---
+
+# Usage & Billing
+
+City meters every model call and tracks usage across all connected Agents and products. This is the foundation for billing, quotas, and cost management.
+
+## Usage tracking
+
+- Every model request is metered (tokens in, tokens out)
+- Usage is aggregated per user, per project, and per model
+- Real-time usage dashboards are available in the Console
+
+## Balance
+
+- Users maintain a balance account in City
+- Balance is consumed as usage accrues
+- Low balance triggers alerts
+- Auto-recharge can be configured
+
+## Billing
+
+City integrates with Stripe for:
+
+- One-time payments
+- Subscription plans
+- Usage-based billing
+- Invoice generation
+
+## Quotas
+
+- Soft quotas warn before limits are reached
+- Hard quotas block requests when exceeded
+- Quotas can be configured per user, per project, or per model
+
+Continue with:
+
+- [Model Pool](/en/docs/city/model-pool)
+- [City Identity](/en/docs/city/identity)

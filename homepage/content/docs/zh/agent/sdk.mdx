@@ -1,0 +1,93 @@
+---
+title: Agent SDK
+description: 如何在代码中直接使用 Agent SDK
+---
+
+# Agent SDK
+
+Agent SDK (`@downcity/agent`) 是执行 Agent 工作的核心运行时。其他所有东西 —— CLI、控制台、插件 —— 都建立在它之上或连接到它。
+
+## 创建 Agent
+
+```ts
+import { Agent } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  model: myModel,
+  tools: [myTool],
+  plugins: [myPlugin],
+  env: { ... },
+});
+```
+
+## 构造参数
+
+- `id` — 稳定的 Agent 标识符。用于会话存储和运行时目录归属。
+- `path` — 项目目录。Agent 会从这里读取 `PROFILE.md`、`SOUL.md` 和 `.env`。
+- `model` — 实时模型实例。直接传入，不从目录查询。
+- `tools` — 可供 Agent 使用的工具实例数组。
+- `plugins` — 启动时加载的插件实例数组。
+- `env` — 宿主提供的环境变量，与项目 `.env` 叠加。
+- `start` — 可选的 HTTP 服务器配置（端口、host）。
+- `execution` — 可选的执行绑定配置。
+
+## 模型
+
+模型是最重要的依赖。它可以通过以下方式提供：
+
+- 直接传入构造函数
+- 通过 `session.set({ model })` 按会话设置
+- 当 CLI 管理项目时从 `downcity.json` 解析
+
+## 工具
+
+工具是 Agent 在执行过程中可调用的函数。显式挂载：
+
+```ts
+const agent = new Agent({
+  tools: [searchTool, calculatorTool],
+});
+```
+
+## 插件
+
+插件扩展 Agent 的能力，如聊天、任务、记忆和 Shell。显式挂载：
+
+```ts
+const agent = new Agent({
+  plugins: [chatPlugin, memoryPlugin],
+});
+```
+
+## 环境变量
+
+Agent 在启动时合并两层环境变量：
+
+1. 宿主提供的环境变量（来自 `new Agent({ env })` 或 CLI 运行时）。
+2. 项目根目录 `.env`（叠加在宿主层之上）。
+
+运行时元数据变量如 `DC_AGENT_ID`、`DC_AGENT_PATH`、`DC_SESSION_ID` 是为当前命令上下文注入的。
+
+## 启动 Agent
+
+```ts
+await agent.start();
+```
+
+这会加载插件、初始化会话，并在配置了 HTTP 服务器时启动它。
+
+## 停止 Agent
+
+```ts
+await agent.stop();
+```
+
+这会优雅地关闭插件、持久化状态并清理资源。
+
+继续阅读：
+
+- [Agent CLI](/zh/docs/agent/cli)
+- [Agent Profile](/zh/docs/agent/profile)
+- [Agent 生命周期](/zh/docs/agent/lifecycle)

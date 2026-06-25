@@ -1,0 +1,36 @@
+---
+title: Task Plugin
+description: How the Task plugin schedules and runs background jobs
+---
+
+# Task Plugin
+
+The Task plugin lets your Agent schedule and run background jobs. It is useful for periodic data fetching, report generation, or any work that should happen outside the normal request-response flow.
+
+## What it does
+
+- Schedules tasks to run at specific times or intervals
+- Persists task state across Agent restarts
+- Handles retries and failure recovery
+- Provides a task queue for deferred work
+
+## Defining a task
+
+Tasks are defined in the project and registered with the Task plugin at startup. They can be triggered by:
+
+- Cron expressions
+- One-shot scheduling
+- Event-driven triggers
+
+## Use cases
+
+- Daily data sync
+- Periodic report generation
+- Background file processing
+- Scheduled notifications
+
+Continue with:
+
+- [Chat Plugin](/en/docs/plugin/chat)
+- [Memory Plugin](/en/docs/plugin/memory)
+- [Agent Plugins Docs](/en/plugins-docs)

@@ -1,0 +1,54 @@
+---
+title: Chat 插件
+description: Chat 插件如何将 Agent 连接到聊天渠道
+---
+
+# Chat 插件
+
+Chat 插件将 Agent 连接到 Telegram、飞书、QQ 等聊天渠道。它处理收到的消息，将它们路由到 Agent 会话，并将回复发送回渠道。
+
+## 功能
+
+- 监听已配置渠道的消息
+- 为每个对话创建或复用会话
+- 将用户消息路由到 Agent
+- 将 Agent 回复发送回渠道
+
+## 配置
+
+渠道在 `downcity.json` 的 `plugins.chat.channels` 下配置：
+
+```json
+{
+  "plugins": {
+    "chat": {
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "channelAccountId": "telegram-main"
+        },
+        "feishu": {
+          "enabled": true,
+          "channelAccountId": "feishu-work"
+        }
+      }
+    }
+  }
+}
+```
+
+## 渠道账号
+
+实际的机器人凭证存储在 `~/.downcity/downcity.db` 中（由 City 管理）。项目只通过 `channelAccountId` 引用它们。
+
+## 支持的渠道
+
+- Telegram
+- 飞书 (Lark)
+- QQ
+
+继续阅读：
+
+- [Task 插件](/zh/docs/plugin/task)
+- [Memory 插件](/zh/docs/plugin/memory)
+- [Agent Plugins Docs](/zh/plugins-docs)

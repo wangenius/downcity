@@ -1,0 +1,32 @@
+---
+title: Shell Plugin
+description: How the Shell plugin executes local commands safely
+---
+
+# Shell Plugin
+
+The Shell plugin lets your Agent execute local commands in a sandboxed environment. It is useful for file operations, script execution, and system integration.
+
+## What it does
+
+- Executes shell commands on behalf of the Agent
+- Sandboxes execution to prevent harmful operations
+- Captures stdout, stderr, and exit codes
+- Supports timeouts and cancellation
+
+## Safety
+
+By default, the Shell plugin runs commands in a restricted environment. Dangerous operations (deleting system files, modifying system config) are blocked unless explicitly allowed.
+
+## Use cases
+
+- Running build scripts
+- File system operations
+- Querying system state
+- Executing project-specific tools
+
+Continue with:
+
+- [Chat Plugin](/en/docs/plugin/chat)
+- [Task Plugin](/en/docs/plugin/task)
+- [Agent Plugins Docs](/en/plugins-docs)

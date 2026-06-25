@@ -1,4 +1,4 @@
 {
   "title": "Federation & Service",
-  "pages": ["overview"]
+  "pages": ["overview", "model-provider", "service", "action", "routing"]
 }

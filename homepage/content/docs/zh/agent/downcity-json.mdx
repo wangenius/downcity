@@ -1,0 +1,49 @@
+---
+title: downcity.json
+description: CLI 读取并传给 Agent SDK 的项目配置文件
+---
+
+# downcity.json
+
+`downcity.json` 是项目配置文件。CLI 读取它并将内容传给 Agent SDK 构造函数。当你直接使用 SDK 时，也可以把它作为配置参考。
+
+## 最小结构
+
+```json
+{
+  "$schema": "./.downcity/schema/downcity.schema.json",
+  "id": "my-agent",
+  "version": "1.0.0",
+  "start": {
+    "port": 5314,
+    "host": "0.0.0.0"
+  },
+  "execution": {
+    "type": "api",
+    "modelId": "default"
+  },
+  "plugins": {}
+}
+```
+
+## 关键字段
+
+- `id` — 稳定的 Agent 标识符。用于会话存储和运行时目录归属。
+- `start` — 运行时启动配置（端口、host）。CLI 参数会覆盖这里的值。
+- `execution` — 将项目绑定到已连接 Federation AIService 中的模型 ID。
+- `plugins` — 插件级配置。
+
+## 不应该放在这里的内容
+
+- 完整的模型供应商标识（那些属于 City / Federation AIService）。
+- 明文 API 密钥或机器人凭证（那些属于 `~/.downcity/downcity.db` 或通过环境变量注入）。
+- 控制台级别的控制平面设置。
+
+## 与 SDK 的关系
+
+当你直接使用 SDK 时，你以构造参数形式传入相同的值。`downcity.json` 只是这些参数的序列化形式，方便 CLI 使用。
+
+继续阅读：
+
+- [Agent SDK](/zh/docs/agent/sdk)
+- [Agent CLI](/zh/docs/agent/cli)

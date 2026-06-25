@@ -1,0 +1,63 @@
+---
+title: 自定义插件
+description: 如何为 Agent 编写和注册自定义插件
+---
+
+# 自定义插件
+
+如果内置插件不能满足需求，你可以编写自定义插件。插件是实现 Plugin API 的普通 TypeScript 模块。
+
+## 插件结构
+
+```ts
+import { definePlugin } from "@downcity/agent-plugin";
+
+export default definePlugin({
+  id: "my-plugin",
+  name: "My Plugin",
+  version: "1.0.0",
+
+  async init(context) {
+    // 生命周期钩子：Agent 启动时调用
+  },
+
+  async destroy(context) {
+    // 生命周期钩子：Agent 停止时调用
+  },
+
+  tools: [
+    {
+      id: "myTool",
+      description: "做一件有用的事",
+      async handler(args) {
+        return { result: "done" };
+      },
+    },
+  ],
+});
+```
+
+## 关键概念
+
+- `id` — 唯一插件标识符
+- `init` — 启动钩子，用于设置和连接
+- `destroy` — 关闭钩子，用于清理
+- `tools` — Agent 在执行过程中可调用的函数
+
+## 注册插件
+
+传给 Agent 构造函数：
+
+```ts
+import myPlugin from "./my-plugin";
+
+const agent = new Agent({
+  plugins: [myPlugin],
+});
+```
+
+继续阅读：
+
+- [Chat 插件](/zh/docs/plugin/chat)
+- [Task 插件](/zh/docs/plugin/task)
+- [Agent Plugins Docs](/zh/plugins-docs)

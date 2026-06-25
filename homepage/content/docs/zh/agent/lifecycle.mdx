@@ -1,0 +1,77 @@
+---
+title: Agent 生命周期
+description: Agent 从初始化到执行再到恢复的全过程
+---
+
+# Agent 生命周期
+
+Agent 通常从项目创建到运行和恢复经历五个阶段。
+
+## 1. 初始化项目
+
+初始化生成最小运行时骨架：
+
+- `PROFILE.md`
+- `SOUL.md`
+- `downcity.json`
+- `.downcity/`
+
+目标是让一个普通目录变成 Downcity 能识别和运行的 Agent 项目。
+
+## 2. 绑定执行目标
+
+项目必须绑定到已连接 Federation AIService 中的模型 ID：
+
+```json
+{
+  "execution": {
+    "type": "api",
+    "modelId": "your-model-id"
+  }
+}
+```
+
+这个绑定是启动的核心前提。
+
+## 3. 启动运行时
+
+启动期间，Agent 会：
+
+- 验证项目已初始化
+- 读取 `downcity.json`
+- 加载 `PROFILE.md` 和 `SOUL.md`
+- 通过已连接的 Federation AIService 解析模型绑定
+- 启动 HTTP（如果 `start` 中配置了）
+- 启动已配置的项目插件
+
+使用 CLI 时，Downcity 会维护守护进程状态，以便后续检查、停止、重启或修复进程。
+
+## 4. 执行与交互
+
+启动后，Agent 可以通过多种表层进入：
+
+- Downcity CLI
+- 已连接的聊天渠道
+- 项目级 HTTP 路由
+- SDK `Agent` 和 `RemoteAgent`
+
+所有路径都收敛到同一个会话和执行核心。
+
+## 5. 停止、重启与恢复
+
+停止、重启和恢复是同一项目运行时的生命周期操作。如果进程异常退出但状态文件仍在，恢复操作会修复守护进程状态与实际进程之间的一致性。
+
+## 日常循环
+
+实际使用中，生命周期通常是循环的：
+
+1. 编辑 `PROFILE.md` 或 `SOUL.md`
+2. 如需则编辑 `downcity.json`
+3. 重启项目运行时
+4. 与 Agent 交互
+5. 观察输出并再次迭代
+
+继续阅读：
+
+- [Agent SDK](/zh/docs/agent/sdk)
+- [Agent CLI](/zh/docs/agent/cli)

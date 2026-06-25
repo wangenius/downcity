@@ -1,0 +1,45 @@
+---
+title: 身份
+description: City 如何管理用户身份、认证和权限
+---
+
+# 身份
+
+City 管理全局用户身份、认证和权限。这是所有 Agent 和产品连接的共享基础设施，而不是在每个项目中复制。
+
+## City 负责什么
+
+- **用户账号** — 全局 downcity 账号，包含个人资料和凭证
+- **API token** — 用于编程访问的有作用域 token
+- **权限** — 资源和操作的基于角色的访问控制
+- **渠道账号** — Telegram、飞书、QQ 等机器人凭证
+
+## 认证流程
+
+1. 用户通过控制台或 CLI 登录
+2. City 颁发身份 token
+3. 该 token 用于所有后续 API 调用
+4. Agent 在提供 HTTP 请求时通过 City 验证 token
+
+## 渠道账号
+
+聊天平台的机器人凭证存储在 `~/.downcity/downcity.db` 中，并通过 ID 从项目引用：
+
+```json
+{
+  "plugins": {
+    "chat": {
+      "channels": {
+        "telegram": {
+          "channelAccountId": "telegram-main"
+        }
+      }
+    }
+  }
+}
+```
+
+继续阅读：
+
+- [模型池](/zh/docs/city/model-pool)
+- [用量与计费](/zh/docs/city/usage-billing)

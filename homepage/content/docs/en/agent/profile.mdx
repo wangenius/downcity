@@ -1,0 +1,63 @@
+---
+title: Agent Profile
+description: How to shape agent behavior with PROFILE.md and SOUL.md
+---
+
+# Agent Profile
+
+An Agent's behavior is shaped by two natural-language prompt files in the project directory: `PROFILE.md` and `SOUL.md`. The Agent reads both at startup and includes them in the system context for every session.
+
+## PROFILE.md
+
+Defines the agent's visible role:
+
+- who the agent is
+- what it is responsible for
+- how it should answer
+- which boundaries it should respect
+
+Think of it as the role definition rather than runtime configuration. If you want to shape output style, priorities, or collaboration tone, this is the first place to do it.
+
+### Example
+
+```markdown
+# Profile
+
+You are a helpful coding assistant named DevBot.
+
+You specialize in:
+- Reviewing pull requests
+- Explaining code changes
+- Suggesting refactors
+
+You should:
+- Be concise but thorough
+- Use examples when helpful
+- Ask clarifying questions when context is unclear
+```
+
+## SOUL.md
+
+Defines deeper, more stable operating principles. It is closer to foundational working style than a one-off role prompt. Change it only when you truly want to shift the agent's long-term behavior.
+
+### Example
+
+```markdown
+# Soul
+
+Always prefer simple solutions over clever ones.
+When uncertain, ask rather than assume.
+Respect user privacy — never log sensitive data.
+```
+
+## Best practices
+
+- Keep `PROFILE.md` focused on the current role and responsibilities.
+- Keep `SOUL.md` focused on timeless principles and values.
+- In a healthy project, `SOUL.md` changes less often than `PROFILE.md`.
+- Both files are optional, but most projects benefit from having both.
+
+Continue with:
+
+- [Agent SDK](/en/docs/agent/sdk)
+- [Agent CLI](/en/docs/agent/cli)

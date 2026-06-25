@@ -1,0 +1,58 @@
+---
+title: Agent CLI
+description: 如何使用 CLI 管理 Agent 项目
+---
+
+# Agent CLI
+
+`downcity` CLI 是 Agent SDK 的便利包装器。它从项目目录读取 `downcity.json`，将那些值传给 Agent SDK 构造函数，然后处理启动、停止和重启等生命周期命令。
+
+## 项目初始化
+
+```bash
+downcity agent init my-project
+```
+
+这会生成：
+
+- `downcity.json`
+- `PROFILE.md`
+- `SOUL.md`
+- `.downcity/`
+
+## 项目目录结构
+
+```text
+my-project/
+├── downcity.json
+├── PROFILE.md
+├── SOUL.md
+├── .downcity/
+└── 你的业务代码
+```
+
+## 关键命令
+
+- `downcity agent start` — 在当前项目启动 Agent
+- `downcity agent stop` — 停止运行中的 Agent
+- `downcity agent restart` — 重启 Agent
+- `downcity agent status` — 检查 Agent 是否正在运行
+- `downcity agent logs` — 查看运行时日志
+
+## CLI 做了什么
+
+1. 从项目目录读取 `downcity.json`
+2. 通过已连接的 Federation AIService 解析 `execution.modelId`
+3. 将解析后的配置传给 `new Agent(...)`
+4. 调用 `agent.start()`
+5. 维护守护进程状态，以便后续检查、停止或重启
+
+## CLI vs SDK
+
+CLI 用于日常项目管理。SDK 用于将 Agent 能力嵌入自己的应用。两者使用相同的执行核心。
+
+继续阅读：
+
+- [Agent SDK](/zh/docs/agent/sdk)
+- [downcity.json](/zh/docs/agent/downcity-json)
+- [Agent 生命周期](/zh/docs/agent/lifecycle)

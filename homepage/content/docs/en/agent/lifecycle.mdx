@@ -1,0 +1,77 @@
+---
+title: Agent Lifecycle
+description: The full lifecycle of an Agent from initialization to execution and recovery
+---
+
+# Agent Lifecycle
+
+An Agent usually moves through five stages from project creation to running and recovery.
+
+## 1. Initialize the project
+
+Initialization generates the minimum runtime scaffold:
+
+- `PROFILE.md`
+- `SOUL.md`
+- `downcity.json`
+- `.downcity/`
+
+The goal is to turn a normal directory into an Agent project that Downcity can recognize and run.
+
+## 2. Bind an execution target
+
+The project must bind to a model ID from the connected Federation AIService:
+
+```json
+{
+  "execution": {
+    "type": "api",
+    "modelId": "your-model-id"
+  }
+}
+```
+
+This binding is a core prerequisite for startup.
+
+## 3. Start the runtime
+
+During startup, the Agent will:
+
+- validate that the project is initialized
+- read `downcity.json`
+- load `PROFILE.md` and `SOUL.md`
+- resolve model binding through the connected Federation AIService
+- start HTTP (if configured in `start`)
+- start configured project plugins
+
+When using the CLI, Downcity maintains daemon state so lifecycle actions can inspect, stop, restart, or repair the process later.
+
+## 4. Execute and interact
+
+Once running, the Agent can be entered through multiple surfaces:
+
+- Downcity CLI
+- connected chat channels
+- project-level HTTP routes
+- SDK `Agent` and `RemoteAgent`
+
+All paths converge on the same session and executor core.
+
+## 5. Stop, restart, and recover
+
+Stop, restart, and recovery are lifecycle operations over the same project runtime. If the process exits unexpectedly but state files remain, recovery restores consistency between daemon state and the actual process.
+
+## The normal day-to-day loop
+
+In real usage, the lifecycle is often cyclical:
+
+1. edit `PROFILE.md` or `SOUL.md`
+2. edit `downcity.json` if needed
+3. restart the project runtime
+4. interact with the agent
+5. observe output and iterate again
+
+Continue with:
+
+- [Agent SDK](/en/docs/agent/sdk)
+- [Agent CLI](/en/docs/agent/cli)

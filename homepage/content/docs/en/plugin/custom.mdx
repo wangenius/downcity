@@ -1,0 +1,63 @@
+---
+title: Custom Plugin
+description: How to write and register a custom plugin for your Agent
+---
+
+# Custom Plugin
+
+If the built-in plugins do not cover your needs, you can write a custom plugin. A plugin is a plain TypeScript module that implements the Plugin API.
+
+## Plugin structure
+
+```ts
+import { definePlugin } from "@downcity/agent-plugin";
+
+export default definePlugin({
+  id: "my-plugin",
+  name: "My Plugin",
+  version: "1.0.0",
+
+  async init(context) {
+    // lifecycle hook: called when the Agent starts
+  },
+
+  async destroy(context) {
+    // lifecycle hook: called when the Agent stops
+  },
+
+  tools: [
+    {
+      id: "myTool",
+      description: "Does something useful",
+      async handler(args) {
+        return { result: "done" };
+      },
+    },
+  ],
+});
+```
+
+## Key concepts
+
+- `id` — unique plugin identifier
+- `init` — startup hook for setup and connections
+- `destroy` — shutdown hook for cleanup
+- `tools` — functions the Agent can call during execution
+
+## Registering the plugin
+
+Pass it to the Agent constructor:
+
+```ts
+import myPlugin from "./my-plugin";
+
+const agent = new Agent({
+  plugins: [myPlugin],
+});
+```
+
+Continue with:
+
+- [Chat Plugin](/en/docs/plugin/chat)
+- [Task Plugin](/en/docs/plugin/task)
+- [Agent Plugins Docs](/en/plugins-docs)

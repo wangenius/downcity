@@ -1,0 +1,46 @@
+---
+title: Identity
+
+description: How City manages user identity, authentication, and permissions
+---
+
+# Identity
+
+City manages global user identity, authentication, and permissions. This is shared infrastructure that all Agents and products connect to, rather than being replicated in every project.
+
+## What City owns
+
+- **User accounts** — global downcity accounts with profile and credentials
+- **API tokens** — scoped tokens for programmatic access
+- **Permissions** — role-based access control for resources and actions
+- **Channel accounts** — bot credentials for Telegram, Feishu, QQ, etc.
+
+## Authentication flow
+
+1. User logs in via Console or CLI
+2. City issues an identity token
+3. The token is used for all subsequent API calls
+4. Agents validate tokens through City when serving HTTP requests
+
+## Channel accounts
+
+Bot credentials for messaging platforms are stored in `~/.downcity/downcity.db` and referenced by ID from the project:
+
+```json
+{
+  "plugins": {
+    "chat": {
+      "channels": {
+        "telegram": {
+          "channelAccountId": "telegram-main"
+        }
+      }
+    }
+  }
+}
+```
+
+Continue with:
+
+- [Model Pool](/en/docs/city/model-pool)
+- [Usage & Billing](/en/docs/city/usage-billing)

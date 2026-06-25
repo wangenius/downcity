@@ -1,0 +1,141 @@
+---
+title: Agent 配置
+description: Agent 如何配置，从构造参数到 downcity.json 以及提示词文件
+---
+
+# Agent 配置
+
+Agent 通过 Agent SDK 进行配置。CLI (`downcity`) 是一个便利包装器，它会从项目目录读取 `downcity.json`，然后把其中的值传给 Agent SDK 的构造函数。
+
+## 构造参数
+
+直接使用 `@downcity/agent` 创建 Agent 时，配置通过构造参数传入：
+
+```ts
+import { Agent } from "@downcity/agent";
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  model: myModel,
+  tools: [myTool],
+  plugins: [myPlugin],
+  env: { ... },
+});
+```
+
+关键字段：
+
+- `id` — 稳定的 Agent 标识符。用于会话存储和运行时目录归属。
+- `path` — 项目目录。Agent 会从这里读取 `PROFILE.md`、`SOUL.md` 和 `.env`。
+- `model` — 实时模型实例。直接传入，不从目录查询。
+- `tools` — 可供 Agent 使用的工具实例数组。
+- `plugins` — 启动时加载的插件实例数组。
+- `env` — 宿主提供的环境变量，与项目 `.env` 叠加。
+
+你也可以传入 `start`（端口、host）和 `execution` 选项，让 Agent 启动自己的 HTTP 服务。
+
+## 项目配置文件：downcity.json
+
+CLI (`downcity agent start`) 会在项目目录查找 `downcity.json`，并将其内容传给 Agent SDK 构造函数。它本质上是构造参数的序列化形式。
+
+最小结构如下：
+
+```json
+{
+  "$schema": "./.downcity/schema/downcity.schema.json",
+  "id": "my-agent",
+  "version": "1.0.0",
+  "start": {
+    "port": 5314,
+    "host": "0.0.0.0"
+  },
+  "execution": {
+    "type": "api",
+    "modelId": "default"
+  },
+  "plugins": {}
+}
+```
+
+关键字段：
+
+- `id` — 同构造参数的 `id`。
+- `start` — 运行时启动配置（端口、host）。CLI 参数会覆盖这里的值。
+- `execution` — 将项目绑定到已连接 Federation AIService 中的模型 ID。`type` 固定为 `api`。
+- `plugins` — 插件级配置。例如 `plugins.chat.channels` 将聊天渠道绑定到全局账号。
+
+不应该放在这里的内容：
+
+- 完整的模型供应商标识（那些属于 City / Federation AIService）。
+- 明文 API 密钥或机器人凭证（那些属于 `~/.downcity/downcity.db` 或通过环境变量注入）。
+- 控制台级别的控制平面设置。
+
+这个文件的任务是声明项目在运行时如何组装，而不是存储所有东西。
+
+## PROFILE.md
+
+`PROFILE.md` 定义 Agent 的可见角色：
+
+- 它是谁
+- 它负责什么
+- 它应该如何回答
+- 它应该遵守哪些边界
+
+把它理解为角色定义，而不是运行时配置。如果你想调整输出风格、优先级或协作语气，这里是首选。
+
+## SOUL.md
+
+`SOUL.md` 定义更深层的、更稳定的运行原则。它更接近基础工作风格，而不是一次性角色提示。只有当你真正想改变 Agent 的长期行为时才修改它。
+
+在一个健康的项目中，`SOUL.md` 通常比 `PROFILE.md` 修改得更少。
+
+## 环境变量
+
+Agent 在启动时合并两层环境变量：
+
+1. 宿主提供的环境变量（来自 `new Agent({ env })` 或 CLI 运行时）。
+2. 项目根目录 `.env`（叠加在宿主层之上）。
+
+运行时元数据变量如 `DC_AGENT_ID`、`DC_AGENT_PATH`、`DC_SESSION_ID` 是为当前命令上下文注入的，不会写回当前 shell 会话。
+
+## 模型绑定
+
+使用 CLI 时，项目通过 `downcity.json` 绑定模型：
+
+```json
+{
+  "execution": {
+    "type": "api",
+    "modelId": "quality"
+  }
+}
+```
+
+模型 ID 必须在已连接的 Federation AIService 目录中存在。项目不存储供应商标识或 base URL。直接使用 SDK 时，模型传入构造参数或 session。
+
+## 聊天渠道
+
+聊天渠道在 `plugins.chat.channels` 下配置。项目只绑定一个全局账号 ID：
+
+```json
+{
+  "plugins": {
+    "chat": {
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "channelAccountId": "telegram-main"
+        }
+      }
+    }
+  }
+}
+```
+
+实际的机器人凭证存储在 `~/.downcity/downcity.db` 中（由 `downcity chat` CLI 或 Console UI 管理）。项目只声明使用哪个账号。
+
+继续阅读：
+
+- [Agent 生命周期](/zh/docs/agent/lifecycle)
+- [存储布局](/zh/docs/agent/storage)

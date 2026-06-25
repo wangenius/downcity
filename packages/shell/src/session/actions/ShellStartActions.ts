@@ -104,6 +104,7 @@ export async function startShellSession(
         cwd,
         reason,
         ...(ownerContextId ? { ownerContextId } : {}),
+        ...(request.toolCallId ? { toolCallId: request.toolCallId } : {}),
       }).catch(() => undefined);
     } else {
       const approval = await requestUnrestrictedApproval({
@@ -116,6 +117,7 @@ export async function startShellSession(
         reason,
         ...(ownerContextId ? { ownerContextId } : {}),
         ...(turnId ? { turnId } : {}),
+        ...(request.toolCallId ? { toolCallId: request.toolCallId } : {}),
       });
       approvalId = approval.approvalId;
       approvalStatus = approval.status;

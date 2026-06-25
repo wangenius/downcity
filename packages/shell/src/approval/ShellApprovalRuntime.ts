@@ -125,15 +125,17 @@ function publishApprovalResult(params: {
   shellId: string;
   toolName: ShellApprovalToolName;
   decision: ShellApprovalStatus;
+  toolCallId?: string;
 }): void {
   const sessionId = String(params.ownerContextId || "").trim();
   if (!sessionId || !params.context.session) return;
   const turnId = String(params.turnId || sessionId).trim();
+  const toolCallId = String(params.toolCallId || params.shellId || "").trim();
   try {
     params.context.session.get(sessionId).publishEvent({
       type: "tool-approval-result",
       turnId,
-      toolCallId: params.shellId,
+      toolCallId,
       toolName: params.toolName,
       approvalId: params.approvalId,
       decision: params.decision,
@@ -173,18 +175,20 @@ export async function recordAutoApprovedApproval(params: {
   ownerContextId?: string;
   inputPreview?: string;
   inputChars?: number;
+  toolCallId?: string;
 }): Promise<void> {
   const operation = resolveApprovalOperation(params.toolName);
   const inputPreview = params.inputPreview !== undefined
     ? buildInputPreview(params.inputPreview)
     : undefined;
+  const tool_call_id = String(params.toolCallId || params.shellId || "").trim() || null;
   await appendAudit({
     context: params.context,
     record: {
       event: "approval_auto_approved",
       mode: "always-allow",
       session_id: String(params.ownerContextId || "").trim() || null,
-      tool_call_id: params.shellId,
+      tool_call_id,
       agent_id: params.context.config?.id || null,
       tool_name: params.toolName,
       cmd: params.cmd,
@@ -213,6 +217,7 @@ export async function requestUnrestrictedApproval(params: {
   turnId?: string;
   inputPreview?: string;
   inputChars?: number;
+  toolCallId?: string;
 }): Promise<{
   approvalId: string;
   status: ShellApprovalStatus;
@@ -221,10 +226,12 @@ export async function requestUnrestrictedApproval(params: {
   const createdAt = nowMs();
   const ownerContextId = String(params.ownerContextId || "").trim() || undefined;
   const turnId = String(params.turnId || "").trim() || undefined;
+  const toolCallId = String(params.toolCallId || "").trim() || undefined;
   const operation = resolveApprovalOperation(params.toolName);
   const inputPreview = params.inputPreview !== undefined
     ? buildInputPreview(params.inputPreview)
     : undefined;
+  const resolvedToolCallId = toolCallId || params.shellId;
 
   // 关键点（中文）
   // - 没有 ownerContextId 时无法把审批事件发给任何 session，必须直接拒绝，
@@ -235,7 +242,7 @@ export async function requestUnrestrictedApproval(params: {
       record: {
         event: "approval_rejected_no_owner",
         approval_id: approvalId,
-        tool_call_id: params.shellId,
+        tool_call_id: resolvedToolCallId,
         agent_id: params.context.config?.id || null,
         tool_name: params.toolName,
         cmd: params.cmd,
@@ -266,6 +273,7 @@ export async function requestUnrestrictedApproval(params: {
       shellId: params.shellId,
       ...(ownerContextId ? { ownerContextId } : {}),
       ...(turnId ? { turnId } : {}),
+      ...(toolCallId ? { toolCallId } : {}),
       toolName: params.toolName,
       cmd: params.cmd,
       operation,
@@ -283,7 +291,7 @@ export async function requestUnrestrictedApproval(params: {
       params.context.session?.get(ownerContextId).publishEvent({
         type: "tool-approval-request",
         turnId: eventTurnId,
-        toolCallId: params.shellId,
+        toolCallId: resolvedToolCallId,
         toolName: params.toolName,
         approvalId,
         sandbox: "unrestricted",
@@ -306,7 +314,7 @@ export async function requestUnrestrictedApproval(params: {
         event: "approval_requested",
         approval_id: approvalId,
         session_id: ownerContextId || null,
-        tool_call_id: params.shellId,
+        tool_call_id: resolvedToolCallId,
         agent_id: params.context.config?.id || null,
         cmd: params.cmd,
         operation,
@@ -345,6 +353,7 @@ export async function resolveApproval(params: {
     shellId: approval.shellId,
     toolName: approval.toolName,
     decision: params.decision,
+    toolCallId: approval.toolCallId,
   });
 
   await appendAudit({
@@ -353,7 +362,7 @@ export async function resolveApproval(params: {
       event: "approval_resolved",
       approval_id: approval.approvalId,
       session_id: approval.ownerContextId || null,
-      tool_call_id: approval.shellId,
+      tool_call_id: String(approval.toolCallId || approval.shellId || "").trim() || null,
       agent_id: params.context.config?.id || null,
       cmd: approval.cmd,
       operation: approval.operation,

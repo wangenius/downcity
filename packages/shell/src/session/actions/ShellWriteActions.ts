@@ -82,6 +82,7 @@ export async function writeShellSession(
         ...(session.snapshot.ownerContextId ? { ownerContextId: session.snapshot.ownerContextId } : {}),
         inputPreview: chars,
         inputChars: chars.length,
+        ...(request.toolCallId ? { toolCallId: request.toolCallId } : {}),
       }).catch(() => undefined);
     } else {
       const approval = await requestUnrestrictedApproval({
@@ -96,6 +97,7 @@ export async function writeShellSession(
         ...(turnId ? { turnId } : {}),
         inputPreview: chars,
         inputChars: chars.length,
+        ...(request.toolCallId ? { toolCallId: request.toolCallId } : {}),
       });
       approvalId = approval.approvalId;
       approvalStatus = approval.status;

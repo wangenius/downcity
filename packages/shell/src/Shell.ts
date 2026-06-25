@@ -74,6 +74,7 @@ export class Shell {
           params.payload,
           params.ownerContextId,
           params.turnId,
+          params.toolCallId,
         ),
     });
   }
@@ -201,12 +202,14 @@ export class Shell {
     payload: Record<string, unknown>,
     ownerContextId?: string,
     turnId?: string,
+    toolCallId?: string,
   ): Promise<ShellActionResponse> {
     const context = this.create_host_context();
     const payload_with_context: Record<string, unknown> = {
       ...payload,
       ...(ownerContextId ? { ownerContextId } : {}),
       ...(turnId ? { turnId } : {}),
+      ...(toolCallId ? { toolCallId } : {}),
     };
     switch (action) {
       case "start":

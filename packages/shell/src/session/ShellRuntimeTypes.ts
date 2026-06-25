@@ -38,6 +38,10 @@ export type ShellApprovalRuntimeState = {
    */
   turnId?: string;
   /**
+   * 当前审批对应的 AI SDK tool call id；用于对齐 tool-call / tool-result 事件。
+   */
+  toolCallId?: string;
+  /**
    * 关联工具名。
    */
   toolName: ShellApprovalToolName;

@@ -56,6 +56,7 @@ export async function execShellCommand(
     autoNotifyOnExit: false,
     ...(request.ownerContextId ? { ownerContextId: request.ownerContextId } : {}),
     ...(request.turnId ? { turnId: request.turnId } : {}),
+    ...(request.toolCallId ? { toolCallId: request.toolCallId } : {}),
   });
 
   let current = started;

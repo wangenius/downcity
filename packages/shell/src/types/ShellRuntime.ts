@@ -250,6 +250,14 @@ export interface ShellToolRunner {
      * 当前 tool 调用所属的 turn id。
      */
     turnId?: string;
+    /**
+     * AI SDK 分配给当前 tool 调用的 id。
+     *
+     * 关键点（中文）
+     * - tool-approval-request / tool-approval-result 事件需要用它作为 toolCallId，
+     *   才能与 tool-call / tool-result 事件对齐。
+     */
+    toolCallId?: string;
   }): Promise<ShellActionResponse>;
 }
 

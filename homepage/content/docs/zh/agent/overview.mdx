@@ -1,46 +1,21 @@
 ---
 title: Agent
-description: 理解 Downcity Agent 是什么、如何运行，以及两种使用方式
+description: Agent SDK 是什么，以及如何运行 Agent 工作
 ---
 
 # Agent
 
-在 Downcity 中，**Agent** 是单个项目的 Agent SDK 运行实体。它读取项目配置、维护会话、调用工具、运行插件。
+**Agent SDK** (`@downcity/agent`) 是执行 Agent 工作的核心运行时。Agent 实例将项目配置、会话、工具、插件和模型组装成一个执行上下文。
 
-CLI (`downcity`) 是一个使用 Agent SDK 的管理工具。它读取 `downcity.json` 并处理启动、停止、重启等生命周期命令。
+## Agent 做什么
 
-运行 Agent 有两种方式：
+- 读取项目配置（构造参数或项目目录）
+- 维护会话和对话历史
+- 在执行过程中调用工具
+- 运行扩展其能力的插件
+- 绑定到模型进行推理
 
-1. **通过 CLI** — `downcity` 命令管理项目，从 `downcity.json` 读取配置。
-2. **通过 SDK** — 在代码中通过 `new Agent()` 直接创建运行实例。
-
-两条路径使用相同的 Agent SDK 执行核心。
-
-## 通过 CLI
-
-这是大多数用户开始的路线。你创建一个项目，编辑 `downcity.json`，然后运行 `downcity agent start`。
-
-项目目录通常长这样：
-
-```text
-your-project/
-├── downcity.json
-├── PROFILE.md
-├── SOUL.md
-├── .downcity/
-└── 你的业务代码
-```
-
-- `downcity.json` — 结构化运行时配置（模型绑定、插件、启动端口）。
-- `PROFILE.md` — Agent 的可见角色和输出风格。
-- `SOUL.md` — 更深层的长期运行原则。
-- `.downcity/` — 运行时数据（会话、日志、缓存、任务产物）。
-
-CLI 一次管理一个项目目录。它不负责管理多个项目、拥有模型目录或持久化全局凭证。
-
-## 通过 SDK
-
-这是将 Agent 能力嵌入自己 Node.js 应用的路径。
+## 创建 Agent
 
 ```ts
 import { Agent } from "@downcity/agent";
@@ -54,38 +29,32 @@ const agent = new Agent({
 });
 ```
 
-使用 CLI 时的关键区别：
+## 关键概念
 
-- 模型直接传入构造参数或 session，而不是从 `downcity.json` 解析。
-- 工具和插件在代码中显式挂载。
-- 默认不读取 `downcity.json`（除非你指定了项目路径）。
-- 适合在已有工作流中嵌入 Agent 能力。
-
-## Agent 的职责
-
-启动后，Agent 将以下要素组装成一个可执行上下文：
-
-- 项目配置（或构造参数）
-- 静态提示词（`PROFILE.md`、`SOUL.md`）
-- 会话历史
-- 可用工具和插件
-- 当前模型
+- **Session** — 一个执行线程。Agent 按需创建会话，并通过它们路由消息。
+- **Tool** — Agent 在执行过程中可调用的函数。直接传给构造函数。
+- **Plugin** — 扩展 Agent 能力的模块，如聊天、任务或记忆。也直接传给构造函数。
+- **Model** — 推理后端。直接传给构造函数或按会话设置。
 
 ## Agent 不做什么
 
-- 不管理多个项目（那是 Downcity 的事）。
-- 不拥有 Federation AIService 模型目录（那是 City 的事）。
-- 不持久化全局渠道账号或凭证（那是 City / `~/.downcity/downcity.db` 的事）。
+- 不管理多个项目（那是 CLI / 控制台层）。
+- 不拥有模型目录（那是 City / Federation）。
+- 不持久化全局凭证（那是 City）。
 
 保持这些边界清晰，你很容易回答：模型应该在哪配置？机器人凭证应该放在哪？这是控制平面故障还是项目运行时故障？
 
-## 执行核心
+## 执行模型
 
-无论你通过 CLI、聊天渠道、任务还是 SDK 进入，系统都会收敛到同一个会话和执行核心。唯一区别是模型如何提供：
+Agent 执行模型很简单：
 
-- 通过 CLI，`downcity.json` 提供 `execution.modelId`，从已连接的 Federation AIService 解析模型。
-- 通过 SDK，模型通过 `session.set({ model })` 或构造参数直接传入。
+1. 接收消息或任务
+2. 加载会话上下文（历史、工具、插件、提示词）
+3. 调用模型
+4. 如果模型要求调用工具，执行它并继续
+5. 返回结果
 
 继续阅读：
 
-- [Agent SDK](/zh/agent-sdk-docs)
+- [Agent SDK](/zh/docs/agent/sdk)
+- [Agent 生命周期](/zh/docs/agent/lifecycle)

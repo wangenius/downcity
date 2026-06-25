@@ -1,77 +1,75 @@
 ---
 title: Agent Lifecycle
-description: The full lifecycle of an Agent from initialization to execution and recovery
+description: The lifecycle of an Agent instance from creation to shutdown
 ---
 
 # Agent Lifecycle
 
-An Agent usually moves through five stages from project creation to running and recovery.
+An Agent instance moves through a simple lifecycle: create, start, execute, stop.
 
-## 1. Initialize the project
+## 1. Create
 
-Initialization generates the minimum runtime scaffold:
+Instantiate the Agent with constructor options:
 
-- `PROFILE.md`
-- `SOUL.md`
-- `downcity.json`
-- `.downcity/`
-
-The goal is to turn a normal directory into an Agent project that Downcity can recognize and run.
-
-## 2. Bind an execution target
-
-The project must bind to a model ID from the connected Federation AIService:
-
-```json
-{
-  "execution": {
-    "type": "api",
-    "modelId": "your-model-id"
-  }
-}
+```ts
+const agent = new Agent({
+  id: "my-agent",
+  model: myModel,
+  tools: [myTool],
+  plugins: [myPlugin],
+});
 ```
 
-This binding is a core prerequisite for startup.
+At this stage, the Agent is configured but not running. No plugins are loaded, no sessions exist, and no HTTP server is listening.
 
-## 3. Start the runtime
+## 2. Start
+
+```ts
+await agent.start();
+```
 
 During startup, the Agent will:
 
-- validate that the project is initialized
-- read `downcity.json`
-- load `PROFILE.md` and `SOUL.md`
-- resolve model binding through the connected Federation AIService
-- start HTTP (if configured in `start`)
-- start configured project plugins
+- validate the project directory (if `path` is provided)
+- load `PROFILE.md` and `SOUL.md` (if found in the project directory)
+- initialize all plugins (call their `init` hooks)
+- start the HTTP server (if configured in `start`)
 
-When using the CLI, Downcity maintains daemon state so lifecycle actions can inspect, stop, restart, or repair the process later.
+After `start()`, the Agent is ready to accept messages and tasks.
 
-## 4. Execute and interact
+## 3. Execute
 
 Once running, the Agent can be entered through multiple surfaces:
 
-- Downcity CLI
-- connected chat channels
-- project-level HTTP routes
-- SDK `Agent` and `RemoteAgent`
+- HTTP requests (if the HTTP server is enabled)
+- Direct SDK calls (`agent.session(...)`)
+- Plugin-driven events (chat messages, scheduled tasks)
 
 All paths converge on the same session and executor core.
 
-## 5. Stop, restart, and recover
+## 4. Stop
 
-Stop, restart, and recovery are lifecycle operations over the same project runtime. If the process exits unexpectedly but state files remain, recovery restores consistency between daemon state and the actual process.
+```ts
+await agent.stop();
+```
 
-## The normal day-to-day loop
+During shutdown, the Agent will:
 
-In real usage, the lifecycle is often cyclical:
+- stop accepting new requests
+- gracefully close all active sessions
+- call `destroy` hooks on all plugins
+- stop the HTTP server (if running)
+- persist any pending state
 
-1. edit `PROFILE.md` or `SOUL.md`
-2. edit `downcity.json` if needed
-3. restart the project runtime
-4. interact with the agent
-5. observe output and iterate again
+## Recovery
+
+If the process exits unexpectedly, the next `start()` will:
+
+- restore persisted sessions from `.downcity/`
+- reinitialize plugins
+- resume any scheduled tasks
 
 Continue with:
 
 - [Agent SDK](/en/docs/agent/sdk)
-- [Agent CLI](/en/docs/agent/cli)
+- [Agent SDK Reference](/en/agent-sdk-docs)

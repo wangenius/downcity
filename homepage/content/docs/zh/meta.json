@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "quickstart",
+    "cli",
     "agent",
     "plugin",
     "city",

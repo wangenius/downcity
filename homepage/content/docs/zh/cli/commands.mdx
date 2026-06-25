@@ -1,0 +1,67 @@
+---
+title: CLI 命令
+description: 管理 Agent 和项目的常用 Downcity CLI 命令
+---
+
+# CLI 命令
+
+## Agent 生命周期
+
+```bash
+# 创建新项目
+downcity agent init my-project
+
+# 在当前目录启动 Agent
+downcity agent start
+
+# 停止运行中的 Agent
+downcity agent stop
+
+# 重启 Agent
+downcity agent restart
+
+# 检查状态
+downcity agent status
+
+# 查看日志
+downcity agent logs
+```
+
+## 渠道账号
+
+```bash
+# 添加 Telegram 机器人
+downcity chat add telegram --id telegram-main
+
+# 列出账号
+downcity chat list
+
+# 移除账号
+downcity chat remove telegram-main
+```
+
+## 全局命令
+
+```bash
+# 登录 City
+downcity login
+
+# 退出登录
+downcity logout
+
+# 查看 CLI 版本
+downcity --version
+```
+
+## 标志和选项
+
+大多数命令支持：
+
+- `--config <path>` — 使用自定义配置文件
+- `--verbose` — 打印详细输出
+- `--json` — 以 JSON 格式输出
+
+继续阅读：
+
+- [项目初始化](/zh/docs/cli/init)
+- [项目结构](/zh/docs/cli/project)

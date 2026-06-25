@@ -1,0 +1,54 @@
+---
+title: Project Structure
+description: What an Agent project directory contains and how the files relate
+---
+
+# Project Structure
+
+An Agent project is a directory that the CLI recognizes and can run. It contains configuration, prompts, and runtime data.
+
+## Directory layout
+
+```text
+my-project/
+├── downcity.json      # project configuration
+├── PROFILE.md         # agent role definition
+├── SOUL.md            # long-term principles
+├── .env               # environment variables
+├── .downcity/         # runtime data
+│   ├── sessions/      # persisted conversation history
+│   ├── logs/          # runtime logs
+│   └── cache/         # plugin cache and temp files
+└── src/               # your code (optional)
+```
+
+## Key files
+
+### downcity.json
+
+The project configuration file. The CLI reads it at startup and passes its values to the Agent SDK constructor. See [downcity.json](/en/docs/cli/downcity-json).
+
+### PROFILE.md
+
+Defines the agent's visible role. This is included in the system context for every session. See [Profile](/en/docs/cli/profile).
+
+### SOUL.md
+
+Defines deeper, more stable operating principles. Also included in the system context. See [Profile](/en/docs/cli/profile).
+
+### .env
+
+Project-specific environment variables. These overlay the host environment. The Agent SDK reads this file automatically.
+
+### .downcity/
+
+The runtime data directory. Everything here is managed by the Agent SDK and plugins. You should not edit files inside it directly, but you may inspect logs and sessions for debugging.
+
+## Multiple projects
+
+You can have multiple projects on the same machine. Each project is independent: its own config, its own sessions, its own runtime. The CLI operates on the project in the current working directory.
+
+Continue with:
+
+- [downcity.json](/en/docs/cli/downcity-json)
+- [Profile](/en/docs/cli/profile)

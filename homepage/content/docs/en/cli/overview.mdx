@@ -1,0 +1,41 @@
+---
+title: CLI
+description: What the Downcity CLI is and how it manages Agent projects
+---
+
+# CLI
+
+The `downcity` CLI is a management tool built on top of the Agent SDK. It handles project creation, Agent lifecycle, and configuration without you writing code.
+
+## What it does
+
+- Creates and initializes Agent projects
+- Reads `downcity.json` and passes config to the Agent SDK
+- Starts, stops, and restarts Agents
+- Manages channel accounts and credentials
+- Provides debugging and inspection commands
+
+## Who it is for
+
+The CLI is for users who want to run agents from the terminal without embedding the SDK into their own application. If you are building a product that needs programmatic control, use the Agent SDK directly.
+
+## Key commands
+
+| Command | What it does |
+|---------|-------------|
+| `downcity agent init` | Create a new Agent project |
+| `downcity agent start` | Start the Agent in the current project |
+| `downcity agent stop` | Stop the running Agent |
+| `downcity agent status` | Check if the Agent is running |
+| `downcity agent logs` | View runtime logs |
+| `downcity chat add` | Add a messaging channel account |
+
+## Relationship to SDK
+
+The CLI is a wrapper. It reads `downcity.json`, resolves the model binding through City, and calls `new Agent(...)` and `agent.start()` under the hood. The execution core is the same Agent SDK that you would use directly in code.
+
+Continue with:
+
+- [CLI Commands](/en/docs/cli/commands)
+- [Project Init](/en/docs/cli/init)
+- [Project Structure](/en/docs/cli/project)

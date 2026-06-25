@@ -1,0 +1,54 @@
+---
+title: 项目结构
+description: Agent 项目目录包含什么，以及文件之间的关系
+---
+
+# 项目结构
+
+Agent 项目是 CLI 能够识别和运行的目录。它包含配置、提示词和运行时数据。
+
+## 目录布局
+
+```text
+my-project/
+├── downcity.json      # 项目配置
+├── PROFILE.md         # Agent 角色定义
+├── SOUL.md            # 长期原则
+├── .env               # 环境变量
+├── .downcity/         # 运行时数据
+│   ├── sessions/      # 持久化的对话历史
+│   ├── logs/          # 运行时日志
+│   └── cache/         # 插件缓存和临时文件
+└── src/               # 你的代码（可选）
+```
+
+## 关键文件
+
+### downcity.json
+
+项目配置文件。CLI 在启动时读取它，并将其值传给 Agent SDK 构造函数。见 [downcity.json](/zh/docs/cli/downcity-json)。
+
+### PROFILE.md
+
+定义 Agent 的可见角色。这包含在每个会话的系统上下文中。见 [Profile](/zh/docs/cli/profile)。
+
+### SOUL.md
+
+定义更深层的、更稳定的运行原则。也包含在系统上下文中。见 [Profile](/zh/docs/cli/profile)。
+
+### .env
+
+项目专属环境变量。这些叠加在宿主环境之上。Agent SDK 会自动读取此文件。
+
+### .downcity/
+
+运行时数据目录。这里的一切由 Agent SDK 和插件管理。你不应该直接编辑里面的文件，但可以检查日志和会话以进行调试。
+
+## 多个项目
+
+你可以在同一个机器上有多个项目。每个项目都是独立的：自己的配置、自己的会话、自己的运行时。CLI 操作当前工作目录中的项目。
+
+继续阅读：
+
+- [downcity.json](/zh/docs/cli/downcity-json)
+- [Profile](/zh/docs/cli/profile)

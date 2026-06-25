@@ -1,46 +1,21 @@
 ---
 title: Agent
-description: Understand what a Downcity Agent is, how it runs, and the two ways to use it
+description: What the Agent SDK is and how it runs agent work
 ---
 
 # Agent
 
-In Downcity, an **Agent** is the Agent SDK runtime for a single project. It reads project config, maintains sessions, calls tools, and runs plugins.
+The **Agent SDK** (`@downcity/agent`) is the core runtime for executing agent work. An Agent instance assembles project config, sessions, tools, plugins, and a model into one execution context.
 
-The CLI (`downcity`) is a management tool that uses the Agent SDK. It reads `downcity.json` and handles lifecycle commands like start, stop, and restart.
+## What an Agent does
 
-There are two ways to run an Agent:
+- Reads project config (constructor options or a project directory)
+- Maintains sessions and conversation history
+- Calls tools during execution
+- Runs plugins that extend its capabilities
+- Binds to a model for inference
 
-1. **Via CLI** — `downcity` commands manage the project, reading config from `downcity.json`.
-2. **Via SDK** — `new Agent()` creates the runtime directly in your code.
-
-Both paths use the same Agent SDK execution core.
-
-## Via CLI
-
-This is the path most users start with. You create a project, edit `downcity.json`, and run `downcity agent start`.
-
-A project directory usually looks like this:
-
-```text
-your-project/
-├── downcity.json
-├── PROFILE.md
-├── SOUL.md
-├── .downcity/
-└── your application code
-```
-
-- `downcity.json` — structured runtime config (model binding, plugins, startup port).
-- `PROFILE.md` — the agent's visible role and response style.
-- `SOUL.md` — deeper, long-term operating principles.
-- `.downcity/` — runtime data (sessions, logs, cache, task artifacts).
-
-The CLI manages one project directory at a time. It does not manage multiple projects, own the model catalog, or persist global credentials.
-
-## Via SDK
-
-This is the path for embedding agent behavior into your own Node.js application.
+## Creating an Agent
 
 ```ts
 import { Agent } from "@downcity/agent";
@@ -54,38 +29,32 @@ const agent = new Agent({
 });
 ```
 
-Key differences when using the CLI:
+## Key concepts
 
-- The model is passed directly to the constructor or session, not resolved from `downcity.json`.
-- Tools and plugins are attached explicitly in code.
-- It does not read `downcity.json` by default (unless you point it to a project path).
-- It is useful when you want agent capability inside an existing workflow.
-
-## What an Agent is responsible for
-
-Once running, an Agent assembles these into one execution context:
-
-- project config (or constructor options)
-- static prompts (`PROFILE.md`, `SOUL.md`)
-- session history
-- available tools and plugins
-- the active model
+- **Session** — one execution thread. The Agent creates sessions on demand and routes messages through them.
+- **Tool** — a function the Agent can call during execution. Passed directly to the constructor.
+- **Plugin** — a module that extends the Agent with capabilities like chat, tasks, or memory. Also passed directly to the constructor.
+- **Model** — the inference backend. Passed directly to the constructor or set per-session.
 
 ## What an Agent is not responsible for
 
-- Managing multiple projects (that is Downcity).
-- Owning the Federation AIService model catalog (that is City).
-- Persisting global channel accounts or credentials (that is City / `~/.downcity/downcity.db`).
+- Managing multiple projects (that is the CLI / Console layer).
+- Owning the model catalog (that is City / Federation).
+- Persisting global credentials (that is City).
 
 Keeping these boundaries clear makes it easy to answer: where should I configure a model? Where should a bot credential live? Is this a control-plane failure or a project-runtime failure?
 
-## Execution core
+## Execution model
 
-Whether you enter through CLI, chat channels, tasks, or SDK, the system converges on the same session and executor core. The only difference is how the model is supplied:
+The Agent execution model is simple:
 
-- Via CLI, `downcity.json` provides `execution.modelId`, which is resolved through the connected Federation AIService.
-- Via SDK, the model is passed through `session.set({ model })` or the constructor.
+1. Receive a message or task
+2. Load the session context (history, tools, plugins, prompts)
+3. Call the model
+4. If the model asks for a tool, execute it and continue
+5. Return the result
 
 Continue with:
 
-- [Agent SDK](/en/agent-sdk-docs)
+- [Agent SDK](/en/docs/agent/sdk)
+- [Agent Lifecycle](/en/docs/agent/lifecycle)

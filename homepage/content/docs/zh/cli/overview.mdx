@@ -1,0 +1,41 @@
+---
+title: CLI
+description: Downcity CLI 是什么，以及如何管理 Agent 项目
+---
+
+# CLI
+
+`downcity` CLI 是建立在 Agent SDK 之上的管理工具。它处理项目创建、Agent 生命周期和配置，无需你编写代码。
+
+## 功能
+
+- 创建和初始化 Agent 项目
+- 读取 `downcity.json` 并将配置传给 Agent SDK
+- 启动、停止和重启 Agent
+- 管理渠道账号和凭证
+- 提供调试和检查命令
+
+## 适用人群
+
+CLI 适合想从终端运行 Agent 而不将 SDK 嵌入自己应用的用户。如果你正在构建需要编程控制的产品，请直接使用 Agent SDK。
+
+## 关键命令
+
+| 命令 | 功能 |
+|---------|-------------|
+| `downcity agent init` | 创建新 Agent 项目 |
+| `downcity agent start` | 在当前项目启动 Agent |
+| `downcity agent stop` | 停止运行中的 Agent |
+| `downcity agent status` | 检查 Agent 是否正在运行 |
+| `downcity agent logs` | 查看运行时日志 |
+| `downcity chat add` | 添加聊天渠道账号 |
+
+## 与 SDK 的关系
+
+CLI 是一个包装器。它读取 `downcity.json`，通过 City 解析模型绑定，然后调用 `new Agent(...)` 和 `agent.start()`。执行核心与你在代码中直接使用的 Agent SDK 相同。
+
+继续阅读：
+
+- [CLI 命令](/zh/docs/cli/commands)
+- [项目初始化](/zh/docs/cli/init)
+- [项目结构](/zh/docs/cli/project)

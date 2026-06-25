@@ -1,4 +1,4 @@
 {
   "title": "Agent",
-  "pages": ["overview", "sdk", "cli", "profile", "downcity-json", "lifecycle"]
+  "pages": ["overview", "sdk", "lifecycle"]
 }

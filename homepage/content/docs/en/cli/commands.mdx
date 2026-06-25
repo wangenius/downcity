@@ -1,0 +1,67 @@
+---
+title: CLI Commands
+description: Common Downcity CLI commands for managing agents and projects
+---
+
+# CLI Commands
+
+## Agent lifecycle
+
+```bash
+# Create a new project
+downcity agent init my-project
+
+# Start the agent in the current directory
+downcity agent start
+
+# Stop the running agent
+downcity agent stop
+
+# Restart the agent
+downcity agent restart
+
+# Check status
+downcity agent status
+
+# View logs
+downcity agent logs
+```
+
+## Channel accounts
+
+```bash
+# Add a Telegram bot
+downcity chat add telegram --id telegram-main
+
+# List accounts
+downcity chat list
+
+# Remove an account
+downcity chat remove telegram-main
+```
+
+## Global commands
+
+```bash
+# Login to City
+downcity login
+
+# Logout
+downcity logout
+
+# Check CLI version
+downcity --version
+```
+
+## Flags and options
+
+Most commands support:
+
+- `--config <path>` — use a custom config file
+- `--verbose` — print detailed output
+- `--json` — output in JSON format
+
+Continue with:
+
+- [Project Init](/en/docs/cli/init)
+- [Project Structure](/en/docs/cli/project)

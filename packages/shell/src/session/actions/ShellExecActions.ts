@@ -38,10 +38,13 @@ export async function execShellCommand(
   context: ShellHostContext,
   request: ShellExecRequest,
 ): Promise<ShellActionResponse> {
-  const timeoutMs = clampWaitMsWithOptions(
-    state.options,
-    request.timeoutMs,
-    state.options.defaultExecTimeoutMs,
+  const timeoutMs = Math.max(
+    120_000,
+    clampWaitMsWithOptions(
+      state.options,
+      request.timeoutMs,
+      state.options.defaultExecTimeoutMs,
+    ),
   );
   const started = await startShellSession(state, context, {
     cmd: request.cmd,

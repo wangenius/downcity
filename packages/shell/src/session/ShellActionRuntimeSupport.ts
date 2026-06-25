@@ -43,7 +43,7 @@ const DEFAULT_SHELL_RUNTIME_OPTIONS: ResolvedShellRuntimeOptions = {
   maxWaitMs: 30_000,
   defaultInlineWaitMs: 1_200,
   defaultWaitTimeoutMs: 10_000,
-  defaultExecTimeoutMs: 60_000,
+  defaultExecTimeoutMs: 120_000,
   defaultApprovalTimeoutMs: 120_000,
 };
 

@@ -136,14 +136,14 @@ const clientLoader = browserCollections.servicesSdkDocs.createClientLoader({
     toc?: TOCItemType[];
   }) => (
     <DocsPage toc={Array.isArray(toc) ? toc : []}>
-      <DocsTitle>{frontmatter.title}</DocsTitle>
+      <div className="flex items-center justify-between gap-4">
+        <DocsTitle>{frontmatter.title}</DocsTitle>
+        <CopyMarkdownButton />
+      </div>
       <DocsDescription>{frontmatter.description}</DocsDescription>
       <DocsBody>
         <Mdx components={getMDXComponents()} />
       </DocsBody>
-      <div className="flex flex-row gap-2 items-center pt-6 mt-4 border-t">
-        <CopyMarkdownButton />
-      </div>
     </DocsPage>
   ),
 });

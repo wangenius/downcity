@@ -1,71 +1,80 @@
 ---
 title: CLI
-description: Downcity CLI 是什么，以及如何管理项目、City 和 Federation
+description: Downcity CLI 套件 — downcity 管理本地 Agent，downfed 管理 Federation
 ---
 
 # CLI
 
-`downcity` CLI 是统一的 Downcity 栈管理工具。它通过单一终端界面覆盖 Agent 项目、City 基础设施和 Federation 配置。
+Downcity 提供两个 CLI 二进制文件：
 
-## 功能
+- **`downcity`**（别名 `city`）— 管理本地 Agent、全局配置和 City 状态。
+- **`downfed`** — 管理 Federation 部署、City 实体和服务资源。
 
-### Agent 项目
+两者共享相同的全局标志（`--verbose`、`--quiet`、`--lang`）和帮助系统。
 
-- 创建和初始化 Agent 项目
-- 读取 `downcity.json` 并将配置传给 Agent SDK
-- 启动、停止和重启 Agent
-- 管理渠道账号和凭证
+## downcity
 
-### City
+`downcity` 是本地管理 CLI。它处理 Agent 生命周期、插件、环境变量、token 和 Federation 连接。
 
-- 登录和登出 City 身份
-- 管理 API token 和权限
-- 检查用量、余额和计费状态
-- 配置渠道账号（Telegram、飞书、QQ 机器人）
+### 全局命令
 
-### Federation
-
-- 列出可用模型提供商和模型 ID
-- 配置项目模型绑定
-- 检查提供商健康和状态
-
-## 适用人群
-
-CLI 适合想从终端管理整个 Downcity 栈的用户。如果你正在构建需要编程控制的产品，请直接使用 SDK。
-
-## 关键命令
-
-### Agent
-
-| 命令 | 功能 |
+| 命令 | 说明 |
 |---------|-------------|
-| `downcity agent init` | 创建新 Agent 项目 |
-| `downcity agent start` | 在当前项目启动 Agent |
-| `downcity agent stop` | 停止运行中的 Agent |
-| `downcity agent status` | 检查 Agent 是否正在运行 |
-| `downcity agent logs` | 查看运行时日志 |
+| `downcity init` | 初始化 City 全局状态（`~/.downcity/downcity.db`） |
+| `downcity update` | 更新 downcity CLI 到最新版本 |
+| `downcity env` | 管理平台环境变量 |
+| `downcity config` | 管理 City 配置 |
+| `downcity token` | 管理 API token |
+| `downcity federation` | 管理 Federation 连接 |
 
-### City
+### Agent 命令
 
-| 命令 | 功能 |
+| 命令 | 说明 |
 |---------|-------------|
-| `downcity login` | 向 City 认证 |
-| `downcity logout` | 移除本地 City 凭证 |
-| `downcity chat add` | 添加聊天渠道账号 |
-| `downcity chat list` | 列出已注册的渠道账号 |
-| `downcity usage` | 查看当前用量和余额 |
+| `downcity agent create [path]` | 创建并初始化 Agent 项目 |
+| `downcity agent list` | 列出已登记的 Agent 项目 |
+| `downcity agent start [path]` | 启动 Agent（后台/前台） |
+| `downcity agent stop [path]` | 停止后台 Agent 守护进程 |
+| `downcity agent restart [path]` | 重启后台 Agent 守护进程 |
+| `downcity agent status [path]` | 查看后台 Agent 状态 |
+| `downcity agent doctor [path]` | 诊断守护进程状态文件 |
+| `downcity agent chat` | 在终端中与 Agent 对话 |
+| `downcity agent history` | 管理 Agent 会话历史 |
 
-### Federation
+### Plugin 命令
 
-| 命令 | 功能 |
+| 命令 | 说明 |
 |---------|-------------|
-| `downcity models list` | 列出可用模型 |
-| `downcity providers list` | 列出已注册的模型提供商 |
-| `downcity providers status` | 检查提供商健康 |
+| `downcity plugins` | 管理插件（交互式或列出操作） |
+| `downcity plugins schedule` | 管理插件调度 |
 
-## 与 SDK 的关系
+### Chat 命令
 
-CLI 是 SDK 的包装器。它读取配置文件，通过 City 解析模型绑定，并在底层调用 SDK 构造函数。无论你使用 CLI 还是直接使用 SDK，执行核心都是相同的。
+| 命令 | 说明 |
+|---------|-------------|
+| `downcity chat` | 管理 chat 插件资源（交互式） |
+| `downcity chat auth` | 管理 chat 授权 |
+
+## downfed
+
+`downfed` 是 Federation 管理 CLI。它处理部署、项目脚手架和管理操作。
+
+| 命令 | 说明 |
+|---------|-------------|
+| `downfed` | 打开交互式 Federation 管理界面 |
+| `downfed manage` | 打开 admin 管理界面 |
+| `downfed server manage` | 进入 Federation 的 admin 工作区 |
+| `downfed server add` | 添加已部署的 Federation URL |
+| `downfed query <method> <path>` | 查询当前 active Federation 的 HTTP API |
+| `downfed create [dir]` | 创建新 Federation 项目骨架 |
+| `downfed deploy [source]` | 部署 Federation 项目 |
+
+## 全局标志
+
+- `--verbose` — 打印详细进度输出
+- `--quiet` — 仅输出错误信息
+- `--lang <locale>` — 设置 CLI 语言（zh/en）
+- `--help` — 显示任何命令的帮助
 
 继续阅读：
 

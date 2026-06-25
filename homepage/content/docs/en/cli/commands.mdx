@@ -1,106 +1,134 @@
 ---
 title: CLI Commands
-description: Common Downcity CLI commands for agents, City, and Federation
+description: Common commands for downcity and downfed
 ---
 
 # CLI Commands
 
-## Agent lifecycle
+## downcity (city)
+
+### Global init and update
 
 ```bash
-# Create a new project
-downcity agent init my-project
+# Initialize City global state
+downcity init
 
-# Start the agent in the current directory
+# Update CLI to latest version
+downcity update
+```
+
+### Agent lifecycle
+
+```bash
+# Create a new Agent project
+downcity agent create my-project
+
+# List registered Agent projects
+downcity agent list
+
+# Start an Agent in the background
 downcity agent start
 
-# Stop the running agent
+# Start an Agent in the foreground
+downcity agent start --foreground
+
+# Stop the Agent daemon
 downcity agent stop
 
-# Restart the agent
+# Restart the Agent daemon
 downcity agent restart
 
-# Check status
+# Check Agent status
 downcity agent status
 
-# View logs
-downcity agent logs
+# Diagnose daemon issues
+downcity agent doctor
+# Fix stale daemon state
+downcity agent doctor --fix
+
+# Chat with an Agent
+downcity agent chat
+# Send a one-shot message
+downcity agent chat -m "hello"
 ```
 
-## City identity
+### Agent history
 
 ```bash
-# Login to City
-downcity login
+# Clean a conversation history
+downcity agent history clean
+# Clean a specific session
+downcity agent history clean --session-id <id>
+```
 
-# Logout
-downcity logout
+### Environment variables
 
-# Check who you are
-downcity whoami
+```bash
+# List env vars
+downcity env list
+# Set an env var
+downcity env set KEY=value
+# Delete an env var
+downcity env delete KEY
+# Export env vars to .env
+downcity env copy
+```
 
+### Tokens
+
+```bash
 # List API tokens
-downcity tokens list
-
+downcity token list
 # Create a new token
-downcity tokens create --name "ci-deployment"
-
-# Revoke a token
-downcity tokens revoke <token-id>
+downcity token create
+# Delete a token
+downcity token delete <id>
 ```
 
-## City usage & billing
+### Plugins
 
 ```bash
-# View current usage
-downcity usage
-
-# View balance
-downcity balance
-
-# Add balance ( Stripe )
-downcity balance add --amount 100
+# Manage plugins interactively
+downcity plugins
+# Schedule plugin actions
+downcity plugins schedule
 ```
 
-## Channel accounts
+### Chat
 
 ```bash
-# Add a Telegram bot
-downcity chat add telegram --id telegram-main
-
-# Add a Feishu bot
-downcity chat add feishu --id feishu-work
-
-# List accounts
-downcity chat list
-
-# Remove an account
-downcity chat remove telegram-main
+# Manage chat resources interactively
+downcity chat
+# Set chat authorization
+downcity chat auth set <platform>:<userId>
 ```
 
-## Federation models
+## downfed
 
 ```bash
-# List available models
-downcity models list
+# Open interactive Federation manager
+downfed
 
-# Show model details
-downcity models show quality
+# Open admin interface
+downfed manage
 
-# List providers
-downcity providers list
+# Add a Federation server
+downfed server add
 
-# Check provider health
-downcity providers status
+# Enter a server workspace
+downfed server manage
+
+# Query Federation API
+downfed query GET /health
+
+# Create a new project
+downfed create my-project
+
+# Deploy a project
+downfed deploy
+# Deploy with options
+downfed deploy --verify --dry-run
 ```
-
-## Global flags
-
-Most commands support:
-
-- `--config <path>` — use a custom config file
-- `--verbose` — print detailed output
-- `--json` — output in JSON format
 
 Continue with:
 

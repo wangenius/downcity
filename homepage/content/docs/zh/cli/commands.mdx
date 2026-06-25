@@ -1,106 +1,134 @@
 ---
 title: CLI 命令
-description: 管理 Agent、City 和 Federation 的常用 Downcity CLI 命令
+description: downcity 和 downfed 的常用命令
 ---
 
 # CLI 命令
 
-## Agent 生命周期
+## downcity (city)
+
+### 全局初始化与更新
 
 ```bash
-# 创建新项目
-downcity agent init my-project
+# 初始化 City 全局状态
+downcity init
 
-# 在当前目录启动 Agent
+# 更新 CLI 到最新版本
+downcity update
+```
+
+### Agent 生命周期
+
+```bash
+# 创建新 Agent 项目
+downcity agent create my-project
+
+# 列出已登记的 Agent 项目
+downcity agent list
+
+# 在后台启动 Agent
 downcity agent start
 
-# 停止运行中的 Agent
+# 在前台启动 Agent
+downcity agent start --foreground
+
+# 停止 Agent 守护进程
 downcity agent stop
 
-# 重启 Agent
+# 重启 Agent 守护进程
 downcity agent restart
 
-# 检查状态
+# 检查 Agent 状态
 downcity agent status
 
-# 查看日志
-downcity agent logs
+# 诊断守护进程问题
+downcity agent doctor
+# 修复僵尸守护进程状态
+downcity agent doctor --fix
+
+# 与 Agent 对话
+downcity agent chat
+# 发送一次性消息
+downcity agent chat -m "hello"
 ```
 
-## City 身份
+### Agent 历史
 
 ```bash
-# 登录 City
-downcity login
+# 清理会话历史
+downcity agent history clean
+# 清理特定会话
+downcity agent history clean --session-id <id>
+```
 
-# 退出登录
-downcity logout
+### 环境变量
 
-# 查看当前身份
-downcity whoami
+```bash
+# 列出环境变量
+downcity env list
+# 设置环境变量
+downcity env set KEY=value
+# 删除环境变量
+downcity env delete KEY
+# 导出环境变量到 .env
+downcity env copy
+```
 
+### Token
+
+```bash
 # 列出 API token
-downcity tokens list
-
+downcity token list
 # 创建新 token
-downcity tokens create --name "ci-deployment"
-
-# 撤销 token
-downcity tokens revoke <token-id>
+downcity token create
+# 删除 token
+downcity token delete <id>
 ```
 
-## City 用量与计费
+### Plugin
 
 ```bash
-# 查看当前用量
-downcity usage
-
-# 查看余额
-downcity balance
-
-# 充值（Stripe）
-downcity balance add --amount 100
+# 交互式管理插件
+downcity plugins
+# 调度插件操作
+downcity plugins schedule
 ```
 
-## 渠道账号
+### Chat
 
 ```bash
-# 添加 Telegram 机器人
-downcity chat add telegram --id telegram-main
-
-# 添加飞书机器人
-downcity chat add feishu --id feishu-work
-
-# 列出账号
-downcity chat list
-
-# 移除账号
-downcity chat remove telegram-main
+# 交互式管理 chat 资源
+downcity chat
+# 设置 chat 授权
+downcity chat auth set <platform>:<userId>
 ```
 
-## Federation 模型
+## downfed
 
 ```bash
-# 列出可用模型
-downcity models list
+# 打开交互式 Federation 管理器
+downfed
 
-# 显示模型详情
-downcity models show quality
+# 打开 admin 界面
+downfed manage
 
-# 列出提供商
-downcity providers list
+# 添加 Federation 服务器
+downfed server add
 
-# 检查提供商健康
-downcity providers status
+# 进入服务器工作区
+downfed server manage
+
+# 查询 Federation API
+downfed query GET /health
+
+# 创建新项目
+downfed create my-project
+
+# 部署项目
+downfed deploy
+# 带选项部署
+downfed deploy --verify --dry-run
 ```
-
-## 全局标志
-
-大多数命令支持：
-
-- `--config <path>` — 使用自定义配置文件
-- `--verbose` — 打印详细输出
-- `--json` — 以 JSON 格式输出
 
 继续阅读：
 

@@ -1,71 +1,80 @@
 ---
 title: CLI
-description: What the Downcity CLI is and how it manages projects, City, and Federation
+description: The Downcity CLI suite — downcity for local agents and downfed for Federation
 ---
 
 # CLI
 
-The `downcity` CLI is a unified management tool for the entire Downcity stack. It covers Agent projects, City infrastructure, and Federation configuration from a single terminal interface.
+Downcity provides two CLI binaries:
 
-## What it does
+- **`downcity`** (alias `city`) — manages local agents, global config, and City state.
+- **`downfed`** — manages Federation deployment, City entities, and service resources.
 
-### Agent projects
+Both share the same global flags (`--verbose`, `--quiet`, `--lang`) and help system.
 
-- Creates and initializes Agent projects
-- Reads `downcity.json` and passes config to the Agent SDK
-- Starts, stops, and restarts Agents
-- Manages channel accounts and credentials
+## downcity
 
-### City
+`downcity` is the local management CLI. It handles agent lifecycle, plugins, environment variables, tokens, and Federation connections.
 
-- Logs in and out of City identity
-- Manages API tokens and permissions
-- Inspects usage, balance, and billing status
-- Configures channel accounts (Telegram, Feishu, QQ bots)
+### Global commands
 
-### Federation
-
-- Lists available model providers and model IDs
-- Configures model bindings for projects
-- Inspects provider health and status
-
-## Who it is for
-
-The CLI is for users who want to manage the entire Downcity stack from the terminal. If you are building a product that needs programmatic control, use the SDKs directly.
-
-## Key commands
-
-### Agent
-
-| Command | What it does |
+| Command | Description |
 |---------|-------------|
-| `downcity agent init` | Create a new Agent project |
-| `downcity agent start` | Start the Agent in the current project |
-| `downcity agent stop` | Stop the running Agent |
-| `downcity agent status` | Check if the Agent is running |
-| `downcity agent logs` | View runtime logs |
+| `downcity init` | Initialize City global state (`~/.downcity/downcity.db`) |
+| `downcity update` | Update the downcity CLI to the latest version |
+| `downcity env` | Manage platform environment variables |
+| `downcity config` | Manage City configuration |
+| `downcity token` | Manage API tokens |
+| `downcity federation` | Manage Federation connections |
 
-### City
+### Agent commands
 
-| Command | What it does |
+| Command | Description |
 |---------|-------------|
-| `downcity login` | Authenticate with City |
-| `downcity logout` | Remove local City credentials |
-| `downcity chat add` | Add a messaging channel account |
-| `downcity chat list` | List registered channel accounts |
-| `downcity usage` | View current usage and balance |
+| `downcity agent create [path]` | Create and initialize an Agent project |
+| `downcity agent list` | List registered Agent projects |
+| `downcity agent start [path]` | Start an Agent (background or foreground) |
+| `downcity agent stop [path]` | Stop the background Agent daemon |
+| `downcity agent restart [path]` | Restart the background Agent daemon |
+| `downcity agent status [path]` | Show background Agent daemon status |
+| `downcity agent doctor [path]` | Diagnose daemon state files |
+| `downcity agent chat` | Chat with an Agent in the terminal |
+| `downcity agent history` | Manage Agent conversation history |
 
-### Federation
+### Plugin commands
 
-| Command | What it does |
+| Command | Description |
 |---------|-------------|
-| `downcity models list` | List available models |
-| `downcity providers list` | List registered model providers |
-| `downcity providers status` | Check provider health |
+| `downcity plugins` | Manage plugins (interactive or list actions) |
+| `downcity plugins schedule` | Manage plugin scheduling |
 
-## Relationship to SDKs
+### Chat commands
 
-The CLI is a wrapper around the SDKs. It reads config files, resolves model bindings through City, and calls SDK constructors under the hood. The execution core is the same whether you use the CLI or the SDKs directly.
+| Command | Description |
+|---------|-------------|
+| `downcity chat` | Manage chat plugin resources (interactive) |
+| `downcity chat auth` | Manage chat authorization |
+
+## downfed
+
+`downfed` is the Federation management CLI. It handles deployment, project scaffolding, and admin operations.
+
+| Command | Description |
+|---------|-------------|
+| `downfed` | Open the interactive Federation management interface |
+| `downfed manage` | Open the admin management interface |
+| `downfed server manage` | Enter the admin workspace for a Federation |
+| `downfed server add` | Add a deployed Federation URL |
+| `downfed query <method> <path>` | Query the active Federation HTTP API |
+| `downfed create [dir]` | Scaffold a new Federation project |
+| `downfed deploy [source]` | Deploy a Federation project |
+
+## Global flags
+
+- `--verbose` — print detailed progress output
+- `--quiet` — only print error output
+- `--lang <locale>` — set CLI language (zh/en)
+- `--help` — show help for any command
 
 Continue with:
 

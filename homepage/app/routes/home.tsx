@@ -12,6 +12,8 @@ export function meta() {
   const title = `${product.productName} — Agent Infrastructure for AI Builders`;
   const description = product.description;
 
+  const twitter_image = `${baseUrl}/icon.png`;
+
   return [
     // Essential meta tags (required, not inherited from parent)
     { charSet: "utf-8" },
@@ -50,9 +52,11 @@ export function meta() {
       property: "og:image:alt",
       content: "Downcity - Agent Infrastructure for AI Builders",
     },
+    // X / Twitter
+    // icon.png 为 1:1 正方形，summary 卡片比 summary_large_image 更适合展示 logo。
     {
       name: "twitter:card",
-      content: "summary_large_image",
+      content: "summary",
     },
     {
       name: "twitter:url",
@@ -68,7 +72,7 @@ export function meta() {
     },
     {
       name: "twitter:image",
-      content: `${baseUrl}/twitter-image.png`,
+      content: twitter_image,
     },
     {
       name: "twitter:image:alt",

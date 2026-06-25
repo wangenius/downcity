@@ -84,6 +84,17 @@ export interface ModelActions {
 }
 
 /**
+ * 模型级 fallback 配置。
+ *
+ * 当前只暴露 `image` 一个入口，用来覆盖图片/附件类非文本输入的自动切换。
+ * 开发者只需要在不支持多模态输入的模型上配置它即可。
+ */
+export interface ModelFallbackConfig {
+  /** 当请求里出现非文本输入时，切换到的目标模型。 */
+  image?: ModelConfig | string;
+}
+
+/**
  * 模型配置（Provider.model() 的返回值）。
  */
 export interface ModelConfig {
@@ -109,6 +120,8 @@ export interface ModelConfig {
   envKey?: string;
   /** 上游 API 实际模型 ID（自动透传时替换 body.model） */
   passthroughModel?: string;
+  /** 模型级 fallback 配置。 */
+  fallback?: ModelFallbackConfig;
   /** 各通路 action 绑定 */
   actions: ModelActions;
   /** 本模型的出账方法，只生成扣费草稿，不直接扣余额。 */

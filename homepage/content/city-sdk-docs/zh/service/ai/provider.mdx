@@ -87,7 +87,29 @@ description: Provider 是第三方 AI 提供商的基类，通过子类化声明
  }
  ```
 
- ## 图片 Provider
+## 模型 fallback
+
+可以直接在 model 配置上挂 fallback：
+
+```ts
+const kimi = kimiProvider.model({
+  id: "kimi-k2.6",
+  name: "Kimi K2.6",
+});
+
+const deepseek = deepseekProvider.model({
+  id: "deepseek-v4-flash",
+  name: "DeepSeek V4 Flash",
+  fallback: {
+    image: kimi,
+  },
+});
+```
+
+当请求里出现图片输入，而当前模型不支持时，AIService 会在 `text`、`stream`、`chat/completions` 三条通路上自动切到 `fallback.image`。
+如果没有配置 fallback，AIService 会保持原模型不变，继续交给 provider 自己处理。
+
+## 图片 Provider
 
 `@downcity/city` 不内置 OpenAI、DeepSeek 或其他具体图片 Provider 构造器。City 包提供 `Provider` 抽象、`AIService` 注册机制，以及 `client.ai.image_create()` / `client.ai.image_result()` 的统一任务协议。
 

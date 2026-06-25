@@ -446,6 +446,215 @@ test("AIService uses provider bill when model bill is not set", async () => {
   }
 })
 
+test("AIService falls back to image-capable model for UIMessage image parts", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-fallback-ui-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+    const calls = []
+
+    const ai = new AIService()
+    ai.use([
+      {
+        id: "kimi",
+        provider_id: "kimi-provider",
+        name: "Kimi",
+        default: ["text"],
+        actions: {
+          text: async () => {
+            calls.push("kimi")
+            return {
+              id: "msg_kimi",
+              role: "assistant",
+              parts: [{ type: "text", text: "kimi" }],
+            }
+          },
+        },
+      },
+      {
+        id: "deepseek",
+        provider_id: "deepseek-provider",
+        name: "DeepSeek",
+        default: ["text"],
+        fallback: {
+          image: "kimi",
+        },
+        actions: {
+          text: async (ctx) => {
+            calls.push({
+              model_id: ctx.metering?.model_id,
+              fallback_from: ctx.metering?.metadata?.fallback_from,
+              fallback_reason: ctx.metering?.metadata?.fallback_reason,
+            })
+            return {
+              id: "msg_deepseek",
+              role: "assistant",
+              parts: [{ type: "text", text: "deepseek" }],
+            }
+          },
+        },
+      },
+    ])
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    const city = await (await base.handleRequest(new Request("http://localhost/v1/cities/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ name: "Demo" }),
+    }))).json()
+    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/cities/tokens/apply", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
+    }))).json()
+
+    const response = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${tokenBody.user_token}`,
+      },
+      body: JSON.stringify({
+        model: "deepseek",
+        messages: [{
+          role: "user",
+          parts: [
+            { type: "text", text: "看图" },
+            { type: "file", mediaType: "image/png", url: "https://example.com/a.png" },
+          ],
+        }],
+      }),
+    }))
+
+    assert.equal(response.status, 200)
+    assert.equal((await response.json()).id, "msg_kimi")
+    assert.deepEqual(calls, [
+      "kimi",
+    ])
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("AIService falls back for OpenAI chat completions with image_url parts", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-fallback-openai-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+    const calls = []
+
+    const ai = new AIService()
+    ai.use([
+      {
+        id: "kimi",
+        provider_id: "kimi-provider",
+        name: "Kimi",
+        default: ["text"],
+        actions: {
+          openai: async () => {
+            calls.push("kimi")
+            return {
+              response: Response.json({
+                id: "chat_kimi",
+                object: "chat.completion",
+              }),
+            }
+          },
+        },
+      },
+      {
+        id: "deepseek",
+        provider_id: "deepseek-provider",
+        name: "DeepSeek",
+        default: ["text"],
+        fallback: {
+          image: "kimi",
+        },
+        actions: {
+          openai: async (ctx) => {
+            calls.push({
+              model_id: ctx.metering?.model_id,
+              fallback_from: ctx.metering?.metadata?.fallback_from,
+              fallback_reason: ctx.metering?.metadata?.fallback_reason,
+            })
+            return {
+              response: Response.json({
+                id: "chat_deepseek",
+                object: "chat.completion",
+              }),
+            }
+          },
+        },
+      },
+    ])
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    const city = await (await base.handleRequest(new Request("http://localhost/v1/cities/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ name: "Demo" }),
+    }))).json()
+    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/cities/tokens/apply", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
+    }))).json()
+
+    const response = await base.handleRequest(new Request("http://localhost/v1/ai/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${tokenBody.user_token}`,
+      },
+      body: JSON.stringify({
+        model: "deepseek",
+        messages: [{
+          role: "user",
+          content: [
+            { type: "text", text: "看图" },
+            { type: "image_url", image_url: { url: "https://example.com/a.png" } },
+          ],
+        }],
+      }),
+    }))
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), {
+      id: "chat_kimi",
+      object: "chat.completion",
+    })
+    assert.deepEqual(calls, [
+      "kimi",
+    ])
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
 test("AIService lets model bill override provider bill", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-model-bill-override-"))

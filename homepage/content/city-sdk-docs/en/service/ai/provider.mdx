@@ -69,9 +69,9 @@ description: Provider is an abstract base class for AI upstreams. Subclass it to
  }
  ```
 
- ## Multimodal prompt extraction
+## Multimodal prompt extraction
 
- Override `extractPrompt` to flatten multimodal messages into plain text:
+Override `extractPrompt` to flatten multimodal messages into plain text:
 
  ```ts
  class DeepSeekProvider extends Provider {
@@ -84,10 +84,32 @@ description: Provider is an abstract base class for AI upstreams. Subclass it to
        .filter(Boolean)
        .join("\n") ?? "";
    }
- }
- ```
+}
+```
 
- ## Image Providers
+## Model fallback
+
+You can attach a fallback model directly on a model config:
+
+```ts
+const kimi = kimiProvider.model({
+  id: "kimi-k2.6",
+  name: "Kimi K2.6",
+});
+
+const deepseek = deepseekProvider.model({
+  id: "deepseek-v4-flash",
+  name: "DeepSeek V4 Flash",
+  fallback: {
+    image: kimi,
+  },
+});
+```
+
+When a request contains image input and the current model does not support it, AIService switches to `fallback.image` automatically for `text`, `stream`, and `chat/completions`.
+If no fallback is configured, AIService keeps the original model and the provider decides how to handle the request.
+
+## Image Providers
 
 `@downcity/city` does not ship concrete image provider factories. City provides the `Provider` abstraction, `AIService` registration, and the unified `client.ai.image_create()` / `client.ai.image_result()` job contract.
 

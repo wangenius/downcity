@@ -25,6 +25,7 @@ import type {
 import type {
   ModelConfig,
   ModelActions,
+  ModelFallbackConfig,
   OpenAICompatibleClient,
   OpenAICompatibleClientConfig,
   ProviderOptions,
@@ -268,10 +269,10 @@ export abstract class Provider {
    openai?(ctx: Context): Promise<AIProviderChargedResponse>;
 
    /**
-    * 生成模型配置。
-    *
-    * 自动收集当前 Provider 实例上定义的 action 方法。
-    */
+   * 生成模型配置。
+   *
+   * 自动收集当前 Provider 实例上定义的 action 方法。
+   */
    model(spec: {
      id: string;
      name: string;
@@ -279,6 +280,7 @@ export abstract class Provider {
      tags?: string[];
      meta?: Record<string, unknown>;
      default?: boolean | string[];
+     fallback?: ModelFallbackConfig;
      bill?: AIProviderBillFn;
    }): ModelConfig {
      const actions: ModelActions = {};
@@ -320,6 +322,7 @@ export abstract class Provider {
        baseURL: this.baseURL,
        envKey: this.envKey,
        passthroughModel: this.passthroughModel,
+       fallback: spec.fallback,
        actions,
        bill: spec.bill ?? this.bill.bind(this),
      };

@@ -66,6 +66,16 @@ type ResolvedProviderOutput = {
   output: unknown;
   charge?: AIProviderChargeLine | Promise<AIProviderChargeLine | undefined>;
 };
+type ResolvedAction = {
+  model?: ModelConfig;
+  action: ActionFn;
+};
+type RoutingFallbackReason = "input_requires_image";
+type ResolvedRoutingPlan = {
+  resolved: ResolvedAction;
+  fallback_from?: string;
+  fallback_reason?: RoutingFallbackReason;
+};
 type StoredImagePart = Record<string, unknown> & {
   type: "file";
   url: string;
@@ -136,6 +146,15 @@ function readOptionalNumber(value: unknown): number | undefined {
   if (typeof value !== "string" || !value.trim()) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+/**
+ * 读取 part 的 MIME 类型。
+ */
+function readPartMediaType(part: Record<string, unknown>): string {
+  return readOptionalString(part.mediaType)
+    ?? readOptionalString(part.media_type)
+    ?? "";
 }
 
 /**
@@ -530,11 +549,112 @@ export class AIService extends Service {
       .map((item) => item.key);
   }
 
+  /**
+   * 按请求内容和模型级 fallback 决定实际执行模型。
+   *
+   * 关键说明（中文）
+   * - 这里只做路由，不改写请求体，避免 AIService 绑定具体上游协议。
+   * - 当前把 OpenAI image_url 与 UIMessage image/file part 统一归一为 image 输入。
+   * - 没有配置 fallback 时保持既有行为，由 Provider 自己决定如何处理。
+   */
+  private planTextExecution(resolved: ResolvedAction, ctx: Context, mode: string): ResolvedRoutingPlan {
+    const model = resolved.model;
+    if (!model || !this.requiresImageInput(ctx.input, mode)) {
+      return { resolved };
+    }
+
+    const fallback_model = this.resolveFallbackModel(model.fallback?.image);
+    if (!fallback_model || fallback_model.id === model.id) {
+      return { resolved };
+    }
+
+    const action = mode === "openai"
+      ? this.resolveOpenAIAction(fallback_model)
+      : this.getAction(fallback_model, mode);
+    if (!action || this.getMissingEnv(fallback_model, ctx.env).length > 0) {
+      return { resolved };
+    }
+
+    return {
+      resolved: {
+        model: fallback_model,
+        action,
+      },
+      fallback_from: model.id,
+      fallback_reason: "input_requires_image",
+    };
+  }
+
+  /**
+   * 解析模型 fallback 引用。
+   */
+  private resolveFallbackModel(input: ModelConfig | string | undefined): ModelConfig | undefined {
+    if (!input) return undefined;
+    if (typeof input === "string") return this.modelMap.get(input);
+    return this.modelMap.get(input.id) ?? input;
+  }
+
+  /**
+   * 判断当前文本请求是否包含图片输入。
+   */
+  private requiresImageInput(input: unknown, mode: string): boolean {
+    if (!isRecord(input)) return false;
+    if (mode === "openai") {
+      return this.hasOpenAIImageInput(input.messages);
+    }
+    return this.hasUiImageInput(input.messages);
+  }
+
+  /**
+   * 扫描 OpenAI-compatible messages 的图片输入。
+   */
+  private hasOpenAIImageInput(messages: unknown): boolean {
+    if (!Array.isArray(messages)) return false;
+    return messages.some((message) => {
+      if (!isRecord(message)) return false;
+      const content = message.content;
+      if (!Array.isArray(content)) return false;
+      return content.some((part) => this.isOpenAIImagePart(part));
+    });
+  }
+
+  /**
+   * 判断 OpenAI-compatible content part 是否为图片输入。
+   */
+  private isOpenAIImagePart(part: unknown): boolean {
+    if (!isRecord(part)) return false;
+    const type = readOptionalString(part.type);
+    if (type === "image" || type === "image_url" || type === "input_image") return true;
+    return type === "file" && readPartMediaType(part).startsWith("image/");
+  }
+
+  /**
+   * 扫描 UIMessage messages 的图片输入。
+   */
+  private hasUiImageInput(messages: unknown): boolean {
+    if (!Array.isArray(messages)) return false;
+    return messages.some((message) => {
+      if (!isRecord(message) || !Array.isArray(message.parts)) return false;
+      return message.parts.some((part) => this.isUiImagePart(part));
+    });
+  }
+
+  /**
+   * 判断 UIMessage part 是否为图片输入。
+   */
+  private isUiImagePart(part: unknown): boolean {
+    if (!isRecord(part)) return false;
+    const type = readOptionalString(part.type);
+    if (type === "image") return true;
+    return type === "file" && readPartMediaType(part).startsWith("image/");
+  }
+
   // ========== SDK 通路 ==========
 
   private async handleModality(modality: Modality, ctx: Context): Promise<unknown | Response> {
-    const resolved = this.resolve({ model: ctx.input.model as string | undefined, mode: modality }, ctx.env);
-    this.attachResolvedModel(ctx, resolved.model, modality);
+    const initial_resolved = this.resolve({ model: ctx.input.model as string | undefined, mode: modality }, ctx.env);
+    const { resolved, fallback_from, fallback_reason } = this.planTextExecution(initial_resolved, ctx, modality);
+    this.attachResolvedModel(ctx, resolved.model, modality, { fallback_from, fallback_reason });
     const started_at = Date.now();
 
     try {
@@ -834,8 +954,9 @@ export class AIService extends Service {
   private async handleChatCompletions(ctx: Context): Promise<Response> {
     const body = ctx.input as Record<string, unknown>;
     const modelId = body.model as string | undefined;
-    const resolved = this.resolve({ model: modelId, mode: "openai" }, ctx.env);
-    this.attachResolvedModel(ctx, resolved.model, "openai");
+    const initial_resolved = this.resolve({ model: modelId, mode: "openai" }, ctx.env);
+    const { resolved, fallback_from, fallback_reason } = this.planTextExecution(initial_resolved, ctx, "openai");
+    this.attachResolvedModel(ctx, resolved.model, "openai", { fallback_from, fallback_reason });
     ctx.input = body;
     const started_at = Date.now();
 
@@ -858,7 +979,12 @@ export class AIService extends Service {
   /**
    * 将解析出的模型写回原始 Context，供 hook / usage / charge 读取。
    */
-  private attachResolvedModel(ctx: Context, model: ModelConfig | undefined, mode: string): void {
+  private attachResolvedModel(
+    ctx: Context,
+    model: ModelConfig | undefined,
+    mode: string,
+    routing?: { fallback_from?: string; fallback_reason?: RoutingFallbackReason },
+  ): void {
     if (!model) return;
     ctx.variant = { id: model.id, name: model.name, meta: model.meta };
     ctx.metering = {
@@ -872,6 +998,8 @@ export class AIService extends Service {
       metadata: {
         ...(ctx.metering?.metadata ?? {}),
         mode,
+        ...(routing?.fallback_from ? { fallback_from: routing.fallback_from } : {}),
+        ...(routing?.fallback_reason ? { fallback_reason: routing.fallback_reason } : {}),
       },
     };
   }

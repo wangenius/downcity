@@ -71,6 +71,7 @@ export { Provider } from "./service/ai/provider.js";
 export type {
   AIServiceOptions,
   ModelConfig,
+  ModelFallbackConfig,
   ModelActions,
   OpenAICompatibleClient,
   OpenAICompatibleClientConfig,

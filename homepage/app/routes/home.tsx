@@ -12,7 +12,7 @@ export function meta() {
   const title = `${product.productName} — Agent Infrastructure for AI Builders`;
   const description = product.description;
 
-  const twitter_image = `${baseUrl}/icon-inverse.png`;
+  const twitter_image = `${baseUrl}/icon.png`;
 
   return [
     // Essential meta tags (required, not inherited from parent)
@@ -53,7 +53,7 @@ export function meta() {
       content: "Downcity - Agent Infrastructure for AI Builders",
     },
     // X / Twitter
-    // icon-inverse.png 为 1:1 白色 logo，在深色卡片背景上能正常显示。
+    // icon.png 为 1:1 正方形，summary 卡片比 summary_large_image 更适合展示 logo。
     {
       name: "twitter:card",
       content: "summary",

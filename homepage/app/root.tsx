@@ -86,7 +86,7 @@ export const meta: Route.MetaFunction = ({ location }) => {
   // X/Twitter、LinkedIn、Discord 等抓取 Open Graph 图片时必须使用绝对 URL。
   const site_origin = product.homepage ?? "https://www.downcity.ai";
   const canonical_url = `${site_origin}${location.pathname}${location.search}`;
-  const og_image = `${site_origin}/icon-512.png`;
+  const og_image = `${site_origin}/icon-inverse.png`;
 
   return [
     { title },
@@ -117,8 +117,8 @@ export const meta: Route.MetaFunction = ({ location }) => {
     { property: "og:url", content: canonical_url },
     { tagName: "link", rel: "canonical", href: canonical_url },
 
-    // Twitter
-    // icon-512.png 为 1:1 正方形，summary 卡片比 summary_large_image 更适合展示 logo。
+    // Twitter / X
+    // icon-inverse.png 为 1:1 白色 logo，在深色卡片背景上能正常显示。
     { name: "twitter:card", content: "summary" },
     { name: "twitter:site", content: "@downcity_ai" },
     {

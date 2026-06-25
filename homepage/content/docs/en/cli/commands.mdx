@@ -1,6 +1,6 @@
 ---
 title: CLI Commands
-description: Common Downcity CLI commands for managing agents and projects
+description: Common Downcity CLI commands for agents, City, and Federation
 ---
 
 # CLI Commands
@@ -27,20 +27,7 @@ downcity agent status
 downcity agent logs
 ```
 
-## Channel accounts
-
-```bash
-# Add a Telegram bot
-downcity chat add telegram --id telegram-main
-
-# List accounts
-downcity chat list
-
-# Remove an account
-downcity chat remove telegram-main
-```
-
-## Global commands
+## City identity
 
 ```bash
 # Login to City
@@ -49,11 +36,65 @@ downcity login
 # Logout
 downcity logout
 
-# Check CLI version
-downcity --version
+# Check who you are
+downcity whoami
+
+# List API tokens
+downcity tokens list
+
+# Create a new token
+downcity tokens create --name "ci-deployment"
+
+# Revoke a token
+downcity tokens revoke <token-id>
 ```
 
-## Flags and options
+## City usage & billing
+
+```bash
+# View current usage
+downcity usage
+
+# View balance
+downcity balance
+
+# Add balance ( Stripe )
+downcity balance add --amount 100
+```
+
+## Channel accounts
+
+```bash
+# Add a Telegram bot
+downcity chat add telegram --id telegram-main
+
+# Add a Feishu bot
+downcity chat add feishu --id feishu-work
+
+# List accounts
+downcity chat list
+
+# Remove an account
+downcity chat remove telegram-main
+```
+
+## Federation models
+
+```bash
+# List available models
+downcity models list
+
+# Show model details
+downcity models show quality
+
+# List providers
+downcity providers list
+
+# Check provider health
+downcity providers status
+```
+
+## Global flags
 
 Most commands support:
 

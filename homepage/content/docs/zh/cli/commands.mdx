@@ -1,6 +1,6 @@
 ---
 title: CLI 命令
-description: 管理 Agent 和项目的常用 Downcity CLI 命令
+description: 管理 Agent、City 和 Federation 的常用 Downcity CLI 命令
 ---
 
 # CLI 命令
@@ -27,20 +27,7 @@ downcity agent status
 downcity agent logs
 ```
 
-## 渠道账号
-
-```bash
-# 添加 Telegram 机器人
-downcity chat add telegram --id telegram-main
-
-# 列出账号
-downcity chat list
-
-# 移除账号
-downcity chat remove telegram-main
-```
-
-## 全局命令
+## City 身份
 
 ```bash
 # 登录 City
@@ -49,11 +36,65 @@ downcity login
 # 退出登录
 downcity logout
 
-# 查看 CLI 版本
-downcity --version
+# 查看当前身份
+downcity whoami
+
+# 列出 API token
+downcity tokens list
+
+# 创建新 token
+downcity tokens create --name "ci-deployment"
+
+# 撤销 token
+downcity tokens revoke <token-id>
 ```
 
-## 标志和选项
+## City 用量与计费
+
+```bash
+# 查看当前用量
+downcity usage
+
+# 查看余额
+downcity balance
+
+# 充值（Stripe）
+downcity balance add --amount 100
+```
+
+## 渠道账号
+
+```bash
+# 添加 Telegram 机器人
+downcity chat add telegram --id telegram-main
+
+# 添加飞书机器人
+downcity chat add feishu --id feishu-work
+
+# 列出账号
+downcity chat list
+
+# 移除账号
+downcity chat remove telegram-main
+```
+
+## Federation 模型
+
+```bash
+# 列出可用模型
+downcity models list
+
+# 显示模型详情
+downcity models show quality
+
+# 列出提供商
+downcity providers list
+
+# 检查提供商健康
+downcity providers status
+```
+
+## 全局标志
 
 大多数命令支持：
 

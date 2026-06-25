@@ -1,25 +1,41 @@
 ---
 title: CLI
-description: What the Downcity CLI is and how it manages Agent projects
+description: What the Downcity CLI is and how it manages projects, City, and Federation
 ---
 
 # CLI
 
-The `downcity` CLI is a management tool built on top of the Agent SDK. It handles project creation, Agent lifecycle, and configuration without you writing code.
+The `downcity` CLI is a unified management tool for the entire Downcity stack. It covers Agent projects, City infrastructure, and Federation configuration from a single terminal interface.
 
 ## What it does
+
+### Agent projects
 
 - Creates and initializes Agent projects
 - Reads `downcity.json` and passes config to the Agent SDK
 - Starts, stops, and restarts Agents
 - Manages channel accounts and credentials
-- Provides debugging and inspection commands
+
+### City
+
+- Logs in and out of City identity
+- Manages API tokens and permissions
+- Inspects usage, balance, and billing status
+- Configures channel accounts (Telegram, Feishu, QQ bots)
+
+### Federation
+
+- Lists available model providers and model IDs
+- Configures model bindings for projects
+- Inspects provider health and status
 
 ## Who it is for
 
-The CLI is for users who want to run agents from the terminal without embedding the SDK into their own application. If you are building a product that needs programmatic control, use the Agent SDK directly.
+The CLI is for users who want to manage the entire Downcity stack from the terminal. If you are building a product that needs programmatic control, use the SDKs directly.
 
 ## Key commands
+
+### Agent
 
 | Command | What it does |
 |---------|-------------|
@@ -28,11 +44,28 @@ The CLI is for users who want to run agents from the terminal without embedding 
 | `downcity agent stop` | Stop the running Agent |
 | `downcity agent status` | Check if the Agent is running |
 | `downcity agent logs` | View runtime logs |
+
+### City
+
+| Command | What it does |
+|---------|-------------|
+| `downcity login` | Authenticate with City |
+| `downcity logout` | Remove local City credentials |
 | `downcity chat add` | Add a messaging channel account |
+| `downcity chat list` | List registered channel accounts |
+| `downcity usage` | View current usage and balance |
 
-## Relationship to SDK
+### Federation
 
-The CLI is a wrapper. It reads `downcity.json`, resolves the model binding through City, and calls `new Agent(...)` and `agent.start()` under the hood. The execution core is the same Agent SDK that you would use directly in code.
+| Command | What it does |
+|---------|-------------|
+| `downcity models list` | List available models |
+| `downcity providers list` | List registered model providers |
+| `downcity providers status` | Check provider health |
+
+## Relationship to SDKs
+
+The CLI is a wrapper around the SDKs. It reads config files, resolves model bindings through City, and calls SDK constructors under the hood. The execution core is the same whether you use the CLI or the SDKs directly.
 
 Continue with:
 

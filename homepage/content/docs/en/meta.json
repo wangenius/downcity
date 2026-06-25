@@ -3,13 +3,13 @@
   "pages": [
     "index",
     "quickstart",
-    "cli",
     "agent",
     "plugin",
     "city",
     "federation",
     "concepts",
     "security",
+    "cli",
     "reference",
     "community"
   ]

@@ -1,0 +1,42 @@
+---
+title: Federation & Service
+description: What Federation and Service are in Downcity's AI infrastructure
+---
+
+# Federation & Service
+
+**Federation** is the model abstraction layer in City. It provides a unified interface over multiple AI providers (OpenAI, Anthropic, Google, local models, etc.) so that Agents do not need to hardcode provider-specific APIs.
+
+## Federation AIService
+
+The Federation AIService is a City component that:
+
+- Registers model providers and their capabilities
+- Exposes a unified model API regardless of the backend
+- Tracks usage and routes requests to the appropriate provider
+- Handles failover and rate limiting
+
+An Agent binds to a model through an ID like `"default"` or `"quality"`. The Federation AIService resolves this ID to a live model instance at runtime.
+
+## Service / Action infrastructure
+
+City also provides a general-purpose **Service** and **Action** layer for building backend capabilities that Agents can call:
+
+- **Service** — a long-running backend capability (e.g., a knowledge base, a search engine, a database)
+- **Action** — a discrete operation that an Agent can invoke (e.g., send an email, query a database, call an external API)
+
+Services and Actions are registered with City and can be discovered and called by any connected Agent.
+
+## Relationship to City
+
+Federation is a subsystem of City. When you use the City SDK, you are interacting with:
+
+- City identity and auth
+- Federation AIService (model catalog and routing)
+- Service/Action infrastructure (backend capabilities)
+- Usage, balance, and billing (City Services)
+
+## Where to learn more
+
+- [City SDK](/en/city-sdk-docs) — building on City and Federation
+- [City Services Docs](/en/services-sdk-docs) — usage, balance, and billing APIs

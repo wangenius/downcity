@@ -1,7 +1,0 @@
-{
-  "title": "Environment",
-  "pages": [
-    "env-loading",
-    "built-in-env-vars"
-  ]
-}

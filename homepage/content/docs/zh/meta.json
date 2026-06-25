@@ -4,9 +4,10 @@
     "index",
     "quickstart",
     "agent",
+    "plugin",
+    "city",
+    "federation",
     "concepts",
-    "capabilities",
-    "configuration",
     "security",
     "reference",
     "community"

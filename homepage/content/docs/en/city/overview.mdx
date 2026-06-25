@@ -1,0 +1,35 @@
+---
+title: City
+description: What City is and how it provides shared AI infrastructure to Agents
+---
+
+# City
+
+**City** is the shared AI infrastructure layer that Downcity Agents connect to. It owns the things that should not live inside every individual Agent project: model catalogs, authentication, usage tracking, and billing.
+
+## What City owns
+
+- **Model catalog** — the Federation AIService lists available models and providers. Agents bind to models through IDs, not by embedding provider keys.
+- **Identity & auth** — global user accounts, API tokens, and permissions live in City, not in each project.
+- **Usage & balance** — every model call is metered and tracked. City handles billing, quotas, and payment (via Stripe).
+- **Channel accounts** — bot credentials for Telegram, Feishu, QQ, etc. are stored in `~/.downcity/downcity.db` and referenced by ID from the project.
+
+## What City does not own
+
+- Project-specific prompts (`PROFILE.md`, `SOUL.md`)
+- Agent sessions and conversation state
+- Plugin behavior and tool implementations
+
+These belong to the Agent runtime.
+
+## How Agents connect to City
+
+When you run `downcity agent start`, the CLI reads `downcity.json`, resolves the `execution.modelId` from the connected City instance, and passes the live model instance to the Agent SDK.
+
+When you use the SDK directly, you provide the model instance yourself — but City still owns the catalog and billing behind it.
+
+## Where to learn more
+
+- [City SDK](/en/city-sdk-docs) — the SDK for building on City infrastructure
+- [City Services Docs](/en/services-sdk-docs) — accounts, balance, usage, and payment APIs
+- [Agent SDK](/en/agent-sdk-docs) — how Agents consume City services at runtime

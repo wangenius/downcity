@@ -61,7 +61,7 @@ export async function runCommand(params: RunCommandParams): Promise<string> {
 
     child.on("exit", (code) => {
       if (code === 0) {
-        resolve(params.capture ? `${stdout}${stderr}`.trim() : "");
+        resolve(params.capture ? stdout.trim() : "");
         return;
       }
       reject(new CliError({

@@ -8,6 +8,7 @@
 
 import type { Tool } from "ai";
 import type {
+  ShellActionResponse,
   ShellApprovalMode,
   ShellApprovalStatus,
 } from "@/types/ShellAction.js";
@@ -26,6 +27,29 @@ export interface ShellRuntimeLogger {
  * Shell 事件。
  */
 export type ShellEvent = Record<string, unknown>;
+
+/**
+ * Shell tool 执行时需要的宿主运行上下文。
+ *
+ * 关键点（中文）
+ * - 替代 AsyncLocalStorage，显式把 session/turn 上下文传给 Shell action。
+ * - 由 Agent 在 tool.execute 入口提供，Shell 内部不再隐式读取 run scope。
+ */
+export interface ShellToolRunContext {
+  /**
+   * 当前 tool 调用所属的 agent session id。
+   */
+  ownerContextId?: string;
+  /**
+   * 当前 tool 调用所属的 turn id。
+   */
+  turnId?: string;
+}
+
+/**
+ * 读取当前 Shell tool 运行上下文。
+ */
+export type ShellGetRunContext = () => ShellToolRunContext | null | undefined;
 
 /**
  * Shell 构造参数。
@@ -51,6 +75,14 @@ export interface ShellOptions {
    * Shell 事件出口。Agent 会把这些事件转成 session event。
    */
   emit_event?: (event: ShellEvent) => void;
+  /**
+   * 读取当前 tool 调用所属的 session/turn 上下文。
+   *
+   * 说明（中文）
+   * - 若未提供，Shell 会回退到 `getShellRunContext()`（AsyncLocalStorage）。
+   * - 推荐由 Agent 显式注入，避免 AI SDK 并行 tool callback 丢失 async context。
+   */
+  get_run_context?: ShellGetRunContext;
 }
 
 /**
@@ -172,6 +204,56 @@ export interface ShellApprovalModeUpdateResult extends ShellSessionApprovalModeV
    */
   success: true;
 }
+
+/**
+ * Shell tool action 名称。
+ */
+export type ShellToolAction =
+  | "start"
+  | "exec"
+  | "status"
+  | "read"
+  | "write"
+  | "wait"
+  | "close";
+
+/**
+ * Shell tool 执行器协议。
+ *
+ * 关键点（中文）
+ * - `getRunContext` 让 tool 在执行入口拿到显式 session/turn 上下文。
+ * - `run_action` 显式携带 `ownerContextId`/`turnId`，替代 Shell 内部读 AsyncLocalStorage。
+ */
+export interface ShellToolRunner {
+  /**
+   * 读取当前 tool 调用所属的 session/turn 上下文。
+   */
+  getRunContext?: ShellGetRunContext;
+
+  /**
+   * 执行 shell action。
+   */
+  run_action(params: {
+    /**
+     * action 名称。
+     */
+    action: ShellToolAction;
+    /**
+     * action payload。
+     */
+    payload: Record<string, unknown>;
+    /**
+     * 当前 tool 调用所属的 agent session id。
+     */
+    ownerContextId?: string;
+    /**
+     * 当前 tool 调用所属的 turn id。
+     */
+    turnId?: string;
+  }): Promise<ShellActionResponse>;
+}
+
+type JsonObject = Record<string, unknown>;
 
 /**
  * Shell 工具集合。

@@ -34,6 +34,10 @@ export type ShellApprovalRuntimeState = {
    */
   ownerContextId?: string;
   /**
+   * 当前审批所属的 turn id；用于发布 approval 事件。
+   */
+  turnId?: string;
+  /**
    * 关联工具名。
    */
   toolName: ShellApprovalToolName;

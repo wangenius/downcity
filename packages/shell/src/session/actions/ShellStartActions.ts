@@ -68,7 +68,8 @@ export async function startShellSession(
   const login = request.login !== false;
   const sandboxMode = resolveSandboxMode(request.sandbox);
   const reason = String(request.reason || "").trim();
-  const ownerContextId = resolveOwnerContextId(context, request.ownerContextId);
+  const ownerContextId = String(request.ownerContextId || "").trim() || undefined;
+  const turnId = String(request.turnId || "").trim() || undefined;
   const shellDir = getShellDir(context.rootPath, shellId);
   const snapshotFilePath = getShellSnapshotPath(context.rootPath, shellId);
   const outputFilePath = getShellOutputPath(context.rootPath, shellId);
@@ -103,6 +104,7 @@ export async function startShellSession(
         cwd,
         reason,
         ...(ownerContextId ? { ownerContextId } : {}),
+        ...(turnId ? { turnId } : {}),
       });
       approvalId = approval.approvalId;
       approvalStatus = approval.status;
@@ -129,7 +131,7 @@ export async function startShellSession(
     cwd,
     shellPath,
     login,
-    baseEnv: buildShellEnv(context),
+    baseEnv: buildShellEnv(context, ownerContextId),
     sandboxMode,
   });
   const child = spawnResult.child;

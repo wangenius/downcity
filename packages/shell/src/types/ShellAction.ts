@@ -145,6 +145,8 @@ export type ShellStartRequest = {
   maxOutputTokens?: number;
   /** 显式指定 owner sessionId；为空时优先从 SessionRunScope 推断。 */
   ownerContextId?: string;
+  /** 显式指定当前 turn id。 */
+  turnId?: string;
   /** 是否在 shell 结束后自动回投主 chat agent。 */
   autoNotifyOnExit?: boolean;
   /** 命令执行 sandbox 模式；默认 safe。 */
@@ -179,6 +181,10 @@ export type ShellExecRequest = {
   sandbox?: ShellSandboxMode;
   /** 请求 unrestricted sandbox 时展示给用户的原因。 */
   reason?: string;
+  /** 显式指定 owner sessionId。 */
+  ownerContextId?: string;
+  /** 显式指定当前 turn id。 */
+  turnId?: string;
 };
 
 /**
@@ -219,6 +225,10 @@ export type ShellWriteRequest = {
   chars: string;
   /** 向 unrestricted shell session 写入 stdin 时展示给用户的原因。 */
   reason?: string;
+  /** 显式指定 owner sessionId。 */
+  ownerContextId?: string;
+  /** 显式指定当前 turn id。 */
+  turnId?: string;
 };
 
 /**

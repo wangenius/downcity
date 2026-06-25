@@ -57,6 +57,7 @@ export async function writeShellSession(
   let approvalId: string | undefined;
   let approvalStatus: ShellApprovalStatus | undefined;
   const reason = String(request.reason || "").trim();
+  const turnId = String(request.turnId || "").trim() || undefined;
   if (session.snapshot.sandboxMode === "unrestricted") {
     const validationError = validateUnrestrictedRequest({ cmd: chars, reason });
     if (validationError) throw new Error(validationError);
@@ -87,6 +88,7 @@ export async function writeShellSession(
         cwd: session.snapshot.cwd,
         reason,
         ...(session.snapshot.ownerContextId ? { ownerContextId: session.snapshot.ownerContextId } : {}),
+        ...(turnId ? { turnId } : {}),
         inputPreview: chars,
         inputChars: chars.length,
       });

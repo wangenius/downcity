@@ -16,8 +16,14 @@ function stripShellSecretEnv(env: NodeJS.ProcessEnv): void {
 
 /**
  * 构造 shell 子进程环境变量。
+ *
+ * 关键点（中文）
+ * - `sessionId` 显式传入时优先使用，避免依赖 AsyncLocalStorage。
  */
-export function buildShellEnv(context: ShellHostContext): NodeJS.ProcessEnv {
+export function buildShellEnv(
+  context: ShellHostContext,
+  sessionId?: string,
+): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
 
   // 关键点（中文）
@@ -30,8 +36,9 @@ export function buildShellEnv(context: ShellHostContext): NodeJS.ProcessEnv {
     env[normalizedKey] = normalizedValue;
   }
 
+  const explicitSessionId = String(sessionId || "").trim();
   const run_context = context.shellIntegration?.getRunContext?.();
-  const sessionId = String(run_context?.sessionId || "").trim();
+  const resolvedSessionId = explicitSessionId || String(run_context?.sessionId || "").trim();
   const agentPath = String(context.rootPath || "").trim();
   const configuredAgentId = String(context.config?.id || "").trim();
   const agentId = configuredAgentId || (agentPath ? path.basename(agentPath) : "");
@@ -42,7 +49,7 @@ export function buildShellEnv(context: ShellHostContext): NodeJS.ProcessEnv {
   //   很容易把请求发到错误项目，最终误报 “Agent runtime 没启动”。
   if (agentPath) env.DC_AGENT_PATH = agentPath;
   if (agentId) env.DC_AGENT_ID = agentId;
-  if (sessionId) env.DC_SESSION_ID = sessionId;
+  if (resolvedSessionId) env.DC_SESSION_ID = resolvedSessionId;
   if (process.env.DC_CITY_HOST) env.DC_CITY_HOST = process.env.DC_CITY_HOST;
   if (process.env.DC_CITY_PORT) env.DC_CITY_PORT = process.env.DC_CITY_PORT;
   stripShellSecretEnv(env);

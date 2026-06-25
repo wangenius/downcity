@@ -15,6 +15,8 @@ import type {
   ShellApprovalView,
   ShellConfigureOptions,
   ShellOptions,
+  ShellToolAction,
+  ShellToolRunContext,
   ShellToolSet,
 } from "@/types/ShellRuntime.js";
 import type {
@@ -39,10 +41,7 @@ import {
   waitShellSession,
   writeShellSession,
 } from "@/session/ShellActionRuntime.js";
-import {
-  createShellTools,
-  type ShellToolAction,
-} from "@/tool/ShellTools.js";
+import { createShellTools } from "@/tool/ShellTools.js";
 import { getShellRunContext } from "@/session/ShellRunScope.js";
 
 /**
@@ -68,7 +67,14 @@ export class Shell {
     this.host_options = { ...options };
     this.state = createShellRuntimeState();
     this.tools = createShellTools({
-      run_action: async (params) => await this.run_action(params.action, params.payload),
+      getRunContext: () => this.resolve_run_context(),
+      run_action: async (params) =>
+        await this.run_action(
+          params.action,
+          params.payload,
+          params.ownerContextId,
+          params.turnId,
+        ),
     });
   }
 
@@ -87,6 +93,7 @@ export class Shell {
       },
       logger: options.logger || this.host_options.logger,
       emit_event: options.emit_event || this.host_options.emit_event,
+      get_run_context: options.get_run_context || this.host_options.get_run_context,
     };
   }
 
@@ -192,26 +199,55 @@ export class Shell {
   private async run_action(
     action: ShellToolAction,
     payload: Record<string, unknown>,
+    ownerContextId?: string,
+    turnId?: string,
   ): Promise<ShellActionResponse> {
     const context = this.create_host_context();
+    const payload_with_context: Record<string, unknown> = {
+      ...payload,
+      ...(ownerContextId ? { ownerContextId } : {}),
+      ...(turnId ? { turnId } : {}),
+    };
     switch (action) {
       case "start":
-        return await startShellSession(this.state, context, payload as never);
+        return await startShellSession(this.state, context, payload_with_context as never);
       case "exec":
-        return await execShellCommand(this.state, context, payload as never);
+        return await execShellCommand(this.state, context, payload_with_context as never);
       case "status":
-        return await getShellSessionStatus(this.state, context, payload as never);
+        return await getShellSessionStatus(this.state, context, payload_with_context as never);
       case "read":
-        return await readShellSession(this.state, context, payload as never);
+        return await readShellSession(this.state, context, payload_with_context as never);
       case "write":
-        return await writeShellSession(this.state, context, payload as never);
+        return await writeShellSession(this.state, context, payload_with_context as never);
       case "wait":
-        return await waitShellSession(this.state, context, payload as never);
+        return await waitShellSession(this.state, context, payload_with_context as never);
       case "close":
-        return await closeShellSession(this.state, context, payload as never);
+        return await closeShellSession(this.state, context, payload_with_context as never);
       default:
         throw new Error(`Unknown shell action: ${String(action)}`);
     }
+  }
+
+  /**
+   * 解析当前 tool 调用所需的 session/turn 上下文。
+   *
+   * 关键点（中文）
+   * - 优先使用 Agent 显式注入的 `get_run_context`。
+   * - 未注入时回退到 AsyncLocalStorage（兼容旧集成）。
+   */
+  private resolve_run_context(): ShellToolRunContext {
+    const explicit = this.host_options.get_run_context?.();
+    if (explicit?.ownerContextId || explicit?.turnId) {
+      return {
+        ownerContextId: String(explicit.ownerContextId || "").trim() || undefined,
+        turnId: String(explicit.turnId || "").trim() || undefined,
+      };
+    }
+    const from_scope = getShellRunContext();
+    return {
+      ownerContextId: String(from_scope?.session_id || "").trim() || undefined,
+      turnId: String(from_scope?.turn_id || "").trim() || undefined,
+    };
   }
 
   private create_host_context(): ShellHostContext {
@@ -220,9 +256,9 @@ export class Shell {
       throw new Error("Shell requires root_path. Pass Shell through new Agent({ shell }) or construct Shell with root_path.");
     }
     const emit_event = this.host_options.emit_event;
-    const run_context = getShellRunContext() || null;
-    const session_id = String(run_context?.session_id || "").trim();
-    const turn_id = String(run_context?.turn_id || "").trim();
+    const run_context = this.resolve_run_context();
+    const session_id = run_context.ownerContextId || "";
+    const turn_id = run_context.turnId || "";
     return {
       rootPath: root_path,
       env: this.host_options.env,

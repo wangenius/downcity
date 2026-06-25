@@ -54,6 +54,8 @@ export async function execShellCommand(
     inlineWaitMs: Math.min(state.options.defaultInlineWaitMs, timeoutMs),
     maxOutputTokens: request.maxOutputTokens,
     autoNotifyOnExit: false,
+    ...(request.ownerContextId ? { ownerContextId: request.ownerContextId } : {}),
+    ...(request.turnId ? { turnId: request.turnId } : {}),
   });
 
   let current = started;

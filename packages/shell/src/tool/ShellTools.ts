@@ -27,34 +27,13 @@ import {
   shellWriteInputSchema,
 } from "@/tool/ShellToolSchemas.js";
 import { validateChatSendCommand } from "@/tool/ShellToolFormatting.js";
-import type { ShellToolSet } from "@/types/ShellRuntime.js";
+import type {
+  ShellToolAction,
+  ShellToolRunner,
+  ShellToolSet,
+} from "@/types/ShellRuntime.js";
 
 type JsonObject = Record<string, unknown>;
-
-export type ShellToolAction =
-  | "start"
-  | "exec"
-  | "status"
-  | "read"
-  | "write"
-  | "wait"
-  | "close";
-
-export interface ShellToolRunner {
-  /**
-   * 执行 shell action。
-   */
-  run_action(params: {
-    /**
-     * action 名称。
-     */
-    action: ShellToolAction;
-    /**
-     * action payload。
-     */
-    payload: JsonObject;
-  }): Promise<ShellActionResponse>;
-}
 
 function flattenShellActionResponse(params: {
   /**
@@ -171,8 +150,28 @@ function formatToolError(
 
 /**
  * 创建 shell tools。
+ *
+ * 关键点（中文）
+ * - 每个 tool.execute 都会通过 runner.getRunContext() 拿到显式 session/turn 上下文，
+ *   并随 action 请求一起传给 Shell 内部，避免依赖 AsyncLocalStorage。
  */
 export function createShellTools(runner: ShellToolRunner): ShellToolSet {
+  /**
+   * 统一包装 run_action，自动注入当前 tool 运行上下文。
+   */
+  function run_action_with_context(
+    action: ShellToolAction,
+    payload: JsonObject,
+  ): Promise<ShellActionResponse> {
+    const run_context = runner.getRunContext?.() || null;
+    return runner.run_action({
+      action,
+      payload,
+      ownerContextId: run_context?.ownerContextId,
+      turnId: run_context?.turnId,
+    });
+  }
+
   const shell_start = tool({
     description:
       "Start a shell session. Returns shell_id plus initial status/output. Long-running commands should usually be checked later with shell_status or shell_wait instead of repeated polling.",
@@ -198,23 +197,20 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
           };
         }
 
-        const response = await runner.run_action({
-          action: "start",
-          payload: {
-            cmd,
-            ...(workdir ? { cwd: workdir } : {}),
-            ...(shell ? { shell } : {}),
-            login,
-            inlineWaitMs: inline_wait_ms,
-            ...(typeof max_output_tokens === "number"
-              ? { maxOutputTokens: max_output_tokens }
-              : {}),
-            ...(typeof auto_notify_on_exit === "boolean"
-              ? { autoNotifyOnExit: auto_notify_on_exit }
-              : {}),
-            sandbox,
-            ...(reason ? { reason } : {}),
-          },
+        const response = await run_action_with_context("start", {
+          cmd,
+          ...(workdir ? { cwd: workdir } : {}),
+          ...(shell ? { shell } : {}),
+          login,
+          inlineWaitMs: inline_wait_ms,
+          ...(typeof max_output_tokens === "number"
+            ? { maxOutputTokens: max_output_tokens }
+            : {}),
+          ...(typeof auto_notify_on_exit === "boolean"
+            ? { autoNotifyOnExit: auto_notify_on_exit }
+            : {}),
+          sandbox,
+          ...(reason ? { reason } : {}),
         });
         return flattenShellActionResponse({ response, started_at });
       } catch (error) {
@@ -247,20 +243,17 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
           };
         }
 
-        const response = await runner.run_action({
-          action: "exec",
-          payload: {
-            cmd,
-            ...(workdir ? { cwd: workdir } : {}),
-            ...(shell ? { shell } : {}),
-            login,
-            timeoutMs: timeout_ms,
-            ...(typeof max_output_tokens === "number"
-              ? { maxOutputTokens: max_output_tokens }
-              : {}),
-            sandbox,
-            ...(reason ? { reason } : {}),
-          },
+        const response = await run_action_with_context("exec", {
+          cmd,
+          ...(workdir ? { cwd: workdir } : {}),
+          ...(shell ? { shell } : {}),
+          login,
+          timeoutMs: timeout_ms,
+          ...(typeof max_output_tokens === "number"
+            ? { maxOutputTokens: max_output_tokens }
+            : {}),
+          sandbox,
+          ...(reason ? { reason } : {}),
         });
         return flattenShellExecResponse({ response, started_at });
       } catch (error) {
@@ -276,13 +269,10 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
     execute: async ({ shell_id, cmd }: ShellStatusInput) => {
       const started_at = Date.now();
       try {
-        const response = await runner.run_action({
-          action: "status",
-          payload: {
-            ...(shell_id ? { shellId: shell_id } : {}),
-            ...(cmd ? { cmd } : {}),
-            includeCompleted: true,
-          },
+        const response = await run_action_with_context("status", {
+          ...(shell_id ? { shellId: shell_id } : {}),
+          ...(cmd ? { cmd } : {}),
+          includeCompleted: true,
         });
         return flattenShellActionResponse({ response, started_at });
       } catch (error) {
@@ -302,16 +292,13 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
     }: ShellReadInput) => {
       const started_at = Date.now();
       try {
-        const response = await runner.run_action({
-          action: "read",
-          payload: {
-            shellId: shell_id,
-            ...(typeof from_cursor === "number" ? { fromCursor: from_cursor } : {}),
-            ...(typeof max_output_tokens === "number"
-              ? { maxOutputTokens: max_output_tokens }
-              : {}),
-            includeCompleted: true,
-          },
+        const response = await run_action_with_context("read", {
+          shellId: shell_id,
+          ...(typeof from_cursor === "number" ? { fromCursor: from_cursor } : {}),
+          ...(typeof max_output_tokens === "number"
+            ? { maxOutputTokens: max_output_tokens }
+            : {}),
+          includeCompleted: true,
         });
         return flattenShellActionResponse({ response, started_at });
       } catch (error) {
@@ -327,13 +314,10 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
     execute: async ({ shell_id, chars, reason }: ShellWriteInput) => {
       const started_at = Date.now();
       try {
-        const response = await runner.run_action({
-          action: "write",
-          payload: {
-            shellId: shell_id,
-            chars,
-            ...(reason ? { reason } : {}),
-          },
+        const response = await run_action_with_context("write", {
+          shellId: shell_id,
+          chars,
+          ...(reason ? { reason } : {}),
         });
         return flattenShellActionResponse({ response, started_at });
       } catch (error) {
@@ -355,17 +339,14 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
     }: ShellWaitInput) => {
       const started_at = Date.now();
       try {
-        const response = await runner.run_action({
-          action: "wait",
-          payload: {
-            shellId: shell_id,
-            ...(typeof after_version === "number" ? { afterVersion: after_version } : {}),
-            ...(typeof from_cursor === "number" ? { fromCursor: from_cursor } : {}),
-            timeoutMs: timeout_ms,
-            ...(typeof max_output_tokens === "number"
-              ? { maxOutputTokens: max_output_tokens }
-              : {}),
-          },
+        const response = await run_action_with_context("wait", {
+          shellId: shell_id,
+          ...(typeof after_version === "number" ? { afterVersion: after_version } : {}),
+          ...(typeof from_cursor === "number" ? { fromCursor: from_cursor } : {}),
+          timeoutMs: timeout_ms,
+          ...(typeof max_output_tokens === "number"
+            ? { maxOutputTokens: max_output_tokens }
+            : {}),
         });
         return flattenShellActionResponse({ response, started_at });
       } catch (error) {
@@ -381,12 +362,9 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
     execute: async ({ shell_id, force = false }: ShellCloseInput) => {
       const started_at = Date.now();
       try {
-        const response = await runner.run_action({
-          action: "close",
-          payload: {
-            shellId: shell_id,
-            force,
-          },
+        const response = await run_action_with_context("close", {
+          shellId: shell_id,
+          force,
         });
         return flattenShellActionResponse({ response, started_at });
       } catch (error) {

@@ -7,7 +7,7 @@
  * - 负责 history 写入、run scope、executing 状态、Composer 编排与 tool-loop 执行。
  */
 
-import { streamText, type LanguageModel, type Tool } from "ai";
+import { streamText, type LanguageModel, type Tool, type ToolExecutionOptions } from "ai";
 import { withShellRunScope } from "@downcity/shell";
 import { SessionHistoryWriter } from "@executor/composer/history/SessionHistoryWriter.js";
 import type { SessionHistoryComposer } from "@executor/composer/history/SessionHistoryComposer.js";
@@ -358,7 +358,7 @@ export class Executor implements SessionExecutor {
     }
 
     const composed_context = await this.contextComposer.compose(run_context);
-    const tools = composed_context.tools;
+    const tools = this.bind_run_scope_to_tools(composed_context.tools, run_context);
     const system = await this.systemComposer.resolve(run_context);
 
     try {
@@ -407,6 +407,46 @@ export class Executor implements SessionExecutor {
       model,
       run_context,
     });
+  }
+
+  /**
+   * 为所有 tool 的 execute callback 绑定 ShellRunScope。
+   *
+   * 关键点（中文）
+   * - AI SDK 的 streamText 在并行执行 tool callback 时会丢失 AsyncLocalStorage。
+   * - 在 tool.execute 入口重新进入 withShellRunScope，确保 Shell 能读取到 session/turn 上下文。
+   */
+  private bind_run_scope_to_tools(
+    tools: Record<string, Tool>,
+    run_context: SessionRunContext,
+  ): Record<string, Tool> {
+    const session_id = String(run_context.sessionId || "").trim();
+    const turn_id = String(run_context.turnId || "").trim();
+    if (!session_id && !turn_id) return tools;
+
+    const wrapped: Record<string, Tool> = {};
+    for (const [name, tool] of Object.entries(tools)) {
+      const original_execute = tool.execute;
+      if (typeof original_execute !== "function") {
+        wrapped[name] = tool;
+        continue;
+      }
+      wrapped[name] = {
+        ...tool,
+        execute: async (args: unknown, options: ToolExecutionOptions) => {
+          return await withShellRunScope(
+            {
+              run_context: {
+                ...(session_id ? { session_id } : {}),
+                ...(turn_id ? { turn_id } : {}),
+              },
+            },
+            async () => await original_execute(args, options),
+          );
+        },
+      };
+    }
+    return wrapped;
   }
 
   /**

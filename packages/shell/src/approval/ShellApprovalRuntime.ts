@@ -120,6 +120,7 @@ export function setShellApprovalMode(params: {
 function publishApprovalResult(params: {
   context: ShellHostContext;
   ownerContextId?: string;
+  turnId?: string;
   approvalId: string;
   shellId: string;
   toolName: ShellApprovalToolName;
@@ -127,7 +128,7 @@ function publishApprovalResult(params: {
 }): void {
   const sessionId = String(params.ownerContextId || "").trim();
   if (!sessionId || !params.context.session) return;
-  const turnId = String(params.context.shellIntegration?.getRunContext?.()?.turnId || sessionId).trim();
+  const turnId = String(params.turnId || sessionId).trim();
   try {
     params.context.session.get(sessionId).publishEvent({
       type: "tool-approval-result",
@@ -209,6 +210,7 @@ export async function requestUnrestrictedApproval(params: {
   cwd: string;
   reason: string;
   ownerContextId?: string;
+  turnId?: string;
   inputPreview?: string;
   inputChars?: number;
 }): Promise<{
@@ -218,10 +220,35 @@ export async function requestUnrestrictedApproval(params: {
   const approvalId = `ap_${generateId()}`;
   const createdAt = nowMs();
   const ownerContextId = String(params.ownerContextId || "").trim() || undefined;
+  const turnId = String(params.turnId || "").trim() || undefined;
   const operation = resolveApprovalOperation(params.toolName);
   const inputPreview = params.inputPreview !== undefined
     ? buildInputPreview(params.inputPreview)
     : undefined;
+
+  // 关键点（中文）
+  // - 没有 ownerContextId 时无法把审批事件发给任何 session，必须直接拒绝，
+  //   避免创建 pending approval 后无限挂起直到超时。
+  if (!ownerContextId) {
+    await appendAudit({
+      context: params.context,
+      record: {
+        event: "approval_rejected_no_owner",
+        approval_id: approvalId,
+        tool_call_id: params.shellId,
+        agent_id: params.context.config?.id || null,
+        tool_name: params.toolName,
+        cmd: params.cmd,
+        operation,
+        ...(inputPreview !== undefined ? { input_preview: inputPreview } : {}),
+        ...(typeof params.inputChars === "number" ? { input_chars: params.inputChars } : {}),
+        cwd: params.cwd,
+        reason: params.reason,
+        created_at: new Date(createdAt).toISOString(),
+      },
+    }).catch(() => undefined);
+    return { approvalId, status: "denied" };
+  }
 
   const status = await new Promise<ShellApprovalStatus>((resolve) => {
     const timer = setTimeout(() => {
@@ -238,6 +265,7 @@ export async function requestUnrestrictedApproval(params: {
       approvalId,
       shellId: params.shellId,
       ...(ownerContextId ? { ownerContextId } : {}),
+      ...(turnId ? { turnId } : {}),
       toolName: params.toolName,
       cmd: params.cmd,
       operation,
@@ -250,28 +278,26 @@ export async function requestUnrestrictedApproval(params: {
       resolve,
     });
 
-    if (ownerContextId) {
-      const turnId = String(params.context.shellIntegration?.getRunContext?.()?.turnId || ownerContextId).trim();
-      try {
-        params.context.session?.get(ownerContextId).publishEvent({
-          type: "tool-approval-request",
-          turnId,
-          toolCallId: params.shellId,
-          toolName: params.toolName,
-          approvalId,
-          sandbox: "unrestricted",
-          cmd: params.cmd,
-          cwd: params.cwd,
-          reason: params.reason,
-          status: "pending",
-          operation,
-          shellId: params.shellId,
-          ...(inputPreview !== undefined ? { inputPreview } : {}),
-          ...(typeof params.inputChars === "number" ? { inputChars: params.inputChars } : {}),
-        });
-      } catch {
-        // ignore event delivery failures
-      }
+    const eventTurnId = String(turnId || ownerContextId).trim();
+    try {
+      params.context.session?.get(ownerContextId).publishEvent({
+        type: "tool-approval-request",
+        turnId: eventTurnId,
+        toolCallId: params.shellId,
+        toolName: params.toolName,
+        approvalId,
+        sandbox: "unrestricted",
+        cmd: params.cmd,
+        cwd: params.cwd,
+        reason: params.reason,
+        status: "pending",
+        operation,
+        shellId: params.shellId,
+        ...(inputPreview !== undefined ? { inputPreview } : {}),
+        ...(typeof params.inputChars === "number" ? { inputChars: params.inputChars } : {}),
+      });
+    } catch {
+      // ignore event delivery failures
     }
 
     appendAudit({
@@ -314,6 +340,7 @@ export async function resolveApproval(params: {
   publishApprovalResult({
     context: params.context,
     ownerContextId: approval.ownerContextId,
+    turnId: approval.turnId,
     approvalId: approval.approvalId,
     shellId: approval.shellId,
     toolName: approval.toolName,

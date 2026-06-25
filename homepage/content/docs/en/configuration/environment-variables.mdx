@@ -143,34 +143,3 @@ Concrete workflows live in [Downcity CLI](/en/docs/reference/cli), [Downcity Cit
 5. Validate chat routing through the Downcity chat product surface after changing bindings.
 6. If values look inherited, check `channelAccountId`, host-injected `env`, and project `.env`.
 
-## 9. Homepage Agent Marketplace
-
-The homepage community marketplace now uses PostgreSQL-compatible storage and works well with Supabase.
-
-Required environment variables:
-
-1. `DATABASE_URL`: point this to your Supabase Postgres connection string so repository submissions and review states can be stored centrally.
-
-Behavior:
-
-1. Public submissions are inserted with `review_status = pending`.
-2. Managers approve or reject records manually in Supabase.
-3. Only `approved` records are shown on the public marketplace page.
-
-## 10. Public address
-
-Current `downcity` CLI no longer starts or rebinds Console UI. Public Console access should be provided by the Console product deployment, reverse proxy, tunnel, or hosting layer.
-
-These values are normally injected by local runtime host discovery or by the deployment environment. They are not endpoint parameters that users enter for `contact link`:
-
-1. `DOWNCITY_PUBLIC_URL`: full external URL, for example `https://console.example.com`
-2. `DOWNCITY_PUBLIC_HOST`: external host only
-
-The local runtime host can detect the public host when possible and store it in City-side Env as `DOWNCITY_PUBLIC_HOST`. Agent `contact link` generation also uses this value to create transferable contact codes.
-
-Priority:
-
-1. `DOWNCITY_PUBLIC_URL`
-2. `DOWNCITY_PUBLIC_HOST`
-3. the current bind host (when it is already directly reachable)
-4. a detected public IPv4 from local network interfaces

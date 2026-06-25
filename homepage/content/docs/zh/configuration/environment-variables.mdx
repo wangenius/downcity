@@ -143,34 +143,3 @@ flowchart TD
 5. 渠道配置变更后，通过 Downcity chat 产品表层验收路由。
 6. 出现“像复用旧值”的情况时，优先检查 `channelAccountId`、宿主注入 env 与项目 `.env`。
 
-## 9. Homepage Agent 社区资源
-
-Homepage 里的 Agent 社区资源现在可以接 PostgreSQL 兼容数据库，推荐直接使用 Supabase。
-
-需要的运行时变量：
-
-1. `DATABASE_URL`：指向你的 Supabase Postgres 连接串，用来统一保存仓库提交与审核状态。
-
-行为说明：
-
-1. 所有公开提交都会先以 `review_status = pending` 写入数据库。
-2. 管理员直接在 Supabase 后台手动执行通过或拒绝。
-3. 只有 `approved` 状态的记录才会显示在公开 marketplace 页面上。
-
-## 10. 公网地址
-
-当前 `downcity` CLI 不再启动或重新绑定 Console UI。Console 公网访问应该由 Console 产品部署、反向代理、隧道或托管层提供。
-
-这些值通常由本地 runtime host 探测时写入，或由部署环境注入，不是 `contact link` 要求用户手动填写的参数：
-
-1. `DOWNCITY_PUBLIC_URL`：完整公网 URL，例如 `https://console.example.com`
-2. `DOWNCITY_PUBLIC_HOST`：公网 host
-
-本地 runtime host 会在可能时自动探测公网 host，并把结果写入 City 侧 Env 的 `DOWNCITY_PUBLIC_HOST`。这个值也会被 agent 的 `contact link` 用来生成可转交的联系码。
-
-优先级：
-
-1. `DOWNCITY_PUBLIC_URL`
-2. `DOWNCITY_PUBLIC_HOST`
-3. 当前绑定 host（如果它本身就是可直连地址）
-4. 本机网卡里探测到的公网 IPv4

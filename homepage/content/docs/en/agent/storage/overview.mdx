@@ -22,7 +22,24 @@ You can think of it as:
 
 If you need to answer "what did this agent actually do," `.downcity/` is often more reliable than terminal output that has already scrolled away.
 
+## Logs and debug files
+
+When an agent behaves incorrectly, the most useful places to inspect first are:
+
+- runtime status
+- logs under `.downcity/`
+- daemon state files
+- related session message files
+
+### Recommended inspection order
+
+1. Check command output first.
+2. Then inspect logs and persisted messages under `.downcity/`.
+3. Only after that consider cleaning stale state.
+
+If you have not narrowed the issue yet, deleting state files or message directories too early usually makes the problem harder to reproduce.
+
 ## Continue reading
 
-- [`.downcity` layout](/en/docs/agent/storage/dot-downcity-layout)
+- [`.downcity` directory](/en/docs/reference/dot-downcity)
 - [SDK Session layout](/en/agent-sdk-docs/storage/sdk-session-layout)

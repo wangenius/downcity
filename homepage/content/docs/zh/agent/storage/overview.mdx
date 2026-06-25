@@ -22,7 +22,24 @@ Agent 的运行产物大多会落在项目的 `.downcity/` 目录里。
 
 如果你需要回答“这个 agent 到底做了什么”，`.downcity/` 往往比终端里一闪而过的输出更可靠。
 
+## 日志与调试文件
+
+当 agent 行为异常时，最先应该查看的地方：
+
+- 运行时状态
+- `.downcity/` 下的日志
+- daemon 状态文件
+- 相关会话消息文件
+
+### 建议排查顺序
+
+1. 先看命令输出。
+2. 再检查 `.downcity/` 下的日志和已落盘消息。
+3. 最后才考虑清理陈旧状态。
+
+如果还没定位问题就删除状态文件或消息目录，通常会让问题更难复现。
+
 ## 继续阅读
 
-- [`.downcity` 布局](/zh/docs/agent/storage/dot-downcity-layout)
+- [`.downcity` 目录](/zh/docs/reference/dot-downcity)
 - [SDK Session 布局](/zh/agent-sdk-docs/storage/sdk-session-layout)

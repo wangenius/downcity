@@ -1,8 +1,6 @@
 {
-  "title": "Storage",
+  "title": "存储",
   "pages": [
-    "overview",
-    "dot-downcity-layout",
-    "logs-and-debug-files"
+    "overview"
   ]
 }

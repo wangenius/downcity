@@ -38,7 +38,8 @@
     "all:patch:build": "bash ./scripts/build-packages.sh --all"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "downcity": "workspace:*"
   },
   "dependencies": {},
   "repository": {

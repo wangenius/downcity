@@ -11,6 +11,9 @@ importers:
       '@types/bun':
         specifier: latest
         version: 1.3.14
+      downcity:
+        specifier: workspace:*
+        version: link:packages/cli
 
   homepage:
     dependencies:

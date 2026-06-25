@@ -54,7 +54,7 @@ export function Navbar() {
   const docsPath = isZh ? "/zh/docs" : "/en/docs";
   const citySdkDocsPath = isZh ? "/zh/city-sdk-docs" : "/en/city-sdk-docs";
   const agentSdkDocsPath = isZh ? "/zh/agent-sdk-docs" : "/en/agent-sdk-docs";
-  const servicesSdkDocsPath = isZh ? "/zh/services-sdk-docs" : "/en/services-sdk-docs";
+  const paymentsPath = isZh ? "/zh/payments" : "/en/payments";
   const pluginsDocsPath = isZh ? "/zh/plugins-docs" : "/en/plugins-docs";
   const uiSdkDocsPath = isZh ? "/zh/ui-sdk-docs" : "/en/ui-sdk-docs";
   const productBasePath = isZh ? "/zh/product" : "/product";
@@ -98,7 +98,7 @@ export function Navbar() {
       docsPath,
       citySdkDocsPath,
       agentSdkDocsPath,
-      servicesSdkDocsPath,
+      paymentsPath,
       pluginsDocsPath,
       uiSdkDocsPath,
     ],
@@ -111,9 +111,9 @@ export function Navbar() {
         path: agentSdkDocsPath,
       },
       {
-        label: "City Services Docs",
-        description: isZh ? "City Services Docs 文档空间" : "City Services Docs documentation space",
-        path: servicesSdkDocsPath,
+        label: "Payments",
+        description: isZh ? "Payments 文档空间" : "Payments documentation space",
+        path: paymentsPath,
       },
       {
         label: "Agent Plugins Docs",

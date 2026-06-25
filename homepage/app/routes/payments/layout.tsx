@@ -1,11 +1,11 @@
 /**
- * City SDK 文档布局路由模块。
+ * Payments 文档布局路由模块。
  * 说明：
- * 1. `city-sdk-docs` 与 `docs`、`agent-sdk-docs`、`payments` 平级存在，单独承载City SDK 文档。
+ * 1. `payments` 与 `city-sdk-docs`、`agent-sdk-docs`、`plugins-docs` 平级存在，单独承载 Payments 文档。
  * 2. 这里仅负责语言切换与 Fumadocs 布局装配，不承载业务逻辑。
  */
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
-import { citySdkDocsSource } from "@/lib/city-sdk-docs-source";
+import { paymentsSource } from "@/lib/payments-source";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { useEffect } from "react";
 import type { Route } from "./+types/layout";
@@ -19,7 +19,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     url.pathname.startsWith("/zh/") || url.pathname === "/zh" ? "zh" : "en";
 
   return {
-    tree: citySdkDocsSource.pageTree[lang],
+    tree: paymentsSource.pageTree[lang],
     lang,
   };
 }
@@ -40,8 +40,8 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
       }
     }
 
-    if (location.pathname === "/city-sdk-docs" || location.pathname === "/city-sdk-docs/") {
-      navigate("/en/city-sdk-docs", { replace: true });
+    if (location.pathname === "/payments" || location.pathname === "/payments/") {
+      navigate("/en/payments", { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

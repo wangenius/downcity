@@ -125,16 +125,16 @@ export default [
     }),
   ]),
 
-  // City Services Docs routes with layout
-  layout("routes/services-sdk-docs/layout.tsx", [
-    route("en/services-sdk-docs/*", "routes/services-sdk-docs/page.tsx", {
-      id: "services-sdk-docs-en",
+  // Payments routes with layout
+  layout("routes/payments/layout.tsx", [
+    route("en/payments/*", "routes/payments/page.tsx", {
+      id: "payments-en",
     }),
-    route("services-sdk-docs/*", "routes/services-sdk-docs/redirect.tsx", {
-      id: "services-sdk-docs-redirect",
+    route("payments/*", "routes/payments/redirect.tsx", {
+      id: "payments-redirect",
     }),
-    route("zh/services-sdk-docs/*", "routes/services-sdk-docs/page.tsx", {
-      id: "services-sdk-docs-zh",
+    route("zh/payments/*", "routes/payments/page.tsx", {
+      id: "payments-zh",
     }),
   ]),
 
@@ -164,7 +164,7 @@ export default [
   route("api/search", "routes/docs/search.ts"),
   route("api/city-sdk-docs/search", "routes/city-sdk-docs/search.ts"),
   route("api/agent-sdk-docs/search", "routes/agent-sdk-docs/search.ts"),
-  route("api/services-sdk-docs/search", "routes/services-sdk-docs/search.ts"),
+  route("api/payments/search", "routes/payments/search.ts"),
   route("api/plugins-docs/search", "routes/plugins-docs/search.ts"),
   route("api/ui-sdk-docs/search", "routes/ui-sdk-docs/search.ts"),
 ] satisfies RouteConfig;

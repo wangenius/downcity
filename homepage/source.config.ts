@@ -17,8 +17,8 @@ export const citySdkDocs = defineDocs({
   dir: "content/city-sdk-docs",
 });
 
-export const servicesSdkDocs = defineDocs({
-  dir: "content/services-sdk-docs",
+export const payments = defineDocs({
+  dir: "content/payments",
 });
 
 export const uiSdkDocs = defineDocs({

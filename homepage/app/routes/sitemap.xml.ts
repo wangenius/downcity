@@ -1,7 +1,7 @@
 import { source } from "@/lib/source";
 import { citySdkDocsSource } from "@/lib/city-sdk-docs-source";
 import { agentSdkDocsSource } from "@/lib/agent-sdk-docs-source";
-import { servicesSdkDocsSource } from "@/lib/services-sdk-docs-source";
+import { paymentsSource } from "@/lib/payments-source";
 import { pluginsDocsSource } from "@/lib/plugins-docs-source";
 import { uiSdkDocsSource } from "@/lib/ui-sdk-docs-source";
 import { product } from "@/lib/product";
@@ -13,7 +13,7 @@ export const loader = async () => {
   const pages = source.getPages();
   const citySdkPages = citySdkDocsSource.getPages();
   const agentSdkPages = agentSdkDocsSource.getPages();
-  const servicesSdkPages = servicesSdkDocsSource.getPages();
+  const paymentsPages = paymentsSource.getPages();
   const pluginsDocsPages = pluginsDocsSource.getPages();
   const uiSdkPages = uiSdkDocsSource.getPages();
 
@@ -91,7 +91,7 @@ export const loader = async () => {
       priority: 0.7,
     },
     {
-      url: `${baseUrl}/services-sdk-docs`,
+      url: `${baseUrl}/payments`,
       lastModified: new Date().toISOString(),
       changeFrequency: "weekly" as const,
       priority: 0.7,
@@ -132,7 +132,7 @@ export const loader = async () => {
     priority: 0.7,
   }));
 
-  const servicesSdkDocumentationPages = servicesSdkPages.map((page) => ({
+  const servicesSdkDocumentationPages = paymentsPages.map((page) => ({
     url: `${baseUrl}${page.path}`,
     lastModified: new Date().toISOString(),
     changeFrequency: "weekly" as const,

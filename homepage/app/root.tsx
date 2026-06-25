@@ -157,13 +157,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
     path === "/docs" ||
     path === "/city-sdk-docs" ||
     path === "/agent-sdk-docs" ||
-    path === "/services-sdk-docs" ||
+    path === "/payments" ||
     path === "/plugins-docs" ||
     path === "/ui-sdk-docs" ||
     path.startsWith("/docs/") ||
     path.startsWith("/city-sdk-docs/") ||
     path.startsWith("/agent-sdk-docs/") ||
-    path.startsWith("/services-sdk-docs/") ||
+    path.startsWith("/payments/") ||
     path.startsWith("/plugins-docs/") ||
     path.startsWith("/ui-sdk-docs/") ||
     path.startsWith("/en/docs") ||
@@ -172,8 +172,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     path.startsWith("/zh/city-sdk-docs") ||
     path.startsWith("/en/agent-sdk-docs") ||
     path.startsWith("/zh/agent-sdk-docs") ||
-    path.startsWith("/en/services-sdk-docs") ||
-    path.startsWith("/zh/services-sdk-docs") ||
+    path.startsWith("/en/payments") ||
+    path.startsWith("/zh/payments") ||
     path.startsWith("/en/plugins-docs") ||
     path.startsWith("/zh/plugins-docs") ||
     path.startsWith("/en/ui-sdk-docs") ||

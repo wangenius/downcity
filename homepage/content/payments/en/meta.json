@@ -1,0 +1,13 @@
+{
+  "title": "Payments",
+  "pages": [
+    "index",
+    "accounts",
+    "balance",
+    "usage",
+    "payment-stripe",
+    "payment-creem",
+    "payment-dodo",
+    "payment-waffo"
+  ]
+}

@@ -200,7 +200,9 @@ await plugin_read({
 });
 ```
 
-然后使用任务式 action：
+图片生成会消耗 provider 额度。Agent 应该先向用户确认具体要创建或编辑的图片请求，拿到明确确认后再调用 `image_create`。
+
+确认后再使用任务式 action：
 
 ```ts
 const job = await plugin_call({
@@ -249,7 +251,7 @@ const job = await plugin_call({
 
 所谓“provider 输入解析”指的是：Agent 调用 `plugin_call` 时只传简单的 `prompt` 或 `content`；`ImagePlugin` 在内部把本地图片读成 data URL，并把 `content` 转成 `ImagePluginResolvedInput.messages` 后再交给 `image_create(input)`。这只是 ImagePlugin 到 City / provider adapter 的内部边界，不是给 Agent 使用的新协议。
 
-生成图片的 file parts 会统一落盘到 `.downcity/resources/`，以 `resources://.downcity/resources/...` 引用，并自动合并进最终 assistant message。`plugin_call` 结果也会通过 `files[].path` 返回可直接打开的本机绝对路径。
+生成图片的 file parts 会统一落盘到 `.downcity/resources/`，以 `.downcity/resources/...` 这类 Agent 根目录相对路径引用，并自动合并进最终 assistant message。生成结果里的相对文件 URL 会先按 Agent 项目根目录解析，再进行资源落盘。`plugin_call` 结果也会通过 `files[].relative_path` 和 `files[].path` 返回 Agent 根目录相对路径与可直接打开的本机绝对路径。
 
 ## plugin HTTP
 

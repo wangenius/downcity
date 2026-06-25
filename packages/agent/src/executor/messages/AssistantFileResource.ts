@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 只处理运行期产生的 assistant file part，不参与 user 附件注入。
  * - 将 data URL、远程 URL 与本地文件统一写入 `.downcity/resources`。
- * - 历史中只保留 `resources://<project-relative-path>`，避免暴露本机绝对路径。
+ * - 历史中只保留基于 Agent 项目根目录的相对路径，避免暴露本机绝对路径。
  * - 资源文件按内容 hash 命名，天然去重并避免重复写入大文件。
  */
 
@@ -34,8 +34,8 @@ export interface MaterializeAssistantFilePartsParams {
    * 当前项目根目录。
    *
    * 关键点（中文）
-   * - 正常 session run 会显式传入 projectRoot。
-   * - 旧入口未传时回退到 `process.cwd()`，保证行为可用。
+   * - 正常 session run 必须显式传入 projectRoot。
+   * - 旧入口未传时仅为兼容回退到 `process.cwd()`。
    */
   projectRoot?: string;
 
@@ -102,12 +102,58 @@ function filename_from_url(raw_url: string): string | undefined {
   }
 }
 
-function to_resources_url(projectRoot: string, filePath: string): string {
+/**
+ * 将项目内文件路径转换为基于 Agent 根目录的相对路径。
+ */
+export function toAgentRelativePath(params: {
+  /**
+   * 当前 Agent 项目根目录。
+   */
+  projectRoot: string;
+  /**
+   * 项目内文件绝对路径。
+   */
+  filePath: string;
+}): string {
+  const project_root = resolve_project_root(params.projectRoot);
   const relative = path
-    .relative(projectRoot, filePath)
+    .relative(project_root, params.filePath)
     .split(path.sep)
     .join("/");
-  return `resources://${relative}`;
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new Error(`Assistant resource path is outside agent root: ${params.filePath}`);
+  }
+  return relative;
+}
+
+/**
+ * 将相对路径解析为 Agent 项目内绝对路径。
+ *
+ * 关键点（中文）
+ * - 相对路径统一基于 Agent 项目根目录解析。
+ * - 绝对路径原样归一化后返回。
+ * - 越界路径返回空字符串，由调用方决定是否忽略。
+ */
+export function resolveAgentFilePath(params: {
+  /**
+   * 当前 Agent 项目根目录。
+   */
+  projectRoot: string;
+  /**
+   * 待解析的相对路径或绝对路径。
+   */
+  filePath: string;
+}): string {
+  const raw = String(params.filePath || "").trim();
+  if (!raw) return "";
+  const project_root = resolve_project_root(params.projectRoot);
+  const file_path = path.isAbsolute(raw)
+    ? path.resolve(raw)
+    : path.resolve(project_root, raw);
+  if (path.isAbsolute(raw)) return file_path;
+  const rel = path.relative(project_root, file_path);
+  if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) return "";
+  return file_path;
 }
 
 async function write_resource_file(params: {
@@ -258,8 +304,6 @@ async function materialize_file_part(params: {
   if (!raw_url) {
     throw new Error("Assistant file part url is required");
   }
-  if (raw_url.startsWith("resources://")) return params.part;
-
   const parsed_data_url = parse_data_url(raw_url);
   if (parsed_data_url) {
     const media_type =
@@ -275,7 +319,10 @@ async function materialize_file_part(params: {
     return {
       ...params.part,
       mediaType: media_type,
-      url: to_resources_url(params.projectRoot, file_path),
+      url: toAgentRelativePath({
+        projectRoot: params.projectRoot,
+        filePath: file_path,
+      }),
     };
   }
 
@@ -297,7 +344,10 @@ async function materialize_file_part(params: {
       return {
         ...params.part,
         mediaType: media_type,
-        url: to_resources_url(params.projectRoot, file_path),
+        url: toAgentRelativePath({
+          projectRoot: params.projectRoot,
+          filePath: file_path,
+        }),
       };
     } catch (error) {
       // 关键点（中文）：远程下载失败时保留原始 URL，不让整张图导致 action 失败。
@@ -325,12 +375,15 @@ async function materialize_file_part(params: {
   return {
     ...params.part,
     mediaType: media_type,
-    url: to_resources_url(params.projectRoot, file_path),
+    url: toAgentRelativePath({
+      projectRoot: params.projectRoot,
+      filePath: file_path,
+    }),
   };
 }
 
 /**
- * 将 assistant file part 中的资源统一落盘为 `resources://` 相对 URL。
+ * 将 assistant file part 中的资源统一落盘为 Agent 根目录相对路径。
  */
 export async function materializeAssistantFileParts(
   params: MaterializeAssistantFilePartsParams,

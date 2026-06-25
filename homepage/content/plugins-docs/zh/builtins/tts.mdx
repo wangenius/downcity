@@ -90,7 +90,7 @@ return {
 };
 ```
 
-plugin 会统一转成包含 `file` part 的 UIMessage。通过 `plugin_call` 调用时，agent 会把音频落盘到 `.downcity/resources`，并在最终 assistant 消息中保留 `resources://...` 相对路径。
+plugin 会统一转成包含 `file` part 的 UIMessage。通过 `plugin_call` 调用时，agent 会把音频落盘到 `.downcity/resources`，并在最终 assistant 消息中保留 `.downcity/resources/...` 这类 Agent 根目录相对路径。
 
 ## Agent 如何调用
 

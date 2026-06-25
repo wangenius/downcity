@@ -182,7 +182,9 @@ await plugin_read({
 });
 ```
 
-Then it can use the job-style actions directly:
+Image creation consumes provider quota. The Agent should ask the user to explicitly confirm the exact image creation or edit request before calling `image_create`.
+
+After confirmation, it can use the job-style actions directly:
 
 ```ts
 const job = await plugin_call({
@@ -231,7 +233,7 @@ Call `models` first when the Agent needs to inspect available image model IDs.
 
 “Resolved provider input” means this: the Agent only passes simple `prompt` or `content`; `ImagePlugin` reads local files into data URLs and converts `content` into `ImagePluginResolvedInput.messages` before calling `image_create(input)`. This is the internal boundary from ImagePlugin to City / provider adapters, not a third Agent-facing payload format.
 
-Generated image file parts are always materialized under `.downcity/resources/`, referenced as `resources://.downcity/resources/...`, and merged into the final assistant message automatically. The `plugin_call` result also includes `files[].path` with the absolute local file path for direct opening.
+Generated image file parts are always materialized under `.downcity/resources/`, referenced by Agent-root relative paths such as `.downcity/resources/...`, and merged into the final assistant message automatically. Relative file URLs in generated file parts are resolved from the Agent project root before materialization. The `plugin_call` result also includes `files[].relative_path` and `files[].path` for the Agent-root relative path and absolute local file path.
 
 ## plugin HTTP
 

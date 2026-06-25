@@ -90,7 +90,7 @@ return {
 };
 ```
 
-The plugin normalizes this into a UIMessage with a `file` part. When called through `plugin_call`, the agent materializes the audio under `.downcity/resources` and keeps a `resources://...` relative path in the final assistant message.
+The plugin normalizes this into a UIMessage with a `file` part. When called through `plugin_call`, the agent materializes the audio under `.downcity/resources` and keeps an Agent-root relative path such as `.downcity/resources/...` in the final assistant message.
 
 ## How The Agent Calls It
 

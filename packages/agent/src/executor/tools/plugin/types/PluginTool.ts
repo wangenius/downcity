@@ -40,9 +40,9 @@ export interface PluginCallToolFileResult {
   media_type: string;
   /** 原始文件名；若上游未提供则为空字符串。 */
   filename: string;
-  /** 持久化到历史消息中的资源 URL，通常为 `resources://.downcity/resources/...`。 */
-  url: string;
-  /** 当前机器可直接打开的绝对文件路径。 */
+  /** 基于 Agent 项目根目录的相对路径，例如 `.downcity/resources/xxx.png`。 */
+  relative_path: string;
+  /** 当前机器可直接打开的绝对文件路径，按 Agent 项目根目录解析。 */
   path: string;
 }
 

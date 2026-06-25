@@ -2,8 +2,8 @@
  * @file 验证 plugin tool bridge 会把生成文件摘要为可打开路径。
  *
  * 关键点（中文）
- * - assistant message 仍然使用 `resources://` URL，避免历史暴露本机路径。
- * - tool result 额外返回本机绝对路径，便于模型与用户明确知道文件位置。
+ * - assistant message 使用 Agent 根目录相对路径，避免历史暴露本机路径。
+ * - tool result 同时返回相对路径与本机绝对路径，便于模型与用户明确知道文件位置。
  */
 
 import test from "node:test";
@@ -78,7 +78,7 @@ test("invokePluginCallTool returns absolute paths for materialized file parts", 
   assert.equal(result.success, true);
   assert.equal(result.assistant_file_count, 1);
   assert.equal(result.files?.length, 1);
-  assert.match(result.files[0].url, /^resources:\/\/\.downcity\/resources\//);
+  assert.match(result.files[0].relative_path, /^\.downcity\/resources\//);
   assert.equal(path.isAbsolute(result.files[0].path), true);
   assert.equal(
     path.dirname(result.files[0].path),
@@ -89,7 +89,7 @@ test("invokePluginCallTool returns absolute paths for materialized file parts", 
 
   const pending_parts = run_context.pendingAssistantFileParts;
   assert.equal(pending_parts.length, 1);
-  assert.equal(pending_parts[0].url, result.files[0].url);
+  assert.equal(pending_parts[0].url, result.files[0].relative_path);
 });
 
 test("invokePluginReadTool returns plugin action metadata", async () => {

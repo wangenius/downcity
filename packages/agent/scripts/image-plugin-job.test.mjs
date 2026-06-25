@@ -132,6 +132,7 @@ test("ImagePlugin exposes action metadata through plugin registry", async () => 
   assert.equal(metadata.actions[0].name, "image_create");
   assert.equal(metadata.actions[0].has_input_schema, true);
   assert.match(metadata.actions[0].description, /Create an async image job/);
+  assert.match(metadata.actions[0].description, /explicit user confirmation/);
   assert.equal(metadata.actions[0].examples[0].payload.prompt.includes("rainy city"), true);
 });
 

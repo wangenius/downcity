@@ -5,7 +5,7 @@
  * - 兼容 Telegram / Feishu / TUI 等统一的 `<file>` 协议入口。
  * - 仅在本轮执行的内存消息上追加 file parts，不修改持久化历史。
  * - 当前只为图片与 PDF 注入 file part，保持多模态模型可直接消费。
- * - 历史中的 `resources://` 与旧版 `file://` 会在喂给模型前临时 hydrate。
+ * - 历史中的相对路径与旧版 `file://` 会在喂给模型前临时 hydrate。
  */
 
 import fs from "fs-extra";
@@ -63,18 +63,17 @@ function buildDataUrl(mediaType: string, buffer: Buffer): string {
   return `data:${safeType};base64,${base64}`;
 }
 
-function resolveResourcesUrlPath(
+function resolveHydratableFilePath(
   projectRoot: string | undefined,
-  rawUrl: string,
+  rawPath: string,
 ): string | null {
-  const prefix = "resources://";
-  const raw = String(rawUrl || "").trim();
-  if (!raw.startsWith(prefix)) return null;
-  const relative = raw.slice(prefix.length).replace(/^\/+/, "");
-  if (!relative) return null;
+  const raw = String(rawPath || "").trim();
+  if (!raw || raw.startsWith("data:") || /^https?:\/\//i.test(raw)) return null;
+  if (raw.startsWith("file://")) return fileURLToPath(raw);
+  if (path.isAbsolute(raw)) return path.resolve(raw);
 
   const root = path.resolve(String(projectRoot || "").trim() || process.cwd());
-  const absPath = path.resolve(root, relative);
+  const absPath = path.resolve(root, raw);
   const rel = path.relative(root, absPath);
   if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) return null;
   return absPath;
@@ -85,14 +84,13 @@ async function hydrateFileUrlPart(
   projectRoot?: string,
 ): Promise<FileUIPart> {
   const url = String(part.url || "").trim();
-  const resourcesPath = resolveResourcesUrlPath(projectRoot, url);
-  if (!url.startsWith("file://") && !resourcesPath) return part;
+  const filePath = resolveHydratableFilePath(projectRoot, url);
+  if (!filePath) return part;
   try {
-    const absPath = resourcesPath || fileURLToPath(url);
-    const buffer = await fs.readFile(absPath);
+    const buffer = await fs.readFile(filePath);
     const mediaType =
       String(part.mediaType || "").trim() ||
-      guessAttachmentMediaTypeFromPath(absPath) ||
+      guessAttachmentMediaTypeFromPath(filePath) ||
       "application/octet-stream";
     return {
       ...part,
@@ -109,7 +107,7 @@ async function hydrateFileUrlPart(
  *
  * 关键点（中文）
  * - 该函数只修改本轮内存消息，不回写历史。
- * - 新历史保留 `resources://` 相对 URL，旧历史的 `file://` 仍继续兼容。
+ * - 新历史保留 Agent 根目录相对路径，旧历史的 `file://` 仍继续兼容。
  */
 export async function hydrateFileUrlPartsForModel(
   messages: SessionMessageV1[],
@@ -148,10 +146,11 @@ export async function hydrateFileUrlPartsForModel(
  */
 export async function injectFilePartsFromAttachments(
   messages: SessionMessageV1[],
+  projectRoot?: string,
 ): Promise<SessionMessageV1[]> {
   if (!Array.isArray(messages) || messages.length === 0) return messages;
 
-  const cwd = process.cwd();
+  const root = path.resolve(String(projectRoot || "").trim() || process.cwd());
   const out: SessionMessageV1[] = [];
 
   for (const message of messages) {
@@ -203,7 +202,7 @@ export async function injectFilePartsFromAttachments(
 
       const absPath = path.isAbsolute(attachment.path)
         ? attachment.path
-        : path.resolve(cwd, attachment.path);
+        : path.resolve(root, attachment.path);
       try {
         const exists = await fs.pathExists(absPath);
         if (!exists) continue;

@@ -34,7 +34,7 @@ export class CoreEngineMessageState {
   private readonly tools: Record<string, Tool>;
 
   /**
-   * 当前项目根目录，用于解析历史中的 `resources://` file part。
+   * 当前项目根目录，用于解析历史中的相对路径 file part。
    */
   private readonly projectRoot?: string;
 

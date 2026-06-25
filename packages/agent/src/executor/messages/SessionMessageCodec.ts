@@ -78,7 +78,10 @@ export async function toModelMessages(
   if (!Array.isArray(messages) || messages.length === 0) return [];
 
   // 第一步（中文）：在 user 消息上注入 file parts（多模态附件）。
-  const enrichedMessages = await injectFilePartsFromAttachments(messages);
+  const enrichedMessages = await injectFilePartsFromAttachments(
+    messages,
+    projectRoot,
+  );
 
   // 第二步（中文）：把历史里的资源 URL 在内存中 hydrate 成模型可消费的 data URL。
   const hydratedMessages = await hydrateFileUrlPartsForModel(

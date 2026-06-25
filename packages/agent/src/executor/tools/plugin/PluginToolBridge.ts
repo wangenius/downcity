@@ -18,7 +18,10 @@ import type {
   PluginReadInput,
   PluginReadToolResult,
 } from "@/executor/tools/plugin/types/PluginTool.js";
-import { materializeAssistantFileParts } from "@executor/messages/AssistantFileResource.js";
+import {
+  materializeAssistantFileParts,
+  resolveAgentFilePath,
+} from "@executor/messages/AssistantFileResource.js";
 import {
   enqueueAssistantFileParts,
   getSessionRunContext,
@@ -82,38 +85,25 @@ function resolve_project_root(project_root: string | undefined): string {
 }
 
 /**
- * 将 `resources://` URL 转成本机绝对路径。
- */
-function resolve_resources_file_path(
-  project_root: string,
-  raw_url: string,
-): string {
-  const prefix = "resources://";
-  const raw = String(raw_url || "").trim();
-  if (!raw.startsWith(prefix)) return "";
-  const relative = raw.slice(prefix.length).replace(/^\/+/, "");
-  if (!relative) return "";
-
-  const file_path = path.resolve(project_root, relative);
-  const rel = path.relative(project_root, file_path);
-  if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) return "";
-  return file_path;
-}
-
-/**
  * 构建返回给模型和用户可见的文件摘要。
  */
 function summarize_materialized_files(
   parts: FileUIPart[],
   project_root: string,
 ): PluginCallToolFileResult[] {
-  return parts.map((part, index) => ({
-    index,
-    media_type: part.mediaType,
-    filename: typeof part.filename === "string" ? part.filename : "",
-    url: String(part.url || ""),
-    path: resolve_resources_file_path(project_root, String(part.url || "")),
-  }));
+  return parts.map((part, index) => {
+    const relative_path = String(part.url || "");
+    return {
+      index,
+      media_type: part.mediaType,
+      filename: typeof part.filename === "string" ? part.filename : "",
+      relative_path,
+      path: resolveAgentFilePath({
+        projectRoot: project_root,
+        filePath: relative_path,
+      }),
+    };
+  });
 }
 
 /**

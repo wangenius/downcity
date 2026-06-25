@@ -336,7 +336,7 @@ export function getDowncityPublicDirPath(cwd: string): string {
  *
  * 关键点（中文）
  * - 该目录用于存放会话历史引用的二进制资源，例如图片生成结果。
- * - `messages.jsonl` 只保存 `resources://` 相对 URL，避免暴露本机绝对路径或长期保存 base64。
+ * - `messages.jsonl` 只保存 Agent 根目录相对路径，避免暴露本机绝对路径或长期保存 base64。
  */
 export function getDowncityResourcesDirPath(cwd: string): string {
   return path.join(getDowncityDirPath(cwd), "resources");

@@ -497,12 +497,13 @@ export class ImagePlugin extends BasePlugin {
       "",
       "Use this plugin only when the user asks to create, edit, or otherwise produce an image.",
       "Do not call it for ordinary text answers, even if the message mentions visual ideas.",
+      "Image creation consumes provider quota. Before calling `image_create`, you must ask the user to explicitly confirm the exact image creation/edit request. Do not call `image_create` just because the user discusses an image idea.",
       "",
       "## Actions",
       "",
       "- `models`：列出当前可用的图片模型，返回 `{ models, default_model_id }`。",
       "  仅当你需要让用户挑模型，或当前没有默认模型可用时才调用。",
-      "- `image_create`：创建一个异步图片任务，返回 `{ job_id, status }`。",
+      "- `image_create`：在用户明确确认后创建一个异步图片任务，返回 `{ job_id, status }`。",
       "  - 纯文本生成：填 `prompt`（字符串）。",
       "  - 编辑 / 参考图：填 `content`，格式：",
       "    `[{ type: \"text\", text }, { type: \"image\", url }]`。可以多段文本和多张图任意顺序混排。",
@@ -520,8 +521,9 @@ export class ImagePlugin extends BasePlugin {
       "## Flow",
       "",
       "1. 需要选模型时先 `models`，否则直接进入第 2 步。",
-      "2. `image_create` 拿到 `job_id`。",
-      "3. `image_result` 查询；短任务可加 `until_done: true` 一次拿结果，长任务保存 `job_id` 下一轮再查。",
+      "2. 向用户说明将消耗图片生成额度，并等待用户明确确认。",
+      "3. 用户确认后调用 `image_create` 拿到 `job_id`。",
+      "4. `image_result` 查询；短任务可加 `until_done: true` 一次拿结果，长任务保存 `job_id` 下一轮再查。",
       "",
       "如有疑问可用 `plugin_read { plugin: \"image\", action: \"...\" }` 查看每个 action 完整的输入 schema 与示例。",
     ].join("\n");
@@ -624,7 +626,7 @@ export class ImagePlugin extends BasePlugin {
     }),
     image_create: createAction({
       description:
-        "Create an async image job. Use prompt for text-only generation, or content for reference images and edits.",
+        "Create an async image job only after explicit user confirmation because image creation consumes quota. Use prompt for text-only generation, or content for reference images and edits.",
       input_schema: {
         zod: IMAGE_CREATE_INPUT_SCHEMA,
         json_schema: {
@@ -634,11 +636,13 @@ export class ImagePlugin extends BasePlugin {
             model: { type: "string", description: "Image model id." },
             prompt: {
               type: "string",
-              description: "Text-only image prompt. Ignored when content is present.",
+              description:
+                "Text-only image prompt. Ask the user to confirm before calling image_create. Ignored when content is present.",
             },
             content: {
               type: "array",
-              description: "Multimodal content for image edits or reference images.",
+              description:
+                "Multimodal content for image edits or reference images. Ask the user to confirm before calling image_create.",
               items: {
                 oneOf: [
                   {

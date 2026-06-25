@@ -13,6 +13,11 @@ import {
 } from "fumadocs-ui/page";
 import { getMDXComponents } from "@/components/docs/mdx-components";
 import browserCollections from "fumadocs-mdx:collections/browser";
+import { readFile } from "fs/promises";
+import {
+  CopyMarkdownButton,
+  RawMarkdownContext,
+} from "@/components/docs/copy-markdown-button";
 
 type PageTreeNode = {
   type?: string;
@@ -74,10 +79,21 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     throw new Response("Not found", { status: 404 });
   }
 
+  // 读取原始 Markdown 文件内容，用于复制按钮功能
+  let rawMarkdown = "";
+  if (page.absolutePath) {
+    try {
+      rawMarkdown = await readFile(page.absolutePath, "utf-8");
+    } catch {
+      // 读取失败时不影响页面渲染
+    }
+  }
+
   return {
     path: page.path,
     title: page.data.title ?? "Downcity Docs",
     description: page.data.description ?? "",
+    rawMarkdown,
   };
 }
 
@@ -171,13 +187,20 @@ const clientLoader = browserCollections.docs.createClientLoader({
       <DocsBody>
         <Mdx components={getMDXComponents()} />
       </DocsBody>
+      <div className="flex flex-row gap-2 items-center pt-6 mt-4 border-t">
+        <CopyMarkdownButton />
+      </div>
     </DocsPage>
   ),
 });
 
 export default function Page({ loaderData }: Route.ComponentProps) {
-  const { path } = loaderData;
+  const { path, rawMarkdown } = loaderData;
   const Content: any = clientLoader.getComponent(path);
 
-  return React.createElement(Content);
+  return (
+    <RawMarkdownContext.Provider value={rawMarkdown ?? ""}>
+      {React.createElement(Content)}
+    </RawMarkdownContext.Provider>
+  );
 }

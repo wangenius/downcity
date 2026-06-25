@@ -21,12 +21,12 @@ export default defineConfig({
     dedupe: ["react", "react-dom"],
     alias: [
       {
-        find: "@",
-        replacement: path.resolve(__dirname, "./app"),
+        find: /^@\//,
+        replacement: path.resolve(__dirname, "./app/") + "/",
       },
       {
-        find: "~",
-        replacement: path.resolve(__dirname, "./app"),
+        find: /^~\//,
+        replacement: path.resolve(__dirname, "./app/") + "/",
       },
       {
         find: "@/.source",

@@ -7,13 +7,14 @@
  * - metadata、title、assistant 结果持久化等状态副作用交由 SessionStateService 处理。
  */
 
-import { extractTextFromUiMessage } from "@/executor/messages/UIMessageTransformer.js";
+import { extractTextFromParts, extractTextFromUiMessage } from "@/executor/messages/UIMessageTransformer.js";
 import type { Executor } from "@executor/Executor.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type {
   AgentSessionSubscriber,
   AgentSessionUnsubscribe,
 } from "@/types/sdk/AgentSessionEvent.js";
+import { isAgentSessionPromptInputEmpty } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
@@ -118,14 +119,11 @@ export class SessionTurnService {
    * 追加一条新的 Session prompt。
    */
   async prompt(input: AgentSessionPromptInput): Promise<AgentSessionTurnHandle> {
-    const query = String(input.query || "").trim();
-    if (!query) {
+    if (isAgentSessionPromptInputEmpty(input)) {
       throw new Error("session.prompt requires a non-empty query");
     }
     await this.state_service.ensure_runnable();
-    return await this.prompt_runtime.prompt({
-      query,
-    });
+    return await this.prompt_runtime.prompt(input);
   }
 
   /**
@@ -205,8 +203,10 @@ export class SessionTurnService {
       pendingAssistantFileParts: [],
       ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
     };
+    const query = input.promptInput.query;
+    const executor_query = typeof query === "string" ? query : extractTextFromParts(query);
     const result = await this.executor.run({
-      query: input.promptInput.query,
+      query: executor_query,
       runContext: run_context,
     });
     await this.state_service.persist_assistant_result(result.assistantMessage);

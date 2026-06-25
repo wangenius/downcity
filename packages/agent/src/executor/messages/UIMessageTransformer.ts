@@ -10,14 +10,11 @@ import {
   getToolName,
   isTextUIPart,
   isToolUIPart,
-  type UIDataTypes,
-  type UIMessagePart,
-  type UITools,
+  type UIMessage,
 } from "ai";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { SessionUserMessagePart } from "@/types/sdk/AgentSessionPrompt.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 
-type AnyUiMessagePart = UIMessagePart<UIDataTypes, UITools>;
 type ToolNameReadablePart = Parameters<typeof getToolName>[0];
 type ToolCallSummary = {
   tool: string;
@@ -37,7 +34,7 @@ type ToolPartCompatShape = {
   };
 };
 
-function toUiParts(message: SessionMessageV1 | null | undefined): AnyUiMessagePart[] {
+function toUiParts(message: UIMessage | null | undefined): Array<SessionUserMessagePart> {
   return Array.isArray(message?.parts) ? message.parts : [];
 }
 
@@ -72,7 +69,7 @@ function resolveToolName(part: ToolPartCompatShape, aiToolName?: string): string
   return "";
 }
 
-function tryReadAiToolName(part: AnyUiMessagePart): string {
+function tryReadAiToolName(part: SessionUserMessagePart): string {
   if (!isToolUIPart(part)) return "";
   return String(getToolName(part as ToolNameReadablePart) || "").trim();
 }
@@ -96,10 +93,24 @@ function extractToolOutput(part: ToolPartCompatShape): string {
 }
 
 /**
+ * 从 parts 数组中提取纯文本。
+ */
+export function extractTextFromParts(
+  parts: SessionUserMessagePart[] | null | undefined,
+): string {
+  if (!Array.isArray(parts)) return "";
+  return parts
+    .filter(isTextUIPart)
+    .map((part) => String(part.text ?? ""))
+    .join("\n")
+    .trim();
+}
+
+/**
  * 从 UIMessage 中提取纯文本。
  */
 export function extractTextFromUiMessage(
-  message: SessionMessageV1 | null | undefined,
+  message: UIMessage | null | undefined,
 ): string {
   const parts = toUiParts(message);
   return parts
@@ -113,7 +124,7 @@ export function extractTextFromUiMessage(
  * 从 UIMessage 中提取 tool 调用记录。
  */
 export function extractToolCallsFromUiMessage(
-  message: SessionMessageV1 | null | undefined,
+  message: UIMessage | null | undefined,
 ): ToolCallSummary[] {
   const parts = toUiParts(message);
   const out: ToolCallSummary[] = [];

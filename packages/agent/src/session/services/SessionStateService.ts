@@ -35,6 +35,7 @@ import type {
   SessionUserMessageV1,
 } from "@/executor/types/SessionMessages.js";
 import type { SessionLocalState } from "@/types/session/SessionLocalState.js";
+import { generateId } from "@/utils/Id.js";
 
 type SessionStateServiceOptions = {
   /**
@@ -307,12 +308,36 @@ export class SessionStateService {
   async create_and_persist_user_prompt_message(
     input: AgentSessionPromptInput,
   ): Promise<SessionUserMessageV1> {
-    const message = this.history_store.userText({
-      text: String(input.query || "").trim(),
+    const query = input.query;
+    if (typeof query === "string") {
+      const message = this.history_store.userText({
+        text: query.trim(),
+        metadata: {
+          sessionId: this.session_id,
+        },
+      }) as SessionUserMessageV1;
+      await this.executor.appendUserMessage({
+        message,
+      });
+      await this.ensure_title_from_history({ generate: true });
+      await this.touch_metadata();
+      return message;
+    }
+
+    // query 是 parts 数组，直接用其构造 user 消息
+    const parts = Array.isArray(query) ? query : [];
+    const message: SessionUserMessageV1 = {
+      id: `u:${this.session_id}:${generateId()}`,
+      role: "user",
+      parts,
       metadata: {
+        v: 1,
+        ts: Date.now(),
         sessionId: this.session_id,
+        source: "ingress",
+        kind: "normal",
       },
-    }) as SessionUserMessageV1;
+    };
     await this.executor.appendUserMessage({
       message,
     });

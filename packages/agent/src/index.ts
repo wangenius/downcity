@@ -55,7 +55,7 @@ export type {
   AgentSessionSubscriber,
   AgentSessionUnsubscribe,
 } from "./types/sdk/AgentSessionEvent.js";
-export type { AgentSessionPromptInput } from "./types/sdk/AgentSessionPrompt.js";
+export type { AgentSessionPromptInput, SessionUserMessagePart } from "./types/sdk/AgentSessionPrompt.js";
 export type { AgentSessionStopResult } from "./types/sdk/AgentSessionStop.js";
 export type {
   AgentSessionTurnHandle,

@@ -16,6 +16,7 @@ import type {
   AgentSessionSetInput,
   AgentSessionSystemSnapshot,
 } from "@/types/agent/AgentTypes.js";
+import { isAgentSessionPromptInputEmpty } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type {
   AgentSessionEvent,
@@ -94,8 +95,7 @@ export class RemoteSession implements AgentSession {
    * 向当前远程 session 追加一条新的 prompt。
    */
   async prompt(input: AgentSessionPromptInput): Promise<AgentSessionTurnHandle> {
-    const query = String(input.query || "").trim();
-    if (!query) {
+    if (isAgentSessionPromptInputEmpty(input)) {
       throw new Error("remote session.prompt requires a non-empty query");
     }
 

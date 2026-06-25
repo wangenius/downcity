@@ -23,6 +23,25 @@ const turn = await session.prompt({
 await turn.finished;
 ```
 
+## 传入 parts 数组
+
+`query` 也支持直接传入 `SessionUserMessagePart` 数组，可以携带图片、文件等：
+
+```ts
+import type { SessionUserMessagePart } from "@downcity/agent";
+
+const parts: SessionUserMessagePart[] = [
+  { type: "text", text: "分析这张图片" },
+  { type: "file", mediaType: "image/png", url: "https://example.com/image.png" },
+];
+
+const turn = await session.prompt({
+  query: parts,
+});
+
+await turn.finished;
+```
+
 ## 例子
 
 ```ts

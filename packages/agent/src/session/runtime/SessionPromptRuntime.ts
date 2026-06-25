@@ -146,9 +146,7 @@ export class SessionPromptRuntime {
   prompt(input: AgentSessionPromptInput): Promise<AgentSessionTurnHandle> {
     const deferredHandle = createDeferred<AgentSessionTurnHandle>();
     this.queue.push({
-      input: {
-        query: String(input.query || "").trim(),
-      },
+      input,
       deferredHandle,
     });
     this.ensureProcessing();

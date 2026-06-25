@@ -23,6 +23,25 @@ const turn = await session.prompt({
 await turn.finished;
 ```
 
+## Passing a parts array
+
+`query` also accepts a `SessionUserMessagePart` array, so you can include images, files, and other parts:
+
+```ts
+import type { SessionUserMessagePart } from "@downcity/agent";
+
+const parts: SessionUserMessagePart[] = [
+  { type: "text", text: "Analyze this image" },
+  { type: "file", mediaType: "image/png", url: "https://example.com/image.png" },
+];
+
+const turn = await session.prompt({
+  query: parts,
+});
+
+await turn.finished;
+```
+
 ## Example
 
 ```ts

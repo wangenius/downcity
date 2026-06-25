@@ -147,7 +147,18 @@ function hasBucketInListOutput(output: string, bucket_name: string): boolean {
 function readTextBucketNames(output: string): string[] {
   const names: string[] = [];
   for (const line of output.replace(/\u001b\[[0-9;]*m/g, "").split(/\r?\n/)) {
-    const cells = line
+    const clean_line = line.trim();
+    if (!clean_line) continue;
+
+    // 匹配 wrangler 4.x 的 "name:   bucket_name" 格式
+    const name_match = clean_line.match(/^name:\s*(.+)$/);
+    if (name_match) {
+      const name = name_match[1].trim();
+      if (isPossibleBucketName(name)) names.push(name);
+      continue;
+    }
+
+    const cells = clean_line
       .split(/[│|]/g)
       .map((cell) => cell.trim())
       .filter(Boolean);
@@ -156,7 +167,7 @@ function readTextBucketNames(output: string): string[] {
       continue;
     }
 
-    const plain_name = line.trim().replace(/^[-*]\s+/, "");
+    const plain_name = clean_line.replace(/^[-*]\s+/, "");
     if (isPossibleBucketName(plain_name)) names.push(plain_name);
   }
   return names;

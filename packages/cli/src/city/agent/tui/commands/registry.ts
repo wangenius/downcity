@@ -38,6 +38,18 @@ export const BUILTIN_SLASH_COMMANDS: readonly SlashCommand[] = [
     description: "Browse and switch sessions",
     availability: "idle-only",
   },
+  {
+    name: "approve",
+    aliases: ["a"],
+    description: "Approve an unrestricted sandbox request (/approve <approval_id>)",
+    availability: "always",
+  },
+  {
+    name: "deny",
+    aliases: ["d"],
+    description: "Deny an unrestricted sandbox request (/deny <approval_id>)",
+    availability: "always",
+  },
 ];
 
 /**

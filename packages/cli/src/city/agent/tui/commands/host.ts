@@ -38,6 +38,20 @@ export interface SlashCommandHost {
   /** 展示 session 选择器。 */
   show_session_picker(): Promise<void>;
 
+  /**
+   * 批准指定 unrestricted sandbox 审批请求。
+   *
+   * @param approval_id 审批 ID；为空时尝试批准最近一个 pending 请求。
+   */
+  approve(approval_id?: string): Promise<void>;
+
+  /**
+   * 拒绝指定 unrestricted sandbox 审批请求。
+   *
+   * @param approval_id 审批 ID；为空时尝试拒绝最近一个 pending 请求。
+   */
+  deny(approval_id?: string): Promise<void>;
+
   /** 停止 TUI。 */
   stop(): Promise<void>;
 }

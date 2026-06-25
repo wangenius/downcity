@@ -21,16 +21,23 @@ import type { MessageListComponent } from "@/city/agent/tui/components/MessageLi
 export class PiTuiChatRenderer implements AgentChatInteractiveRendererPort {
   private streaming_ui: StreamingUIController;
   private emitted_visible_text = false;
+  on_approval_request?: AgentChatInteractiveRendererPort["on_approval_request"];
 
   /**
    * @param message_list 消息流组件。
    * @param request_render 通知 TUI 重绘的回调。
+   * @param on_approval_request approval 弹窗回调。
    */
-  constructor(message_list: MessageListComponent, request_render: () => void) {
+  constructor(
+    message_list: MessageListComponent,
+    request_render: () => void,
+    on_approval_request?: AgentChatInteractiveRendererPort["on_approval_request"],
+  ) {
     this.streaming_ui = new StreamingUIController({
       message_list,
       request_render,
     });
+    this.on_approval_request = on_approval_request;
   }
 
   /**
@@ -59,6 +66,15 @@ export class PiTuiChatRenderer implements AgentChatInteractiveRendererPort {
     this.streaming_ui.handle_event(event);
     if (event.type === "text-delta" && (event.text || "").trim()) {
       this.emitted_visible_text = true;
+    }
+    if (event.type === "tool-approval-request") {
+      this.on_approval_request?.({
+        approval_id: event.approvalId,
+        tool_name: event.toolName,
+        cmd: event.cmd,
+        cwd: event.cwd,
+        reason: event.reason,
+      });
     }
   }
 

@@ -32,6 +32,20 @@ export interface AgentChatInteractiveRendererPort {
   /** 渲染单个 session 事件。 */
   render_event: (event: AgentSessionEvent) => void;
 
+  /**
+   * 当 unrestricted sandbox 审批请求到达时触发。
+   *
+   * 说明（中文）
+   * - 由 TUI 实现弹窗选择器；stdout 版可忽略。
+   */
+  on_approval_request?: (params: {
+    approval_id: string;
+    tool_name: string;
+    cmd: string;
+    cwd: string;
+    reason: string;
+  }) => void;
+
   /** 结束当前一轮渲染。 */
   finish_turn: () => AgentChatInteractiveRenderSnapshot;
 }

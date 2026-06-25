@@ -22,6 +22,7 @@ import {
 } from "@/city/agent/tui/components/index.js";
 import { MessageListComponent } from "@/city/agent/tui/components/MessageList.js";
 import { SessionPickerComponent } from "@/city/agent/tui/dialogs/SessionPicker.js";
+import { ApprovalDialogComponent } from "@/city/agent/tui/dialogs/ApprovalDialog.js";
 import { PiTuiChatRenderer } from "@/city/agent/tui/PiTuiChatRenderer.js";
 import type { AgentChatSessionSummaryView } from "@/city/agent/AgentChatTypes.js";
 import type { AgentChatInteractiveRendererPort } from "@/city/types/AgentChatInteractive.js";
@@ -55,6 +56,12 @@ export interface AgentChatTuiCoordinatorOptions {
     emitted_visible_text: boolean;
     text?: string;
   }>;
+
+  /** 批准 unrestricted sandbox 审批请求。 */
+  approve: (approval_id: string) => Promise<{ success: boolean; decision: string }>;
+
+  /** 拒绝 unrestricted sandbox 审批请求。 */
+  deny: (approval_id: string) => Promise<{ success: boolean; decision: string }>;
 }
 
 /**
@@ -75,6 +82,10 @@ export class AgentChatTuiCoordinator {
   private overlay_handle: OverlayHandle | null = null;
   private remove_input_listener: (() => void) | null = null;
 
+  /**
+   * 当前 session 中尚未处理的 unrestricted sandbox 审批请求。
+   * 用于支持 /approve /deny 不带参数时默认操作最近一个。
+   */
   /**
    * 全局 tool output 展开状态。
    * 对齐 Kimi Code：Ctrl+O 统一切换所有 tool 卡片，
@@ -105,6 +116,12 @@ export class AgentChatTuiCoordinator {
       },
       show_session_picker: async () => {
         await this.show_session_picker();
+      },
+      approve: async (approval_id) => {
+        await this.approve(approval_id);
+      },
+      deny: async (approval_id) => {
+        await this.deny(approval_id);
       },
       stop: async () => {
         await this.stop();
@@ -188,6 +205,100 @@ export class AgentChatTuiCoordinator {
   }
 
   /**
+   * 显示 unrestricted sandbox 审批弹窗。
+   */
+  private show_approval_dialog(params: {
+    approval_id: string;
+    tool_name: string;
+    cmd: string;
+    cwd: string;
+    reason: string;
+  }): void {
+    if (this.overlay_handle || this.stopped) {
+      return;
+    }
+
+    const dialog = new ApprovalDialogComponent({
+      approval_id: params.approval_id,
+      tool_name: params.tool_name,
+      cmd: params.cmd,
+      cwd: params.cwd,
+      reason: params.reason,
+      on_decide: (decision) => {
+        this.hide_approval_dialog();
+        if (decision === "approve") {
+          void this.approve(params.approval_id);
+        } else if (decision === "deny") {
+          void this.deny(params.approval_id);
+        }
+      },
+    });
+
+    this.overlay_handle = this.tui.showOverlay(dialog as Component, {
+      width: "80%",
+      maxHeight: "70%",
+      anchor: "center",
+    });
+    this.overlay_handle.focus();
+    this.request_render();
+  }
+
+  /**
+   * 隐藏当前弹窗。
+   */
+  private hide_approval_dialog(): void {
+    if (!this.overlay_handle) {
+      return;
+    }
+    this.overlay_handle.hide();
+    this.overlay_handle = null;
+    this.tui.setFocus(this.editor as Component);
+    this.request_render();
+  }
+
+  /**
+   * 批准指定审批请求。
+   */
+  private async approve(approval_id?: string): Promise<void> {
+    const target_id = String(approval_id || "").trim();
+    if (!target_id) {
+      this.add_error_message("Usage: /approve <approval_id>");
+      this.request_render();
+      return;
+    }
+    try {
+      const result = await this.options.approve(target_id);
+      if (!result.success) {
+        this.add_error_message(`Failed to approve ${target_id}`);
+      }
+    } catch (error) {
+      this.add_error_message(this.format_error(error));
+    }
+    this.request_render();
+  }
+
+  /**
+   * 拒绝指定审批请求。
+   */
+  private async deny(approval_id?: string): Promise<void> {
+    const target_id = String(approval_id || "").trim();
+    if (!target_id) {
+      this.add_error_message("Usage: /deny <approval_id>");
+      this.request_render();
+      return;
+    }
+    try {
+      const result = await this.options.deny(target_id);
+      if (!result.success) {
+        this.add_error_message(`Failed to deny ${target_id}`);
+      }
+    } catch (error) {
+      this.add_error_message(this.format_error(error));
+    }
+    this.request_render();
+  }
+
+  /**
    * 停止 TUI 并清理资源。
    */
   async stop(): Promise<void> {
@@ -196,6 +307,7 @@ export class AgentChatTuiCoordinator {
     }
     this.stopped = true;
     this.hide_session_picker();
+    this.hide_approval_dialog();
     this.remove_input_listener?.();
     this.status_line.dispose();
     this.tui.stop();
@@ -279,7 +391,13 @@ export class AgentChatTuiCoordinator {
     this.add_user_message(message);
     this.request_render();
 
-    const renderer = new PiTuiChatRenderer(this.message_list, () => this.request_render());
+    const renderer = new PiTuiChatRenderer(
+      this.message_list,
+      () => this.request_render(),
+      (params) => {
+        this.show_approval_dialog(params);
+      },
+    );
     const outcome = await this.options.run_turn({
       session_id: this.current_session_id,
       message,

@@ -101,6 +101,10 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
         await createRemoteChatSession({
           remote_agent: interactive.remote_agent,
         }),
+      approve: async (approval_id) =>
+        await interactive.remote_agent.approve({ approval_id }),
+      deny: async (approval_id) =>
+        await interactive.remote_agent.deny({ approval_id }),
       run_turn: async ({ session_id, message, interactive_renderer }) => {
         const outcome = await runSdkPromptTurn({
           agentId,

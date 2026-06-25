@@ -35,6 +35,12 @@ export async function run_agent_chat_tui(params: {
     emitted_visible_text: boolean;
     text?: string;
   }>;
+
+  /** 批准 unrestricted sandbox 审批请求。 */
+  approve: (approval_id: string) => Promise<{ success: boolean; decision: string }>;
+
+  /** 拒绝 unrestricted sandbox 审批请求。 */
+  deny: (approval_id: string) => Promise<{ success: boolean; decision: string }>;
 }): Promise<void> {
   const coordinator = new AgentChatTuiCoordinator({
     agent_id: params.agent_id,
@@ -42,6 +48,8 @@ export async function run_agent_chat_tui(params: {
     list_sessions: params.list_sessions,
     create_session: params.create_session,
     run_turn: params.run_turn,
+    approve: params.approve,
+    deny: params.deny,
   });
 
   await coordinator.run();

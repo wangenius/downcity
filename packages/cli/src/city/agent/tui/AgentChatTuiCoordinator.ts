@@ -83,15 +83,23 @@ export class AgentChatTuiCoordinator {
   private remove_input_listener: (() => void) | null = null;
 
   /**
-   * 当前 session 中尚未处理的 unrestricted sandbox 审批请求。
-   * 用于支持 /approve /deny 不带参数时默认操作最近一个。
-   */
-  /**
    * 全局 tool output 展开状态。
    * 对齐 Kimi Code：Ctrl+O 统一切换所有 tool 卡片，
    * 新创建的 tool 卡片也会沿用当前状态。
    */
   private tool_output_expanded = false;
+
+  /**
+   * 待处理的 unrestricted sandbox 审批请求队列。
+   * 当模型并行发起多个需要审批的 tool call 时，依次弹出选择器。
+   */
+  private approval_queue: Array<{
+    approval_id: string;
+    tool_name: string;
+    cmd: string;
+    cwd: string;
+    reason: string;
+  }> = [];
 
   /**
    * slash 命令宿主，解耦命令分发与 coordinator 内部实现。
@@ -205,7 +213,7 @@ export class AgentChatTuiCoordinator {
   }
 
   /**
-   * 显示 unrestricted sandbox 审批弹窗。
+   * 入队并尝试显示 unrestricted sandbox 审批弹窗。
    */
   private show_approval_dialog(params: {
     approval_id: string;
@@ -214,10 +222,22 @@ export class AgentChatTuiCoordinator {
     cwd: string;
     reason: string;
   }): void {
-    if (this.overlay_handle || this.stopped) {
+    if (this.stopped) {
+      return;
+    }
+    this.approval_queue.push(params);
+    this.ensure_approval_dialog();
+  }
+
+  /**
+   * 如果当前没有弹窗且队列非空，显示下一个审批弹窗。
+   */
+  private ensure_approval_dialog(): void {
+    if (this.overlay_handle || this.stopped || this.approval_queue.length === 0) {
       return;
     }
 
+    const params = this.approval_queue[0];
     const dialog = new ApprovalDialogComponent({
       approval_id: params.approval_id,
       tool_name: params.tool_name,
@@ -231,6 +251,7 @@ export class AgentChatTuiCoordinator {
         } else if (decision === "deny") {
           void this.deny(params.approval_id);
         }
+        this.ensure_approval_dialog();
       },
     });
 
@@ -244,9 +265,10 @@ export class AgentChatTuiCoordinator {
   }
 
   /**
-   * 隐藏当前弹窗。
+   * 隐藏当前弹窗并从队列移除当前请求。
    */
   private hide_approval_dialog(): void {
+    this.approval_queue.shift();
     if (!this.overlay_handle) {
       return;
     }

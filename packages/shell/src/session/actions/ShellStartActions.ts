@@ -68,8 +68,19 @@ export async function startShellSession(
   const login = request.login !== false;
   const sandboxMode = resolveSandboxMode(request.sandbox);
   const reason = String(request.reason || "").trim();
-  const ownerContextId = String(request.ownerContextId || "").trim() || undefined;
-  const turnId = String(request.turnId || "").trim() || undefined;
+  // 关键点（中文）
+  // - 优先使用显式传入的 ownerContextId/turnId。
+  // - 未显式传入时保留 AsyncLocalStorage fallback，避免非 Agent 直接调用 Shell 时上下文丢失。
+  const ownerContextId =
+    String(
+      request.ownerContextId ||
+        context.shellIntegration?.getRunContext?.()?.sessionId ||
+        "",
+    ).trim() || undefined;
+  const turnId =
+    String(
+      request.turnId || context.shellIntegration?.getRunContext?.()?.turnId || "",
+    ).trim() || undefined;
   const shellDir = getShellDir(context.rootPath, shellId);
   const snapshotFilePath = getShellSnapshotPath(context.rootPath, shellId);
   const outputFilePath = getShellOutputPath(context.rootPath, shellId);

@@ -3,7 +3,15 @@ title: Registration and Login
 description: "The most common register, login, and user_token-returning flow in @downcity/services."
 ---
 
-The most direct problem solved by `@downcity/services` is letting a downcity ship registration and login before building a full account system.
+`AccountsService` gives a downcity the shared account infrastructure, but email registration and login are available only when an email accounts provider is mounted and configured.
+
+Before rendering an email form, ask the server which providers are enabled:
+
+```ts
+const providers = await guest.service("accounts").get("providers");
+```
+
+Render email registration or login only when the response contains an enabled `email` provider.
 
 ## register
 

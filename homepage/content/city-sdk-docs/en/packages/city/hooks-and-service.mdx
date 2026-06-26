@@ -61,6 +61,7 @@ import {
   AccountsService,
   BalanceService,
   PaymentService,
+  googleAccountsProvider,
   stripePaymentProvider,
   UsageService,
 } from "@downcity/services";
@@ -70,6 +71,9 @@ const balance = new BalanceService();
 
 base.use(new AccountsService({
   token_ttl: "7d",
+  providers: [
+    googleAccountsProvider(),
+  ],
 }));
 
 base.use(balance);
@@ -88,7 +92,7 @@ base.use(new UsageService({
 }));
 ```
 
-In this setup, `AccountsService` owns the full accounts HTTP surface. Mounting it once also exposes registration, login, OAuth start/result, the better-auth passthrough route, and the OAuth callback route, so edge workers do not need to call `router()` for accounts internals.
+In this setup, `AccountsService` owns the accounts HTTP surface. Mounting it once exposes `/providers`, `me`, admin reads, the better-auth passthrough route, and the OAuth callback route. Concrete login methods appear only when the matching provider is mounted and configured.
 
 ## How product-side callers reach services
 

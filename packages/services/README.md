@@ -14,13 +14,17 @@ pnpm add @downcity/services
 
 ```ts
 import {
-  accountsService,
-  balanceService,
+  AccountsService,
+  BalanceService,
+  PaymentService,
+  UsageService,
   creemPaymentProvider,
   dodoPaymentProvider,
-  paymentService,
+  emailAccountsProvider,
+  githubAccountsProvider,
+  googleAccountsProvider,
   stripePaymentProvider,
-  usageService,
+  wechatAccountsProvider,
   waffoPaymentProvider,
 } from "@downcity/services";
 ```
@@ -51,8 +55,11 @@ const checkout = await user.service("payment").action("checkout/create").invoke(
 
 ## 包含的服务
 
-- `accountsService()`：注册、登录、邮箱验证、GitHub/Google OAuth 与 `user_token` 签发
-- `balanceService()`：全局余额账户、流水、充值单与兑换码
-- `paymentService()`：统一暴露支付方式、checkout、webhook、payments 与入账同步
-- `usageService()`：记录真实用户侧 service 调用事件
-- `stripePaymentProvider()` / `creemPaymentProvider()` / `dodoPaymentProvider()` / `waffoPaymentProvider()`：作为 provider 挂到统一 `paymentService()`
+- `AccountsService`：统一账号服务容器，负责账号表、better-auth、profile、OAuth callback 和 `user_token` 签发
+- `emailAccountsProvider()` / `githubAccountsProvider()` / `googleAccountsProvider()` / `wechatAccountsProvider()`：作为 provider 挂到统一 `AccountsService`
+- `BalanceService`：全局余额账户、流水、充值单与兑换码
+- `PaymentService`：统一暴露支付方式、checkout、webhook、payments 与入账同步
+- `UsageService`：记录真实用户侧 service 调用事件
+- `stripePaymentProvider()` / `creemPaymentProvider()` / `dodoPaymentProvider()` / `waffoPaymentProvider()`：作为 provider 挂到统一 `PaymentService`
+
+`AccountsService` 启用只代表账号服务、表和 better-auth runtime 已安装；具体登录方式由 provider 决定。`/v1/accounts/providers` 只返回 required env 或 runtime 配置已经满足的 provider。

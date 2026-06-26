@@ -5,7 +5,13 @@ import path from "node:path"
 import test from "node:test"
 import { Federation } from "@downcity/city"
 import { createSqliteDb } from "./sqlite-db.mjs"
-import { AccountsService } from "../../bin/index.js"
+import {
+  AccountsService,
+  emailAccountsProvider,
+  githubAccountsProvider,
+  googleAccountsProvider,
+  wechatAccountsProvider,
+} from "../../bin/index.js"
 
 test("accountsService registers users, logs in, and issues Federation tokens", async () => {
   const cwd = process.cwd()
@@ -85,6 +91,7 @@ test("accountsService reports enabled providers from server state", async () => 
         id: "email",
         type: "password",
         enabled: true,
+        label: "Email",
         login_enabled: true,
         register_enabled: true,
       },
@@ -92,17 +99,13 @@ test("accountsService reports enabled providers from server state", async () => 
         id: "github",
         type: "oauth",
         enabled: true,
-      },
-      {
-        id: "google",
-        type: "oauth",
-        enabled: false,
-        reason: "not_configured",
+        label: "GitHub",
       },
       {
         id: "wechat",
         type: "oauth",
         enabled: true,
+        label: "WeChat",
       },
     ])
   } finally {
@@ -129,6 +132,34 @@ test("accountsService exposes better-auth passthrough as an installed public rou
 
     assert.notEqual(response.status, 401)
     assert.doesNotMatch(body, /Authentication required/)
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("accountsService does not expose email login without an email provider", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-accounts-no-email-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db })
+    base.use(new AccountsService({ token_ttl: "7d" }))
+    await base.health()
+
+    const providersResponse = await base.handleRequest(new Request("http://localhost/v1/accounts/providers"))
+    assert.equal(providersResponse.status, 200)
+    assert.deepEqual(await providersResponse.json(), { items: [] })
+
+    const loginResponse = await base.handleRequest(jsonRequest("/v1/accounts/login", {
+      email: "user@example.com",
+      password: "password123",
+      city_id: "city_demo",
+    }))
+    assert.equal(loginResponse.status, 400)
+    assert.deepEqual(await loginResponse.json(), { error: "email provider not configured" })
   } finally {
     process.chdir(cwd)
     await fs.rm(tempDir, { recursive: true, force: true })
@@ -305,7 +336,17 @@ test("accountsService completes WeChat website OAuth callback and resolves the s
 async function setupBase(tempDir, env = {}) {
   const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
   const base = new Federation({ db })
-  base.use(new AccountsService({ token_ttl: "7d" }))
+  base.use(new AccountsService({
+    token_ttl: "7d",
+    providers: [
+      emailAccountsProvider({
+        send_email: async () => {},
+      }),
+      githubAccountsProvider(),
+      googleAccountsProvider(),
+      wechatAccountsProvider(),
+    ],
+  }))
   await base.health()
 
   const envProvider = base.getService("env")._env

@@ -17,7 +17,10 @@ import {
   BalanceService,
   PaymentService,
   UsageService,
+  githubAccountsProvider,
+  googleAccountsProvider,
   stripePaymentProvider,
+  wechatAccountsProvider,
 } from "@downcity/services";
 import * as models from "./models/index.js";
 
@@ -131,7 +134,14 @@ async function sync_local_env(federation: Federation): Promise<void> {
  */
 const federation = new Federation({ db });
 
-const accounts = new AccountsService({ token_ttl: "7d" });
+const accounts = new AccountsService({
+  token_ttl: "7d",
+  providers: [
+    githubAccountsProvider(),
+    googleAccountsProvider(),
+    wechatAccountsProvider(),
+  ],
+});
 federation.use(accounts);
 
 const balance = new BalanceService({});

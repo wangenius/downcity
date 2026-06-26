@@ -3,8 +3,16 @@
  */
 
 import { Federation } from "@downcity/city";
-import { AccountsService } from "../../src/index.js";
+import { AccountsService, emailAccountsProvider, githubAccountsProvider } from "../../src/index.js";
 
 const base = new Federation({ db: {} as never });
 
-base.use(new AccountsService({ token_ttl: "7d" }));
+base.use(new AccountsService({
+  token_ttl: "7d",
+  providers: [
+    emailAccountsProvider({
+      send_email: async () => {},
+    }),
+    githubAccountsProvider(),
+  ],
+}));

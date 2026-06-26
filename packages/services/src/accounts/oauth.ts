@@ -195,24 +195,25 @@ export async function resolveOAuthProfile(
  */
 export function buildSocialProviders(
   getEnv?: (key: string) => string | undefined,
+  provider_ids: readonly OAuthProviderId[] = OAUTH_PROVIDER_IDS,
 ): BetterAuthOptions["socialProviders"] {
   const providers: NonNullable<BetterAuthOptions["socialProviders"]> = {};
 
   const ghId = getEnv?.("GITHUB_CLIENT_ID");
   const ghSecret = getEnv?.("GITHUB_CLIENT_SECRET");
-  if (ghId && ghSecret) {
+  if (provider_ids.includes("github") && ghId && ghSecret) {
     providers.github = { clientId: ghId, clientSecret: ghSecret };
   }
 
   const googleId = getEnv?.("GOOGLE_CLIENT_ID");
   const googleSecret = getEnv?.("GOOGLE_CLIENT_SECRET");
-  if (googleId && googleSecret) {
+  if (provider_ids.includes("google") && googleId && googleSecret) {
     providers.google = { clientId: googleId, clientSecret: googleSecret };
   }
 
   const wechatId = getEnv?.("WECHAT_CLIENT_ID");
   const wechatSecret = getEnv?.("WECHAT_CLIENT_SECRET");
-  if (wechatId && wechatSecret) {
+  if (provider_ids.includes("wechat") && wechatId && wechatSecret) {
     providers.wechat = { clientId: wechatId, clientSecret: wechatSecret };
   }
 

@@ -8,10 +8,11 @@
  */
 
 import { InstallableService } from "@downcity/city";
-import type { ServiceInstallContext } from "@downcity/city";
+import type { EnvRequirement, ServiceInstallContext } from "@downcity/city";
 import { betterAuth } from "better-auth/minimal";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { readPreparedAll, readPreparedFirst, runPrepared } from "./db.js";
+import { mergeAccountsEnvRequirements, normalizeAccountsProviders } from "./helpers.js";
 import {
   ACCOUNTS_OAUTH_STATE_TABLE,
   AUTH_ACCOUNT_TABLE,
@@ -28,19 +29,38 @@ import {
   type UserProfileRow,
 } from "./schema.js";
 import {
-  OAUTH_PROVIDER_IDS,
   buildOAuthAuthorizeURL,
   buildSocialProviders,
-  readOAuthProviderConfig,
   readOAuthProviderId,
   resolveOAuthProfile,
-  type AccountsProviderItem,
   type OAuthProviderId,
   type OAuthProviderProfile,
 } from "./oauth.js";
+import type {
+  AccountsEmailProvider,
+  AccountsProvider,
+  AccountsProviderContext,
+  AccountsProviderItem,
+  AccountsOAuthProvider,
+} from "./types.js";
+
+export {
+  emailAccountsProvider,
+  githubAccountsProvider,
+  googleAccountsProvider,
+  oauthAccountsProvider,
+  wechatAccountsProvider,
+} from "./providers/index.js";
 
 const OAUTH_STATE_TTL_MS = 5 * 60 * 1000;
 const AUTH_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Accounts 服务自身 env。
+ */
+const accountsEnv: EnvRequirement[] = [
+  { key: "BETTER_AUTH_SECRET", description: "better-auth signing secret", required: true },
+];
 
 /**
  * Accounts 服务配置。
@@ -52,9 +72,9 @@ export interface AccountsServiceOptions {
   token_ttl?: string;
 
   /**
-   * 自定义验证邮件发送函数。
+   * 当前 City 启用的账号 provider。
    */
-  sendEmail?: (params: { to: string; subject: string; text: string }) => Promise<void>;
+  providers?: AccountsProvider[];
 }
 
 /**
@@ -156,28 +176,25 @@ export class AccountsService extends InstallableService {
   };
 
   private auth!: ReturnType<typeof betterAuth>;
+  private readonly providers: AccountsProvider[];
 
   constructor(private readonly options: AccountsServiceOptions = {}) {
-    super([
-      { key: "BETTER_AUTH_SECRET", description: "better-auth signing secret", required: true },
-      { key: "GITHUB_CLIENT_ID", description: "GitHub OAuth App Client ID", required: false },
-      { key: "GITHUB_CLIENT_SECRET", description: "GitHub OAuth App Client Secret", required: false },
-      { key: "GOOGLE_CLIENT_ID", description: "Google OAuth Client ID", required: false },
-      { key: "GOOGLE_CLIENT_SECRET", description: "Google OAuth Client Secret", required: false },
-      { key: "WECHAT_CLIENT_ID", description: "WeChat Website App AppID", required: false },
-      { key: "WECHAT_CLIENT_SECRET", description: "WeChat Website App AppSecret", required: false },
-    ]);
+    const providers = normalizeAccountsProviders(options.providers ?? []);
+    super(mergeAccountsEnvRequirements([
+      ...accountsEnv,
+      ...providers.flatMap((provider) => provider.env),
+    ]));
+    this.providers = providers;
     this.instruction = ({ actions }) => [
-      "提供 Downcity 的账号、邮箱验证、GitHub/Google/WeChat OAuth 登录能力。",
-      "注册或登录时传入 city_id 后，接口会返回绑定该 city 的 City user_token。",
+      "提供 Downcity 的统一账号服务容器，具体登录方式由 email / phone / OAuth 等 provider 决定。",
+      "provider 满足 required env 或 runtime 配置后，才会出现在 /providers 中供客户端使用。",
+      "登录成功时传入 city_id 后，接口会返回绑定该 city 的 City user_token。",
       "OAuth 回调地址固定为 /v1/accounts/oauth/callback，服务会根据 City 公网地址生成完整回调 URL。",
-      `当前暴露 ${actions.length} 个动作，常用流程是 register/login -> verify-email 或 oauth/start -> me。`,
+      `当前暴露 ${actions.length} 个动作，常用流程由 /providers 返回的 provider 决定。`,
     ].join("\n");
   }
 
   async _onInit(): Promise<void> {
-    const sendEmail = this.options.sendEmail ?? defaultSendEmail;
-
     this.auth = betterAuth({
       secret: this._env?.get("BETTER_AUTH_SECRET"),
       database: drizzleAdapter(this.readDrizzleDb(), {
@@ -208,14 +225,16 @@ export class AccountsService extends InstallableService {
       },
       emailVerification: {
         sendVerificationEmail: async ({ user, url }: { user: { email: string }; url: string }) => {
-          await sendEmail({
+          const provider = this.getEnabledEmailProvider();
+          if (!provider) throw new Error("Email provider is not configured");
+          await provider.send_email({
             to: user.email,
             subject: "Verify your email for Downcity",
             text: `Verification: ${url}`,
           });
         },
       },
-      socialProviders: buildSocialProviders((key: string) => this._env?.get(key)),
+      socialProviders: buildSocialProviders((key: string) => this._env?.get(key), this.getRegisteredOAuthProviderIds()),
     } as any);
 
     await super._onInit();
@@ -245,6 +264,11 @@ export class AccountsService extends InstallableService {
       path: "/register",
       public: true,
       handler: async (c) => {
+        const email_provider = this.getEnabledEmailProvider();
+        if (!email_provider) {
+          return c.jsonResponse({ error: "email provider not configured" }, 400);
+        }
+
         const body = await c.json<{ email?: string; password?: string; name?: string }>();
         const email = String(body.email ?? "").trim().toLowerCase();
         const password = String(body.password ?? "");
@@ -294,6 +318,11 @@ export class AccountsService extends InstallableService {
       path: "/verify-email",
       public: true,
       handler: async (c) => {
+        const email_provider = this.getEnabledEmailProvider();
+        if (!email_provider) {
+          return c.jsonResponse({ error: "email provider not configured" }, 400);
+        }
+
         const body = await c.json<{ token?: string; city_id?: string }>();
         const token = String(body.token ?? "").trim();
         if (!token) return c.jsonResponse({ error: "verification token required" }, 400);
@@ -333,6 +362,11 @@ export class AccountsService extends InstallableService {
       path: "/login",
       public: true,
       handler: async (c) => {
+        const email_provider = this.getEnabledEmailProvider();
+        if (!email_provider) {
+          return c.jsonResponse({ error: "email provider not configured" }, 400);
+        }
+
         const body = await c.json<{ email?: string; password?: string; city_id?: string }>();
         const email = String(body.email ?? "").trim().toLowerCase();
         const password = String(body.password ?? "");
@@ -384,7 +418,7 @@ export class AccountsService extends InstallableService {
       method: "GET",
       path: "/providers",
       public: true,
-      handler: async (c) => c.jsonResponse({ items: this.listProviders() }),
+      handler: async (c) => c.jsonResponse({ items: this.listProviders().filter((item) => item.enabled) }),
     });
 
     ctx.route({
@@ -398,7 +432,7 @@ export class AccountsService extends InstallableService {
           return c.jsonResponse({ error: "provider must be github, google, or wechat" }, 400);
         }
 
-        const config = this.getOAuthProviderConfig(provider);
+        const config = this.getEnabledOAuthProviderConfig(provider);
         if (!config) {
           return c.jsonResponse({ error: "provider not configured" }, 400);
         }
@@ -509,7 +543,7 @@ export class AccountsService extends InstallableService {
 
       const profile = await resolveOAuthProfile(
         provider,
-        this.getOAuthProviderConfig(provider),
+        this.getEnabledOAuthProviderConfig(provider),
         code,
         this.getOAuthCallbackURL(),
       );
@@ -537,34 +571,44 @@ export class AccountsService extends InstallableService {
    * 列出可用登录方式。
    */
   private listProviders(): AccountsProviderItem[] {
-    return [
-      {
-        id: "email",
-        type: "password",
-        enabled: true,
-        login_enabled: true,
-        register_enabled: true,
-      },
-      ...OAUTH_PROVIDER_IDS.map((provider) => {
-        const enabled = Boolean(this.getOAuthProviderConfig(provider));
-        return enabled
-          ? { id: provider, type: "oauth" as const, enabled: true }
-          : { id: provider, type: "oauth" as const, enabled: false, reason: "not_configured" as const };
-      }),
-    ];
+    return this.providers.map((provider) => provider.method(this.getProviderContext()));
   }
 
   /**
-   * 获取 provider 配置。
+   * 获取 provider 上下文。
    */
-  private getOAuthProviderConfig(provider: OAuthProviderId) {
-    if (provider === "github") {
-      return readOAuthProviderConfig(provider, this._env?.get("GITHUB_CLIENT_ID"), this._env?.get("GITHUB_CLIENT_SECRET"));
-    }
-    if (provider === "wechat") {
-      return readOAuthProviderConfig(provider, this._env?.get("WECHAT_CLIENT_ID"), this._env?.get("WECHAT_CLIENT_SECRET"));
-    }
-    return readOAuthProviderConfig(provider, this._env?.get("GOOGLE_CLIENT_ID"), this._env?.get("GOOGLE_CLIENT_SECRET"));
+  private getProviderContext(): AccountsProviderContext {
+    return {
+      env: (key: string) => this._env?.get(key),
+    };
+  }
+
+  /**
+   * 获取已注册的 OAuth provider ID。
+   */
+  private getRegisteredOAuthProviderIds(): OAuthProviderId[] {
+    return this.providers
+      .filter((provider): provider is AccountsOAuthProvider => provider.type === "oauth")
+      .map((provider) => provider.id);
+  }
+
+  /**
+   * 获取已启用的 email provider。
+   */
+  private getEnabledEmailProvider(): AccountsEmailProvider | undefined {
+    const provider = this.providers.find((item): item is AccountsEmailProvider => item.id === "email" && item.type === "password");
+    if (!provider) return undefined;
+    return provider.method(this.getProviderContext()).enabled ? provider : undefined;
+  }
+
+  /**
+   * 获取已启用 OAuth provider 配置。
+   */
+  private getEnabledOAuthProviderConfig(provider_id: OAuthProviderId) {
+    const provider = this.providers.find((item): item is AccountsOAuthProvider => item.id === provider_id && item.type === "oauth");
+    if (!provider) return undefined;
+    if (!provider.method(this.getProviderContext()).enabled) return undefined;
+    return provider.config(this.getProviderContext());
   }
 
   /**
@@ -826,19 +870,6 @@ export class AccountsService extends InstallableService {
     }
     return this._db;
   }
-}
-
-/**
- * 创建 Accounts 服务实例。
- */
-/**
- * 默认开发邮件发送器。
- */
-async function defaultSendEmail(params: { to: string; subject: string; text: string }): Promise<void> {
-  console.log("[accounts] VERIFICATION EMAIL");
-  console.log(`  To: ${params.to}`);
-  console.log(`  Subject: ${params.subject}`);
-  console.log(`  Body: ${params.text}`);
 }
 
 /**

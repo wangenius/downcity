@@ -4,13 +4,33 @@
  * 关键说明（中文）
  * - 对外统一暴露 Downcity 官方服务
  * - 对外统一暴露 accounts / balance / payment / usage 等官方服务
+ * - Email / GitHub / Google / WeChat 统一作为 accounts provider 暴露
  * - Stripe / Creem / Dodo / Waffo 统一作为 payment provider 暴露
  * - 业务侧只需要从一个包完成导入
  */
 
 export { accountsOAuthStates, userProfiles } from "./accounts/schema.js";
-export { AccountsService } from "./accounts/index.js";
+export {
+  AccountsService,
+  emailAccountsProvider,
+  githubAccountsProvider,
+  googleAccountsProvider,
+  oauthAccountsProvider,
+  wechatAccountsProvider,
+} from "./accounts/index.js";
 export type { AccountsServiceOptions } from "./accounts/index.js";
+export type {
+  AccountsEmailProvider,
+  AccountsEmailSendParams,
+  AccountsOAuthProvider,
+  AccountsProvider,
+  AccountsProviderContext,
+  AccountsProviderItem,
+  AccountsProviderReason,
+  AccountsProviderType,
+  EmailAccountsProviderOptions,
+  OAuthAccountsProviderOptions,
+} from "./accounts/types.js";
 
 export { balanceAccounts, balanceCharges, balanceLedger, balanceRedeemCodes, balanceTopups } from "./balance/schema.js";
 export { BalanceService } from "./balance/service.js";

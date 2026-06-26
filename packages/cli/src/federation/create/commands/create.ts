@@ -235,9 +235,12 @@ function createWorkerEntrypoint(): string {
 import { drizzle } from "drizzle-orm/d1";
 import { Federation, R2Storage } from "@downcity/city";
 import {
-  accountsService,
-  balanceService,
-  usageService,
+  AccountsService,
+  BalanceService,
+  UsageService,
+  githubAccountsProvider,
+  googleAccountsProvider,
+  wechatAccountsProvider,
 } from "@downcity/services";
 
 export interface Env {
@@ -268,9 +271,15 @@ async function init_federation(env: Env): Promise<Federation> {
     }));
   }
 
-  federation.use(accountsService());
-  federation.use(balanceService());
-  federation.use(usageService());
+  federation.use(new AccountsService({
+    providers: [
+      githubAccountsProvider(),
+      googleAccountsProvider(),
+      wechatAccountsProvider(),
+    ],
+  }));
+  federation.use(new BalanceService());
+  federation.use(new UsageService());
 
   await federation.health();
   return federation;

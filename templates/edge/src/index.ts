@@ -18,7 +18,10 @@ import {
   UsageService,
   creemPaymentProvider,
   dodoPaymentProvider,
+  githubAccountsProvider,
+  googleAccountsProvider,
   stripePaymentProvider,
+  wechatAccountsProvider,
   waffoPaymentProvider,
 } from "@downcity/services";
 import {
@@ -60,7 +63,13 @@ async function init_federation(env: Env): Promise<Federation> {
   // 顺序有依赖关系：payment 依赖 balance 暴露的 readTopup / finishTopup；ai 依赖 balance 执行扣费。
   const federation = new Federation({ db });
 
-  federation.use(new AccountsService());
+  federation.use(new AccountsService({
+    providers: [
+      githubAccountsProvider(),
+      googleAccountsProvider(),
+      wechatAccountsProvider(),
+    ],
+  }));
 
   const balance = new BalanceService({ init: INITIAL_BALANCE });
   federation.use(balance);

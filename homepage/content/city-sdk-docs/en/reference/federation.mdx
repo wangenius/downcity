@@ -45,8 +45,13 @@ See [Provider & Model Registration](/en/city-sdk-docs/service/ai/provider).
 ## Official Service Registration
 
 ```ts
-import { AccountsService } from "@downcity/services";
-base.use(new AccountsService());
+import { AccountsService, googleAccountsProvider } from "@downcity/services";
+
+base.use(new AccountsService({
+  providers: [
+    googleAccountsProvider(),
+  ],
+}));
 ```
 
 ## Routing

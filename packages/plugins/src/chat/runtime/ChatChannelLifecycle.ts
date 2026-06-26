@@ -11,13 +11,44 @@ import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/
 import type { ChatChannelState } from "@/chat/types/ChatRuntime.js";
 import type { ChatChannelName } from "@/chat/types/ChannelStatus.js";
 import { createTelegramBot } from "@/chat/channels/telegram/Bot.js";
-import { createFeishuBot } from "@/chat/channels/feishu/Feishu.js";
 import { createQQBot } from "@/chat/channels/qq/QQ.js";
 import {
   isChatChannelEnabled,
   resolveChannelAccount,
   resolveTargetChannels,
 } from "./ChatChannelCore.js";
+
+/**
+ * 延迟创建 Feishu bot。
+ *
+ * 关键点（中文）
+ * - Feishu 依赖 `@larksuiteoapi/node-sdk`，由启用 Feishu 的宿主应用显式安装。
+ * - 只有 Feishu channel 实际启用且凭据完整时，才加载 Feishu runtime 模块。
+ */
+async function createFeishuBotLazy(
+  options: {
+    /**
+     * 是否启用。
+     */
+    enabled: boolean;
+    /**
+     * Feishu / Lark App ID。
+     */
+    appId: string;
+    /**
+     * Feishu / Lark App Secret。
+     */
+    appSecret: string;
+    /**
+     * Feishu / Lark Open API 域名。
+     */
+    domain: string;
+  },
+  context: AgentContext,
+) {
+  const module_value = await import("@/chat/channels/feishu/Feishu.js");
+  return await module_value.createFeishuBot(options, context);
+}
 
 async function startTelegramChannel(
   state: ChatChannelState,
@@ -50,7 +81,7 @@ async function startFeishuChannel(
   const appId = String(account?.appId || "").trim();
   const appSecret = String(account?.appSecret || "").trim();
   if (!appId || !appSecret) return;
-  state.feishu = await createFeishuBot(
+  state.feishu = await createFeishuBotLazy(
     {
       enabled: true,
       appId,

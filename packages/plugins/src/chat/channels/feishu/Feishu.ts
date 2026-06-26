@@ -26,6 +26,7 @@ import type {
 import { parseFeishuAttachments } from "./Shared.js";
 import { FeishuPlatformClient } from "./FeishuPlatformClient.js";
 import { handleFeishuMessage } from "./FeishuMessageHandler.js";
+import { isMissingFeishuSdkDependencyError } from "./FeishuSdk.js";
 
 /**
  * 飞书入站确认 reaction 类型。
@@ -175,6 +176,9 @@ export class FeishuBot extends BaseChatChannel {
     try {
       await this.platform.start(this.processedMessages);
     } catch (error) {
+      if (isMissingFeishuSdkDependencyError(error)) {
+        throw error;
+      }
       this.logger.error("Failed to start Feishu Bot", { error: String(error) });
     }
   }

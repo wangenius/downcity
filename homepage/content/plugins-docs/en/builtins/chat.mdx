@@ -91,6 +91,24 @@ const plugin = new ChatPlugin({
 
 `channelAccountId` is still available as an account-pool binding, but the SDK-first path is to pass channel-specific env to the channel object.
 
+## Feishu dependency
+
+`@downcity/plugins` keeps the Feishu/Lark SDK outside its default production dependencies. Apps that do not enable Feishu can import `@downcity/plugins` without installing Feishu runtime dependencies.
+
+If your host enables `FeishuChannel`, install the SDK in that host:
+
+```bash
+npm install @larksuiteoapi/node-sdk@^1.66.0
+```
+
+The import path does not change:
+
+```ts
+import { ChatPlugin, FeishuChannel } from "@downcity/plugins";
+```
+
+When Feishu is enabled without the SDK installed, the runtime error tells you which package to install before enabling channel `"feishu"`.
+
 ## SDK action use
 
 In an embedded SDK scenario, call the visible chat actions by plugin name:

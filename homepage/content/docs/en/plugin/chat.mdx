@@ -47,6 +47,22 @@ The actual bot credentials live in `~/.downcity/downcity.db` (managed by City). 
 - Feishu (Lark)
 - QQ
 
+## Feishu dependency
+
+`@downcity/plugins` does not install the Feishu/Lark SDK by default. If you enable the Feishu channel in an embedded SDK host, install it in that host app:
+
+```bash
+npm install @larksuiteoapi/node-sdk@^1.66.0
+```
+
+Existing SDK imports can stay the same:
+
+```ts
+import { ChatPlugin, FeishuChannel } from "@downcity/plugins";
+```
+
+Apps that do not enable Feishu do not need the Feishu SDK.
+
 Continue with:
 
 - [Task Plugin](/en/docs/plugin/task)

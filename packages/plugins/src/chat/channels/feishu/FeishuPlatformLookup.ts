@@ -6,7 +6,6 @@
  * - `FeishuPlatformClient` 只保留运行时状态与 token 管理，这里负责具体 OpenAPI 查询细节。
  */
 
-import * as Lark from "@larksuiteoapi/node-sdk";
 import fs from "fs-extra";
 import path from "path";
 import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
@@ -17,6 +16,7 @@ import type { FeishuIncomingAttachmentDescriptor } from "@/chat/types/FeishuInbo
 import type { InboundReplyContext } from "@/chat/types/ReplyContext.js";
 import { buildFeishuInboundCacheFileName } from "./InboundAttachment.js";
 import { buildFeishuReplyContext } from "./ReplyContext.js";
+import type { FeishuSdkClient } from "./types/FeishuSdk.js";
 
 /**
  * Feishu 查询类依赖。
@@ -42,7 +42,7 @@ export interface FeishuLookupDeps {
   /**
    * Feishu SDK client。
    */
-  client: Lark.Client | null;
+  client: FeishuSdkClient | null;
   /**
    * 获取 tenant_access_token 的回调。
    */

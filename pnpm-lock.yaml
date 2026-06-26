@@ -405,9 +405,6 @@ importers:
       '@downcity/shell':
         specifier: workspace:^
         version: link:../shell
-      '@larksuiteoapi/node-sdk':
-        specifier: ^1.66.0
-        version: 1.66.0
       ai:
         specifier: ^6.0.193
         version: 6.0.193(zod@4.4.3)

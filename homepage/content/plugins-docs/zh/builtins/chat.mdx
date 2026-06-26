@@ -91,6 +91,24 @@ const plugin = new ChatPlugin({
 
 `channelAccountId` 仍可作为账号池绑定能力使用，但 SDK 主路径推荐直接把 channel 需要的 env 传给对应 channel 对象。
 
+## 飞书依赖
+
+`@downcity/plugins` 不再把飞书 / Lark SDK 放进默认生产依赖。不启用飞书的应用可以直接导入 `@downcity/plugins`，无需安装飞书运行时依赖。
+
+如果宿主应用启用了 `FeishuChannel`，需要在宿主应用中安装：
+
+```bash
+npm install @larksuiteoapi/node-sdk@^1.66.0
+```
+
+import 路径不需要变化：
+
+```ts
+import { ChatPlugin, FeishuChannel } from "@downcity/plugins";
+```
+
+如果启用了飞书但没有安装 SDK，运行时错误会明确提示需要安装的包，并说明是在启用 channel `"feishu"` 前安装。
+
 ## SDK action 用法
 
 本地嵌入 SDK 场景里，可以按 plugin 名称调用会话 action：

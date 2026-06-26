@@ -7,7 +7,6 @@
  * - `FeishuBot` 只调用这里暴露的平台能力，不再直接持有底层 Feishu 连接细节。
  */
 
-import * as Lark from "@larksuiteoapi/node-sdk";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type {
   FeishuConfig,
@@ -29,6 +28,11 @@ import {
   sendFeishuAttachment,
   sendFeishuPlatformMessage,
 } from "./FeishuPlatformMessaging.js";
+import { loadFeishuSdk } from "./FeishuSdk.js";
+import type {
+  FeishuSdkClient,
+  FeishuSdkWsClient,
+} from "./types/FeishuSdk.js";
 
 const FEISHU_INBOUND_ACK_REACTION_TYPE = "OK";
 
@@ -62,8 +66,8 @@ export class FeishuPlatformClient {
   private readonly domain?: string;
   private readonly onMessage: (data: FeishuMessageEvent) => Promise<void>;
 
-  private client: Lark.Client | null = null;
-  private wsClient: Lark.WSClient | null = null;
+  private client: FeishuSdkClient | null = null;
+  private wsClient: FeishuSdkWsClient | null = null;
   private isRunning = false;
   private messageCleanupInterval: NodeJS.Timeout | null = null;
   private appAccessToken = "";
@@ -201,12 +205,13 @@ export class FeishuPlatformClient {
       appSecret: this.appSecret,
       domain: this.domain || "https://open.feishu.cn",
     };
-    this.client = new Lark.Client(baseConfig);
-    this.wsClient = new Lark.WSClient(baseConfig);
+    const feishu_sdk = loadFeishuSdk();
+    this.client = new feishu_sdk.Client(baseConfig);
+    this.wsClient = new feishu_sdk.WSClient(baseConfig);
 
-    const eventDispatcher = new Lark.EventDispatcher({}).register({
-      "im.message.receive_v1": async (data: FeishuMessageEvent) => {
-        await this.onMessage(data);
+    const eventDispatcher = new feishu_sdk.EventDispatcher({}).register({
+      "im.message.receive_v1": async (data: unknown) => {
+        await this.onMessage(data as FeishuMessageEvent);
       },
     });
 

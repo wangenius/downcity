@@ -1,6 +1,6 @@
 {
   "name": "@downcity/plugins",
-  "version": "1.0.115",
+  "version": "1.0.118",
   "type": "module",
   "description": "Downcity 内建 plugin 集合包",
   "main": "./bin/index.js",
@@ -21,7 +21,6 @@
   "dependencies": {
     "@downcity/agent": "workspace:^",
     "@downcity/shell": "workspace:^",
-    "@larksuiteoapi/node-sdk": "^1.66.0",
     "ai": "^6.0.193",
     "better-sqlite3": "^12.10.0",
     "commander": "^15.0.0",

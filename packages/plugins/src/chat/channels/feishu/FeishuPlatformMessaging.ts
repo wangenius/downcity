@@ -6,13 +6,13 @@
  * - `FeishuPlatformClient` 只保留统一入口和状态，不再直接承载全部细节。
  */
 
-import * as Lark from "@larksuiteoapi/node-sdk";
 import fs from "fs-extra";
 import path from "path";
 import type {
   FeishuMessagePayloadType,
 } from "@/chat/channels/feishu/types/FeishuChannel.js";
 import type { ParsedFeishuAttachmentCommand } from "@/chat/types/FeishuAttachment.js";
+import type { FeishuSdkClient } from "./types/FeishuSdk.js";
 
 /**
  * Feishu 发送类依赖。
@@ -34,7 +34,7 @@ export interface FeishuMessagingDeps {
   /**
    * Feishu SDK client。
    */
-  client: Lark.Client | null;
+  client: FeishuSdkClient | null;
   /**
    * 获取 tenant_access_token 的回调。
    */

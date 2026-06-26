@@ -365,9 +365,36 @@
   *
   * - 替换 model 为实际上游模型
   * - 当 stream 为 true 时补充 include_usage
-  * - 把多模态 content 中的文本片段拼成纯文本（适合不支持 image_url 的上游）
+  * - 保留 OpenAI-compatible content 数组，让 image_url 等多模态输入原样透传
   */
  export function normalizeOpenAICompatibleBody(
+   input: Record<string, unknown>,
+   model: string,
+ ): Record<string, unknown> {
+   return normalizeOpenAICompatibleBodyBase(input, model);
+ }
+
+ /**
+  * 给文本模型 /chat/completions 透传前规整 body。
+  *
+  * - 替换 model 为实际上游模型
+  * - 当 stream 为 true 时补充 include_usage
+  * - 把多模态 content 中的文本片段拼成纯文本，适合不支持 image_url 的上游
+  */
+ export function normalizeTextOnlyOpenAICompatibleBody(
+   input: Record<string, unknown>,
+   model: string,
+ ): Record<string, unknown> {
+   const body = normalizeOpenAICompatibleBodyBase(input, model);
+   return {
+     ...body,
+     messages: Array.isArray(input.messages)
+       ? input.messages.map((message) => normalizeOpenAIMessageForTextOnly(message))
+       : input.messages,
+   };
+ }
+
+ function normalizeOpenAICompatibleBodyBase(
    input: Record<string, unknown>,
    model: string,
  ): Record<string, unknown> {
@@ -381,13 +408,10 @@
      ...input,
      model,
      ...(stream_options !== undefined ? { stream_options } : {}),
-     messages: Array.isArray(input.messages)
-       ? input.messages.map((message) => normalizeOpenAIMessage(message))
-       : input.messages,
    };
  }
 
- function normalizeOpenAIMessage(message: unknown): unknown {
+ function normalizeOpenAIMessageForTextOnly(message: unknown): unknown {
    if (!message || typeof message !== "object") return message;
    const record = message as OpenAIChatMessage;
    if (record.role !== "user") return record;

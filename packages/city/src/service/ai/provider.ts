@@ -66,6 +66,11 @@ interface ResolvedActionInputWithTools {
   messages: Awaited<ReturnType<typeof convertToModelMessages>>;
 }
 
+interface ResolvedActionInputWithMessages {
+  /** 已转换为模型侧 messages 的消息列表。 */
+  messages: Awaited<ReturnType<typeof convertToModelMessages>>;
+}
+
 interface ResolvedActionInputWithPrompt {
   /** 供单轮调用使用的 prompt 文本。 */
   prompt: string;
@@ -73,6 +78,7 @@ interface ResolvedActionInputWithPrompt {
 
 type ResolvedActionInput =
   | ResolvedActionInputWithTools
+  | ResolvedActionInputWithMessages
   | ResolvedActionInputWithPrompt;
 
 // ===========================================================================
@@ -151,16 +157,18 @@ export abstract class Provider {
    }
 
    /**
-    * 将输入解析成 prompt 或 tools+messages。
+    * 将输入解析成 prompt 或 messages。
     */
    private async resolveActionInput(input: OpenAIActionInput): Promise<ResolvedActionInput> {
      const tools = buildToolSet(input.tools);
-     if (!tools) {
-       return { prompt: this.extractPrompt(input) };
+     if (Array.isArray(input.messages) && input.messages.length > 0) {
+       const messages = tools
+         ? await convertToModelMessages(input.messages, { tools })
+         : await convertToModelMessages(input.messages);
+       return tools ? { tools, messages } : { messages };
      }
      return {
-       tools,
-       messages: await convertToModelMessages(input.messages ?? [], { tools }),
+       prompt: this.extractPrompt(input),
      };
    }
 
@@ -172,16 +180,17 @@ export abstract class Provider {
      const resolved_input = await this.resolveActionInput(input);
      const model = this.createChatModel(ctx);
 
-     if ("tools" in resolved_input) {
+     if ("messages" in resolved_input) {
        const result = await generateText({
          model,
          messages: resolved_input.messages,
-         tools: resolved_input.tools,
+         ...("tools" in resolved_input ? { tools: resolved_input.tools } : {}),
+         ...(!("tools" in resolved_input) ? { temperature: 1 } : {}),
        });
        return buildAssistantMessage(result.text, ctx, {
          finishReason: result.finishReason,
          usage: result.usage,
-         toolCalls: result.toolCalls as ToolCallShape[],
+         ...("tools" in resolved_input ? { toolCalls: result.toolCalls as ToolCallShape[] } : {}),
        });
      }
 
@@ -204,11 +213,12 @@ export abstract class Provider {
      const resolved_input = await this.resolveActionInput(input);
      const model = this.createChatModel(ctx);
 
-     if ("tools" in resolved_input) {
+     if ("messages" in resolved_input) {
       const result = streamText({
         model,
         messages: resolved_input.messages,
-        tools: resolved_input.tools,
+        ...("tools" in resolved_input ? { tools: resolved_input.tools } : {}),
+        ...(!("tools" in resolved_input) ? { temperature: 1 } : {}),
       });
       return {
         response: result.toUIMessageStreamResponse(),

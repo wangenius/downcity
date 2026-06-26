@@ -87,6 +87,7 @@ export {
   isRecord,
   normalizeAIUsage,
   normalizeOpenAICompatibleBody,
+  normalizeTextOnlyOpenAICompatibleBody,
   readErrorMessage,
   readJsonResponse,
   readOpenAICompatibleSseUsage,

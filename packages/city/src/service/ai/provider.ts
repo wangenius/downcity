@@ -25,7 +25,7 @@ import type {
 import type {
   ModelConfig,
   ModelActions,
-  ModelFallbackConfig,
+  ModelFallbackRule,
   OpenAICompatibleClient,
   OpenAICompatibleClientConfig,
   ProviderOptions,
@@ -280,7 +280,7 @@ export abstract class Provider {
      tags?: string[];
      meta?: Record<string, unknown>;
      default?: boolean | string[];
-     fallback?: ModelFallbackConfig;
+     fallback?: ModelFallbackRule[];
      bill?: AIProviderBillFn;
    }): ModelConfig {
      const actions: ModelActions = {};

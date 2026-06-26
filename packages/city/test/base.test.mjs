@@ -479,9 +479,10 @@ test("AIService falls back to image-capable model for UIMessage image parts", as
         provider_id: "deepseek-provider",
         name: "DeepSeek",
         default: ["text"],
-        fallback: {
-          image: "kimi",
-        },
+        fallback: [{
+          match: (media) => media.media_type.startsWith("image/") && media.url === "https://example.com/a.png",
+          model: "kimi",
+        }],
         actions: {
           text: async (ctx) => {
             calls.push({
@@ -548,6 +549,134 @@ test("AIService falls back to image-capable model for UIMessage image parts", as
   }
 })
 
+test("AIService selects fallback rule by UIMessage file media type", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-fallback-media-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+    const calls = []
+
+    const ai = new AIService()
+    ai.use([
+      {
+        id: "vision",
+        provider_id: "vision-provider",
+        name: "Vision",
+        actions: {
+          text: async () => {
+            calls.push("vision")
+            return {
+              id: "msg_vision",
+              role: "assistant",
+              parts: [{ type: "text", text: "vision" }],
+            }
+          },
+        },
+      },
+      {
+        id: "pdf-reader",
+        provider_id: "pdf-provider",
+        name: "PDF Reader",
+        actions: {
+          text: async (ctx) => {
+            calls.push({
+              model_id: ctx.metering?.model_id,
+              fallback_from: ctx.metering?.metadata?.fallback_from,
+              fallback_reason: ctx.metering?.metadata?.fallback_reason,
+              fallback_media_type: ctx.metering?.metadata?.fallback_media_type,
+            })
+            return {
+              id: "msg_pdf",
+              role: "assistant",
+              parts: [{ type: "text", text: "pdf" }],
+            }
+          },
+        },
+      },
+      {
+        id: "deepseek",
+        provider_id: "deepseek-provider",
+        name: "DeepSeek",
+        default: ["text"],
+        fallback: [
+          {
+            match: (media) => media.media_type === "application/pdf" && media.filename === "paper.pdf",
+            model: "pdf-reader",
+          },
+          {
+            match: (media) => media.media_type.startsWith("image/"),
+            model: "vision",
+          },
+        ],
+        actions: {
+          text: async () => {
+            calls.push("deepseek")
+            return {
+              id: "msg_deepseek",
+              role: "assistant",
+              parts: [{ type: "text", text: "deepseek" }],
+            }
+          },
+        },
+      },
+    ])
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    const city = await (await base.handleRequest(new Request("http://localhost/v1/cities/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ name: "Demo" }),
+    }))).json()
+    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/cities/tokens/apply", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
+    }))).json()
+
+    const response = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${tokenBody.user_token}`,
+      },
+      body: JSON.stringify({
+        model: "deepseek",
+        messages: [{
+          role: "user",
+          parts: [
+            { type: "text", text: "总结这个 PDF" },
+            { type: "image", mediaType: "image/png", url: "https://example.com/legacy-image.png" },
+            { type: "file", mediaType: "application/pdf", filename: "paper.pdf", url: "https://example.com/paper.pdf" },
+          ],
+        }],
+      }),
+    }))
+
+    assert.equal(response.status, 200)
+    assert.equal((await response.json()).id, "msg_pdf")
+    assert.deepEqual(calls, [{
+      model_id: "pdf-reader",
+      fallback_from: "deepseek",
+      fallback_reason: "input_requires_media",
+      fallback_media_type: "application/pdf",
+    }])
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
 test("AIService falls back for OpenAI chat completions with image_url parts", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-fallback-openai-"))
@@ -582,15 +711,17 @@ test("AIService falls back for OpenAI chat completions with image_url parts", as
         provider_id: "deepseek-provider",
         name: "DeepSeek",
         default: ["text"],
-        fallback: {
-          image: "kimi",
-        },
+        fallback: [{
+          match: (media) => media.media_type.startsWith("image/"),
+          model: "kimi",
+        }],
         actions: {
           openai: async (ctx) => {
             calls.push({
               model_id: ctx.metering?.model_id,
               fallback_from: ctx.metering?.metadata?.fallback_from,
               fallback_reason: ctx.metering?.metadata?.fallback_reason,
+              fallback_media_type: ctx.metering?.metadata?.fallback_media_type,
             })
             return {
               response: Response.json({

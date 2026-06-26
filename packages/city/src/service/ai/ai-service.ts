@@ -27,6 +27,8 @@ import type {
   AIModelEnvRequirement,
   ModelConfig,
   ModelActions,
+  ModelFallbackMedia,
+  ModelFallbackRule,
   PublicModel,
 } from "./types.js";
 import type {
@@ -70,11 +72,12 @@ type ResolvedAction = {
   model?: ModelConfig;
   action: ActionFn;
 };
-type RoutingFallbackReason = "input_requires_image";
+type RoutingFallbackReason = "input_requires_media";
 type ResolvedRoutingPlan = {
   resolved: ResolvedAction;
   fallback_from?: string;
   fallback_reason?: RoutingFallbackReason;
+  fallback_media_type?: string;
 };
 type StoredImagePart = Record<string, unknown> & {
   type: "file";
@@ -550,39 +553,35 @@ export class AIService extends Service {
   }
 
   /**
-   * 按请求内容和模型级 fallback 决定实际执行模型。
+   * 按请求媒体输入和模型级 fallback 规则决定实际执行模型。
    *
    * 关键说明（中文）
    * - 这里只做路由，不改写请求体，避免 AIService 绑定具体上游协议。
-   * - 当前把 OpenAI image_url 与 UIMessage image/file part 统一归一为 image 输入。
+   * - UIMessage 只从 file part 提取媒体信息，具体如何分流交给 fallback.match。
+   * - OpenAI image_url / input_image 会归一为 image 媒体输入后进入同一套规则。
+   * - fallback 规则按数组顺序匹配，规则顺序高于请求里的 file 顺序。
    * - 没有配置 fallback 时保持既有行为，由 Provider 自己决定如何处理。
    */
   private planTextExecution(resolved: ResolvedAction, ctx: Context, mode: string): ResolvedRoutingPlan {
     const model = resolved.model;
-    if (!model || !this.requiresImageInput(ctx.input, mode)) {
+    if (!model || !model.fallback?.length) {
       return { resolved };
     }
 
-    const fallback_model = this.resolveFallbackModel(model.fallback?.image);
-    if (!fallback_model || fallback_model.id === model.id) {
+    const media_inputs = this.extractMediaInputs(ctx.input, mode);
+    if (media_inputs.length === 0) {
       return { resolved };
     }
 
-    const action = mode === "openai"
-      ? this.resolveOpenAIAction(fallback_model)
-      : this.getAction(fallback_model, mode);
-    if (!action || this.getMissingEnv(fallback_model, ctx.env).length > 0) {
-      return { resolved };
+    for (const rule of model.fallback ?? []) {
+      for (const media of media_inputs) {
+        const plan = this.resolveMediaFallbackPlan(model, rule, media, mode, ctx.env);
+        if (!plan) continue;
+        return plan;
+      }
     }
 
-    return {
-      resolved: {
-        model: fallback_model,
-        action,
-      },
-      fallback_from: model.id,
-      fallback_reason: "input_requires_image",
-    };
+    return { resolved };
   }
 
   /**
@@ -595,66 +594,155 @@ export class AIService extends Service {
   }
 
   /**
-   * 判断当前文本请求是否包含图片输入。
+   * 根据一条规则和一个媒体输入解析 fallback 计划。
    */
-  private requiresImageInput(input: unknown, mode: string): boolean {
-    if (!isRecord(input)) return false;
-    if (mode === "openai") {
-      return this.hasOpenAIImageInput(input.messages);
+  private resolveMediaFallbackPlan(
+    model: ModelConfig,
+    rule: ModelFallbackRule,
+    media: ModelFallbackMedia,
+    mode: string,
+    env: EnvReader,
+  ): ResolvedRoutingPlan | undefined {
+    if (!this.matchesFallbackRule(rule, media)) return undefined;
+
+    const fallback_model = this.resolveFallbackModel(rule.model);
+    if (!fallback_model || fallback_model.id === model.id) return undefined;
+
+    const action = mode === "openai"
+      ? this.resolveOpenAIAction(fallback_model)
+      : this.getAction(fallback_model, mode);
+    if (!action || this.getMissingEnv(fallback_model, env).length > 0) return undefined;
+
+    return {
+      resolved: {
+        model: fallback_model,
+        action,
+      },
+      fallback_from: model.id,
+      fallback_reason: "input_requires_media",
+      fallback_media_type: media.media_type,
+    };
+  }
+
+  /**
+   * 安全执行 fallback 规则匹配。
+   */
+  private matchesFallbackRule(rule: ModelFallbackRule, media: ModelFallbackMedia): boolean {
+    try {
+      return rule.match(media);
+    } catch {
+      return false;
     }
-    return this.hasUiImageInput(input.messages);
   }
 
   /**
-   * 扫描 OpenAI-compatible messages 的图片输入。
+   * 从当前请求中提取可参与 fallback 判断的媒体输入。
    */
-  private hasOpenAIImageInput(messages: unknown): boolean {
-    if (!Array.isArray(messages)) return false;
-    return messages.some((message) => {
-      if (!isRecord(message)) return false;
+  private extractMediaInputs(input: unknown, mode: string): ModelFallbackMedia[] {
+    if (!isRecord(input)) return [];
+    if (mode === "openai") {
+      return this.extractOpenAIMediaInputs(input.messages);
+    }
+    return this.extractUiMediaInputs(input.messages);
+  }
+
+  /**
+   * 扫描 OpenAI-compatible messages 的媒体输入。
+   */
+  private extractOpenAIMediaInputs(messages: unknown): ModelFallbackMedia[] {
+    if (!Array.isArray(messages)) return [];
+    const media_inputs: ModelFallbackMedia[] = [];
+    for (const message of messages) {
+      if (!isRecord(message)) continue;
       const content = message.content;
-      if (!Array.isArray(content)) return false;
-      return content.some((part) => this.isOpenAIImagePart(part));
+      if (!Array.isArray(content)) continue;
+      for (const part of content) {
+        const media = this.readOpenAIMediaPart(part);
+        if (media) media_inputs.push(media);
+      }
+    }
+    return media_inputs;
+  }
+
+  /**
+   * 读取 OpenAI-compatible content part 的媒体输入。
+   */
+  private readOpenAIMediaPart(part: unknown): ModelFallbackMedia | undefined {
+    if (!isRecord(part)) return undefined;
+    const type = readOptionalString(part.type);
+    if (type === "image_url" || type === "input_image") {
+      return this.buildFallbackMedia("image/*", {
+        url: this.readOpenAIImageUrl(part),
+      });
+    }
+    if (type !== "file") return undefined;
+    const media_type = readPartMediaType(part);
+    if (!media_type) return undefined;
+    return this.buildFallbackMedia(media_type, {
+      filename: readFilePartFilename(part),
+      url: readOptionalString(part.url),
     });
   }
 
   /**
-   * 判断 OpenAI-compatible content part 是否为图片输入。
+   * 读取 OpenAI-compatible 图片 URL。
    */
-  private isOpenAIImagePart(part: unknown): boolean {
-    if (!isRecord(part)) return false;
-    const type = readOptionalString(part.type);
-    if (type === "image" || type === "image_url" || type === "input_image") return true;
-    return type === "file" && readPartMediaType(part).startsWith("image/");
+  private readOpenAIImageUrl(part: Record<string, unknown>): string | undefined {
+    const direct_url = readOptionalString(part.url);
+    if (direct_url) return direct_url;
+    if (!isRecord(part.image_url)) return undefined;
+    return readOptionalString(part.image_url.url);
   }
 
   /**
-   * 扫描 UIMessage messages 的图片输入。
+   * 扫描 UIMessage messages 的 file 媒体输入。
    */
-  private hasUiImageInput(messages: unknown): boolean {
-    if (!Array.isArray(messages)) return false;
-    return messages.some((message) => {
-      if (!isRecord(message) || !Array.isArray(message.parts)) return false;
-      return message.parts.some((part) => this.isUiImagePart(part));
+  private extractUiMediaInputs(messages: unknown): ModelFallbackMedia[] {
+    if (!Array.isArray(messages)) return [];
+    const media_inputs: ModelFallbackMedia[] = [];
+    for (const message of messages) {
+      if (!isRecord(message) || !Array.isArray(message.parts)) continue;
+      for (const part of message.parts) {
+        const media = this.readUiFilePart(part);
+        if (media) media_inputs.push(media);
+      }
+    }
+    return media_inputs;
+  }
+
+  /**
+   * 读取 UIMessage file part 的媒体输入。
+   */
+  private readUiFilePart(part: unknown): ModelFallbackMedia | undefined {
+    if (!isRecord(part) || part.type !== "file") return undefined;
+    const media_type = readPartMediaType(part);
+    if (!media_type) return undefined;
+    return this.buildFallbackMedia(media_type, {
+      filename: readFilePartFilename(part),
+      url: readOptionalString(part.url),
     });
   }
 
   /**
-   * 判断 UIMessage part 是否为图片输入。
+   * 构造 fallback 媒体输入，避免可选字段写入 undefined。
    */
-  private isUiImagePart(part: unknown): boolean {
-    if (!isRecord(part)) return false;
-    const type = readOptionalString(part.type);
-    if (type === "image") return true;
-    return type === "file" && readPartMediaType(part).startsWith("image/");
+  private buildFallbackMedia(
+    media_type: string,
+    optional: { filename?: string; url?: string },
+  ): ModelFallbackMedia {
+    return {
+      media_type,
+      ...(optional.filename ? { filename: optional.filename } : {}),
+      ...(optional.url ? { url: optional.url } : {}),
+    };
   }
 
   // ========== SDK 通路 ==========
 
   private async handleModality(modality: Modality, ctx: Context): Promise<unknown | Response> {
     const initial_resolved = this.resolve({ model: ctx.input.model as string | undefined, mode: modality }, ctx.env);
-    const { resolved, fallback_from, fallback_reason } = this.planTextExecution(initial_resolved, ctx, modality);
-    this.attachResolvedModel(ctx, resolved.model, modality, { fallback_from, fallback_reason });
+    const { resolved, fallback_from, fallback_reason, fallback_media_type } = this.planTextExecution(initial_resolved, ctx, modality);
+    this.attachResolvedModel(ctx, resolved.model, modality, { fallback_from, fallback_reason, fallback_media_type });
     const started_at = Date.now();
 
     try {
@@ -955,8 +1043,8 @@ export class AIService extends Service {
     const body = ctx.input as Record<string, unknown>;
     const modelId = body.model as string | undefined;
     const initial_resolved = this.resolve({ model: modelId, mode: "openai" }, ctx.env);
-    const { resolved, fallback_from, fallback_reason } = this.planTextExecution(initial_resolved, ctx, "openai");
-    this.attachResolvedModel(ctx, resolved.model, "openai", { fallback_from, fallback_reason });
+    const { resolved, fallback_from, fallback_reason, fallback_media_type } = this.planTextExecution(initial_resolved, ctx, "openai");
+    this.attachResolvedModel(ctx, resolved.model, "openai", { fallback_from, fallback_reason, fallback_media_type });
     ctx.input = body;
     const started_at = Date.now();
 
@@ -983,7 +1071,7 @@ export class AIService extends Service {
     ctx: Context,
     model: ModelConfig | undefined,
     mode: string,
-    routing?: { fallback_from?: string; fallback_reason?: RoutingFallbackReason },
+    routing?: { fallback_from?: string; fallback_reason?: RoutingFallbackReason; fallback_media_type?: string },
   ): void {
     if (!model) return;
     ctx.variant = { id: model.id, name: model.name, meta: model.meta };
@@ -1000,6 +1088,7 @@ export class AIService extends Service {
         mode,
         ...(routing?.fallback_from ? { fallback_from: routing.fallback_from } : {}),
         ...(routing?.fallback_reason ? { fallback_reason: routing.fallback_reason } : {}),
+        ...(routing?.fallback_media_type ? { fallback_media_type: routing.fallback_media_type } : {}),
       },
     };
   }

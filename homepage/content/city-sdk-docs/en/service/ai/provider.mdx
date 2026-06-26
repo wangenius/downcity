@@ -100,14 +100,20 @@ const kimi = kimiProvider.model({
 const deepseek = deepseekProvider.model({
   id: "deepseek-v4-flash",
   name: "DeepSeek V4 Flash",
-  fallback: {
-    image: kimi,
-  },
+  fallback: [
+    {
+      match: (media) => media.media_type.startsWith("image/"),
+      model: kimi,
+    },
+  ],
 });
 ```
 
-When a request contains image input and the current model does not support it, AIService switches to `fallback.image` automatically for `text`, `stream`, and `chat/completions`.
-If no fallback is configured, AIService keeps the original model and the provider decides how to handle the request.
+When a request contains file media input that the current model cannot handle, AIService evaluates `fallback` rules in array order for `text`, `stream`, and `chat/completions`. The first matching rule whose target model is available becomes the execution model.
+
+For UIMessage requests, AIService only extracts media from `{ type: "file" }` parts and passes `media.media_type`, `media.filename`, and `media.url` into `match`. Image, audio, video, PDF, and custom routing should all live in your `match` functions. For OpenAI-compatible requests, `image_url` / `input_image` parts are normalized as `media.media_type === "image/*"` and use the same rule list.
+
+If no fallback is configured, or no rule matches, AIService keeps the original model and the provider decides how to handle the request.
 
 ## Image Providers
 

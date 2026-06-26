@@ -100,14 +100,20 @@ const kimi = kimiProvider.model({
 const deepseek = deepseekProvider.model({
   id: "deepseek-v4-flash",
   name: "DeepSeek V4 Flash",
-  fallback: {
-    image: kimi,
-  },
+  fallback: [
+    {
+      match: (media) => media.media_type.startsWith("image/"),
+      model: kimi,
+    },
+  ],
 });
 ```
 
-当请求里出现图片输入，而当前模型不支持时，AIService 会在 `text`、`stream`、`chat/completions` 三条通路上自动切到 `fallback.image`。
-如果没有配置 fallback，AIService 会保持原模型不变，继续交给 provider 自己处理。
+当请求里出现 file 媒体输入，而当前模型不支持时，AIService 会在 `text`、`stream`、`chat/completions` 三条通路上按 `fallback` 数组顺序执行 `match(media)`，第一条命中且目标模型可用的规则会成为实际执行模型。
+
+UIMessage 通路只会从 `parts` 里的 `{ type: "file" }` 提取 `media.media_type`、`media.filename` 和 `media.url`；图片、音频、视频、PDF 等分流逻辑都应该写在 `match` 里。OpenAI-compatible 通路的 `image_url` / `input_image` 会被归一成 `media.media_type === "image/*"` 后参与同一套规则。
+
+如果没有配置 fallback，或没有任何规则命中，AIService 会保持原模型不变，继续交给 provider 自己处理。
 
 ## 图片 Provider
 

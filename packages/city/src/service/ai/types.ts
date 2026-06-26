@@ -84,14 +84,29 @@ export interface ModelActions {
 }
 
 /**
- * 模型级 fallback 配置。
+ * 模型级 fallback 媒体输入。
  *
- * 当前只暴露 `image` 一个入口，用来覆盖图片/附件类非文本输入的自动切换。
- * 开发者只需要在不支持多模态输入的模型上配置它即可。
+ * AIService 只负责从请求中提取 file 媒体信息，具体是否命中 fallback 由模型配置自行判断。
  */
-export interface ModelFallbackConfig {
-  /** 当请求里出现非文本输入时，切换到的目标模型。 */
-  image?: ModelConfig | string;
+export interface ModelFallbackMedia {
+  /** file part 的 IANA 媒体类型，例如 `image/png`、`audio/mpeg` 或 `application/pdf`。 */
+  media_type: string;
+  /** file part 的文件名；请求未提供文件名时为空。 */
+  filename?: string;
+  /** file part 的 URL 或 Data URL；请求未提供 URL 时为空。 */
+  url?: string;
+}
+
+/**
+ * 模型级 fallback 规则。
+ *
+ * 规则按数组顺序执行，第一条匹配且目标模型可用的规则会成为实际执行模型。
+ */
+export interface ModelFallbackRule {
+  /** 判断当前媒体输入是否应该使用这条 fallback 规则。 */
+  match: (media: ModelFallbackMedia) => boolean;
+  /** 规则命中后切换到的目标模型。 */
+  model: ModelConfig | string;
 }
 
 /**
@@ -120,8 +135,8 @@ export interface ModelConfig {
   envKey?: string;
   /** 上游 API 实际模型 ID（自动透传时替换 body.model） */
   passthroughModel?: string;
-  /** 模型级 fallback 配置。 */
-  fallback?: ModelFallbackConfig;
+  /** 模型级 fallback 规则列表，按顺序匹配请求中的 file 媒体输入。 */
+  fallback?: ModelFallbackRule[];
   /** 各通路 action 绑定 */
   actions: ModelActions;
   /** 本模型的出账方法，只生成扣费草稿，不直接扣余额。 */

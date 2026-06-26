@@ -12,5 +12,13 @@ packages:
   - templates/*
   - examples/*
 
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true
+  koffi: true
+  protobufjs: true
+  sharp: true
+  workerd: true
+
 onlyBuiltDependencies:
   - better-sqlite3

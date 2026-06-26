@@ -16,6 +16,7 @@ import {
   isTextUIPart,
   type FileUIPart,
 } from "ai";
+import type { SessionUserMessagePart } from "@/types/sdk/AgentSessionPrompt.js";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import { parseChatMessageMarkup } from "@/executor/messages/ChatMessageMarkup.js";
 
@@ -100,6 +101,66 @@ async function hydrateFileUrlPart(
   } catch {
     return part;
   }
+}
+
+async function hydrateFileUrlPartStrict(
+  part: FileUIPart,
+  project_root?: string,
+): Promise<FileUIPart> {
+  const url = String(part.url || "").trim();
+  const file_path = resolveHydratableFilePath(project_root, url);
+  if (!file_path) return part;
+
+  try {
+    const buffer = await fs.readFile(file_path);
+    const media_type =
+      String(part.mediaType || "").trim() ||
+      guessAttachmentMediaTypeFromPath(file_path) ||
+      "application/octet-stream";
+    return {
+      ...part,
+      mediaType: media_type,
+      url: buildDataUrl(media_type, buffer),
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`读取本地附件失败：${file_path}。${message}`);
+  }
+}
+
+/**
+ * 在用户 prompt 入库前，将本地图片 file part 转成 data URL。
+ *
+ * 关键点（中文）
+ * - 只处理调用侧直接传入的图片 file part。
+ * - 已经是 data URL 或远程 URL 的附件保持原样。
+ * - 本地文件读取失败时直接报错，避免模型请求拿到不可访问的本地路径。
+ */
+export async function hydrateUserPromptFileParts(
+  parts: SessionUserMessagePart[],
+  project_root?: string,
+): Promise<SessionUserMessagePart[]> {
+  if (!Array.isArray(parts) || parts.length === 0) return [];
+
+  const out: SessionUserMessagePart[] = [];
+  for (const part of parts) {
+    if (!isFileUIPart(part as FileUIPart)) {
+      out.push(part);
+      continue;
+    }
+
+    const file_part = part as FileUIPart;
+    const media_type = String(file_part.mediaType || "").trim();
+    if (!media_type.startsWith("image/")) {
+      out.push(part);
+      continue;
+    }
+
+    const next_part = await hydrateFileUrlPartStrict(file_part, project_root);
+    out.push(next_part as SessionUserMessagePart);
+  }
+
+  return out;
 }
 
 /**

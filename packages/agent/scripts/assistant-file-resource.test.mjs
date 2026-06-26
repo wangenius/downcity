@@ -16,6 +16,7 @@ import { pathToFileURL } from "node:url";
 
 import { materializeAssistantFileParts } from "../bin/executor/messages/AssistantFileResource.js";
 import {
+  hydrateUserPromptFileParts,
   hydrateFileUrlPartsForModel,
   injectFilePartsFromAttachments,
 } from "../bin/executor/messages/SessionAttachmentMapper.js";
@@ -167,6 +168,64 @@ test("hydrateFileUrlPartsForModel converts relative resource paths back to data 
     `data:image/png;base64,${bytes.toString("base64")}`,
   );
   assert.match(materialized[0].url, /^\.downcity\/resources\//);
+});
+
+test("hydrateUserPromptFileParts converts local image paths to data URLs before persistence", async () => {
+  const project_root = await fs.mkdtemp(
+    path.join(os.tmpdir(), "downcity-agent-user-prompt-image-"),
+  );
+  const bytes = Buffer.from("user-prompt-image-bytes", "utf8");
+  const image_path = path.join(project_root, "image.png");
+  await fs.writeFile(image_path, bytes);
+
+  const parts = await hydrateUserPromptFileParts(
+    [
+      {
+        type: "text",
+        text: "这张图写了啥",
+      },
+      {
+        type: "file",
+        mediaType: "image/png",
+        filename: "image.png",
+        url: image_path,
+      },
+    ],
+    project_root,
+  );
+
+  assert.equal(parts[0]?.type, "text");
+  assert.equal(parts[1]?.type, "file");
+  assert.equal(parts[1]?.mediaType, "image/png");
+  assert.equal(
+    parts[1]?.url,
+    `data:image/png;base64,${bytes.toString("base64")}`,
+  );
+});
+
+test("hydrateUserPromptFileParts keeps existing data URLs and non-image files unchanged", async () => {
+  const data_url = "data:image/png;base64,already-base64";
+  const pdf_url = "/tmp/input.pdf";
+  const parts = await hydrateUserPromptFileParts(
+    [
+      {
+        type: "file",
+        mediaType: "image/png",
+        filename: "image.png",
+        url: data_url,
+      },
+      {
+        type: "file",
+        mediaType: "application/pdf",
+        filename: "input.pdf",
+        url: pdf_url,
+      },
+    ],
+    process.cwd(),
+  );
+
+  assert.equal(parts[0]?.url, data_url);
+  assert.equal(parts[1]?.url, pdf_url);
 });
 
 test("hydrateFileUrlPartsForModel keeps old file URLs compatible", async () => {

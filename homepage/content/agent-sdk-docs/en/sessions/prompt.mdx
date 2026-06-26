@@ -42,6 +42,22 @@ const turn = await session.prompt({
 await turn.finished;
 ```
 
+Image `file` parts can also use a local absolute path or a `file://` URL. A local `Agent` reads the file and converts it to `data:<mediaType>;base64,...` before calling the model:
+
+```ts
+const turn = await session.prompt({
+  query: [
+    { type: "text", text: "What does this image say?" },
+    {
+      type: "file",
+      mediaType: "image/png",
+      filename: "image.png",
+      url: "/Users/me/project/.downcity/input/image.png",
+    },
+  ],
+});
+```
+
 ## Example
 
 ```ts

@@ -20,6 +20,7 @@ import {
 } from "@/session/index.js";
 import { ensureSessionTitle } from "@/session/SessionTitle.js";
 import { persistSdkAssistantResult } from "@/session/storage/Persistence.js";
+import { hydrateUserPromptFileParts } from "@executor/messages/SessionAttachmentMapper.js";
 import type { Executor } from "@executor/Executor.js";
 import type { JsonlSessionHistoryStore } from "@/executor/store/history/jsonl/JsonlSessionHistoryStore.js";
 import type {
@@ -324,8 +325,11 @@ export class SessionStateService {
       return message;
     }
 
-    // query 是 parts 数组，直接用其构造 user 消息
-    const parts = Array.isArray(query) ? query : [];
+    // query 是 parts 数组，先把本地图片附件转换为模型可消费的 data URL。
+    const parts = await hydrateUserPromptFileParts(
+      Array.isArray(query) ? query : [],
+      this.project_root,
+    );
     const message: SessionUserMessageV1 = {
       id: `u:${this.session_id}:${generateId()}`,
       role: "user",

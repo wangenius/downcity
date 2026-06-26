@@ -42,6 +42,22 @@ const turn = await session.prompt({
 await turn.finished;
 ```
 
+图片 `file` part 也可以传本机绝对路径或 `file://` URL；本地 `Agent` 会在请求模型前读取文件并转换为 `data:<mediaType>;base64,...`：
+
+```ts
+const turn = await session.prompt({
+  query: [
+    { type: "text", text: "这张图片写了什么？" },
+    {
+      type: "file",
+      mediaType: "image/png",
+      filename: "image.png",
+      url: "/Users/me/project/.downcity/input/image.png",
+    },
+  ],
+});
+```
+
 ## 例子
 
 ```ts

@@ -5,14 +5,15 @@ description: Model storage, encryption behavior, and key management guidance
 
 # Data Security and Keys
 
-Model config uses a split design:
+Local CLI state uses encrypted SQLite stores:
 
-1. Federation AIService model catalog and provider-side details outside the project
-2. Project-level binding in `<project>/downcity.json` as `execution.modelId`
+1. City-local state and credentials: `~/.downcity/downcity.db`
+2. Federation admin profiles and admin keys: `~/.downcity/federation.db`
+3. Project-level binding stays in `<project>/downcity.json` as `execution.modelId`
 
-## How apiKey is protected
+## How secrets are protected
 
-Provider `apiKey` is not stored in plaintext. It is stored in encrypted field `api_key_encrypted`.
+Provider `apiKey`, channel credentials, user sessions, and Federation admin keys are not stored in plaintext. They are encrypted before being written to the local SQLite stores.
 
 Key source priority:
 

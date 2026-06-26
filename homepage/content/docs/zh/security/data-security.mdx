@@ -5,14 +5,15 @@ description: 模型配置存储、加密机制与用户注意事项
 
 # 数据安全与密钥
 
-模型配置采用“City 存储 + 项目绑定”：
+本地 CLI 状态采用加密 SQLite 存储：
 
-1. Federation AIService 模型目录：`~/.downcity/downcity.db`
-2. 项目绑定：`<project>/downcity.json` 的 `execution.modelId`
+1. City 本地状态与凭证：`~/.downcity/downcity.db`
+2. Federation admin profile 与 admin key：`~/.downcity/federation.db`
+3. 项目绑定仍在 `<project>/downcity.json` 的 `execution.modelId`
 
-## apiKey 如何保护
+## secret 如何保护
 
-provider 的 `apiKey` 不以明文写入数据库，而是写入加密字段 `api_key_encrypted`。
+provider `apiKey`、渠道凭证、user session 与 Federation admin key 都不会明文写入本地存储，会先加密再落入 SQLite。
 
 密钥来源优先级：
 

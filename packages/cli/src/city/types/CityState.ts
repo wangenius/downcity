@@ -28,6 +28,11 @@ export interface CityAdminConfig {
     name?: unknown;
 
     /**
+     * `downfed` 当前结构中的 Federation URL 字段。
+     */
+    base_url?: unknown;
+
+    /**
      * Federation URL。
      */
     federation_url?: unknown;

@@ -12,6 +12,12 @@ Downcity provides two CLI binaries:
 
 Both share the same global flags (`--verbose`, `--quiet`, `--lang`) and help system.
 
+## Local storage
+
+- `downcity` stores local City state, encrypted credentials, environment variables, channel accounts, and registered Agent project paths in `~/.downcity/downcity.db`.
+- `downfed` stores Federation admin profiles, admin keys, Cloudflare account selection, and CLI preferences in `~/.downcity/federation.db`.
+- Agent runtime status is resolved from each project daemon's local meta/pid files under `<project>/.downcity/.debug/`.
+
 ## downcity
 
 `downcity` is the local management CLI. It handles agent lifecycle, plugins, environment variables, tokens, and Federation connections.

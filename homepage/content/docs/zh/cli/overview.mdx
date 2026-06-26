@@ -12,6 +12,12 @@ Downcity 提供两个 CLI 二进制文件：
 
 两者共享相同的全局标志（`--verbose`、`--quiet`、`--lang`）和帮助系统。
 
+## 本地存储
+
+- `downcity` 将本地 City 状态、加密凭证、环境变量、渠道账号和已登记 Agent 项目路径保存到 `~/.downcity/downcity.db`。
+- `downfed` 将 Federation admin profile、admin key、Cloudflare account 选择和 CLI 偏好保存到 `~/.downcity/federation.db`。
+- Agent 运行状态从每个项目的 `<project>/.downcity/.debug/` daemon meta/pid 文件推导。
+
 ## downcity
 
 `downcity` 是本地管理 CLI。它处理 Agent 生命周期、插件、环境变量、token 和 Federation 连接。

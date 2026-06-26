@@ -1,28 +1,45 @@
 /**
- * CityRegistry：city 后台维护的 agent registry（`~/.downcity/main/agents.json`）。
+ * CityAgentProjectStore：City 维护的 agent 项目索引。
  *
  * 关键点（中文）
- * - registry 只维护“City 认知到的 agent 项目列表”，用于统一观测与批量管理。
- * - registry 不承载实时健康检查：status/list 会读取每个项目的 daemon pid 并判活。
- * - registry 是普通本地状态文件，不依赖任何 top-level city 常驻进程。
+ * - 全局 agent 列表进入 `downcity.db` 的加密 secure setting，不再写 `agents.json`。
+ * - 这里只保存 projectRoot 列表；运行状态统一由项目 daemon pid/meta 推导。
+ * - 保留旧导出函数名，降低上层命令改造面积。
  */
 
 import fs from "fs-extra";
 import path from "node:path";
-import type {
-  ManagedAgentRegistryEntry,
-  ManagedAgentRegistryV1,
-} from "@downcity/agent";
-import { getManagedAgentRegistryPath, getCityRuntimeDirPath } from "@/city/process/registry/CityPaths.js";
+import type { ManagedAgentRegistryEntry, ManagedAgentRegistryV1 } from "@downcity/agent";
+import { createCityPlatformStore } from "@/city/runtime/store/index.js";
+import { getCityRuntimeDirPath } from "@/city/process/registry/CityPaths.js";
+import {
+  DAEMON_META_FILENAME,
+  DAEMON_PID_FILENAME,
+  type DaemonMeta,
+} from "@/city/process/daemon/Types.js";
+import { getDowncityDebugDirPath } from "@/city/config/Paths.js";
 
-const CONSOLE_DIR = getCityRuntimeDirPath();
-const MANAGED_AGENTS_FILE = getManagedAgentRegistryPath();
+const CITY_AGENT_PROJECTS_KEY = "city.agent.projects";
+const LEGACY_MANAGED_AGENTS_FILE = path.join(getCityRuntimeDirPath(), "agents.json");
 
-function buildEmptyRegistry(): ManagedAgentRegistryV1 {
+interface CityAgentProjectsState {
+  /** 状态版本。 */
+  v: 1;
+  /** 最近更新时间（ISO 字符串）。 */
+  updatedAt: string;
+  /** 已登记 agent 项目绝对路径列表。 */
+  projectRoots: string[];
+}
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function buildEmptyState(): CityAgentProjectsState {
   return {
     v: 1,
-    updatedAt: new Date().toISOString(),
-    agents: [],
+    updatedAt: nowIso(),
+    projectRoots: [],
   };
 }
 
@@ -32,219 +49,229 @@ function normalizeProjectRoot(projectRoot: string): string {
   return resolved;
 }
 
-function normalizePid(pid: number): number {
-  if (!Number.isFinite(pid) || Number.isNaN(pid) || !Number.isInteger(pid) || pid < 1) {
-    throw new Error(`Invalid pid: ${pid}`);
-  }
-  return pid;
-}
-
 function normalizeIsoTime(input: string | undefined): string {
   const value = String(input || "").trim();
-  if (!value) return new Date().toISOString();
+  if (!value) return nowIso();
   const ms = Date.parse(value);
-  if (!Number.isFinite(ms)) return new Date().toISOString();
+  if (!Number.isFinite(ms)) return nowIso();
   return new Date(ms).toISOString();
 }
 
-function normalizeRegistryEntry(
-  entry: Partial<ManagedAgentRegistryEntry>,
-): ManagedAgentRegistryEntry | null {
+function getDaemonPidPath(projectRoot: string): string {
+  return path.join(getDowncityDebugDirPath(projectRoot), DAEMON_PID_FILENAME);
+}
+
+function getDaemonMetaPath(projectRoot: string): string {
+  return path.join(getDowncityDebugDirPath(projectRoot), DAEMON_META_FILENAME);
+}
+
+async function readDaemonPid(projectRoot: string): Promise<number | null> {
   try {
-    const projectRoot = normalizeProjectRoot(String(entry.projectRoot || ""));
-    const pid = normalizePid(Number(entry.pid));
-    const startedAt = normalizeIsoTime(
-      typeof entry.startedAt === "string" ? entry.startedAt : undefined,
-    );
-    const updatedAt = normalizeIsoTime(
-      typeof entry.updatedAt === "string" ? entry.updatedAt : undefined,
-    );
-    return {
-      projectRoot,
-      pid,
-      startedAt,
-      updatedAt,
-      status:
-        entry.status === "stopped"
-          ? "stopped"
-          : "running",
-      stoppedAt:
-        entry.status === "stopped"
-          ? normalizeIsoTime(
-              typeof entry.stoppedAt === "string"
-                ? entry.stoppedAt
-                : undefined,
-            )
-          : undefined,
-    };
+    const raw = await fs.readFile(getDaemonPidPath(projectRoot), "utf-8");
+    const pid = Number.parseInt(String(raw).trim(), 10);
+    return Number.isFinite(pid) && pid > 0 ? pid : null;
   } catch {
     return null;
   }
 }
 
-function normalizeRegistry(
-  value: Partial<ManagedAgentRegistryV1> | null | undefined,
-): ManagedAgentRegistryV1 {
-  if (!value || typeof value !== "object") return buildEmptyRegistry();
-  const source = Array.isArray(value.agents) ? value.agents : [];
-  const normalizedAgents: ManagedAgentRegistryEntry[] = [];
-  for (const item of source) {
-    if (!item || typeof item !== "object") continue;
-    const normalized = normalizeRegistryEntry(item as ManagedAgentRegistryEntry);
-    if (!normalized) continue;
-    const existingIndex = normalizedAgents.findIndex(
-      (entry) => entry.projectRoot === normalized.projectRoot,
-    );
-    if (existingIndex >= 0) {
-      normalizedAgents[existingIndex] = normalized;
-      continue;
-    }
-    normalizedAgents.push(normalized);
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
   }
+}
+
+async function readDaemonMeta(projectRoot: string): Promise<DaemonMeta | null> {
+  try {
+    const value = await fs.readJson(getDaemonMetaPath(projectRoot));
+    const pid = Number((value as { pid?: unknown })?.pid);
+    if (!Number.isFinite(pid) || pid <= 0) return null;
+    const startedAt = String((value as { startedAt?: unknown })?.startedAt || "").trim();
+    if (!startedAt) return null;
+    const command = String((value as { command?: unknown })?.command || "").trim();
+    const project = String((value as { projectRoot?: unknown })?.projectRoot || "").trim();
+    if (!command || !project) return null;
+    return value as DaemonMeta;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeState(value: Partial<CityAgentProjectsState> | null | undefined): CityAgentProjectsState {
+  if (!value || typeof value !== "object") return buildEmptyState();
+  const projectRoots = Array.isArray(value.projectRoots)
+    ? value.projectRoots
+        .map((item) => {
+          try {
+            return normalizeProjectRoot(String(item || ""));
+          } catch {
+            return "";
+          }
+        })
+        .filter(Boolean)
+    : [];
   return {
     v: 1,
-    updatedAt: normalizeIsoTime(
-      typeof value.updatedAt === "string" ? value.updatedAt : undefined,
-    ),
-    agents: normalizedAgents.sort((a, b) =>
-      a.projectRoot.localeCompare(b.projectRoot),
-    ),
+    updatedAt: normalizeIsoTime(value.updatedAt),
+    projectRoots: [...new Set(projectRoots)].sort((a, b) => a.localeCompare(b)),
   };
 }
 
-async function writeManagedAgentRegistry(
-  registry: ManagedAgentRegistryV1,
-): Promise<void> {
-  await fs.ensureDir(CONSOLE_DIR);
-  await fs.writeJson(MANAGED_AGENTS_FILE, normalizeRegistry(registry), {
-    spaces: 2,
+function readDbState(): CityAgentProjectsState | null {
+  const store = createCityPlatformStore();
+  try {
+    return store.getSecureSettingJsonSync<CityAgentProjectsState>(CITY_AGENT_PROJECTS_KEY);
+  } finally {
+    store.close();
+  }
+}
+
+function writeDbState(state: CityAgentProjectsState): void {
+  const store = createCityPlatformStore();
+  try {
+    store.setSecureSettingJsonSync(CITY_AGENT_PROJECTS_KEY, normalizeState(state));
+  } finally {
+    store.close();
+  }
+}
+
+async function readLegacyProjectRoots(): Promise<string[]> {
+  try {
+    if (!(await fs.pathExists(LEGACY_MANAGED_AGENTS_FILE))) return [];
+    const raw = (await fs.readJson(LEGACY_MANAGED_AGENTS_FILE)) as Partial<ManagedAgentRegistryV1>;
+    const agents = Array.isArray(raw.agents) ? raw.agents : [];
+    return agents
+      .map((entry) => {
+        try {
+          return normalizeProjectRoot(String(entry?.projectRoot || ""));
+        } catch {
+          return "";
+        }
+      })
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+async function readProjectState(): Promise<CityAgentProjectsState> {
+  const stored = readDbState();
+  if (stored) return normalizeState(stored);
+
+  const legacyProjectRoots = await readLegacyProjectRoots();
+  const migrated = normalizeState({
+    v: 1,
+    updatedAt: nowIso(),
+    projectRoots: legacyProjectRoots,
+  });
+  writeDbState(migrated);
+  return migrated;
+}
+
+async function writeProjectState(state: CityAgentProjectsState): Promise<void> {
+  writeDbState({
+    ...normalizeState(state),
+    updatedAt: nowIso(),
   });
 }
 
+async function buildEntry(projectRoot: string): Promise<ManagedAgentRegistryEntry> {
+  const project_root = normalizeProjectRoot(projectRoot);
+  const daemon_pid = await readDaemonPid(project_root);
+  const meta = await readDaemonMeta(project_root);
+  const running = Boolean(daemon_pid && isProcessAlive(daemon_pid));
+  return {
+    projectRoot: project_root,
+    pid: daemon_pid ?? meta?.pid ?? 0,
+    startedAt: normalizeIsoTime(meta?.startedAt),
+    updatedAt: normalizeIsoTime(meta?.startedAt),
+    status: running ? "running" : "stopped",
+    stoppedAt: running ? undefined : nowIso(),
+  };
+}
+
 /**
- * 确保 city agent registry 文件存在。
- *
- * 关键点（中文）
- * - 空 City 运行态也应拥有显式的空 registry，避免管理侧将“尚未启动任何 agent”误判为异常。
- * - 若文件已存在则不覆盖，保持历史记录不丢失。
+ * 确保 agent 项目索引已初始化。
  */
 export async function ensureManagedAgentRegistry(): Promise<void> {
-  await fs.ensureDir(CONSOLE_DIR);
-  if (await fs.pathExists(MANAGED_AGENTS_FILE)) {
-    return;
-  }
-  await writeManagedAgentRegistry(buildEmptyRegistry());
+  await readProjectState();
 }
 
 /**
- * 获取 city agent registry 文件路径。
- */
-export function getManagedAgentsRegistryPath(): string {
-  return MANAGED_AGENTS_FILE;
-}
-
-/**
- * 读取 city agent registry（容错）。
+ * 获取旧 registry 文件路径。
  *
  * 关键点（中文）
- * - 文件不存在或损坏时返回空 registry，避免影响主流程。
+ * - 仅用于诊断或迁移提示；当前版本不会再写这个文件。
  */
-export async function readManagedAgentRegistry(): Promise<ManagedAgentRegistryV1> {
-  try {
-    if (!(await fs.pathExists(MANAGED_AGENTS_FILE))) {
-      return buildEmptyRegistry();
-    }
-    const raw = (await fs.readJson(MANAGED_AGENTS_FILE)) as Partial<ManagedAgentRegistryV1>;
-    return normalizeRegistry(raw);
-  } catch {
-    return buildEmptyRegistry();
-  }
+export function getManagedAgentsRegistryPath(): string {
+  return LEGACY_MANAGED_AGENTS_FILE;
 }
 
 /**
- * 列出 City registry 中记录的 agent（按 projectRoot 排序）。
+ * 读取 agent 项目索引的兼容视图。
+ */
+export async function readManagedAgentRegistry(): Promise<ManagedAgentRegistryV1> {
+  const state = await readProjectState();
+  const agents: ManagedAgentRegistryEntry[] = [];
+  for (const projectRoot of state.projectRoots) {
+    agents.push(await buildEntry(projectRoot));
+  }
+  return {
+    v: 1,
+    updatedAt: state.updatedAt,
+    agents,
+  };
+}
+
+/**
+ * 列出 City 已登记 agent。
  */
 export async function listManagedAgentEntries(): Promise<ManagedAgentRegistryEntry[]> {
   const registry = await readManagedAgentRegistry();
-  return [...registry.agents].sort((a, b) => a.projectRoot.localeCompare(b.projectRoot));
+  return registry.agents.sort((a, b) => a.projectRoot.localeCompare(b.projectRoot));
 }
 
 /**
- * 新增或更新一条 city agent 记录。
+ * 登记或刷新 agent 项目。
  */
 export async function upsertManagedAgentEntry(input: {
   projectRoot: string;
-  pid: number;
+  pid?: number;
   startedAt?: string;
   status?: "running" | "stopped";
   stoppedAt?: string;
 }): Promise<void> {
   const projectRoot = normalizeProjectRoot(input.projectRoot);
-  const pid = normalizePid(input.pid);
-  const nowIso = new Date().toISOString();
-
-  const registry = await readManagedAgentRegistry();
-  const index = registry.agents.findIndex((entry) => entry.projectRoot === projectRoot);
-  if (index >= 0) {
-    const existing = registry.agents[index];
-    registry.agents[index] = {
-      projectRoot,
-      pid,
-      startedAt: normalizeIsoTime(existing.startedAt || input.startedAt),
-      updatedAt: nowIso,
-      status: input.status === "stopped" ? "stopped" : "running",
-      stoppedAt:
-        input.status === "stopped"
-          ? normalizeIsoTime(input.stoppedAt || nowIso)
-          : undefined,
-    };
-  } else {
-    registry.agents.push({
-      projectRoot,
-      pid,
-      startedAt: normalizeIsoTime(input.startedAt),
-      updatedAt: nowIso,
-      status: input.status === "stopped" ? "stopped" : "running",
-      stoppedAt:
-        input.status === "stopped"
-          ? normalizeIsoTime(input.stoppedAt || nowIso)
-          : undefined,
-    });
+  const state = await readProjectState();
+  if (!state.projectRoots.includes(projectRoot)) {
+    state.projectRoots.push(projectRoot);
   }
-
-  registry.updatedAt = nowIso;
-  await writeManagedAgentRegistry(registry);
+  await writeProjectState(state);
 }
 
 /**
- * 标记 agent 为 stopped（保留历史记录，不删除）。
+ * 标记 agent 停止。
+ *
+ * 关键点（中文）
+ * - 当前状态只由 daemon pid/meta 推导，所以这里不写 stopped 状态，只保证项目仍在索引中。
  */
 export async function markManagedAgentStopped(projectRoot: string): Promise<void> {
-  const key = normalizeProjectRoot(projectRoot);
-  const registry = await readManagedAgentRegistry();
-  const index = registry.agents.findIndex((entry) => entry.projectRoot === key);
-  if (index < 0) return;
-  const nowIso = new Date().toISOString();
-  const current = registry.agents[index];
-  registry.agents[index] = {
-    ...current,
-    status: "stopped",
-    stoppedAt: nowIso,
-    updatedAt: nowIso,
-  };
-  registry.updatedAt = nowIso;
-  await writeManagedAgentRegistry(registry);
+  await upsertManagedAgentEntry({ projectRoot, status: "stopped" });
 }
 
 /**
- * 按 projectRoot 移除一条 agent 记录。
+ * 从 agent 项目索引中移除项目。
  */
 export async function removeManagedAgentEntry(projectRoot: string): Promise<void> {
   const key = normalizeProjectRoot(projectRoot);
-  const registry = await readManagedAgentRegistry();
-  const nextAgents = registry.agents.filter((entry) => entry.projectRoot !== key);
-  if (nextAgents.length === registry.agents.length) return;
-  registry.agents = nextAgents;
-  registry.updatedAt = new Date().toISOString();
-  await writeManagedAgentRegistry(registry);
+  const state = await readProjectState();
+  const nextProjectRoots = state.projectRoots.filter((item) => item !== key);
+  if (nextProjectRoots.length === state.projectRoots.length) return;
+  await writeProjectState({
+    ...state,
+    projectRoots: nextProjectRoots,
+  });
 }

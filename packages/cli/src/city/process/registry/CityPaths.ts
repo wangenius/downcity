@@ -1,11 +1,11 @@
 /**
- * CityPaths：City 全局运行态路径规则。
+ * CityPaths：用户级平台路径规则。
  *
  * 关键点（中文）
- * - Downcity 的全局根目录固定在用户目录 `~/.downcity/`。
- * - `~/.downcity/downcity.db`：全局 SQLite 数据库，保存平台级配置。
- * - `~/.downcity/main/*`：全局 agent registry、旧 pid/log 清理文件与平台密钥目录。
- * - 这里定义的是“全局路径约定”，不是单个 agent 项目的 `.downcity/` 路径。
+ * - Downcity 的用户级根目录固定在 `~/.downcity/`，测试可用 `DC_PLATFORM_ROOT` 覆盖。
+ * - `downcity.db` 保存 City 本地加密状态。
+ * - `federation.db` 保存 downfed / Federation 管理端加密状态。
+ * - Agent 项目列表等全局索引进入数据库，不再写 `main/agents.json`。
  */
 
 import os from "node:os";
@@ -31,7 +31,14 @@ export function getPlatformStoreDbPath(): string {
 }
 
 /**
- * City 全局状态目录（registry / 平台密钥 / 旧运行态文件）。
+ * Federation 管理端 SQLite 数据库路径（用户级）。
+ */
+export function getFederationStoreDbPath(): string {
+  return path.join(getPlatformRootDirPath(), "federation.db");
+}
+
+/**
+ * City 全局运行目录（平台密钥 / 旧运行态文件）。
  */
 export function getCityRuntimeDirPath(): string {
   return path.join(getPlatformRootDirPath(), "main");
@@ -74,11 +81,4 @@ export function getGatewayPidPath(): string {
  */
 export function getGatewayMetaPath(): string {
   return path.join(getCityRuntimeDirPath(), "gateway.json");
-}
-
-/**
- * 受管 agent registry 文件路径（City 维护的 agent 清单）。
- */
-export function getManagedAgentRegistryPath(): string {
-  return path.join(getCityRuntimeDirPath(), "agents.json");
 }

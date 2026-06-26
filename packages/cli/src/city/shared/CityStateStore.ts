@@ -11,7 +11,10 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { PlatformStore } from "@/city/runtime/store/index.js";
+import {
+  createCityPlatformStore,
+  createFederationPlatformStore,
+} from "@/city/runtime/store/index.js";
 import type { FederationProfile } from "@/city/types/FederationMembership.js";
 import type { CityUserSession } from "@/city/types/CitySession.js";
 import type { CliLocale } from "@/shared/types/CliLocale.js";
@@ -29,6 +32,7 @@ export const DEFAULT_CITY_ID = "city_downcity";
 
 const CITY_CONFIG_PATH = path.join(os.homedir(), ".downcity", "config.json");
 const CITY_STATE_KEY = "city.city.state";
+const FEDERATION_CONFIG_KEY = "federation.config";
 
 /**
  * 读取字符串字段。
@@ -59,7 +63,7 @@ export function normalizeCityUrl(value: string): string {
  * 读取 City 本地状态。
  */
 export function readCityState(): CityLocalState {
-  const store = new PlatformStore();
+  const store = createCityPlatformStore();
   try {
     return normalizeLocalState(
       store.getSecureSettingJsonSync<CityLocalState>(CITY_STATE_KEY),
@@ -73,7 +77,7 @@ export function readCityState(): CityLocalState {
  * 写入 City 本地状态。
  */
 export function writeCityState(state: CityLocalState): void {
-  const store = new PlatformStore();
+  const store = createCityPlatformStore();
   try {
     store.setSecureSettingJsonSync(CITY_STATE_KEY, normalizeLocalState(state));
   } finally {
@@ -226,7 +230,7 @@ export function read_city_admin_secret_for_url(federation_url: string): string |
   const raw = readCityAdminConfig();
   const servers = Array.isArray(raw.servers) ? raw.servers : [];
   const matched = servers.find((item) =>
-    normalizeCityUrl(readCityString(item.federation_url) || readCityString(item.url)) === target_url,
+    read_admin_federation_url(item) === target_url,
   );
   return readCityString(matched?.admin_secret_key) || undefined;
 }
@@ -264,7 +268,26 @@ function readJsonFile<T>(file_path: string): T | null {
 }
 
 function readCityAdminConfig(): CityAdminConfig {
+  const store = createFederationPlatformStore();
+  try {
+    const config = store.getSecureSettingJsonSync<CityAdminConfig>(FEDERATION_CONFIG_KEY);
+    if (config) return config;
+  } finally {
+    store.close();
+  }
   return readJsonFile<CityAdminConfig>(CITY_CONFIG_PATH) ?? {};
+}
+
+function read_admin_federation_url(item: {
+  base_url?: unknown;
+  federation_url?: unknown;
+  url?: unknown;
+}): string {
+  return normalizeCityUrl(
+    readCityString(item.base_url) ||
+    readCityString(item.federation_url) ||
+    readCityString(item.url),
+  );
 }
 
 function read_city_admin_federations(): FederationProfile[] {
@@ -276,7 +299,7 @@ function read_city_admin_federations(): FederationProfile[] {
   const selected_url = resolve_selected_federation_url(state);
 
   for (const item of servers) {
-    const federation_url = normalizeCityUrl(readCityString(item.federation_url) || readCityString(item.url));
+    const federation_url = read_admin_federation_url(item);
     if (!federation_url || out.some((server) => server.federation_url === federation_url)) continue;
     const session = state.sessions?.[federation_url];
     out.push({

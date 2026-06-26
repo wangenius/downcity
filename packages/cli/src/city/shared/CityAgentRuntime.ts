@@ -17,7 +17,6 @@ import {
 } from "@/city/process/daemon/Manager.js";
 import {
   listManagedAgentEntries,
-  markManagedAgentStopped,
 } from "@/city/process/registry/CityRegistry.js";
 import { assertProjectExecutionModelReady } from "@/city/runtime/city-model/ExecutionModelBinding.js";
 import { CliError } from "@/shared/CliError.js";
@@ -27,13 +26,14 @@ import { checkShellSandboxHostPreflight } from "@/city/shared/PluginTargetSuppor
 /**
  * 解析当前仍在运行的 managed agent。
  */
-export async function resolveRunningManagedAgents(params?: {
+export async function resolveRunningManagedAgents(_params?: {
   /**
    * 是否在扫描过程中回写 registry。
+   *
+   * @deprecated 当前状态只由 daemon pid/meta 推导，不再写 registry 状态。
    */
   syncRegistry?: boolean;
 }): Promise<ManagedAgentProcessView[]> {
-  const sync_registry = params?.syncRegistry !== false;
   const entries = await listManagedAgentEntries();
   const views: ManagedAgentProcessView[] = [];
 
@@ -41,15 +41,12 @@ export async function resolveRunningManagedAgents(params?: {
     const project_root = resolve(String(entry.projectRoot || "").trim() || ".");
     const daemon_pid = await readDaemonPid(project_root);
     if (!daemon_pid || !isDaemonProcessAlive(daemon_pid)) {
-      if (sync_registry) {
-        await markManagedAgentStopped(project_root);
-      }
       continue;
     }
 
     views.push({
       projectRoot: project_root,
-      registeredPid: entry.pid,
+      registeredPid: daemon_pid,
       daemonPid: daemon_pid,
       running: true,
       startedAt: entry.startedAt,

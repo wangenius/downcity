@@ -20,12 +20,6 @@ import type { PluginCliBaseOptions } from "@downcity/agent";
 import { checkShellSandboxPreflight } from "@downcity/shell/sandbox/SandboxPreflight.js";
 import { assertProjectExecutionModelReady } from "@/city/runtime/city-model/ExecutionModelBinding.js";
 
-export function isRegistryEntryRunning(
-  entry: { status?: "running" | "stopped" },
-): boolean {
-  return entry.status !== "stopped";
-}
-
 /**
  * Agent 启动前预检选项。
  */
@@ -157,7 +151,6 @@ export async function resolveProjectRootByAgentId(agentId: string): Promise<{
 
   const entries = await listManagedAgentEntries();
   const matchedRoots = entries
-    .filter((entry) => isRegistryEntryRunning(entry))
     .map((entry) => path.resolve(String(entry.projectRoot || "").trim() || "."))
     .filter((root, index, all) => all.indexOf(root) === index)
     .filter((root) => {
@@ -209,7 +202,6 @@ export async function resolvePluginProjectRoot(options: PluginCliBaseOptions): P
   const entries = await listManagedAgentEntries();
   const registered = entries.some(
     (entry) =>
-      isRegistryEntryRunning(entry) &&
       path.resolve(String(entry.projectRoot || "").trim() || ".") === projectRoot,
   );
   if (!registered) {

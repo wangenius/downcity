@@ -9,7 +9,10 @@
 
 import fs from "fs-extra";
 import Database from "better-sqlite3";
-import { getPlatformStoreDbPath } from "@/city/process/registry/CityPaths.js";
+import {
+  getFederationStoreDbPath,
+  getPlatformStoreDbPath,
+} from "@/city/process/registry/CityPaths.js";
 import { ensurePlatformStoreSchema } from "@/city/runtime/store/StoreSchema.js";
 import type { PlatformStoreContext } from "@/city/runtime/store/StoreShared.js";
 import type {
@@ -297,6 +300,20 @@ export class PlatformStore {
   removeChannelAccount(accountIdInput: string): void {
     removeChannelAccount(this.context, accountIdInput);
   }
+}
+
+/**
+ * 创建 City 本地状态存储。
+ */
+export function createCityPlatformStore(): PlatformStore {
+  return new PlatformStore(getPlatformStoreDbPath());
+}
+
+/**
+ * 创建 Federation 管理端状态存储。
+ */
+export function createFederationPlatformStore(): PlatformStore {
+  return new PlatformStore(getFederationStoreDbPath());
 }
 
 /**

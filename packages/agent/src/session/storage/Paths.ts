@@ -186,6 +186,25 @@ export function getSdkAgentSessionArchiveDirPath(
 }
 
 /**
+ * 单个 session 的 compact archive JSON 文件路径。
+ *
+ * 关键点（中文）
+ * - `archiveId` 来自 compact summary metadata，不由调用方拼接扩展名。
+ * - 这里统一 encode，避免 archiveId 中的特殊字符影响文件路径。
+ */
+export function getSdkAgentSessionArchiveFilePath(
+  projectRoot: string,
+  agentId: string,
+  sessionId: string,
+  archiveId: string,
+): string {
+  return path.join(
+    getSdkAgentSessionArchiveDirPath(projectRoot, agentId, sessionId),
+    `${encodeURIComponent(String(archiveId || "").trim())}.json`,
+  );
+}
+
+/**
  * 单个 session 的 inflight assistant 路径。
  *
  * 关键点（中文）

@@ -273,6 +273,14 @@ export interface AgentSessionHistoryInput {
   /** 分页游标。 */
   cursor?: string;
   /**
+   * 要读取的 compact archive 层 ID。
+   *
+   * 说明（中文）
+   * - 省略时读取当前 `messages.jsonl`。
+   * - 传入时读取 `messages/archive/<archive_id>.json` 中保存的上一层历史。
+   */
+  archive_id?: string;
+  /**
    * 返回顺序。
    *
    * 说明（中文）
@@ -315,9 +323,25 @@ export interface AgentSessionHistoryPage {
    */
   total: number;
   /** 下一页游标。 */
-  nextCursor?: string;
+  next_cursor?: string;
   /** 是否仍有更多数据。 */
-  hasMore: boolean;
+  has_more: boolean;
+  /**
+   * 当前读取的 compact archive 层 ID。
+   *
+   * 说明（中文）
+   * - 省略表示当前页来自主历史 `messages.jsonl`。
+   * - 有值表示当前页来自指定 compact archive。
+   */
+  archive_id?: string;
+  /**
+   * 当前层更早一次 compact 对应的 archive ID。
+   *
+   * 关键点（中文）
+   * - compact summary 不会出现在 `items` 中。
+   * - 若当前层包含 compact summary，则这里暴露其 archive ID，供调用方继续 `session.history({ archive_id })`。
+   */
+  previous_archive_id?: string;
 }
 
 /**

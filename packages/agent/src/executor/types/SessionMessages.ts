@@ -64,6 +64,8 @@ export type SessionMetadataV1 = {
   kind?: SessionMessageKind;
   /** 当前消息来自入站、出站还是 compact。 */
   source?: SessionMessageSource;
+  /** compact 摘要对应的 archive 文件 ID，用于用户历史按层读取更早消息。 */
+  archiveId?: string;
   /** compact 摘要所覆盖的原始消息范围。 */
   sourceRange?: SessionMessageSourceRangeV1;
   /**

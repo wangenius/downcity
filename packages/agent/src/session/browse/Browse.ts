@@ -83,6 +83,13 @@ type SessionBrowseBaseInput = {
   executing?: boolean;
 };
 
+type SessionArchiveFileV1 = {
+  v?: unknown;
+  sessionId?: unknown;
+  archivedAt?: unknown;
+  messages?: unknown;
+};
+
 function decodeMaybe(input: string): string {
   try {
     return decodeURIComponent(input);
@@ -120,6 +127,11 @@ function normalizeCursor(input: unknown): number {
 function encodeCursor(offset: number): string | undefined {
   if (!Number.isFinite(offset) || offset <= 0) return undefined;
   return String(Math.floor(offset));
+}
+
+function normalizeArchiveId(input: unknown): string | undefined {
+  const value = String(input || "").trim();
+  return value || undefined;
 }
 
 function stringifyForDisplay(input: unknown, maxChars = 2400): string {
@@ -360,6 +372,53 @@ export async function loadSessionMessagesFromPath(
 }
 
 /**
+ * 读取 compact archive 文件中的消息。
+ *
+ * 关键点（中文）
+ * - archive 是 compact 时被覆盖的“上一层历史”，不是当前运行态事实源。
+ * - 这里不读取 inflight，因为 archive 层永远是已完成的历史快照。
+ */
+export async function loadSessionArchiveMessagesFromPath(
+  filePath: string,
+): Promise<SessionMessageV1[]> {
+  try {
+    const raw = (await fs.readJson(filePath)) as SessionArchiveFileV1 | null;
+    const items = Array.isArray(raw?.messages) ? raw.messages : [];
+    return items.filter((item): item is SessionMessageV1 => {
+      if (!item || typeof item !== "object") return false;
+      const candidate = item as Partial<SessionMessageV1>;
+      return (
+        (candidate.role === "user" || candidate.role === "assistant") &&
+        Array.isArray(candidate.parts)
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
+function isCompactSummaryMessage(message: SessionMessageV1): boolean {
+  const metadata = (message.metadata || null) as SessionMetadataV1 | null;
+  return metadata?.source === "compact" || metadata?.kind === "summary";
+}
+
+function resolvePreviousArchiveId(messages: SessionMessageV1[]): string | undefined {
+  for (const message of messages) {
+    if (!isCompactSummaryMessage(message)) continue;
+    const metadata = (message.metadata || null) as SessionMetadataV1 | null;
+    const archiveId = normalizeArchiveId(metadata?.archiveId);
+    if (archiveId) return archiveId;
+  }
+  return undefined;
+}
+
+function filterUserVisibleHistoryMessages(
+  messages: SessionMessageV1[],
+): SessionMessageV1[] {
+  return messages.filter((message) => !isCompactSummaryMessage(message));
+}
+
+/**
  * 基于 metadata + messages 构建 SDK session 详情。
  */
 export function buildSessionInfo(
@@ -409,9 +468,12 @@ export function buildSessionHistoryPage(params: {
   const order = params.input?.order || "asc";
   const limit = normalizeLimit(params.input?.limit, 50, 500);
   const cursor = normalizeCursor(params.input?.cursor);
+  const archive_id = normalizeArchiveId(params.input?.archive_id);
+  const previous_archive_id = resolvePreviousArchiveId(params.messages);
+  const visibleMessages = filterUserVisibleHistoryMessages(params.messages);
 
   if (view === "timeline") {
-    const allEvents = params.messages.flatMap((message) => toSessionTimelineEvents(message));
+    const allEvents = visibleMessages.flatMap((message) => toSessionTimelineEvents(message));
     const orderedEvents = order === "desc" ? [...allEvents].reverse() : allEvents;
     const pageItems = orderedEvents.slice(cursor, cursor + limit);
     const nextOffset = cursor + pageItems.length;
@@ -421,14 +483,16 @@ export function buildSessionHistoryPage(params: {
       items: pageItems,
       total: orderedEvents.length,
       ...(nextOffset < orderedEvents.length
-        ? { nextCursor: encodeCursor(nextOffset) }
+        ? { next_cursor: encodeCursor(nextOffset) }
         : {}),
-      hasMore: nextOffset < orderedEvents.length,
+      has_more: nextOffset < orderedEvents.length,
+      ...(archive_id ? { archive_id } : {}),
+      ...(previous_archive_id ? { previous_archive_id } : {}),
     };
   }
 
   const orderedMessages =
-    order === "desc" ? [...params.messages].reverse() : [...params.messages];
+    order === "desc" ? [...visibleMessages].reverse() : [...visibleMessages];
   const pageItems = orderedMessages.slice(cursor, cursor + limit);
   const nextOffset = cursor + pageItems.length;
   return {
@@ -437,9 +501,11 @@ export function buildSessionHistoryPage(params: {
     items: pageItems,
     total: orderedMessages.length,
     ...(nextOffset < orderedMessages.length
-      ? { nextCursor: encodeCursor(nextOffset) }
+      ? { next_cursor: encodeCursor(nextOffset) }
       : {}),
-    hasMore: nextOffset < orderedMessages.length,
+    has_more: nextOffset < orderedMessages.length,
+    ...(archive_id ? { archive_id } : {}),
+    ...(previous_archive_id ? { previous_archive_id } : {}),
   };
 }
 

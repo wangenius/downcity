@@ -39,6 +39,7 @@ type SessionCompactDeps = {
   loadAll: () => Promise<SessionMessageV1[]>;
   createSummaryMessage: (params: {
     text: string;
+    archiveId?: string;
     sourceRange?: SessionMetadataV1["sourceRange"];
   }) => SessionMessageV1;
   getArchiveDirPath: () => string;
@@ -141,12 +142,12 @@ export async function compactSessionMessagesIfNeeded(
 
   const fromId = String(older[0]?.id || "");
   const toId = String(older[older.length - 1]?.id || "");
+  const archiveId = `compact-${Date.now()}-${generateId()}`;
   const summaryMsg = deps.createSummaryMessage({
     text: summary,
+    archiveId,
     sourceRange: fromId && toId ? { fromId, toId, count: older.length } : undefined,
   });
-
-  const archiveId = `compact-${Date.now()}-${generateId()}`;
 
   // phase 2：写入（短锁，且避免覆盖新追加）
   // - 以“当前最新 session messages”为准重算 currentOlder / currentKept，避免覆盖并发新消息。

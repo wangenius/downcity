@@ -191,6 +191,7 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
     const query = new URLSearchParams();
     if (input?.limit !== undefined) query.set("limit", String(input.limit));
     if (input?.cursor) query.set("cursor", input.cursor);
+    if (input?.archive_id) query.set("archive_id", input.archive_id);
     if (input?.order) query.set("order", input.order);
     if (input?.view) query.set("view", input.view);
     const payload = await read_http_json<{

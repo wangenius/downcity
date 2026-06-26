@@ -445,7 +445,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
         sessionId: this.sessionId,
         withWriteLock: (fn) => this.withWriteLock(fn),
         loadAll: () => this.list(),
-        createSummaryMessage: ({ text, sourceRange }) => ({
+        createSummaryMessage: ({ text, archiveId, sourceRange }) => ({
           id: `a:${this.sessionId}:${generateId()}`,
           role: "assistant",
           metadata: {
@@ -454,6 +454,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
             sessionId: this.sessionId,
             source: "compact",
             kind: "summary",
+            ...(archiveId ? { archiveId } : {}),
             ...(sourceRange ? { sourceRange } : {}),
           },
           parts: [{ type: "text", text: String(text ?? "") }],

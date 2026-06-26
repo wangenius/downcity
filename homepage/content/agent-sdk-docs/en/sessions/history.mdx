@@ -25,10 +25,31 @@ Common fields include:
 - `history.view`
 - `history.items`
 - `history.total`
-- `history.nextCursor`
-- `history.hasMore`
+- `history.next_cursor`
+- `history.has_more`
+- `history.archive_id`
+- `history.previous_archive_id`
 
 The default view is `message`.
+
+`session.history()` reads the current `messages.jsonl` layer by default. Compact summaries remain part of the model context, but they are not returned as user-visible `items`. If the current layer has an older compacted layer, the page includes `previous_archive_id`:
+
+```ts
+const current = await session.history({
+  limit: 50,
+});
+
+if (current.previous_archive_id) {
+  const previous = await session.history({
+    archive_id: current.previous_archive_id,
+    limit: 50,
+  });
+
+  console.log(previous.items);
+}
+```
+
+`next_cursor` / `has_more` only paginate the current layer. `previous_archive_id` lets you jump to the next older compact archive layer.
 
 If you want a flattened UI-oriented event stream, pass:
 

@@ -224,6 +224,9 @@ export function registerSdkSessionRoutes(
       const history = await session.history({
         ...(c.req.query("limit") ? { limit: Number(c.req.query("limit")) } : {}),
         ...(c.req.query("cursor") ? { cursor: c.req.query("cursor") } : {}),
+        ...(c.req.query("archive_id")
+          ? { archive_id: c.req.query("archive_id") }
+          : {}),
         ...(c.req.query("order")
           ? { order: c.req.query("order") as "asc" | "desc" }
           : {}),

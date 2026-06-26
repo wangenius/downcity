@@ -25,10 +25,31 @@ console.log(history.items);
 - `history.view`
 - `history.items`
 - `history.total`
-- `history.nextCursor`
-- `history.hasMore`
+- `history.next_cursor`
+- `history.has_more`
+- `history.archive_id`
+- `history.previous_archive_id`
 
 默认视图是 `message`。
+
+`session.history()` 默认读取当前 `messages.jsonl` 这一层。compact summary 是模型上下文的一部分，但不会作为用户可见历史出现在 `items` 中。如果当前层前面还有被 compact 覆盖的历史，返回值会带上 `previous_archive_id`：
+
+```ts
+const current = await session.history({
+  limit: 50,
+});
+
+if (current.previous_archive_id) {
+  const previous = await session.history({
+    archive_id: current.previous_archive_id,
+    limit: 50,
+  });
+
+  console.log(previous.items);
+}
+```
+
+`next_cursor` / `has_more` 只表示当前这一层的分页；`previous_archive_id` 表示可以跳到更早一层 compact archive。
 
 如果你要拿适合 UI 平铺渲染的时间线视图，可以传：
 

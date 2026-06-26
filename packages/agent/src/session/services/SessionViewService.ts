@@ -11,7 +11,9 @@ import { nanoid } from "nanoid";
 import {
   buildSessionHistoryPage,
   buildSessionInfo,
+  getSdkAgentSessionArchiveFilePath,
   ensureSessionTitle,
+  loadSessionArchiveMessagesFromPath,
   readSessionMetadata,
 } from "@/session/index.js";
 import { buildSessionSystemBlocks } from "@/session/SessionSystemBuilder.js";
@@ -179,7 +181,8 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
   async history(
     input?: AgentSessionHistoryInput,
   ): Promise<AgentSessionHistoryPage> {
-    const [metadata, messages] = await Promise.all([
+    const archive_id = String(input?.archive_id || "").trim();
+    const [metadata, current_messages] = await Promise.all([
       readSessionMetadata({
         projectRoot: this.project_root,
         agentId: this.agent_id,
@@ -187,13 +190,23 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
       }),
       this.history_store.list(),
     ]);
+    const page_messages = archive_id
+      ? await loadSessionArchiveMessagesFromPath(
+          getSdkAgentSessionArchiveFilePath(
+            this.project_root,
+            this.agent_id,
+            this.session_id,
+            archive_id,
+          ),
+        )
+      : current_messages;
     const session = await this.build_info({
       metadata,
-      messages,
+      messages: current_messages,
     });
     return buildSessionHistoryPage({
       session,
-      messages,
+      messages: page_messages,
       input,
     });
   }

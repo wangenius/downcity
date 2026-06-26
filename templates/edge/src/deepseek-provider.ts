@@ -15,7 +15,7 @@
    type Context,
    type AIProviderChargedResponse,
    type OpenAICompatibleClientConfig,
-   normalizeOpenAICompatibleBody,
+   normalizeTextOnlyOpenAICompatibleBody,
    readRequiredEnv,
    resolveUpstreamModel,
    trimTrailingSlash,
@@ -58,7 +58,7 @@
 
    async openai(ctx: Context): Promise<AIProviderChargedResponse> {
      const api_key = readRequiredEnv(ctx, this.envKey ?? "");
-     const body = normalizeOpenAICompatibleBody(
+     const body = normalizeTextOnlyOpenAICompatibleBody(
        ctx.input as Record<string, unknown>,
        resolveUpstreamModel(ctx, this.passthroughModel ?? ""),
      );

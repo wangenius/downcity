@@ -21,7 +21,7 @@ import i18next from "@/lib/locales"; // naming conflict with fumadocs i18n
 import { i18n } from "@/lib/i18n";
 import { product } from "@/lib/product";
 
-const favicon_version = "20260601";
+const favicon_version = "20260626";
 
 const { provider } = defineI18nUI(i18n, {
   translations: {
@@ -46,25 +46,16 @@ const { provider } = defineI18nUI(i18n, {
 
 export const links: Route.LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
-  // favicon 使用自包含 SVG 区分明暗色，ico/png 作为旧浏览器兜底。
-  { rel: "icon", href: `/favicon.ico?v=${favicon_version}`, type: "image/x-icon" },
-  { rel: "shortcut icon", href: `/favicon.ico?v=${favicon_version}`, type: "image/x-icon" },
-  { rel: "icon", href: `/favicon-32x32.png?v=${favicon_version}`, type: "image/png", sizes: "32x32" },
-  { rel: "icon", href: `/favicon-16x16.png?v=${favicon_version}`, type: "image/png", sizes: "16x16" },
+  // favicon 使用固定高对比资源，避免浏览器 tab 在深浅主题里出现看不见的问题。
   {
     rel: "icon",
     href: `/favicon.svg?v=${favicon_version}`,
     type: "image/svg+xml",
     sizes: "any",
-    media: "(prefers-color-scheme: light)",
   },
-  {
-    rel: "icon",
-    href: `/favicon-dark.svg?v=${favicon_version}`,
-    type: "image/svg+xml",
-    sizes: "any",
-    media: "(prefers-color-scheme: dark)",
-  },
+  { rel: "icon", href: `/favicon-32x32.png?v=${favicon_version}`, type: "image/png", sizes: "32x32" },
+  { rel: "icon", href: `/favicon-16x16.png?v=${favicon_version}`, type: "image/png", sizes: "16x16" },
+  { rel: "shortcut icon", href: `/favicon.ico?v=${favicon_version}`, type: "image/x-icon" },
   { rel: "apple-touch-icon", href: "/icon-192.png", sizes: "180x180" },
   { rel: "manifest", href: "/site.webmanifest" },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -86,7 +77,7 @@ export const meta: Route.MetaFunction = ({ location }) => {
   // X/Twitter、LinkedIn、Discord 等抓取 Open Graph 图片时必须使用绝对 URL。
   const site_origin = product.homepage ?? "https://www.downcity.ai";
   const canonical_url = `${site_origin}${location.pathname}${location.search}`;
-  const og_image = `${site_origin}/icon-inverse.png`;
+  const og_image = `${site_origin}/social-icon.png`;
 
   return [
     { title },
@@ -114,11 +105,14 @@ export const meta: Route.MetaFunction = ({ location }) => {
       content: description,
     },
     { property: "og:image", content: og_image },
+    { property: "og:image:type", content: "image/png" },
+    { property: "og:image:width", content: "512" },
+    { property: "og:image:height", content: "512" },
     { property: "og:url", content: canonical_url },
     { tagName: "link", rel: "canonical", href: canonical_url },
 
     // Twitter / X
-    // icon-inverse.png 为 1:1 白色 logo，在深色卡片背景上能正常显示。
+    // social-icon.png 为不透明高对比图片，避免 X 等平台把透明 logo 放到深色背景后不可见。
     { name: "twitter:card", content: "summary" },
     { name: "twitter:site", content: "@downcity_ai" },
     {
@@ -130,6 +124,8 @@ export const meta: Route.MetaFunction = ({ location }) => {
       content: description,
     },
     { name: "twitter:image", content: og_image },
+    { name: "twitter:image:width", content: "512" },
+    { name: "twitter:image:height", content: "512" },
 
     // Additional SEO
     { name: "robots", content: "index, follow" },
@@ -185,12 +181,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
       return undefined;
     }
 
-    // favicon 跟随实际主题 class，而不是只跟随系统色彩偏好。
+    // favicon 保持高对比固定资源，不再跟随主题切换。
     const update_favicon = () => {
-      const is_dark = document.documentElement.classList.contains("dark");
-      const favicon_href = is_dark
-        ? `/favicon-dark.svg?v=${favicon_version}`
-        : `/favicon.svg?v=${favicon_version}`;
+      const favicon_href = `/favicon.svg?v=${favicon_version}`;
       let theme_favicon = document.querySelector<HTMLLinkElement>(
         'link[data-theme-favicon="true"]',
       );

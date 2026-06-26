@@ -95,13 +95,13 @@ const plugin = new ChatPlugin({
 
 `@downcity/plugins` 不再把飞书 / Lark SDK 放进默认生产依赖。不启用飞书的应用可以直接导入 `@downcity/plugins`，无需安装飞书运行时依赖。
 
-如果宿主应用启用了 `FeishuChannel`，需要在宿主应用中安装：
+如果宿主应用启用了 `FeishuChannel`，需要在宿主应用中安装这个依赖：
 
 ```bash
 npm install @larksuiteoapi/node-sdk@^1.66.0
 ```
 
-import 路径不需要变化：
+导入路径不需要变化：
 
 ```ts
 import { ChatPlugin, FeishuChannel } from "@downcity/plugins";

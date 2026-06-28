@@ -97,6 +97,6 @@ In the current implementation, a model is a runtime capability unit registered i
 At the product layer, a model is more like a visible capability:
 
 - you can pass it explicitly into `client.ai.text({ model })`
-- or omit it and let AIService use the default model for the current pathway
+- every AIService call must pass an explicit model id or `CityModel`
 
 This means the product sees stable model IDs, not upstream provider details.

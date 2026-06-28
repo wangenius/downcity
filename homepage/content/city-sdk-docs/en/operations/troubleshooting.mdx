@@ -35,7 +35,7 @@ Check:
 
 - whether the client-provided `model` has been registered through `Provider.model()` + `AIService.use()`
 - whether the target model includes the required action for the current pathway, such as `text`, `stream`, or `image`
-- whether the current pathway has a default model, such as `default: true` or `default: ["text"]`
+- whether the request included the intended model id
 - whether `client.ai.listModels()` can see the model
 
 These cases usually return `422`.

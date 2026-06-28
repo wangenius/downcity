@@ -133,7 +133,6 @@ async function init_federation(env: Env): Promise<Federation> {
       name: "Luchi GPT Image 2",
       description: "Luchi async image generation model",
       tags: ["luchi", "image"],
-      default: ["image"],
       meta: {
         upstream_model: "gpt-image-2",
       },

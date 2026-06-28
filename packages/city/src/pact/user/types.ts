@@ -119,8 +119,8 @@ export interface UserImageMessage {
 
 /** 图片生成输入。 */
 export interface UserImageInput extends UserServiceInput {
-  /** 图片模型引用。 */
-  model?: UserModelInput;
+  /** 图片模型引用，AIService 不会自动选择默认模型。 */
+  model: UserModelInput;
   /** 单句快捷提示词。 */
   prompt?: string;
   /** 多轮或多模态图片生成上下文。 */
@@ -177,6 +177,7 @@ export interface UserAsrInput extends UserServiceInput {
 
 /** 发给任意 service 的输入 */
 export interface UserServiceInput {
-  model?: UserModelInput;
+  /** AIService 调用必须显式传入的模型引用或模型 ID。 */
+  model: UserModelInput;
   [key: string]: unknown;
 }

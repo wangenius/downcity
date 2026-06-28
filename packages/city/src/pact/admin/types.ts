@@ -38,7 +38,6 @@ export type AdminServiceSummary = UserServiceSummary;
  *
  * 复用统一模型目录结构；admin 身份下会额外看到：
  * - `env_requirements`
- * - `default_modes`
  */
 export type AdminModelRecord = CityModelDescriptor;
 

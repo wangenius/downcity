@@ -59,9 +59,9 @@ interface ClientConfig {
   admin_secret_key?: string;
 
   /**
-   * 可选的默认模型 ID。
+   * 必填的 City AIService 模型 ID。
    *
-   * 未提供时使用 City 侧 text 模态默认模型。
+   * AIService 不会自动选择默认模型；本地 Agent 必须显式绑定模型。
    */
   model_id?: string;
 
@@ -140,17 +140,19 @@ function is_readline_closed_error(error: unknown): boolean {
  * 解析本地 Agent 使用的 City 模型。
  */
 async function resolve_agent_model(client: City<"user">, model_id: string | undefined): Promise<CityModel> {
+  const resolved_model_id = String(model_id ?? "").trim();
+  if (!resolved_model_id) {
+    throw new Error("必须配置 DOWNCITY_CLIENT_MODEL_ID 或 MODEL_ID，AIService 不会自动选择默认模型。");
+  }
   const catalog = await client.ai.listModels();
   const models = catalog.all();
-  const model = model_id
-    ? catalog.get(model_id)
-    : catalog.forModality("text")[0] ?? catalog.default();
+  const model = catalog.get(resolved_model_id);
 
   if (model) return model;
   if (models.length === 0) {
     throw new Error("当前 Federation 没有可用模型。请先在 templates/node/.env 中配置真实 DEEPSEEK_API_KEY。");
   }
-  throw new Error(`模型不存在：${model_id}`);
+  throw new Error(`模型不存在：${resolved_model_id}`);
 }
 
 /**

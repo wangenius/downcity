@@ -265,7 +265,6 @@ const image_provider = new MyImageProvider();
 ai.use(image_provider.model({
   id: "image-basic",
   name: "Image Basic",
-  default: ["image"],
   bill(ctx, output) {
     return {
       user_id: output.metadata?.user_id,

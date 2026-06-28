@@ -86,30 +86,6 @@ export interface CityModelDescriptor {
    */
   env_requirements?: CityModelEnvRequirement[];
 
-  /**
-   * 该模型默认负责的 modality 列表。
-   *
-   * 关键点（中文）
-   * - 通常只在 admin 身份下返回。
-   * - user 身份下默认能力由 ModelCatalog 计算得到。
-   */
-  default_modes?: string[];
-
-  /**
-   * 当前模型是否为目录中的全局默认模型。
-   *
-   * 关键点（中文）
-   * - 该字段通常由 City 侧 ModelCatalog 计算得到。
-   */
-  is_default?: boolean;
-
-  /**
-   * 当前模型作为默认模型负责的 modality 列表。
-   *
-   * 关键点（中文）
-   * - 该字段通常由 City 侧 ModelCatalog 计算得到。
-   */
-  default_modalities?: string[];
 }
 
 /**

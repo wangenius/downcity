@@ -24,13 +24,13 @@ declare const admin_city: City<"admin">;
 
 const ai: AIInvoker = client.ai;
 
-const textResult = ai.text({ prompt: "hello" });
+const textResult = ai.text({ model: "gpt-5.4", prompt: "hello" });
 const textContract: Promise<UIMessage> = textResult;
 
-const streamResult = ai.stream({ prompt: "hello" });
+const streamResult = ai.stream({ model: "gpt-5.4", prompt: "hello" });
 const streamContract: Promise<ReadableStream<UIMessageChunk>> = streamResult;
 
-const imageJobCreateResult = ai.image_create({ prompt: "draw" });
+const imageJobCreateResult = ai.image_create({ model: "image-basic", prompt: "draw" });
 const imageJobCreateContract: Promise<UserImageJobCreateResult> = imageJobCreateResult;
 void imageJobCreateContract;
 
@@ -38,7 +38,7 @@ const imageJobResult = ai.image_result({ job_id: "img_1" });
 const imageJobResultContract: Promise<UserImageJobResult> = imageJobResult;
 void imageJobResultContract;
 
-const videoResult = ai.video({ prompt: "demo" });
+const videoResult = ai.video({ model: "video-basic", prompt: "demo" });
 const videoContract: Promise<UIMessage> = videoResult;
 
 const adminServices = admin.listServices();
@@ -73,10 +73,9 @@ void paymentMethodInvokeContract;
 async function testCatalog() {
   const catalog: ModelCatalog = await ai.listModels();
   const m = catalog.get("gpt-5.4");
-  const d = catalog.default();
   const all = catalog.all();
   const t = catalog.forModality("text");
-  void m; void d; void all; void t;
+  void m; void all; void t;
 }
 void testCatalog();
 

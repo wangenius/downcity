@@ -125,8 +125,6 @@ export interface ModelConfig {
   tags?: string[];
   /** 模型元数据 */
   meta?: Record<string, unknown>;
-  /** 是否为默认模型 */
-  default?: boolean | string[];
   /** 模型所需环境变量 */
   env?: Record<string, string>;
   /** Provider 的 baseURL（用于自动透传） */
@@ -162,8 +160,6 @@ export interface PublicModel {
   meta: Record<string, unknown>;
   /** 模型依赖的环境变量需求（通常仅在 admin 身份下返回） */
   env_requirements?: AIModelEnvRequirement[];
-  /** 模型默认负责的 modality 列表（通常仅在 admin 身份下返回） */
-  default_modes?: string[];
 }
 
 /**

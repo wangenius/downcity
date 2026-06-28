@@ -205,7 +205,6 @@ test("Federation rejects mismatched city_id for authenticated user requests", as
     ai.use({
       id: "echo-text",
       name: "Echo Text",
-      default: ["text"],
       actions: {
         text: async () => ({
           id: "msg_1",
@@ -262,6 +261,69 @@ test("Federation rejects mismatched city_id for authenticated user requests", as
   }
 })
 
+test("AIService requires explicit model id for executable AI calls", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-ai-model-required-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+    const ai = new AIService()
+    ai.use({
+      id: "required-model",
+      name: "Required Model",
+      baseURL: "https://provider.example.com/v1",
+      envKey: "PROVIDER_API_KEY",
+      actions: {
+        text: async () => ({
+          id: "msg_required",
+          role: "assistant",
+          parts: [{ type: "text", text: "ok", state: "done" }],
+        }),
+        image_create: async () => ({
+          job_id: "img_required",
+          status: "running",
+        }),
+        image_fetch: async (ctx) => ({
+          job_id: String(ctx.input.job_id),
+          status: "running",
+        }),
+      },
+    })
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    const headers = {
+      "content-type": "application/json",
+      authorization: `Bearer ${adminSecret}`,
+    }
+
+    for (const input of [
+      { path: "/v1/ai/text", body: { prompt: "hi" } },
+      { path: "/v1/ai/chat/completions", body: { messages: [{ role: "user", content: "hi" }] } },
+      { path: "/v1/ai/image/create", body: { prompt: "draw" } },
+    ]) {
+      const response = await base.handleRequest(new Request(`http://localhost${input.path}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(input.body),
+      }))
+      assert.equal(response.status, 422)
+      assert.deepEqual(await response.json(), {
+        error: {
+          message: "model is required",
+          type: "server_error",
+        },
+      })
+    }
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
 test("AIService charges explicit provider charge lines", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-explicit-charge-"))
@@ -288,7 +350,6 @@ test("AIService charges explicit provider charge lines", async () => {
       id: "priced-text",
       provider_id: "priced-provider",
       name: "Priced Text",
-      default: ["text"],
       actions: {
         text: async () => ({
           output: {
@@ -399,7 +460,6 @@ test("AIService uses provider bill when model bill is not set", async () => {
     ai.use(provider.model({
       id: "provider-billed-text",
       name: "Provider Billed Text",
-      default: ["text"],
     }))
     base.use(ai)
 
@@ -462,7 +522,6 @@ test("AIService falls back to image-capable model for UIMessage image parts", as
         id: "kimi",
         provider_id: "kimi-provider",
         name: "Kimi",
-        default: ["text"],
         actions: {
           text: async () => {
             calls.push("kimi")
@@ -478,7 +537,6 @@ test("AIService falls back to image-capable model for UIMessage image parts", as
         id: "deepseek",
         provider_id: "deepseek-provider",
         name: "DeepSeek",
-        default: ["text"],
         fallback: [{
           match: (media) => media.media_type.startsWith("image/") && media.url === "https://example.com/a.png",
           model: "kimi",
@@ -600,7 +658,6 @@ test("AIService selects fallback rule by UIMessage file media type", async () =>
         id: "deepseek",
         provider_id: "deepseek-provider",
         name: "DeepSeek",
-        default: ["text"],
         fallback: [
           {
             match: (media) => media.media_type === "application/pdf" && media.filename === "paper.pdf",
@@ -693,7 +750,6 @@ test("AIService falls back for OpenAI chat completions with image_url parts", as
         id: "kimi",
         provider_id: "kimi-provider",
         name: "Kimi",
-        default: ["text"],
         actions: {
           openai: async () => {
             calls.push("kimi")
@@ -710,7 +766,6 @@ test("AIService falls back for OpenAI chat completions with image_url parts", as
         id: "deepseek",
         provider_id: "deepseek-provider",
         name: "DeepSeek",
-        default: ["text"],
         fallback: [{
           match: (media) => media.media_type.startsWith("image/"),
           model: "kimi",
@@ -829,7 +884,6 @@ test("AIService lets model bill override provider bill", async () => {
     ai.use(provider.model({
       id: "model-billed-text",
       name: "Model Billed Text",
-      default: ["text"],
       bill() {
         return {
           credits: 333,
@@ -898,7 +952,6 @@ test("Federation AI image jobs advance and finish through provider result", asyn
     ai.use({
       id: "echo-image",
       name: "Echo Image",
-      default: ["image"],
       actions: {
         image_create: async () => {
           const job_id = "img_echo_1"
@@ -938,7 +991,7 @@ test("Federation AI image jobs advance and finish through provider result", asyn
         "content-type": "application/json",
         authorization: `Bearer ${adminSecret}`,
       },
-      body: JSON.stringify({ prompt: "draw" }),
+      body: JSON.stringify({ model: "echo-image", prompt: "draw" }),
     }))
 
     assert.equal(createResponse.status, 200)
@@ -998,7 +1051,6 @@ test("Federation AI image jobs require provider create and result actions", asyn
     ai.use({
       id: "wrapped-image",
       name: "Wrapped Image",
-      default: ["image"],
       actions: {
         image_create: async () => {
           const job_id = "img_wrapped_1"
@@ -1028,7 +1080,7 @@ test("Federation AI image jobs require provider create and result actions", asyn
         "content-type": "application/json",
         authorization: `Bearer ${adminSecret}`,
       },
-      body: JSON.stringify({ prompt: "draw" }),
+      body: JSON.stringify({ model: "wrapped-image", prompt: "draw" }),
     }))
 
     assert.equal(createResponse.status, 200)
@@ -1080,7 +1132,6 @@ test("Federation AI image jobs return provider result as-is", async () => {
     ai.use({
       id: "remote-image",
       name: "Remote Image",
-      default: ["image"],
       actions: {
         image_create: async () => {
           const job_id = "img_remote_1"
@@ -1110,7 +1161,7 @@ test("Federation AI image jobs return provider result as-is", async () => {
         "content-type": "application/json",
         authorization: `Bearer ${adminSecret}`,
       },
-      body: JSON.stringify({ prompt: "draw" }),
+      body: JSON.stringify({ model: "remote-image", prompt: "draw" }),
     }))
 
     assert.equal(createResponse.status, 200)
@@ -1170,7 +1221,6 @@ test("Federation AI image jobs store remote file parts through federation storag
     ai.use({
       id: "stored-image",
       name: "Stored Image",
-      default: ["image"],
       actions: {
         image_create: async () => ({
           job_id: "img_storage_1",
@@ -1195,7 +1245,7 @@ test("Federation AI image jobs store remote file parts through federation storag
         "content-type": "application/json",
         authorization: `Bearer ${adminSecret}`,
       },
-      body: JSON.stringify({ prompt: "draw" }),
+      body: JSON.stringify({ model: "stored-image", prompt: "draw" }),
     }))
 
     assert.equal(createResponse.status, 200)
@@ -1255,7 +1305,6 @@ test("Federation AI image jobs keep source URL when storage fails", async () => 
     ai.use({
       id: "storage-fail-image",
       name: "Storage Fail Image",
-      default: ["image"],
       actions: {
         image_create: async () => ({
           job_id: "img_storage_fail_1",
@@ -1279,7 +1328,7 @@ test("Federation AI image jobs keep source URL when storage fails", async () => 
         "content-type": "application/json",
         authorization: `Bearer ${adminSecret}`,
       },
-      body: JSON.stringify({ prompt: "draw" }),
+      body: JSON.stringify({ model: "storage-fail-image", prompt: "draw" }),
     }))
 
     assert.equal(createResponse.status, 200)
@@ -1317,7 +1366,6 @@ test("Federation AI image direct endpoint is not exposed", async () => {
     ai.use({
       id: "image-only",
       name: "Image Only",
-      default: ["image"],
       actions: {
         image_create: async () => ({
           job_id: "img_direct_1",
@@ -1339,7 +1387,7 @@ test("Federation AI image direct endpoint is not exposed", async () => {
         "content-type": "application/json",
         authorization: `Bearer ${adminSecret}`,
       },
-      body: JSON.stringify({ prompt: "draw" }),
+      body: JSON.stringify({ model: "image-only", prompt: "draw" }),
     }))
 
     assert.equal(response.status, 404)
@@ -1361,7 +1409,6 @@ test("Federation AI image jobs reject incomplete provider actions", async () => 
     ai.use({
       id: "incomplete-image",
       name: "Incomplete Image",
-      default: ["image"],
       actions: {
         image_create: async () => ({
           job_id: "img_incomplete_1",
@@ -1417,7 +1464,6 @@ test("AIService charges image jobs only after provider result succeeds", async (
       id: "priced-image",
       provider_id: "image-provider",
       name: "Priced Image",
-      default: ["image"],
       bill(ctx, output) {
         return {
           user_id: output.metadata.user_id,
@@ -1555,7 +1601,6 @@ test("AIService prefers action charge over model bill", async () => {
       id: "priority-text",
       provider_id: "priority-provider",
       name: "Priority Text",
-      default: ["text"],
       bill() {
         return {
           credits: 999,
@@ -1638,7 +1683,6 @@ test("Federation AI image jobs can advance through result polling", async () => 
     ai.use({
       id: "step-image",
       name: "Step Image",
-      default: ["image"],
       actions: {
         image_create: async (ctx) => {
           calls += 1
@@ -1691,7 +1735,7 @@ test("Federation AI image jobs can advance through result polling", async () => 
         "content-type": "application/json",
         authorization: `Bearer ${adminSecret}`,
       },
-      body: JSON.stringify({ prompt: "draw" }),
+      body: JSON.stringify({ model: "step-image", prompt: "draw" }),
     }))
     const created = await createResponse.json()
     assert.equal(created.status, "running")
@@ -1770,7 +1814,6 @@ test("Federation AI image jobs fail after max pending duration", async () => {
     ai.use({
       id: "timeout-image",
       name: "Timeout Image",
-      default: ["image"],
       actions: {
         image_create: async () => ({
           job_id: "img_timeout_1",
@@ -1801,7 +1844,7 @@ test("Federation AI image jobs fail after max pending duration", async () => {
         "content-type": "application/json",
         authorization: `Bearer ${adminSecret}`,
       },
-      body: JSON.stringify({ prompt: "draw" }),
+      body: JSON.stringify({ model: "timeout-image", prompt: "draw" }),
     }))
     assert.equal(createResponse.status, 200)
     const created = await createResponse.json()

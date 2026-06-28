@@ -39,9 +39,11 @@ const client = new City({
 });
 
 const catalog = await client.ai.listModels();
+const model = catalog.get("deepseek-v4-flash");
+if (!model) throw new Error("model not found");
 
 const result = await client.ai.text({
-  model: catalog.default(),
+  model,
   prompt: "Write a welcome message",
 });
 ```
@@ -120,7 +122,6 @@ const user = new City({
 const catalog = await client.ai.listModels();
 
 catalog.get("deepseek-v4-flash");
-catalog.default();
 catalog.all();
 catalog.forModality("stream");
 ```
@@ -129,7 +130,8 @@ Recommended usage:
 
 ```ts
 const catalog = await client.ai.listModels();
-const model = catalog.get("deepseek-v4-flash") ?? catalog.default();
+const model = catalog.get("deepseek-v4-flash");
+if (!model) throw new Error("model not found");
 ```
 
 This keeps raw model IDs from scattering across your city code.
@@ -138,7 +140,7 @@ This keeps raw model IDs from scattering across your city code.
 
 ```ts
 const result = await client.ai.text({
-  model: catalog.default(),
+  model: catalog.get("deepseek-v4-flash"),
   prompt: "Write a welcome message",
 });
 ```
@@ -147,11 +149,9 @@ const result = await client.ai.text({
 
 The input object is still intentionally open:
 
-- `model` is optional
+- `model` is required; AIService never chooses a default model
 - other fields are defined by the Provider `text` action resolved by `AIService`
 - the handler result should be a `UIMessage`
-
-If no model is provided, AIService uses the default model for the current modality.
 
 If you call a custom service with a non-`UIMessage` result shape, use `client.service(...).action(...).invoke<T>()`.
 

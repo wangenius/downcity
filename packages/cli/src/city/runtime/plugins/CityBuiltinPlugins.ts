@@ -35,6 +35,20 @@ const city_user_manager = new CityUserManager();
 type ChatChannelAccountName = "telegram" | "feishu" | "qq";
 
 /**
+ * 读取 AIService 调用必须显式提供的模型 ID。
+ */
+function require_model_id(input: unknown, capability: string): string {
+  const record = input && typeof input === "object"
+    ? input as { model?: unknown }
+    : {};
+  const model_id = typeof record.model === "string" ? record.model.trim() : "";
+  if (!model_id) {
+    throw new TypeError(`${capability} requires model id`);
+  }
+  return model_id;
+}
+
+/**
  * 判断 chat account 是否具备对应渠道的完整凭据。
  */
 function isConfiguredChatAccount(account: StoredChannelAccount): boolean {
@@ -159,22 +173,29 @@ export async function createCityBuiltinPlugins(input: {
           modalities: model.modalities,
           tags: model.tags,
           meta: JSON.parse(JSON.stringify(model.meta ?? {})),
-          is_default: model.is_default,
-          default_modalities: model.default_modalities,
         }));
       },
       image_create: async (image_input: ImagePluginResolvedInput) =>
-        await client.ai.image_create(image_input),
+        await client.ai.image_create({
+          ...image_input,
+          model: require_model_id(image_input, "image_create"),
+        }),
       image_result: async (image_input) =>
         await client.ai.image_result(image_input),
     }),
     new AsrPlugin({
       asr: async (asr_input: AsrPluginInput) =>
-        await client.ai.asr(asr_input),
+        await client.ai.asr({
+          ...asr_input,
+          model: require_model_id(asr_input, "asr"),
+        }),
     }),
     new TtsPlugin({
       tts: async (tts_input: TtsPluginInput) =>
-        await client.ai.tts(tts_input),
+        await client.ai.tts({
+          ...tts_input,
+          model: require_model_id(tts_input, "tts"),
+        }),
     }),
   ];
 }

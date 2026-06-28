@@ -73,7 +73,7 @@ class EchoProvider extends Provider {
 const echo = new EchoProvider();
 
 const ai = new AIService();
-ai.use(echo.model({ id: "local-echo", name: "Local Echo", default: true }));
+ai.use(echo.model({ id: "local-echo", name: "Local Echo" }));
 base.use(ai);
 
 import { serve } from "@hono/node-server";
@@ -114,10 +114,12 @@ const client = new City({
 });
 
 const catalog = await client.ai.listModels();
+const model = catalog.get("local-echo");
+if (!model) throw new Error("model not found");
 
 // SDK 通路
 const result = await client.ai.text({
-  model: catalog.default(),
+  model,
   prompt: "你好 Downcity",
 });
 

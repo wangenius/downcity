@@ -36,7 +36,7 @@ const PREFIX = "/v1/ai";
  *
  * 通过 User City .ai 访问：
  * ```ts
- * await client.ai.text({ prompt: "hello" });
+ * await client.ai.text({ model: "deepseek-v4-flash", prompt: "hello" });
  * const catalog = await client.ai.listModels();
  * ```
  */
@@ -227,7 +227,7 @@ export class AIInvoker {
   }
 
   /** 将 ai-sdk tool 格式序列化为 OpenAI function 格式（去掉 execute，只保留 schema） */
-  private serializeTools(input: UserServiceInput): Record<string, unknown> {
+  private serializeTools(input: UserServiceInput): UserServiceInput {
     const { tools, ...rest } = input;
     const body: Record<string, unknown> = { ...rest };
     if (Array.isArray(tools)) {
@@ -236,14 +236,14 @@ export class AIInvoker {
       body.tools = tools
         .map((def) => this.serializeToolDefinition(undefined, def))
         .filter((def): def is Record<string, unknown> => def !== null);
-      return body;
+      return body as UserServiceInput;
     }
     if (tools && typeof tools === "object") {
       body.tools = Object.entries(tools as Record<string, unknown>)
         .map(([name, def]) => this.serializeToolDefinition(name, def))
         .filter((def): def is Record<string, unknown> => def !== null);
     }
-    return body;
+    return body as UserServiceInput;
   }
 }
 
@@ -253,47 +253,23 @@ export class AIInvoker {
 
 /**
  * 模型目录（AIInvoker.listModels() 返回值）。
- *
- * 计算规则：
- * - 第一个模型 = 全局默认
- * - 每个 modality 的第一个支持模型 = 该 modality 的默认
  */
 export class ModelCatalog {
   private readonly byId: Map<string, UserModelRef>;
-  private readonly def: UserModelRef | undefined;
 
   constructor(items: CityModelDescriptor[], ai: AIInvoker) {
     if (!items?.length) {
       this.byId = new Map();
-      this.def = undefined;
       return;
     }
 
-    const first = new Map<string, string>();
-    for (const item of items) {
-      for (const m of item.modalities) {
-        if (!first.has(m)) first.set(m, item.id);
-      }
-    }
-
-    const enriched = items.map((item, i) =>
-      create_city_model(ai, {
-        ...item,
-        is_default: i === 0,
-        default_modalities: item.modalities.filter((m) => first.get(m) === item.id) || undefined,
-      }),
-    );
+    const enriched = items.map((item) => create_city_model(ai, item));
 
     this.byId = new Map(enriched.map((item) => [item.id, item]));
-    this.def = enriched[0];
   }
 
   get(id: string): UserModelRef | undefined {
     return this.byId.get(String(id ?? "").trim());
-  }
-
-  default(): UserModelRef | undefined {
-    return this.def;
   }
 
   all(): UserModelRef[] {

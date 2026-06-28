@@ -57,7 +57,7 @@ class EchoProvider extends Provider {
 const echo = new EchoProvider();
 
 const ai = new AIService();
-ai.use(echo.model({ id: "local-echo", name: "Local Echo", default: true }));
+ai.use(echo.model({ id: "local-echo", name: "Local Echo" }));
 base.use(ai);
 
 await base.health();
@@ -90,7 +90,7 @@ const client = new City({
 });
 
 // SDK pathway
-const result = await client.ai.text({ prompt: "Hello" });
+const result = await client.ai.text({ model: "local-echo", prompt: "Hello" });
 
 // OpenAI-compatible pathway
 // POST /v1/ai/chat/completions

@@ -370,11 +370,6 @@ function normalize_image_model(value: ImagePluginModel): ImagePluginModel | null
   const tags = Array.isArray(record.tags)
     ? record.tags.map((item) => String(item || "").trim()).filter(Boolean)
     : undefined;
-  const default_modalities = Array.isArray(record.default_modalities)
-    ? record.default_modalities
-        .map((item) => String(item || "").trim())
-        .filter(Boolean)
-    : undefined;
   const meta = normalize_json_object(record.meta);
   return {
     id,
@@ -387,12 +382,6 @@ function normalize_image_model(value: ImagePluginModel): ImagePluginModel | null
     modalities,
     ...(tags && tags.length > 0 ? { tags } : {}),
     ...(meta ? { meta } : {}),
-    ...(typeof record.is_default === "boolean"
-      ? { is_default: record.is_default }
-      : {}),
-    ...(default_modalities && default_modalities.length > 0
-      ? { default_modalities }
-      : {}),
   };
 }
 
@@ -403,14 +392,7 @@ function normalize_image_models(values: ImagePluginModel[]): ImagePluginModelsRe
   const items = values
     .map((item) => normalize_image_model(item))
     .filter((item): item is ImagePluginModel => item !== null);
-  const default_model_id =
-    items.find((item) => item.default_modalities?.includes("image"))?.id ??
-    items.find((item) => item.is_default)?.id ??
-    items[0]?.id;
-  return {
-    items,
-    ...(default_model_id ? { default_model_id } : {}),
-  };
+  return { items };
 }
 
 /**
@@ -464,7 +446,6 @@ export class ImagePlugin extends BasePlugin {
   private readonly image_create: NonNullable<ImagePluginOptions["image_create"]>;
   private readonly image_result: NonNullable<ImagePluginOptions["image_result"]>;
   private readonly list_models?: ImagePluginOptions["list_models"];
-  private default_model_id?: string;
 
   constructor(options: ImagePluginOptions) {
     super();
@@ -501,8 +482,8 @@ export class ImagePlugin extends BasePlugin {
       "",
       "## Actions",
       "",
-      "- `models`：列出当前可用的图片模型，返回 `{ models, default_model_id }`。",
-      "  仅当你需要让用户挑模型，或当前没有默认模型可用时才调用。",
+      "- `models`：列出当前可用的图片模型，返回 `{ models }`。",
+      "  当你不知道应该使用哪个模型时先调用，并让用户或当前任务上下文明确模型 ID。",
       "- `image_create`：在用户明确确认后创建一个异步图片任务，返回 `{ job_id, status }`。",
       "  - 纯文本生成：填 `prompt`（字符串）。",
       "  - 编辑 / 参考图：填 `content`，格式：",
@@ -510,7 +491,7 @@ export class ImagePlugin extends BasePlugin {
       "  - 同时给了 `content` 和 `prompt` 时，`content` 生效，`prompt` 被忽略。",
       "  - `url` 支持三种写法：在线 URL、绝对本地路径、相对 Agent 项目根目录的相对路径。",
       "    不要传 base64 / data URL，也不要再用旧的 `messages` 字段。",
-      "  - 可选参数：`model`、`aspect_ratio`（如 `16:9`）、`size`（如 `1024x1024`）、`quality`、`seed`。",
+      "  - 必填参数：`model`。可选参数：`aspect_ratio`（如 `16:9`）、`size`（如 `1024x1024`）、`quality`、`seed`。",
       "- `image_result`：用 `job_id` 读取任务状态。",
       "  - 默认读取一次。`queued` / `running` 时保存好 `job_id`，下一轮再查，不要在同一轮里反复轮询。",
       "  - 想直接等到出图，可以传 `until_done: true`，可选 `max_wait_ms`（默认 60000，最长 600000）与 `poll_interval_ms`（默认 1500）。超时仍未完成会返回最后一次的中间状态。",
@@ -520,32 +501,13 @@ export class ImagePlugin extends BasePlugin {
       "",
       "## Flow",
       "",
-      "1. 需要选模型时先 `models`，否则直接进入第 2 步。",
+      "1. 先确认模型 ID；需要选模型时调用 `models`。",
       "2. 向用户说明将消耗图片生成额度，并等待用户明确确认。",
       "3. 用户确认后调用 `image_create` 拿到 `job_id`。",
       "4. `image_result` 查询；短任务可加 `until_done: true` 一次拿结果，长任务保存 `job_id` 下一轮再查。",
       "",
       "如有疑问可用 `plugin_read { plugin: \"image\", action: \"...\" }` 查看每个 action 完整的输入 schema 与示例。",
     ].join("\n");
-  }
-
-  /**
-   * 当调用方未显式指定模型时，使用模型目录中的图片默认模型。
-   */
-  private async with_default_model(
-    input: ImagePluginResolvedInput,
-  ): Promise<ImagePluginResolvedInput> {
-    if (typeof input.model === "string" && input.model.trim()) return input;
-    const default_model_id = await this.resolve_default_model_id();
-    return default_model_id ? { ...input, model: default_model_id } : input;
-  }
-
-  private async resolve_default_model_id(): Promise<string | undefined> {
-    if (this.default_model_id) return this.default_model_id;
-    if (!this.list_models) return undefined;
-    const result = normalize_image_models(await this.list_models());
-    this.default_model_id = result.default_model_id;
-    return this.default_model_id;
   }
 
   /**
@@ -680,6 +642,7 @@ export class ImagePlugin extends BasePlugin {
         {
           title: "Text-only image",
           payload: {
+            model: "image-model-id",
             prompt: "A cinematic illustration of a rainy city corner at night",
             aspect_ratio: "16:9",
           },
@@ -687,6 +650,7 @@ export class ImagePlugin extends BasePlugin {
         {
           title: "Edit image with local reference",
           payload: {
+            model: "image-model-id",
             content: [
               { type: "text", text: "Change this image to a white studio background" },
               { type: "image", url: "./input.png" },
@@ -698,7 +662,7 @@ export class ImagePlugin extends BasePlugin {
         try {
           const input = normalize_image_payload(payload);
           const normalized_input = await normalize_image_create_input(context, input);
-          const created = await this.image_create(await this.with_default_model(normalized_input));
+          const created = await this.image_create(normalized_input);
           validate_created_job(created);
           return {
             success: true,

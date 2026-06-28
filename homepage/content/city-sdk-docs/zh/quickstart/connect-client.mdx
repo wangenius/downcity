@@ -20,7 +20,7 @@ const client = new City({
 
 // AI Service — SDK 通路
 const msg = await client.ai.text({ prompt: "hello", model: "deepseek-v4-flash" });
-const stream = await client.ai.stream({ prompt: "hello" });
+const stream = await client.ai.stream({ prompt: "hello", model: "deepseek-v4-flash" });
 
 // AI Service — OpenAI 通路（用 OpenAI SDK 直接调）
 import OpenAI from "openai";

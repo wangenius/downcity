@@ -39,9 +39,11 @@ const client = new City({
 });
 
 const catalog = await client.ai.listModels();
+const model = catalog.get("deepseek-v4-flash");
+if (!model) throw new Error("model not found");
 
 const result = await client.ai.text({
-  model: catalog.default(),
+  model,
   prompt: "写一段欢迎语",
 });
 ```
@@ -120,7 +122,6 @@ const user = new City({
 const catalog = await client.ai.listModels();
 
 catalog.get("deepseek-v4-flash");
-catalog.default();
 catalog.all();
 catalog.forModality("stream");
 ```
@@ -129,7 +130,8 @@ catalog.forModality("stream");
 
 ```ts
 const catalog = await client.ai.listModels();
-const model = catalog.get("deepseek-v4-flash") ?? catalog.default();
+const model = catalog.get("deepseek-v4-flash");
+if (!model) throw new Error("model not found");
 ```
 
 这样你的业务代码不会到处散落模型 ID 字符串。
@@ -138,7 +140,7 @@ const model = catalog.get("deepseek-v4-flash") ?? catalog.default();
 
 ```ts
 const result = await client.ai.text({
-  model: catalog.default(),
+  model: catalog.get("deepseek-v4-flash"),
   prompt: "写一段欢迎语",
 });
 ```
@@ -147,11 +149,9 @@ const result = await client.ai.text({
 
 输入仍然是开放对象：
 
-- `model` 是可选
+- `model` 必填；AIService 不会自动选择默认模型
 - 其他字段由 `AIService` 命中的 Provider `text` action 决定
 - handler 返回值应该是一个 `UIMessage`
-
-如果没有传 `model`，AIService 会按注册模型的默认顺序选择对应通路的默认模型。
 
 如果你要调用自定义 service，并且返回结构不是 `UIMessage`，用 `client.service(...).action(...).invoke<T>()`。
 

@@ -56,7 +56,6 @@ const ai = new AIService();
 ai.use({
   id: "local-echo",
   name: "Local Echo",
-  default: ["text"],
   actions: {
     text: async (ctx) => ({
       id: crypto.randomUUID(),

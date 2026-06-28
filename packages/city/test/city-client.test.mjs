@@ -13,11 +13,11 @@ test("AIInvoker.text() posts to /v1/ai/text", async () => {
     user_token: "ub_test",
     fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
   })
-  const result = await client.ai.text({ prompt: "hi" })
+  const result = await client.ai.text({ model: "gpt-5.4", prompt: "hi" })
   assert.deepEqual(result, msg)
   assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/text")
   assert.equal(requests[0].init.headers.authorization, "Bearer ub_test")
-  assert.deepEqual(JSON.parse(requests[0].init.body), { prompt: "hi", city_id: "city_demo" })
+  assert.deepEqual(JSON.parse(requests[0].init.body), { model: "gpt-5.4", prompt: "hi", city_id: "city_demo" })
 })
 
 test("AIInvoker.image_create() posts to /v1/ai/image/create", async () => {
@@ -96,6 +96,7 @@ test("AIInvoker.text() serializes AI SDK provider tools with inputSchema", async
   })
 
   await client.ai.text({
+    model: "gpt-5.4",
     messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "run pwd" }] }],
     tools: [
       {
@@ -129,10 +130,10 @@ test("User City delegates AI calls", async () => {
     user_token: "ub_test",
     fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
   })
-  const result = await city.ai.text({ prompt: "hi" })
+  const result = await city.ai.text({ model: "gpt-5.4", prompt: "hi" })
   assert.deepEqual(result, msg)
   assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/text")
-  assert.deepEqual(JSON.parse(requests[0].init.body), { prompt: "hi", city_id: "city_demo" })
+  assert.deepEqual(JSON.parse(requests[0].init.body), { model: "gpt-5.4", prompt: "hi", city_id: "city_demo" })
 })
 
 test("AIInvoker.listModels() returns ModelCatalog", async () => {
@@ -147,10 +148,8 @@ test("AIInvoker.listModels() returns ModelCatalog", async () => {
   })
   const catalog = await client.ai.listModels()
   assert.equal(catalog.get("gpt-5.4").id, "gpt-5.4")
-  assert.equal(catalog.default().id, "gpt-5.4")
   assert.equal(catalog.forModality("stream").length, 1)
   assert.equal(catalog.forModality("text").length, 2)
-  assert.equal(catalog.get("gpt-5.4").is_default, true)
 })
 
 test("AIInvoker.model(string) builds a correct ModelHandle", async () => {
@@ -175,7 +174,7 @@ test("AIInvoker.stream() returns parsed chunks", async () => {
     federation_url: "https://api.example.com/base/", city_id: "city_demo", user_token: "ub_test",
     fetch: async () => streamResponse(chunks),
   })
-  const stream = await client.ai.stream({ prompt: "hi" })
+  const stream = await client.ai.stream({ model: "gpt-5.4", prompt: "hi" })
   const received = []; const reader = stream.getReader()
   while (true) { const { done, value } = await reader.read(); if (done) break; received.push(value) }
   assert.deepEqual(received, chunks)
@@ -472,7 +471,6 @@ test("Admin City listServices() / listModels() / instruction()", async () => {
               tags: [],
               meta: {},
               env_requirements: [{ key: "OPENAI_API_KEY", description: "key", required: true }],
-              default_modes: ["text"],
             },
           ],
         })
@@ -497,7 +495,6 @@ test("Admin City listServices() / listModels() / instruction()", async () => {
       tags: [],
       meta: {},
       env_requirements: [{ key: "OPENAI_API_KEY", description: "key", required: true }],
-      default_modes: ["text"],
     },
   ])
   assert.equal(await admin.instruction(), "Federation instruction document")
@@ -537,7 +534,7 @@ test("AIInvoker fetch retries transient 'fetch failed' errors", async () => {
       return json(msg)
     },
   })
-  const result = await client.ai.text({ prompt: "hi" })
+  const result = await client.ai.text({ model: "gpt-5.4", prompt: "hi" })
   assert.deepEqual(result, msg)
   assert.equal(calls, 3)
 })
@@ -558,7 +555,7 @@ test("AIInvoker fetch surfaces cause chain when retries exhausted", async () => 
   })
   let captured
   try {
-    await client.ai.text({ prompt: "hi" })
+    await client.ai.text({ model: "gpt-5.4", prompt: "hi" })
   } catch (error) {
     captured = error
   }

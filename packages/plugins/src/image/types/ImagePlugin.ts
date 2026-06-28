@@ -227,10 +227,6 @@ export interface ImagePluginModel {
   tags?: string[];
   /** 模型元数据。 */
   meta?: JsonObject;
-  /** 当前模型是否为目录全局默认模型。 */
-  is_default?: boolean;
-  /** 当前模型作为默认模型负责的 modality 列表。 */
-  default_modalities?: string[];
 }
 
 /**
@@ -239,8 +235,6 @@ export interface ImagePluginModel {
 export interface ImagePluginModelsResult {
   /** 可用于图片生成的模型列表。 */
   items: ImagePluginModel[];
-  /** 图片能力默认模型 ID。 */
-  default_model_id?: string;
 }
 
 /**

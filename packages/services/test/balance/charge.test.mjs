@@ -108,7 +108,6 @@ test("AIService submits provider charges through BalanceService", async () => {
       id: "priced-text",
       provider_id: "priced-provider",
       name: "Priced Text",
-      default: ["text"],
       actions: {
         text: async () => ({
           output: {

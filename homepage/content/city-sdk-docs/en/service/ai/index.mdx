@@ -49,12 +49,11 @@ const ai = new AIService();
 ai.use(deepseek.model({
   id: "deepseek-v4-flash",
   name: "DeepSeek V4 Flash",
-  default: true,
 }));
 base.use(ai);
 
 // SDK pathway
-const result = await client.ai.text({ prompt: "hello" });
+const result = await client.ai.text({ model: "deepseek-v4-flash", prompt: "hello" });
 
 // OpenAI-compatible pathway (curl)
 // POST /v1/ai/chat/completions

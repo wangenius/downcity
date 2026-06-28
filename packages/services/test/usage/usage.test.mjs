@@ -21,7 +21,6 @@ test("usageService records successful service calls", async () => {
     ai.use({
       id: "gpt-5.4",
       name: "GPT-5.4",
-      default: ["text"],
       actions: {
         text: async () => ({
           id: "msg_1",
@@ -50,7 +49,7 @@ test("usageService records successful service calls", async () => {
         "content-type": "application/json",
         authorization: `Bearer ${tokenBody.user_token}`,
       },
-      body: JSON.stringify({ prompt: "hi" }),
+      body: JSON.stringify({ model: "gpt-5.4", prompt: "hi" }),
     }))
     assert.equal(invokeResponse.status, 200)
 

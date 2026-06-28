@@ -289,7 +289,6 @@ export abstract class Provider {
      description?: string;
      tags?: string[];
      meta?: Record<string, unknown>;
-     default?: boolean | string[];
      fallback?: ModelFallbackRule[];
      bill?: AIProviderBillFn;
    }): ModelConfig {
@@ -327,7 +326,6 @@ export abstract class Provider {
        description: spec.description,
        tags: spec.tags,
        meta: spec.meta,
-       default: spec.default,
        env: this.env,
        baseURL: this.baseURL,
        envKey: this.envKey,

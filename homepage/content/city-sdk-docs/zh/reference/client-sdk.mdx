@@ -29,7 +29,7 @@ const client = new City({
 
 // AI Service
 await client.ai.text({ prompt: "hello", model: "deepseek-v4-flash" });
-await client.ai.stream({ prompt: "hello" });
+await client.ai.stream({ prompt: "hello", model: "deepseek-v4-flash" });
 
 // 自定义 Service
 await client.service("translate").action("zh2en").invoke({ text: "hello" });

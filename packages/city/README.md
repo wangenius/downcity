@@ -36,7 +36,6 @@ const ai = new AIService();
 ai.use({
   id: "local-echo",
   name: "Local Echo",
-  default: ["text"],
   actions: {
     text: async (ctx) => ({
       id: crypto.randomUUID(),
@@ -133,7 +132,6 @@ ai.use(
   deepseek.model({
     id: "deepseek-v4-flash",
     name: "DeepSeek V4 Flash",
-    default: ["text", "stream"],
   }),
 );
 
@@ -185,7 +183,8 @@ base.use(usageService());
 
 ```ts
 const catalog = await client.ai.listModels();
-const model = catalog.default();
+const model = catalog.get("deepseek-v4-flash");
+if (!model) throw new Error("model not found");
 
 await client.ai.text({
   model,

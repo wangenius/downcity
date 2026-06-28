@@ -16,9 +16,11 @@ const client = new City({
 });
 
 const catalog = await client.ai.listModels();
+const model = catalog.get("gpt-5.4");
+if (!model) throw new Error("model not found");
 
 const result = await client.ai.text({
-  model: catalog.default(),
+  model,
   prompt: "Write a welcome message for the product",
 });
 ```

@@ -414,27 +414,21 @@ export class AIService extends Service {
     const { model: modelId, mode } = query;
     const isOpenAIMode = mode === "openai";
 
-    if (modelId) {
-      const model = this.modelMap.get(modelId);
-      if (!model) throw httpError(422, `Unknown model: ${modelId}`);
-      const action = isOpenAIMode ? this.resolveOpenAIAction(model) : this.getAction(model, mode);
-      if (!action) throw httpError(422, `Model ${modelId} does not support mode: ${mode ?? "text"}`);
-      return { model, action };
-    }
+    if (!modelId) throw httpError(422, "model is required");
 
-    const candidates = this.listCandidateModels(mode, env);
-    const defaultModel = candidates[0];
-    if (defaultModel) {
-      const action = isOpenAIMode ? this.resolveOpenAIAction(defaultModel) : this.getAction(defaultModel, mode);
-      if (action) return { model: defaultModel, action };
+    const model = this.modelMap.get(modelId);
+    if (!model) throw httpError(422, `Unknown model: ${modelId}`);
+    if (env && this.getMissingEnv(model, env).length > 0) {
+      throw httpError(422, `No available model: ${modelId}`);
     }
+    const action = isOpenAIMode ? this.resolveOpenAIAction(model) : this.getAction(model, mode);
+    if (!action) throw httpError(422, `Model ${modelId} does not support mode: ${mode ?? "text"}`);
+    return { model, action };
+  }
 
-    if (this.modelMap.size > 0) {
-      if (env) throw httpError(422, `No available model for mode: ${mode ?? DEFAULT_MODEL_MODE}`);
-      throw httpError(422, `No action for mode: ${mode ?? DEFAULT_MODEL_MODE}`);
-    }
-
-    throw httpError(422, `No model registered`);
+  private normalizeModelId(input: unknown): string | undefined {
+    const model_id = typeof input === "string" ? input.trim() : "";
+    return model_id || undefined;
   }
 
   private getAction(model: ModelConfig, mode?: string): ActionFn | undefined {
@@ -487,40 +481,6 @@ export class AIService extends Service {
         headers: response.headers,
       });
     };
-  }
-
-  private listCandidateModels(mode?: string, env?: EnvReader): ModelConfig[] {
-    const candidates = [...this.modelMap.values()].filter((model) => {
-      const action = mode === "openai" ? this.resolveOpenAIAction(model) : this.getAction(model, mode);
-      return Boolean(action);
-    });
-
-    const readyCandidates = env
-      ? candidates.filter((model) => this.getMissingEnv(model, env).length === 0)
-      : candidates;
-
-    return readyCandidates.sort((a, b) => this.compareModelPriority(a, b, mode ?? DEFAULT_MODEL_MODE));
-  }
-
-  private compareModelPriority(a: ModelConfig, b: ModelConfig, mode: string): number {
-    const scoreDiff = this.getDefaultScore(b, mode) - this.getDefaultScore(a, mode);
-    if (scoreDiff !== 0) return scoreDiff;
-    return 0;
-  }
-
-  private getDefaultScore(model: ModelConfig, mode: string): number {
-    const defaultModes = this.getDefaultModes(model);
-    if (defaultModes.includes(mode)) return 3;
-    if (defaultModes.includes(DEFAULT_MODEL_MODE)) return 2;
-    if (defaultModes.length > 0) return 1;
-    return 0;
-  }
-
-  private getDefaultModes(model: ModelConfig): string[] {
-    const modalities = this.getModelModalities(model);
-    if (model.default === true) return modalities;
-    if (Array.isArray(model.default)) return model.default.filter((mode) => modalities.includes(mode));
-    return [];
   }
 
   private getModelModalities(model: ModelConfig): string[] {
@@ -740,7 +700,7 @@ export class AIService extends Service {
   // ========== SDK 通路 ==========
 
   private async handleModality(modality: Modality, ctx: Context): Promise<unknown | Response> {
-    const initial_resolved = this.resolve({ model: ctx.input.model as string | undefined, mode: modality }, ctx.env);
+    const initial_resolved = this.resolve({ model: this.normalizeModelId(ctx.input.model), mode: modality }, ctx.env);
     const { resolved, fallback_from, fallback_reason, fallback_media_type } = this.planTextExecution(initial_resolved, ctx, modality);
     this.attachResolvedModel(ctx, resolved.model, modality, { fallback_from, fallback_reason, fallback_media_type });
     const started_at = Date.now();
@@ -764,7 +724,7 @@ export class AIService extends Service {
   // ========== 图片任务通路 ==========
 
   private async createImageJob(ctx: Context): Promise<UserImageJobCreateResult> {
-    const resolved = this.resolve({ model: ctx.input.model as string | undefined, mode: "image_create" }, ctx.env);
+    const resolved = this.resolve({ model: this.normalizeModelId(ctx.input.model), mode: "image_create" }, ctx.env);
     this.attachResolvedModel(ctx, resolved.model, "image/create");
     try {
       const created = await resolved.action(ctx);
@@ -1041,7 +1001,7 @@ export class AIService extends Service {
 
   private async handleChatCompletions(ctx: Context): Promise<Response> {
     const body = ctx.input as Record<string, unknown>;
-    const modelId = body.model as string | undefined;
+    const modelId = this.normalizeModelId(body.model);
     const initial_resolved = this.resolve({ model: modelId, mode: "openai" }, ctx.env);
     const { resolved, fallback_from, fallback_reason, fallback_media_type } = this.planTextExecution(initial_resolved, ctx, "openai");
     this.attachResolvedModel(ctx, resolved.model, "openai", { fallback_from, fallback_reason, fallback_media_type });
@@ -1182,9 +1142,7 @@ export class AIService extends Service {
       ? [...aiService.modelMap.values()]
       : [...aiService.modelMap.values()].filter((config) => aiService.getMissingEnv(config, env).length === 0);
 
-    return items
-      .sort((a, b) => aiService.compareModelPriority(a, b, DEFAULT_MODEL_MODE))
-      .map((config) => aiService.toPublicModel(config, includeAdminFields));
+    return items.map((config) => aiService.toPublicModel(config, includeAdminFields));
   }
 
   private toPublicModel(config: ModelConfig, includeAdminFields = false): PublicModel {
@@ -1198,7 +1156,6 @@ export class AIService extends Service {
       ...(includeAdminFields
         ? {
             env_requirements: this.getModelEnvRequirements(config),
-            default_modes: this.getDefaultModes(config),
           }
         : {}),
     };

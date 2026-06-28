@@ -18,7 +18,7 @@ The difference from `topup` is simple:
 
 ```ts
 const issued = await admin.balance.redeemCodes.create({
-  amount: 500,
+  credits: 500_000_000,
   note: "launch gift",
 });
 ```
@@ -26,7 +26,7 @@ const issued = await admin.balance.redeemCodes.create({
 The result includes:
 
 - `redeem_code_id`
-- `amount`
+- `credits`
 - `unit`
 - `status`
 - `code`

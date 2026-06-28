@@ -15,7 +15,7 @@ const base = new Federation({
 const readTopup = async (_topup_id: string) => ({
   topup_id: "topup_demo",
   user_id: "user_1",
-  amount: 100,
+  credits: 100_000_000,
   status: "pending",
   note: "demo",
 });
@@ -23,7 +23,7 @@ const readTopup = async (_topup_id: string) => ({
 const finishTopup = async (_topup_id: string) => ({
   topup_id: "topup_demo",
   user_id: "user_1",
-  amount: 100,
+  credits: 100_000_000,
   status: "paid",
   note: "demo",
 });

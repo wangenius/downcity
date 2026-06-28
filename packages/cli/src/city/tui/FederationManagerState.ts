@@ -247,8 +247,8 @@ function build_city_items(params: {
         id: "balance",
         title: params.balance
           ? t({
-            zh: `余额：${params.balance.balance}`,
-            en: `Balance: ${params.balance.balance}`,
+            zh: `余额：${params.balance.display || params.balance.credits}`,
+            en: `Balance: ${params.balance.display || params.balance.credits}`,
           })
           : t({ zh: "余额：暂不可用", en: "Balance: unavailable" }),
         subtitle: params.balance
@@ -271,7 +271,7 @@ function build_city_items(params: {
         }),
         detail: t({
           zh: "输入金额和说明后，City 会创建充值单和 checkout 页面。",
-          en: "Enter an amount and note; City will create a topup and checkout page.",
+          en: "Enter a credits amount and note; City will create a topup and checkout page.",
         }),
       },
       {

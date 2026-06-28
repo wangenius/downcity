@@ -15,8 +15,8 @@ interface StripePaymentListItem {
   topup_id: string;
   /** 用户 ID */
   user_id: string;
-  /** 充值金额 */
-  amount: number;
+  /** 充值额度，单位为 credits。 */
+  credits: number;
   /** 结算币种 */
   currency: string;
   /** 当前状态 */
@@ -56,7 +56,7 @@ export async function managePayment(a: City, baseUrl: string, runtime: admin_tui
           value: "payments",
           hint: t({
             zh: "查看当前 City 通过 Stripe 创建或同步的支付记录，包括用户、金额、币种和状态。",
-            en: "List Stripe payment records synced by this City, including user, amount, currency, and status.",
+            en: "List Stripe payment records synced by this City, including user, credits, currency, and status.",
           }),
         },
         {
@@ -97,9 +97,9 @@ export async function managePayment(a: City, baseUrl: string, runtime: admin_tui
         const result = await runtime.with_loading(t({ zh: "支付记录", en: "Payments" }), async () => await svc.get<{ items: StripePaymentListItem[] }>("payments"));
         await runtime.show_table({
           title: t({ zh: `${result.items.length} 条支付记录`, en: `${result.items.length} Payments` }),
-          columns: [t({ zh: "更新时间", en: "Updated" }), t({ zh: "用户", en: "User" }), t({ zh: "金额", en: "Amount" }), t({ zh: "币种", en: "Currency" }), t({ zh: "状态", en: "Status" }), "Payment ID"],
+          columns: [t({ zh: "更新时间", en: "Updated" }), t({ zh: "用户", en: "User" }), "Credits", t({ zh: "币种", en: "Currency" }), t({ zh: "状态", en: "Status" }), "Payment ID"],
           rows: result.items.map((item) => ({
-            cells: [item.updated_at.slice(0, 19), item.user_id, String(item.amount), item.currency, item.status, item.payment_id],
+            cells: [item.updated_at.slice(0, 19), item.user_id, String(item.credits), item.currency, item.status, item.payment_id],
           })),
           empty_message: t({ zh: "暂无支付记录。", en: "No payments." }),
         });

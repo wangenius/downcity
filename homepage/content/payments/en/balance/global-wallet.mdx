@@ -7,10 +7,10 @@ description: "Why @downcity/services stores balance by user instead of creating 
 
 By default, credits are USD-linked:
 
-- `1 credit = 1 USD`
-- `1 credit = 1,000,000 microcredits`
-- user-facing `GET /v1/balance/me` returns `balance` in credits, plus `microcredits`, `display`, and `conversion`
-- admin and internal accounting fields still use microcredits
+- `1 USD = 1,000,000 credits`
+- credits are the only accounting unit
+- user-facing `GET /v1/balance/me` returns ``credits`, plus `usd`, `display`, and `conversion`
+- admin and internal accounting fields also use credits
 
 That means:
 
@@ -33,7 +33,7 @@ If balance is split per product, both product UX and operations become fragmente
 Yes, but it belongs in ledger metadata rather than in the wallet primary key.
 
 ```ts
-await balance.sub(ctx.user!.user_id, 10, {
+await balance.sub(ctx.user!.user_id, 10_000, {
   note: "agent chat",
   meta: {
     city_id: ctx.downcity?.city_id,

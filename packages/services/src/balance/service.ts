@@ -65,11 +65,11 @@ import {
   stringifyMeta,
 } from "./utils.js";
 import {
-  microcreditsToCredits,
-  microcreditsToUsdCents,
-  readAmountMicrocredits,
-  readNonNegativeAmountMicrocredits,
-} from "./amount.js";
+  creditsToUsd,
+  creditsToUsdCents,
+  readCredits,
+  readNonNegativeCredits,
+} from "./credits.js";
 
 type StoredRedeemCodeRow = BalanceRedeemCode & {
   /**
@@ -95,18 +95,17 @@ export class BalanceService extends InstallableService {
     charges: balanceCharges,
   };
 
-  private readonly initMicrocredits: number;
+  private readonly initCredits: number;
 
   constructor(options: BalanceServiceOptions = {}) {
     super();
-    this.initMicrocredits = readNonNegativeAmountMicrocredits({
-      amount: options.init ?? 0,
-      amount_microcredits: options.init_microcredits,
+    this.initCredits = readNonNegativeCredits({
+      credits: options.init_credits ?? 0,
     }, "init");
     this.instruction = [
       "提供用户级全局余额、余额流水、充值单与 redeem_code 能力。",
-      "内部账务与管理端的 `balance` / `amount` / `balance_after` 字段均使用 microcredits 整数；用户侧 `/me` 返回 credits 主字段并附带 microcredits。",
-      `首次自动开户发放 ${this.initMicrocredits} microcredits。`,
+      "内部账务与管理端的 `credits` / `credits_delta` / `credits_after` 字段均使用 credits 整数；用户侧 `/me` 返回 credits 主字段并附带 USD 展示。",
+      `首次自动开户发放 ${this.initCredits} credits。`,
       "推荐在业务侧自行计算扣费金额后调用 charge，把具体计费策略放在业务侧，而不是写死在 BalanceService 内部。",
       "管理端可查询所有账户、流水、充值单、扣费记录与 redeem_code；用户侧可查询自己的余额、历史记录、充值单，并直接兑换 redeem_code。",
     ].join("\n");
@@ -132,20 +131,20 @@ export class BalanceService extends InstallableService {
    *
    * 余额不足时会抛出 `402 insufficient balance`。
    */
-  async require(user_id: string, amount: number): Promise<BalanceAccount> {
-    return await this.requireMicrocredits(user_id, readAmountMicrocredits({ amount }));
+  async require(user_id: string, credits: number): Promise<BalanceAccount> {
+    return await this.requireCredits(user_id, readCredits({ credits }));
   }
 
   /**
-   * 检查用户余额是否足够，入参单位为 microcredits。
+   * 检查用户余额是否足够，入参单位为 credits。
    */
-  async requireMicrocredits(user_id: string, amount_microcredits: number): Promise<BalanceAccount> {
+  async requireCredits(user_id: string, credits: number): Promise<BalanceAccount> {
     const normalizedUserId = normalizeUserId(user_id);
-    const normalizedAmount = readAmountMicrocredits({ amount_microcredits });
+    const normalizedCredits = readCredits({ credits });
     const account = await this.read(normalizedUserId);
 
-    if (account.balance < normalizedAmount) {
-      throw httpError(402, `insufficient balance: need ${normalizedAmount} microcredits, current ${account.balance} microcredits`);
+    if (account.credits < normalizedCredits) {
+      throw httpError(402, `insufficient balance: need ${normalizedCredits} credits, current ${account.credits} credits`);
     }
 
     return account;
@@ -154,29 +153,29 @@ export class BalanceService extends InstallableService {
   /**
    * 给用户加余额，并写入 `add` 流水。
    */
-  async add(user_id: string, amount: number, extra: BalanceExtra = {}): Promise<BalanceAccount> {
-    return await this.addMicrocredits(user_id, readAmountMicrocredits({ amount }), extra);
+  async add(user_id: string, credits: number, extra: BalanceExtra = {}): Promise<BalanceAccount> {
+    return await this.addCredits(user_id, readCredits({ credits }), extra);
   }
 
   /**
-   * 给用户加余额，入参单位为 microcredits。
+   * 给用户加余额，入参单位为 credits。
    */
-  async addMicrocredits(user_id: string, amount_microcredits: number, extra: BalanceExtra = {}): Promise<BalanceAccount> {
-    return await this.applyDelta(normalizeUserId(user_id), readAmountMicrocredits({ amount_microcredits }), "add", extra);
+  async addCredits(user_id: string, credits: number, extra: BalanceExtra = {}): Promise<BalanceAccount> {
+    return await this.applyDelta(normalizeUserId(user_id), readCredits({ credits }), "add", extra);
   }
 
   /**
    * 给用户扣余额，并写入 `sub` 流水。
    */
-  async sub(user_id: string, amount: number, extra: BalanceExtra = {}): Promise<BalanceAccount> {
-    return await this.subMicrocredits(user_id, readAmountMicrocredits({ amount }), extra);
+  async sub(user_id: string, credits: number, extra: BalanceExtra = {}): Promise<BalanceAccount> {
+    return await this.subCredits(user_id, readCredits({ credits }), extra);
   }
 
   /**
-   * 给用户扣余额，入参单位为 microcredits。
+   * 给用户扣余额，入参单位为 credits。
    */
-  async subMicrocredits(user_id: string, amount_microcredits: number, extra: BalanceExtra = {}): Promise<BalanceAccount> {
-    return await this.applyDelta(normalizeUserId(user_id), -readAmountMicrocredits({ amount_microcredits }), "sub", extra);
+  async subCredits(user_id: string, credits: number, extra: BalanceExtra = {}): Promise<BalanceAccount> {
+    return await this.applyDelta(normalizeUserId(user_id), -readCredits({ credits }), "sub", extra);
   }
 
   /**
@@ -189,16 +188,14 @@ export class BalanceService extends InstallableService {
    */
   async charge(input: BalanceChargeInput): Promise<BalanceCharge> {
     const user_id = normalizeUserId(input.user_id);
-    const amount_microcredits = readAmountMicrocredits({
-      amount_microcredits: input.amount_microcredits,
-    }, "amount");
+    const credits = readCredits(input);
     const charge_id = `chg_${randomId()}`;
     const note = normalizeText(input.note) || "charge";
     const ref = normalizeText(input.ref) || charge_id;
     const metadata = input.metadata ?? input.meta;
     const now = new Date().toISOString();
 
-    await this.applyDelta(user_id, -amount_microcredits, "charge", {
+    await this.applyDelta(user_id, -credits, "charge", {
       note,
       ref,
       meta: {
@@ -210,8 +207,7 @@ export class BalanceService extends InstallableService {
     const charge: BalanceCharge = {
       charge_id,
       user_id,
-      amount: microcreditsToCredits(amount_microcredits),
-      amount_microcredits,
+      credits,
       status: "settled",
       note,
       ref,
@@ -220,12 +216,12 @@ export class BalanceService extends InstallableService {
     };
 
     await rawRun(this.resolveRaw(), [
-      `INSERT INTO ${CHARGE_TABLE} (charge_id, user_id, amount_microcredits, status, note, ref, metadata_json, created_at)`,
+      `INSERT INTO ${CHARGE_TABLE} (charge_id, user_id, credits, status, note, ref, metadata_json, created_at)`,
       "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     ].join(" "), [
       charge.charge_id,
       charge.user_id,
-      charge.amount_microcredits,
+      charge.credits,
       charge.status,
       charge.note,
       charge.ref,
@@ -262,15 +258,15 @@ export class BalanceService extends InstallableService {
    *
    * 这一步不会直接入账，只会生成 `pending` 充值单。
    */
-  async createTopup(user_id: string, amount: number | undefined, extra: BalanceExtra = {}): Promise<BalanceTopup> {
+  async createTopup(user_id: string, credits: number | undefined, extra: BalanceExtra = {}): Promise<BalanceTopup> {
     const normalizedUserId = normalizeUserId(user_id);
-    const normalizedAmount = readAmountMicrocredits({ amount });
+    const normalizedCredits = readCredits({ credits });
     const now = new Date().toISOString();
     const topup: BalanceTopup = {
       topup_id: `topup_${randomId()}`,
       user_id: normalizedUserId,
-      amount: normalizedAmount,
-      amount_usd_cents: microcreditsToUsdCents(normalizedAmount),
+      credits: normalizedCredits,
+      usd_cents: creditsToUsdCents(normalizedCredits),
       status: "pending",
       note: normalizeText(extra.note),
       ref: normalizeText(extra.ref),
@@ -281,12 +277,12 @@ export class BalanceService extends InstallableService {
 
     await this.ensureAccount(normalizedUserId);
     await rawRun(this.resolveRaw(), [
-      `INSERT INTO ${TOPUP_TABLE} (topup_id, user_id, amount, status, note, ref, metadata_json, created_at, updated_at)`,
+      `INSERT INTO ${TOPUP_TABLE} (topup_id, user_id, credits, status, note, ref, metadata_json, created_at, updated_at)`,
       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ].join(" "), [
       topup.topup_id,
       topup.user_id,
-      topup.amount,
+      topup.credits,
       topup.status,
       topup.note,
       topup.ref,
@@ -326,7 +322,7 @@ export class BalanceService extends InstallableService {
       throw httpError(409, "topup is no longer pending");
     }
 
-    await this.applyDelta(current.user_id, current.amount, "topup", {
+    await this.applyDelta(current.user_id, current.credits, "topup", {
       note: normalizeText(extra.note) || current.note || "topup",
       ref: normalizeText(extra.ref) || topup_id,
       meta: {
@@ -373,7 +369,7 @@ export class BalanceService extends InstallableService {
    * 创建一个新的 redeem_code。
    */
   async createRedeemCode(input: BalanceCreateRedeemCodeInput): Promise<BalanceRedeemCodeIssueResult> {
-    const amount = readAmountMicrocredits(input, "amount");
+    const credits = readCredits(input);
     const now = new Date().toISOString();
     const code = input.code ? normalizeRedeemCode(input.code) : generateRedeemCode();
     const codeHash = await hashRedeemCode(code);
@@ -384,7 +380,7 @@ export class BalanceService extends InstallableService {
 
     const redeemCode: BalanceRedeemCode = {
       redeem_code_id: `rc_${randomId()}`,
-      amount,
+      credits,
       status: "active",
       code_mask: maskRedeemCode(code),
       note: normalizeText(input.note),
@@ -397,13 +393,13 @@ export class BalanceService extends InstallableService {
     };
 
     await rawRun(this.resolveRaw(), [
-      `INSERT INTO ${REDEEM_CODE_TABLE} (redeem_code_id, code_hash, code_mask, amount, status, note, ref, metadata_json, redeemed_by_user_id, redeemed_at, created_at, updated_at)`,
+      `INSERT INTO ${REDEEM_CODE_TABLE} (redeem_code_id, code_hash, code_mask, credits, status, note, ref, metadata_json, redeemed_by_user_id, redeemed_at, created_at, updated_at)`,
       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ].join(" "), [
       redeemCode.redeem_code_id,
       codeHash,
       redeemCode.code_mask,
-      redeemCode.amount,
+      redeemCode.credits,
       redeemCode.status,
       redeemCode.note,
       redeemCode.ref,
@@ -459,7 +455,7 @@ export class BalanceService extends InstallableService {
       throw httpError(409, `redeem_code is already ${latest.status}`);
     }
 
-    const account = await this.applyDelta(normalizedUserId, current.amount, "redeem", {
+    const account = await this.applyDelta(normalizedUserId, current.credits, "redeem", {
       note: normalizeText(extra.note) || current.note || "redeem_code",
       ref: normalizeText(extra.ref) || current.redeem_code_id,
       meta: {
@@ -511,7 +507,7 @@ export class BalanceService extends InstallableService {
    */
   async listUsers(limit?: number | string): Promise<BalanceAccount[]> {
     const rows = await rawAll<BalanceAccount>(this.resolveRaw(), [
-      `SELECT user_id, balance, created_at, updated_at FROM ${ACCOUNT_TABLE}`,
+      `SELECT user_id, credits, created_at, updated_at FROM ${ACCOUNT_TABLE}`,
       "ORDER BY updated_at DESC",
       "LIMIT ?",
     ].join(" "), [normalizeLimit(limit)]);
@@ -531,7 +527,7 @@ export class BalanceService extends InstallableService {
       : "";
 
     const rows = await rawAll<BalanceLedgerEntry>(this.resolveRaw(), [
-      `SELECT entry_id, user_id, kind, amount, balance_after, note, ref, metadata_json, created_at FROM ${LEDGER_TABLE}`,
+      `SELECT entry_id, user_id, kind, credits_delta, credits_after, note, ref, metadata_json, created_at FROM ${LEDGER_TABLE}`,
       where,
       "ORDER BY created_at DESC, rowid DESC",
       "LIMIT ?",
@@ -552,7 +548,7 @@ export class BalanceService extends InstallableService {
       : "";
 
     const rows = await rawAll<BalanceTopup>(this.resolveRaw(), [
-      `SELECT topup_id, user_id, amount, status, note, ref, metadata_json, created_at, updated_at FROM ${TOPUP_TABLE}`,
+      `SELECT topup_id, user_id, credits, status, note, ref, metadata_json, created_at, updated_at FROM ${TOPUP_TABLE}`,
       where,
       "ORDER BY created_at DESC",
       "LIMIT ?",
@@ -580,7 +576,7 @@ export class BalanceService extends InstallableService {
 
     const where = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
     const rows = await rawAll<BalanceRedeemCode>(this.resolveRaw(), [
-      `SELECT redeem_code_id, amount, status, code_mask, note, ref, metadata_json, redeemed_by_user_id, redeemed_at, created_at, updated_at FROM ${REDEEM_CODE_TABLE}`,
+      `SELECT redeem_code_id, credits, status, code_mask, note, ref, metadata_json, redeemed_by_user_id, redeemed_at, created_at, updated_at FROM ${REDEEM_CODE_TABLE}`,
       where,
       "ORDER BY created_at DESC",
       "LIMIT ?",
@@ -601,7 +597,7 @@ export class BalanceService extends InstallableService {
       : "";
 
     const rows = await rawAll<BalanceCharge>(this.resolveRaw(), [
-      `SELECT charge_id, user_id, amount_microcredits, status, note, ref, metadata_json, created_at FROM ${CHARGE_TABLE}`,
+      `SELECT charge_id, user_id, credits, status, note, ref, metadata_json, created_at FROM ${CHARGE_TABLE}`,
       where,
       "ORDER BY created_at DESC, rowid DESC",
       "LIMIT ?",
@@ -631,20 +627,20 @@ export class BalanceService extends InstallableService {
     if (delta > 0) {
       await rawRun(this.resolveRaw(), [
         `UPDATE ${ACCOUNT_TABLE}`,
-        "SET balance = balance + ?, updated_at = ?",
+        "SET credits = credits + ?, updated_at = ?",
         "WHERE user_id = ?",
       ].join(" "), [delta, now, user_id]);
     } else {
       const spend = Math.abs(delta);
       const changed = await rawRun(this.resolveRaw(), [
         `UPDATE ${ACCOUNT_TABLE}`,
-        "SET balance = balance - ?, updated_at = ?",
-        "WHERE user_id = ? AND balance >= ?",
+        "SET credits = credits - ?, updated_at = ?",
+        "WHERE user_id = ? AND credits >= ?",
       ].join(" "), [spend, now, user_id, spend]);
 
       if (changed === 0) {
         const current = await this.readAccountRequired(user_id);
-        throw httpError(402, `insufficient balance: need ${spend} microcredits, current ${current.balance} microcredits`);
+        throw httpError(402, `insufficient balance: need ${spend} credits, current ${current.credits} credits`);
       }
     }
 
@@ -653,8 +649,8 @@ export class BalanceService extends InstallableService {
       entry_id: `bal_${randomId()}`,
       user_id,
       kind,
-      amount: delta,
-      balance_after: account.balance,
+      credits_delta: delta,
+      credits_after: account.credits,
       note: normalizeText(extra.note),
       ref: normalizeText(extra.ref),
       metadata_json: stringifyMeta(extra.meta),
@@ -669,17 +665,17 @@ export class BalanceService extends InstallableService {
   private async ensureAccount(user_id: string): Promise<void> {
     const now = new Date().toISOString();
     const inserted = await rawRun(this.resolveRaw(), [
-      `INSERT OR IGNORE INTO ${ACCOUNT_TABLE} (user_id, balance, created_at, updated_at)`,
+      `INSERT OR IGNORE INTO ${ACCOUNT_TABLE} (user_id, credits, created_at, updated_at)`,
       "VALUES (?, ?, ?, ?)",
-    ].join(" "), [user_id, this.initMicrocredits, now, now]);
+    ].join(" "), [user_id, this.initCredits, now, now]);
 
-    if (inserted > 0 && this.initMicrocredits > 0) {
+    if (inserted > 0 && this.initCredits > 0) {
       await this.insertLedger({
         entry_id: `bal_${randomId()}`,
         user_id,
         kind: "init",
-        amount: this.initMicrocredits,
-        balance_after: this.initMicrocredits,
+        credits_delta: this.initCredits,
+        credits_after: this.initCredits,
         note: "initial balance",
         ref: "",
         metadata_json: "{}",
@@ -693,7 +689,7 @@ export class BalanceService extends InstallableService {
    */
   private async readAccountRequired(user_id: string): Promise<BalanceAccount> {
     const row = await rawFirst<BalanceAccount>(this.resolveRaw(), [
-      `SELECT user_id, balance, created_at, updated_at FROM ${ACCOUNT_TABLE}`,
+      `SELECT user_id, credits, created_at, updated_at FROM ${ACCOUNT_TABLE}`,
       "WHERE user_id = ?",
     ].join(" "), [user_id]);
 
@@ -709,7 +705,7 @@ export class BalanceService extends InstallableService {
    */
   private async readTopupRequired(topup_id: string): Promise<BalanceTopup> {
     const row = await rawFirst<BalanceTopup>(this.resolveRaw(), [
-      `SELECT topup_id, user_id, amount, status, note, ref, metadata_json, created_at, updated_at FROM ${TOPUP_TABLE}`,
+      `SELECT topup_id, user_id, credits, status, note, ref, metadata_json, created_at, updated_at FROM ${TOPUP_TABLE}`,
       "WHERE topup_id = ?",
     ].join(" "), [readRequired(topup_id, "topup_id")]);
 
@@ -725,7 +721,7 @@ export class BalanceService extends InstallableService {
    */
   private async readRedeemCodeRequired(redeem_code_id: string): Promise<BalanceRedeemCode> {
     const row = await rawFirst<BalanceRedeemCode>(this.resolveRaw(), [
-      `SELECT redeem_code_id, amount, status, code_mask, note, ref, metadata_json, redeemed_by_user_id, redeemed_at, created_at, updated_at FROM ${REDEEM_CODE_TABLE}`,
+      `SELECT redeem_code_id, credits, status, code_mask, note, ref, metadata_json, redeemed_by_user_id, redeemed_at, created_at, updated_at FROM ${REDEEM_CODE_TABLE}`,
       "WHERE redeem_code_id = ?",
     ].join(" "), [readRequired(redeem_code_id, "redeem_code_id")]);
 
@@ -741,7 +737,7 @@ export class BalanceService extends InstallableService {
    */
   private async readRedeemCodeByHash(codeHash: string): Promise<StoredRedeemCodeRow | undefined> {
     const row = await rawFirst<StoredRedeemCodeRow>(this.resolveRaw(), [
-      `SELECT redeem_code_id, code_hash, amount, status, code_mask, note, ref, metadata_json, redeemed_by_user_id, redeemed_at, created_at, updated_at FROM ${REDEEM_CODE_TABLE}`,
+      `SELECT redeem_code_id, code_hash, credits, status, code_mask, note, ref, metadata_json, redeemed_by_user_id, redeemed_at, created_at, updated_at FROM ${REDEEM_CODE_TABLE}`,
       "WHERE code_hash = ?",
     ].join(" "), [readRequired(codeHash, "code_hash")]);
 
@@ -758,14 +754,14 @@ export class BalanceService extends InstallableService {
    */
   private async insertLedger(entry: BalanceLedgerEntry): Promise<void> {
     await rawRun(this.resolveRaw(), [
-      `INSERT INTO ${LEDGER_TABLE} (entry_id, user_id, kind, amount, balance_after, note, ref, metadata_json, created_at)`,
+      `INSERT INTO ${LEDGER_TABLE} (entry_id, user_id, kind, credits_delta, credits_after, note, ref, metadata_json, created_at)`,
       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ].join(" "), [
       entry.entry_id,
       entry.user_id,
       entry.kind,
-      entry.amount,
-      entry.balance_after,
+      entry.credits_delta,
+      entry.credits_after,
       entry.note,
       entry.ref,
       entry.metadata_json,

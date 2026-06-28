@@ -113,7 +113,7 @@ class PricedProvider extends Provider {
 
   protected bill(ctx: Context, output: unknown) {
     return {
-      amount_microcredits: priceUpstreamUsage(output?.metadata?.usage),
+      credits: priceUpstreamUsage(output?.metadata?.usage),
       note: "priced-provider text",
       metadata: {
         provider_id: "priced-provider",
@@ -135,13 +135,13 @@ class PricedProvider extends Provider {
 const provider = new PricedProvider();
 ```
 
-For streams, an action may still return `charge` as a promise when the final amount is only available after the upstream stream finishes:
+For streams, an action may still return `charge` as a promise when the final credits value is only available after the upstream stream finishes:
 
 ```ts
 return {
   response: stream.toUIMessageStreamResponse(),
   charge: stream.totalUsage.then((usage) => ({
-    amount_microcredits: priceUpstreamUsage(usage),
+    credits: priceUpstreamUsage(usage),
     note: "priced-provider stream",
   })),
 };

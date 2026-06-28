@@ -18,7 +18,7 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     const base = new Federation({ db })
 
     const balance = new BalanceService({
-      init: 100,
+      init_credits: 100_000_000,
     })
     base.use(balance)
 
@@ -34,11 +34,11 @@ test("balanceService manages global balance, ledger, and topups", async () => {
       body: { city_id: city.city_id, user_id: "user_1" },
     }))).json()
 
-    assert.equal((await balance.read("user_1")).balance, 100_000_000)
-    assert.equal((await balance.require("user_1", 30)).user_id, "user_1")
+    assert.equal((await balance.read("user_1")).credits, 100_000_000)
+    assert.equal((await balance.require("user_1", 30_000_000)).user_id, "user_1")
 
-    const debit = await balance.sub("user_1", 20, { note: "chat" })
-    assert.equal(debit.balance, 80_000_000)
+    const debit = await balance.sub("user_1", 20_000_000, { note: "chat" })
+    assert.equal(debit.credits, 80_000_000)
 
     const meResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
@@ -47,25 +47,25 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     }))
     assert.equal(meResponse.status, 200)
     const me = await meResponse.json()
-    assert.equal(me.balance, 80)
+    assert.equal(me.credits, 80_000_000)
     assert.equal(me.unit, "credits")
-    assert.equal(me.microcredits, 80_000_000)
+    assert.equal(me.usd, 80)
     assert.deepEqual(me.conversion, {
-      microcredits_per_credit: 1_000_000,
-      credit_decimals: 6,
+      credits_per_usd: 1_000_000,
+      usd_decimals: 6,
     })
-    assert.equal(me.display, "80")
+    assert.equal(me.display, "$80.00")
 
     const topupResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
       path: "/v1/balance/topups/create",
-      body: { amount: 50, note: "recharge" },
+      body: { credits: 50_000_000, note: "recharge" },
     }))
     assert.equal(topupResponse.status, 200)
     const topup = await topupResponse.json()
     assert.equal(topup.status, "pending")
-    assert.equal(topup.amount, 50_000_000)
-    assert.equal(topup.amount_usd_cents, 5000)
+    assert.equal(topup.credits, 50_000_000)
+    assert.equal(topup.usd_cents, 5000)
 
     const finishResponse = await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/balance/topups/finish",
@@ -76,7 +76,7 @@ test("balanceService manages global balance, ledger, and topups", async () => {
 
     const createRedeemCodeResponse = await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/balance/redeem-codes/create",
-      body: { amount: 40, note: "gift campaign" },
+      body: { credits: 40_000_000, note: "gift campaign" },
     }))
     assert.equal(createRedeemCodeResponse.status, 200)
     const redeemCode = await createRedeemCodeResponse.json()
@@ -90,7 +90,7 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     }))
     assert.equal(redeemResponse.status, 200)
     const redeemed = await redeemResponse.json()
-    assert.equal(redeemed.account.balance, 170_000_000)
+    assert.equal(redeemed.account.credits, 170_000_000)
     assert.equal(redeemed.redeem_code.status, "redeemed")
     assert.equal(redeemed.redeem_code.redeemed_by_user_id, "user_1")
 
@@ -103,7 +103,7 @@ test("balanceService manages global balance, ledger, and topups", async () => {
 
     const disableCreateResponse = await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/balance/redeem-codes/create",
-      body: { amount: 25, note: "manual stop" },
+      body: { credits: 25_000_000, note: "manual stop" },
     }))
     assert.equal(disableCreateResponse.status, 200)
     const toDisable = await disableCreateResponse.json()
@@ -130,7 +130,7 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     }))
     assert.equal(usersResponse.status, 200)
     const users = await usersResponse.json()
-    assert.equal(users.items[0].balance, 170_000_000)
+    assert.equal(users.items[0].credits, 170_000_000)
 
     const redeemCodesResponse = await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/balance/redeem-codes?limit=10",

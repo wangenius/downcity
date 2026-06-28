@@ -31,7 +31,7 @@ export async function manageBalance(a: City, _baseUrl: string, runtime: admin_tu
           value: "topups",
           hint: t({
             zh: "查看用户充值单及其金额、状态和备注。",
-            en: "List user topups with amount, status, and notes.",
+            en: "List user topups with credits, status, and notes.",
           }),
         },
         {
@@ -104,9 +104,9 @@ export async function manageBalance(a: City, _baseUrl: string, runtime: admin_tu
         const items = await runtime.with_loading(t({ zh: "余额账户", en: "Balance Accounts" }), async () => await a.balance.listUsers(30));
         await runtime.show_table({
           title: t({ zh: `${items.length} 个余额账户`, en: `${items.length} Balance Accounts` }),
-          columns: [t({ zh: "用户", en: "User" }), t({ zh: "余额", en: "Balance" }), t({ zh: "更新时间", en: "Updated" })],
+          columns: [t({ zh: "用户", en: "User" }), "Credits", t({ zh: "更新时间", en: "Updated" })],
           rows: items.map((item) => ({
-            cells: [item.user_id, String(item.balance), item.updated_at.slice(0, 19)],
+            cells: [item.user_id, String(item.credits), item.updated_at.slice(0, 19)],
           })),
           empty_message: t({ zh: "暂无余额账户。", en: "No balance accounts." }),
         });
@@ -121,9 +121,9 @@ export async function manageBalance(a: City, _baseUrl: string, runtime: admin_tu
         }));
         await runtime.show_table({
           title: t({ zh: `${items.length} 条余额历史`, en: `${items.length} Balance History` }),
-          columns: [t({ zh: "创建时间", en: "Created" }), t({ zh: "用户", en: "User" }), t({ zh: "类型", en: "Kind" }), t({ zh: "金额", en: "Amount" }), t({ zh: "变更后余额", en: "Balance After" }), t({ zh: "备注", en: "Note" })],
+          columns: [t({ zh: "创建时间", en: "Created" }), t({ zh: "用户", en: "User" }), t({ zh: "类型", en: "Kind" }), "Credits Delta", "Credits After", t({ zh: "备注", en: "Note" })],
           rows: items.map((item) => ({
-            cells: [item.created_at.slice(0, 19), item.user_id, item.kind, String(item.amount), String(item.balance_after), item.note],
+            cells: [item.created_at.slice(0, 19), item.user_id, item.kind, String(item.credits_delta), String(item.credits_after), item.note],
           })),
           empty_message: t({ zh: "暂无余额历史。", en: "No balance history." }),
         });
@@ -138,9 +138,9 @@ export async function manageBalance(a: City, _baseUrl: string, runtime: admin_tu
         }));
         await runtime.show_table({
           title: t({ zh: `${items.length} 个充值单`, en: `${items.length} Topups` }),
-          columns: ["Topup ID", t({ zh: "用户", en: "User" }), t({ zh: "金额", en: "Amount" }), t({ zh: "状态", en: "Status" }), t({ zh: "备注", en: "Note" })],
+          columns: ["Topup ID", t({ zh: "用户", en: "User" }), "Credits", t({ zh: "状态", en: "Status" }), t({ zh: "备注", en: "Note" })],
           rows: items.map((item) => ({
-            cells: [item.topup_id, item.user_id, String(item.amount), item.status, item.note],
+            cells: [item.topup_id, item.user_id, String(item.credits), item.status, item.note],
           })),
           empty_message: t({ zh: "暂无充值单。", en: "No topups." }),
         });
@@ -157,12 +157,12 @@ export async function manageBalance(a: City, _baseUrl: string, runtime: admin_tu
         }));
         await runtime.show_table({
           title: t({ zh: `${items.length} 个兑换码`, en: `${items.length} Redeem Codes` }),
-          columns: ["Redeem Code ID", t({ zh: "Code", en: "Code" }), t({ zh: "金额", en: "Amount" }), t({ zh: "状态", en: "Status" }), t({ zh: "归属用户", en: "Owner" }), t({ zh: "备注", en: "Note" })],
+          columns: ["Redeem Code ID", t({ zh: "Code", en: "Code" }), "Credits", t({ zh: "状态", en: "Status" }), t({ zh: "归属用户", en: "Owner" }), t({ zh: "备注", en: "Note" })],
           rows: items.map((item) => ({
             cells: [
               item.redeem_code_id,
               item.code_mask,
-              String(item.amount),
+              String(item.credits),
               item.status,
               item.redeemed_by_user_id || "-",
               item.note,
@@ -176,46 +176,46 @@ export async function manageBalance(a: City, _baseUrl: string, runtime: admin_tu
       if (act === "add" || act === "sub") {
         const userId = await runtime.text("user_id");
         if (!userId) continue;
-        const rawAmount = await runtime.text(t({ zh: "金额", en: "amount" }));
-        if (!rawAmount) continue;
+        const rawCredits = await runtime.text("credits");
+        if (!rawCredits) continue;
 
-        const amount = Number(rawAmount);
-        if (!Number.isInteger(amount) || amount <= 0) {
-          await runtime.show_message("error", t({ zh: "amount 必须是正整数", en: "amount must be a positive integer" }));
+        const credits = Number(rawCredits);
+        if (!Number.isInteger(credits) || credits <= 0) {
+          await runtime.show_message("error", t({ zh: "credits 必须是正整数", en: "credits must be a positive integer" }));
           continue;
         }
 
         const note = await runtime.text(t({ zh: "备注（可选）", en: "note (optional)" }));
         const account = await runtime.with_loading(t({ zh: "更新余额", en: "Update Balance" }), async () => act === "add"
-          ? await a.balance.add({ user_id: userId, amount, note: note ?? "" })
-          : await a.balance.sub({ user_id: userId, amount, note: note ?? "" }));
+          ? await a.balance.add({ user_id: userId, credits, note: note ?? "" })
+          : await a.balance.sub({ user_id: userId, credits, note: note ?? "" }));
         await runtime.show_message("success", t({
-          zh: `余额已更新：${account.user_id} -> ${account.balance}`,
-          en: `balance updated: ${account.user_id} -> ${account.balance}`,
+          zh: `余额已更新：${account.user_id} -> ${account.credits}`,
+          en: `credits updated: ${account.user_id} -> ${account.credits}`,
         }));
         continue;
       }
 
       if (act === "create_redeem_code") {
-        const rawAmount = await runtime.text(t({ zh: "金额", en: "amount" }));
-        if (!rawAmount) continue;
+        const rawCredits = await runtime.text("credits");
+        if (!rawCredits) continue;
 
-        const amount = Number(rawAmount);
-        if (!Number.isInteger(amount) || amount <= 0) {
-          await runtime.show_message("error", t({ zh: "amount 必须是正整数", en: "amount must be a positive integer" }));
+        const credits = Number(rawCredits);
+        if (!Number.isInteger(credits) || credits <= 0) {
+          await runtime.show_message("error", t({ zh: "credits 必须是正整数", en: "credits must be a positive integer" }));
           continue;
         }
 
         const code = await runtime.text(t({ zh: "自定义 redeem_code（可选）", en: "custom redeem_code (optional)" }));
         const note = await runtime.text(t({ zh: "备注（可选）", en: "note (optional)" }));
         const issued = await runtime.with_loading(t({ zh: "创建兑换码", en: "Create Redeem Code" }), async () => await a.balance.redeemCodes.create({
-          amount,
+          credits,
           code: code ?? "",
           note: note ?? "",
         }));
         await runtime.show_text(t({ zh: "兑换码已创建", en: "Redeem Code Created" }), t({
-          zh: `redeem_code 已创建：${issued.redeem_code_id}\ncode: ${issued.code}\namount: +${issued.amount}`,
-          en: `redeem_code created: ${issued.redeem_code_id}\ncode: ${issued.code}\namount: +${issued.amount}`,
+          zh: `redeem_code 已创建：${issued.redeem_code_id}\ncode: ${issued.code}\ncredits: +${issued.credits}`,
+          en: `redeem_code created: ${issued.redeem_code_id}\ncode: ${issued.code}\ncredits: +${issued.credits}`,
         }));
         continue;
       }

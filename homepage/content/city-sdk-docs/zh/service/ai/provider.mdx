@@ -269,7 +269,7 @@ ai.use(image_provider.model({
   bill(ctx, output) {
     return {
       user_id: output.metadata?.user_id,
-      amount_microcredits: 50_000,
+      credits: 50_000,
       ref: `image:${output.job_id}`,
       note: "image generation",
       metadata: { usage: output.metadata?.usage },
@@ -403,7 +403,7 @@ AIService 负责 job 存储、Queue 调度、状态缓存、最终结果落库�
      const normalized = normalizeAIUsage(usage);
      // 根据 usage 计算金额
      return {
-       amount_microcredits: 0,
+       credits: 10_000,
        note: `DeepSeek ${ctx.variant?.id}`,
        metadata: { raw_usage: usage },
      };
@@ -419,7 +419,7 @@ AIService 负责 job 存储、Queue 调度、状态缓存、最终结果落库�
    name: "DeepSeek V4 Pro",
    bill(ctx, output) {
      return {
-       amount_microcredits: 20_000,
+       credits: 20_000,
        note: "DeepSeek V4 Pro request",
        metadata: {
          model_id: ctx.variant?.id,
@@ -438,7 +438,7 @@ AIService 负责 job 存储、Queue 调度、状态缓存、最终结果落库�
    return {
      output: toUIMessage(result),
      charge: {
-       amount_microcredits: priceUpstreamUsage(result.usage),
+       credits: priceUpstreamUsage(result.usage),
        note: "custom text",
      },
    };

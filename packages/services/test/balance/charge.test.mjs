@@ -16,7 +16,7 @@ test("balanceService charges users with generic metadata", async () => {
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const base = new Federation({ db })
 
-    const balance = new BalanceService({ init: 1 })
+    const balance = new BalanceService({ init_credits: 1_000_000 })
     base.use(balance)
 
     await base.health()
@@ -33,7 +33,7 @@ test("balanceService charges users with generic metadata", async () => {
 
     const charge = await balance.charge({
       user_id: "user_1",
-      amount_microcredits: 123_456,
+      credits: 123_456,
       note: "test charge",
       ref: "req_1",
       metadata: {
@@ -42,8 +42,7 @@ test("balanceService charges users with generic metadata", async () => {
       },
     })
 
-    assert.equal(charge.amount_microcredits, 123_456)
-    assert.equal(charge.amount, 0.123456)
+    assert.equal(charge.credits, 123_456)
     assert.equal(charge.ref, "req_1")
     assert.deepEqual(JSON.parse(charge.metadata_json), {
       service_id: "demo",
@@ -51,7 +50,7 @@ test("balanceService charges users with generic metadata", async () => {
     })
 
     const account = await balance.read("user_1")
-    assert.equal(account.balance, 876_544)
+    assert.equal(account.credits, 876_544)
 
     const chargesResponse = await base.handleRequest(adminRequest(adminSecret, {
       path: "/v1/balance/charges?limit=10",
@@ -73,14 +72,14 @@ test("balanceService charges users with generic metadata", async () => {
 
     const history = await balance.history("user_1", 10)
     assert.equal(history[0].kind, "charge")
-    assert.equal(history[0].amount, -123_456)
+    assert.equal(history[0].credits_delta, -123_456)
     assert.equal(history[0].ref, "req_1")
     assert.equal(JSON.parse(history[0].metadata_json).charge_id, charge.charge_id)
 
     await assert.rejects(
       () => balance.charge({
         user_id: "user_1",
-        amount_microcredits: 999_999_999,
+        credits: 999_999_999,
         note: "too much",
       }),
       /insufficient balance/,
@@ -101,7 +100,7 @@ test("AIService submits provider charges through BalanceService", async () => {
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const base = new Federation({ db })
 
-    const balance = new BalanceService({ init: 1 })
+    const balance = new BalanceService({ init_credits: 1_000_000 })
     base.use(balance)
 
     const ai = new AIService({ balance })
@@ -118,7 +117,7 @@ test("AIService submits provider charges through BalanceService", async () => {
             parts: [{ type: "text", text: "ok" }],
           },
           charge: {
-            amount_microcredits: 321,
+            credits: 321,
             note: "provider charge",
             metadata: { provider_id: "priced-provider" },
           },
@@ -147,11 +146,11 @@ test("AIService submits provider charges through BalanceService", async () => {
     assert.equal(response.status, 200)
 
     const account = await balance.read("user_1")
-    assert.equal(account.balance, 999_679)
+    assert.equal(account.credits, 999_679)
 
     const charges = await balance.listCharges({ user_id: "user_1" })
     assert.equal(charges.length, 1)
-    assert.equal(charges[0].amount_microcredits, 321)
+    assert.equal(charges[0].credits, 321)
     assert.equal(charges[0].note, "provider charge")
     assert.deepEqual(JSON.parse(charges[0].metadata_json), {
       provider_id: "priced-provider",

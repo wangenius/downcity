@@ -18,7 +18,7 @@ description: "如何让 admin 创建一次性 redeem_code，并让用户输入 c
 
 ```ts
 const issued = await admin.balance.redeemCodes.create({
-  amount: 500,
+  credits: 500_000_000,
   note: "launch gift",
 });
 ```
@@ -26,7 +26,7 @@ const issued = await admin.balance.redeemCodes.create({
 返回结果里会包含：
 
 - `redeem_code_id`
-- `amount`
+- `credits`
 - `unit`
 - `status`
 - `code`

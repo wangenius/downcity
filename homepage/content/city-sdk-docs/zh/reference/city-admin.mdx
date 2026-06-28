@@ -282,7 +282,7 @@ const payments = await admin.service("payment").get("payments");
 
 ```ts
 const issued = await admin.balance.redeemCodes.create({
-  amount: 300,
+  credits: 300_000_000,
   note: "campaign gift",
 });
 

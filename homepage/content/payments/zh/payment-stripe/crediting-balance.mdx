@@ -32,7 +32,7 @@ Stripe 服务真正影响产品运行时的地方，不是在 AI 调用前 gatin
 
 ```ts
 const topup = await user.service("balance").action("topups/create").invoke({
-  amount: 500,
+  credits: 500_000_000,
 });
 
 const checkout = await user.service("payment").action("checkout/create").invoke({

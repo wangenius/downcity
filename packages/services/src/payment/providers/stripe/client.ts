@@ -130,12 +130,12 @@ export function readMetadata(value: unknown): Record<string, unknown> {
 /**
  * 读取支付 provider 需要的 USD cents 金额。
  */
-function readTopupAmountUsdCents(topup: { amount?: unknown; amount_usd_cents?: unknown }): number {
-  const direct = Number(topup.amount_usd_cents);
+function readTopupAmountUsdCents(topup: { credits?: unknown; usd_cents?: unknown }): number {
+  const direct = Number(topup.usd_cents);
   if (Number.isSafeInteger(direct) && direct > 0) return direct;
-  const fallback = Math.round(Number(topup.amount) / 10_000);
+  const fallback = Math.round(Number(topup.credits) / 10_000);
   if (!Number.isSafeInteger(fallback) || fallback <= 0) {
-    throw new TypeError("topup amount_usd_cents must be a positive integer");
+    throw new TypeError("topup usd_cents must be a positive integer");
   }
   return fallback;
 }

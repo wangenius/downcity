@@ -269,7 +269,7 @@ ai.use(image_provider.model({
   bill(ctx, output) {
     return {
       user_id: output.metadata?.user_id,
-      amount_microcredits: 50_000,
+      credits: 50_000,
       ref: `image:${output.job_id}`,
       note: "image generation",
       metadata: { usage: output.metadata?.usage },
@@ -401,9 +401,9 @@ The usual priority is:
    protected bill(ctx: Context, output: unknown) {
      const usage = output?.metadata?.usage;
      const normalized = normalizeAIUsage(usage);
-     // compute amount from usage
+     // compute credits from usage
      return {
-       amount_microcredits: 0,
+       credits: 10_000,
        note: `DeepSeek ${ctx.variant?.id}`,
        metadata: { raw_usage: usage },
      };
@@ -419,7 +419,7 @@ ai.use(deepseek.model({
   name: "DeepSeek V4 Pro",
   bill(ctx, output) {
     return {
-      amount_microcredits: 20_000,
+      credits: 20_000,
       note: "DeepSeek V4 Pro request",
       metadata: {
         model_id: ctx.variant?.id,
@@ -438,7 +438,7 @@ ai.use(deepseek.model({
    return {
      output: toUIMessage(result),
      charge: {
-       amount_microcredits: priceUpstreamUsage(result.usage),
+       credits: priceUpstreamUsage(result.usage),
        note: "custom text",
      },
    };

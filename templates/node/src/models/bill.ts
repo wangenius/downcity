@@ -8,15 +8,15 @@
 
 import type { Context } from "@downcity/city";
 
-const CHAT_REQUEST_COST_MICROCREDITS = 10_000;
+const CHAT_REQUEST_COST_CREDITS = 10_000;
 
 /**
  * 生成一次 AI 调用的账单行。
  */
-export function bill_ai_request(ctx: Context, output: unknown, amount_microcredits = CHAT_REQUEST_COST_MICROCREDITS) {
+export function bill_ai_request(ctx: Context, output: unknown, credits = CHAT_REQUEST_COST_CREDITS) {
   const mode = String(ctx.metering?.metadata?.mode ?? "request");
   return {
-    amount_microcredits,
+    credits,
     note: `AI ${mode}`,
     ref: read_bill_ref(output),
     metadata: {

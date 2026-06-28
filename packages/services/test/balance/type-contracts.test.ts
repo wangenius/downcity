@@ -7,31 +7,31 @@ async function verifyBalanceServiceContract(): Promise<void> {
   });
 
   const balance = new BalanceService({
-    init: 100,
+    init_credits: 100_000_000,
   });
 
   base.use(balance);
 
   await balance.read("user_1");
-  await balance.require("user_1", 10);
-  await balance.add("user_1", 20, {
+  await balance.require("user_1", 10_000);
+  await balance.add("user_1", 20_000, {
     note: "bonus",
     ref: "bonus_1",
     meta: {
       source: "admin",
     },
   });
-  await balance.sub("user_1", 5, {
+  await balance.sub("user_1", 5_000, {
     note: "chat",
     meta: {
       city_id: "city_downcity",
     },
   });
-  await balance.createTopup("user_1", 50, {
+  await balance.createTopup("user_1", 50_000_000, {
     note: "manual",
   });
   const issued = await balance.createRedeemCode({
-    amount: 30,
+    credits: 30_000_000,
     note: "gift",
   });
   await balance.redeemCode("user_1", issued.code, {

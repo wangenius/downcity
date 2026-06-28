@@ -20,8 +20,8 @@ export interface AIProviderChargeLine {
    * 这时 bill() 应从已保存任务归属中返回 user_id，AIService 会优先使用它。
    */
   user_id?: string;
-  /** 扣费金额，单位为 microcredits。 */
-  amount_microcredits: number;
+  /** 扣费额度，单位为 credits。 */
+  credits: number;
   /** 账单说明。 */
   note?: string;
   /** 外部引用 ID。 */

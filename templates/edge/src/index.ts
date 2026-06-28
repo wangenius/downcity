@@ -31,9 +31,9 @@ import {
 } from "./image-provider.js";
 import { DeepSeekProvider } from "./deepseek-provider.js";
 
-const INITIAL_BALANCE = 100;
-const CHAT_REQUEST_COST_MICROCREDITS = 10_000;
-const IMAGE_COST_MICROCREDITS = 50_000;
+const INITIAL_BALANCE = 100_000_000;
+const CHAT_REQUEST_COST_CREDITS = 10_000;
+const IMAGE_COST_CREDITS = 50_000;
 const WORKER_VERSION = "0.0.1";
 
 export interface Env {
@@ -71,7 +71,7 @@ async function init_federation(env: Env): Promise<Federation> {
     ],
   }));
 
-  const balance = new BalanceService({ init: INITIAL_BALANCE });
+  const balance = new BalanceService({ init_credits: INITIAL_BALANCE });
   federation.use(balance);
 
   federation.use(new PaymentService({
@@ -119,14 +119,14 @@ async function init_federation(env: Env): Promise<Federation> {
       name: "DeepSeek V4 Flash",
       description: "DeepSeek OpenAI-compatible text model",
       tags: ["deepseek", "text"],
-      bill: (ctx, output) => bill_ai_request(ctx, output, CHAT_REQUEST_COST_MICROCREDITS),
+      bill: (ctx, output) => bill_ai_request(ctx, output, CHAT_REQUEST_COST_CREDITS),
     }),
     deepseek_provider.model({
       id: "deepseek-v4-pro",
       name: "DeepSeek V4 Pro",
       description: "DeepSeek OpenAI-compatible text model",
       tags: ["deepseek", "text"],
-      bill: (ctx, output) => bill_ai_request(ctx, output, CHAT_REQUEST_COST_MICROCREDITS),
+      bill: (ctx, output) => bill_ai_request(ctx, output, CHAT_REQUEST_COST_CREDITS),
     }),
     luchi_image_provider.model({
       id: "luchi-gpt-image-2",
@@ -137,7 +137,7 @@ async function init_federation(env: Env): Promise<Federation> {
       meta: {
         upstream_model: "gpt-image-2",
       },
-      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_MICROCREDITS),
+      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_CREDITS),
     }),
     luchi_image_provider.model({
       id: "luchi-gpt-image-1",
@@ -147,7 +147,7 @@ async function init_federation(env: Env): Promise<Federation> {
       meta: {
         upstream_model: "gpt-image-1",
       },
-      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_MICROCREDITS),
+      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_CREDITS),
     }),
     image_302_provider.model({
       id: "302-gpt-image-1",
@@ -155,7 +155,7 @@ async function init_federation(env: Env): Promise<Federation> {
       description: "302.ai OpenAI-compatible image generation model",
       tags: ["302.ai", "image"],
       meta: { upstream_model: "gpt-image-1" },
-      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_MICROCREDITS),
+      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_CREDITS),
     }),
     openai_image_provider.model({
       id: "openai-gpt-image-1",
@@ -163,7 +163,7 @@ async function init_federation(env: Env): Promise<Federation> {
       description: "OpenAI image generation model",
       tags: ["openai", "image"],
       meta: { upstream_model: "gpt-image-1" },
-      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_MICROCREDITS),
+      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_CREDITS),
     }),
     gemini_image_provider.model({
       id: "gemini-2.5-flash-image",
@@ -171,7 +171,7 @@ async function init_federation(env: Env): Promise<Federation> {
       description: "Gemini generateContent image model",
       tags: ["gemini", "image"],
       meta: { upstream_model: "gemini-2.5-flash-image" },
-      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_MICROCREDITS),
+      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_CREDITS),
     }),
   ]);
   federation.use(ai);
@@ -223,11 +223,11 @@ function withCors(response: Response): Response {
 /**
  * 生成一次 AI 调用的账单行。
  */
-function bill_ai_request(ctx: Context, output: unknown, amount_microcredits: number) {
+function bill_ai_request(ctx: Context, output: unknown, credits: number) {
   const mode = String(ctx.metering?.metadata?.mode ?? "request");
   return {
     user_id: read_bill_user_id(output),
-    amount_microcredits,
+    credits,
     note: `AI ${mode}`,
     ref: read_bill_ref(output),
     metadata: {

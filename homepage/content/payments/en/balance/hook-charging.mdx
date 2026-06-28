@@ -25,7 +25,7 @@ That logic fits your own hooks better than service config.
 
 ```ts
 const balance = new BalanceService({
-  init: 100,
+  init_credits: 100_000_000,
 });
 
 base.use(balance);
@@ -36,8 +36,8 @@ ai.hook.before(async (ctx) => {
   if (ctx.identity?.kind !== "user") return;
   if (ctx.action?.id !== "chat/completions") return;
 
-  await balance.require(ctx.user!.user_id, 10);
-  ctx.locals.balance_amount = 10;
+  await balance.require(ctx.user!.user_id, 10_000);
+  ctx.locals.balance_amount = 10_000;
 });
 
 ai.hook.after(async (ctx) => {
@@ -45,12 +45,12 @@ ai.hook.after(async (ctx) => {
   if (ctx.action?.id !== "chat/completions") return;
   if (ctx.output instanceof Response && ctx.output.status >= 400) return;
 
-  const amount = Number(ctx.locals.balance_amount ?? 0);
-  if (amount <= 0) return;
+  const credits = Number(ctx.locals.balance_amount ?? 0);
+  if (credits <= 0) return;
 
   await balance.charge({
     user_id: ctx.user!.user_id,
-    amount_microcredits: amount * 1_000_000,
+    credits,
     note: "agent chat",
     metadata: {
       city_id: ctx.downcity?.city_id,

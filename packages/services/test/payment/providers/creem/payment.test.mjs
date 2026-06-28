@@ -129,7 +129,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
       body: { city_id: city.city_id, user_id: "user_1" },
     }))).json()
 
-    const topup = await balance.createTopup("user_1", 50, { note: "recharge" })
+    const topup = await balance.createTopup("user_1", 50_000_000, { note: "recharge" })
     const checkoutResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
       path: "/v1/payment/checkout/create",
@@ -205,7 +205,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
     })
 
     const afterTopup = await balance.read("user_1")
-    assert.equal(afterTopup.balance, 50_000_000)
+    assert.equal(afterTopup.credits, 50_000_000)
 
     const repeatedWebhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=creem", {
       method: "POST",
@@ -222,7 +222,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
       provider: "creem",
       sync_status: "applied",
     })
-    assert.equal((await balance.read("user_1")).balance, 50_000_000)
+    assert.equal((await balance.read("user_1")).credits, 50_000_000)
 
     const myPaymentsResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
@@ -287,7 +287,7 @@ test("paymentService falls back to request origin for redirect URLs and exposes 
       body: { city_id: city.city_id, user_id: "user_2" },
     }))).json()
 
-    const topup = await balance.createTopup("user_2", 80, { note: "redirect fallback" })
+    const topup = await balance.createTopup("user_2", 80_000_000, { note: "redirect fallback" })
     const checkoutResponse = await base.handleRequest(userRequest({
       token: tokenBody.user_token,
       path: "/v1/payment/checkout/create",
@@ -353,7 +353,7 @@ test("paymentService marks failed and expired payments without crediting balance
       body: { city_id: city.city_id, user_id: "user_3" },
     }))).json()
 
-    const expiredTopup = await balance.createTopup("user_3", 30, { note: "expired" })
+    const expiredTopup = await balance.createTopup("user_3", 30_000_000, { note: "expired" })
     const expiredCheckout = await (await base.handleRequest(userRequest({
       token: tokenBody.user_token,
       path: "/v1/payment/checkout/create",
@@ -382,7 +382,7 @@ test("paymentService marks failed and expired payments without crediting balance
     }))
     assert.equal(expiredResponse.status, 200)
 
-    const failedTopup = await balance.createTopup("user_3", 45, { note: "failed" })
+    const failedTopup = await balance.createTopup("user_3", 45_000_000, { note: "failed" })
     creemStub.setNextSession({
       id: "ch_test_failed",
       checkout_url: "https://checkout.creem.test/ch_test_failed",
@@ -425,7 +425,7 @@ test("paymentService marks failed and expired payments without crediting balance
     const failedRecord = payments.items.find((item) => item.payment_id === failedCheckout.payment_id)
     assert.equal(expiredRecord.status, "expired")
     assert.equal(failedRecord.status, "failed")
-    assert.equal((await balance.read("user_3")).balance, 0)
+    assert.equal((await balance.read("user_3")).credits, 0)
   } finally {
     await creemStub.close()
     process.chdir(cwd)
@@ -522,12 +522,11 @@ function createBalanceBridge() {
   const balances = new Map()
 
   return {
-    async createTopup(userId, amount, extra = {}) {
-      const normalizedAmount = amount * 1_000_000
+    async createTopup(userId, credits, extra = {}) {
       const topup = {
         topup_id: `topup_${Math.random().toString(36).slice(2, 10)}`,
         user_id: userId,
-        amount: normalizedAmount,
+        credits,
         status: "pending",
         note: extra.note || "",
       }
@@ -544,14 +543,14 @@ function createBalanceBridge() {
       if (!topup) throw new Error(`topup not found: ${topupId}`)
       if (topup.status !== "pending") throw new Error(`topup is already ${topup.status}`)
       topup.status = "paid"
-      balances.set(topup.user_id, (balances.get(topup.user_id) || 0) + topup.amount)
+      balances.set(topup.user_id, (balances.get(topup.user_id) || 0) + topup.credits)
       return { ...topup }
     },
     async read(userId) {
       const balance = balances.get(userId) || 0
       return {
         user_id: userId,
-        balance,
+        credits: balance,
       }
     },
   }

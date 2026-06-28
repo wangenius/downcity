@@ -52,8 +52,8 @@ export async function createWaffoCheckoutSession(
       payment_id: input.payment_id,
       topup_id: input.topup.topup_id,
       user_id: input.topup.user_id,
-      amount: String(input.topup.amount),
-      amount_usd_cents: String(readTopupAmountUsdCents(input.topup)),
+      credits: String(input.topup.credits),
+      usd_cents: String(readTopupAmountUsdCents(input.topup)),
     },
   });
 
@@ -142,12 +142,12 @@ export function fallbackWaffoPrivateKey(): string {
 /**
  * 读取支付 provider 需要的 USD cents 金额。
  */
-function readTopupAmountUsdCents(topup: { amount?: unknown; amount_usd_cents?: unknown }): number {
-  const direct = Number(topup.amount_usd_cents);
+function readTopupAmountUsdCents(topup: { credits?: unknown; usd_cents?: unknown }): number {
+  const direct = Number(topup.usd_cents);
   if (Number.isSafeInteger(direct) && direct > 0) return direct;
-  const fallback = Math.round(Number(topup.amount) / 10_000);
+  const fallback = Math.round(Number(topup.credits) / 10_000);
   if (!Number.isSafeInteger(fallback) || fallback <= 0) {
-    throw new TypeError("topup amount_usd_cents must be a positive integer");
+    throw new TypeError("topup usd_cents must be a positive integer");
   }
   return fallback;
 }

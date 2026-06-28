@@ -18,14 +18,9 @@ interface BalanceMutationBody extends Record<string, unknown>, BalanceExtra {
   user_id?: string;
 
   /**
-   * 变动金额。
+   * 变动额度，单位为 credits。
    */
-  amount?: number;
-
-  /**
-   * 变动金额，单位为 microcredits。
-   */
-  amount_microcredits?: number;
+  credits?: number;
 
   /**
    * 结构化扣费审计信息。
@@ -60,9 +55,9 @@ interface BalanceQueryBody extends Record<string, unknown> {
 
 interface BalanceRedeemCodeCreateBody extends Record<string, unknown>, BalanceExtra {
   /**
-   * redeem_code 金额。
+   * redeem_code 额度，单位为 credits。
    */
-  amount?: number;
+  credits?: number;
 
   /**
    * 可选自定义 redeem_code。
@@ -135,7 +130,7 @@ export function registerBalanceRoutes(service: BalanceService, ctx: ServiceInsta
     auth: ["user"],
     handler: async (c) => {
       const body = await c.json<BalanceMutationBody>();
-      return c.jsonResponse(await service.createTopup(readUserId(c), body.amount, body));
+      return c.jsonResponse(await service.createTopup(readUserId(c), Number(body.credits), body));
     },
   });
 
@@ -211,7 +206,7 @@ export function registerBalanceRoutes(service: BalanceService, ctx: ServiceInsta
     auth: ["admin"],
     handler: async (c) => {
       const body = await c.json<BalanceMutationBody>();
-      return c.jsonResponse(await service.add(readRequired(body.user_id, "user_id"), Number(body.amount), body));
+      return c.jsonResponse(await service.add(readRequired(body.user_id, "user_id"), Number(body.credits), body));
     },
   });
 
@@ -221,7 +216,7 @@ export function registerBalanceRoutes(service: BalanceService, ctx: ServiceInsta
     auth: ["admin"],
     handler: async (c) => {
       const body = await c.json<BalanceMutationBody>();
-      return c.jsonResponse(await service.sub(readRequired(body.user_id, "user_id"), Number(body.amount), body));
+      return c.jsonResponse(await service.sub(readRequired(body.user_id, "user_id"), Number(body.credits), body));
     },
   });
 
@@ -233,7 +228,7 @@ export function registerBalanceRoutes(service: BalanceService, ctx: ServiceInsta
       const body = await c.json<BalanceMutationBody>();
       return c.jsonResponse(await service.charge({
         user_id: readRequired(body.user_id, "user_id"),
-        amount_microcredits: Number(body.amount_microcredits),
+        credits: Number(body.credits),
         note: body.note,
         ref: body.ref,
         meta: body.meta,
@@ -269,7 +264,7 @@ export function registerBalanceRoutes(service: BalanceService, ctx: ServiceInsta
     handler: async (c) => {
       const body = await c.json<BalanceRedeemCodeCreateBody>();
       return c.jsonResponse(await service.createRedeemCode({
-        amount: Number(body.amount),
+        credits: Number(body.credits),
         code: body.code,
         note: body.note,
         ref: body.ref,

@@ -28,7 +28,7 @@ const PREFIX = "/v1/balance";
  * 通过 `admin.balance` 访问：
  * ```ts
  * await admin.balance.listUsers();
- * const issued = await admin.balance.redeemCodes.create({ amount: 500 });
+ * const issued = await admin.balance.redeemCodes.create({ credits: 500_000_000 });
  * ```
  */
 export class BalanceInvoker {

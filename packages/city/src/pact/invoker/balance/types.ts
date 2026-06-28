@@ -3,7 +3,7 @@
  *
  * 关键说明（中文）
  * - 这里描述的是 Admin City 看到的 balance service 结构
- * - `balance` / `amount` / `balance_after` 的数值单位是 microcredits
+ * - `credits` / `credits_delta` / `credits_after` 的数值单位是 credits
  * - redeem_code 明文只在创建结果中返回一次
  */
 
@@ -17,9 +17,9 @@ export interface BalanceAccountRecord {
   user_id: string;
 
   /**
-   * 当前余额，单位为 microcredits。
+   * 当前余额，单位为 credits。
    */
-  balance: number;
+  credits: number;
 
   /**
    * 创建时间。
@@ -49,17 +49,17 @@ export interface BalanceLedgerRecord {
   /**
    * 流水类型。
    */
-  kind: "init" | "add" | "sub" | "topup" | "redeem";
+  kind: "init" | "add" | "sub" | "topup" | "redeem" | "charge";
 
   /**
-   * 本次变动金额，单位为 microcredits。
+   * 本次变动金额，单位为 credits。
    */
-  amount: number;
+  credits_delta: number;
 
   /**
-   * 变动后的余额快照，单位为 microcredits。
+   * 变动后的余额快照，单位为 credits。
    */
-  balance_after: number;
+  credits_after: number;
 
   /**
    * 说明文本。
@@ -97,9 +97,9 @@ export interface BalanceTopupRecord {
   user_id: string;
 
   /**
-   * 充值金额，单位为 microcredits。
+   * 充值金额，单位为 credits。
    */
-  amount: number;
+  credits: number;
 
   /**
    * 充值单状态。
@@ -142,9 +142,9 @@ export interface BalanceRedeemCodeRecord {
   redeem_code_id: string;
 
   /**
-   * 充值金额，单位为 microcredits。
+   * 充值金额，单位为 credits。
    */
-  amount: number;
+  credits: number;
 
   /**
    * redeem_code 状态。
@@ -197,9 +197,9 @@ export interface BalanceRedeemCodeRecord {
  */
 export interface BalanceRedeemCodeCreateInput {
   /**
-   * redeem_code 额度。
+   * redeem_code 额度，单位为 credits。
    */
-  amount: number;
+  credits: number;
 
   /**
    * 可选自定义 redeem_code 明文。
@@ -296,9 +296,9 @@ export interface BalanceMutationInput {
   user_id: string;
 
   /**
-   * 变动额度。
+   * 变动额度，单位为 credits。
    */
-  amount: number;
+  credits: number;
 
   /**
    * 说明文本。

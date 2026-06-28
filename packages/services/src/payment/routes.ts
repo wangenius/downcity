@@ -141,7 +141,7 @@ export function installPaymentRoutes(service: PaymentServiceLike, ctx: ServiceIn
         provider_session_id: normalizeOptionalText(created.provider_session_id),
         provider_payment_id: normalizeOptionalText(created.provider_payment_id),
         provider_order_id: normalizeOptionalText(created.provider_order_id),
-        amount: topup.amount,
+        credits: topup.credits,
         currency: method.currency,
         status: "pending",
         checkout_url: created.checkout_url,

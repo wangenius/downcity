@@ -19,7 +19,7 @@ Inside `Downcity`, the more stable model is:
 
 This gives you:
 
-- a trusted amount source inside City, not inside the frontend
+- a trusted credits source inside City, not inside the frontend
 - a stable mapping between Stripe payment records and internal topups
 - one wallet-credit path through `balance.finishTopup()`
 
@@ -27,7 +27,7 @@ This gives you:
 
 ```ts
 const topup = await user.service("balance").action("topups/create").invoke({
-  amount: 500,
+  credits: 500_000_000,
   note: "recharge",
 });
 
@@ -39,11 +39,11 @@ const checkout = await user.service("payment").action("checkout/create").invoke(
 
 The frontend then redirects to `checkout.checkout_url` and Stripe handles the hosted payment page.
 
-## Why not let the Stripe service own the raw amount
+## Why not let the Stripe service own the credits
 
-If the frontend passes the raw amount directly into the Stripe service, several problems appear:
+If the frontend passes the credits directly into the Stripe service, several problems appear:
 
-- the amount is easier to tamper with
+- the credits value is easier to tamper with
 - you lose a unified internal topup record
 - success, failure, and expiration become harder to reconcile
 

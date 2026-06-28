@@ -72,8 +72,8 @@ export function build_city_subtitle(
     : t({ zh: "未登录", en: "not signed in" });
   const balance_text = balance
     ? t({
-      zh: ` · 余额 ${balance.balance}`,
-      en: ` · balance ${balance.balance}`,
+      zh: ` · 余额 ${balance.credits}`,
+      en: ` · credits ${balance.credits}`,
     })
     : "";
   return `${membership.federation_url} · ${login_state}${balance_text}`;
@@ -135,9 +135,11 @@ export function format_login_detail(membership: FederationMembershipState): stri
 export function format_balance_detail(account: CityBalanceAccount): string {
   return [
     `{bold}${t({ zh: "余额", en: "Balance" })}{/bold}`,
-    String(account.balance),
+    account.display || String(account.credits),
     "",
     `user: ${account.user_id}`,
+    `credits: ${account.credits}`,
+    ...(typeof account.usd === "number" ? [`usd: ${account.usd}`] : []),
     `created: ${account.created_at}`,
     `updated: ${account.updated_at}`,
   ].join("\n");
@@ -181,7 +183,8 @@ export function format_recharge_result(result: CityRechargeResult): string {
     : "";
   return [
     `{bold}${t({ zh: "充值已创建", en: "Recharge created" })}{/bold}`,
-    `amount: ${result.topup.amount}`,
+    `credits: ${result.topup.credits}`,
+    ...(typeof result.topup.usd_cents === "number" ? [`usd_cents: ${result.topup.usd_cents}`] : []),
     `status: ${result.topup.status}`,
     `topup: ${result.topup.topup_id}`,
     `method: ${result.method_id}`,

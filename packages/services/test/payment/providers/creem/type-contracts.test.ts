@@ -16,7 +16,7 @@ import {
 const readTopup = async (topup_id: string) => ({
   topup_id,
   user_id: "user_1",
-  amount: 100,
+  credits: 100_000_000,
   status: "pending",
   note: "demo",
 });
@@ -24,7 +24,7 @@ const readTopup = async (topup_id: string) => ({
 const finishTopup = async (topup_id: string) => ({
   topup_id,
   user_id: "user_1",
-  amount: 100,
+  credits: 100_000_000,
   status: "paid",
   note: "demo",
 });

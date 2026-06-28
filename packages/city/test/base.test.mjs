@@ -277,7 +277,7 @@ test("AIService charges explicit provider charge lines", async () => {
         async charge(input) {
           charges.push({
             user_id: input.user_id,
-            amount_microcredits: input.amount_microcredits,
+            credits: input.credits,
             note: input.note,
             metadata: input.metadata,
           })
@@ -297,7 +297,7 @@ test("AIService charges explicit provider charge lines", async () => {
             parts: [{ type: "text", text: "ok", state: "done" }],
           },
           charge: {
-            amount_microcredits: 123,
+            credits: 123,
             note: "provider charge",
             metadata: { provider_id: "priced-provider" },
           },
@@ -339,7 +339,7 @@ test("AIService charges explicit provider charge lines", async () => {
     assert.equal((await response.json()).id, "msg_1")
     assert.deepEqual(charges, [{
       user_id: "user_1",
-      amount_microcredits: 123,
+      credits: 123,
       note: "provider charge",
       metadata: { provider_id: "priced-provider" },
     }])
@@ -366,7 +366,7 @@ test("AIService uses provider bill when model bill is not set", async () => {
 
     bill(ctx, output) {
       return {
-        amount_microcredits: 222,
+        credits: 222,
         note: "provider bill",
         ref: output.id,
         metadata: {
@@ -387,7 +387,7 @@ test("AIService uses provider bill when model bill is not set", async () => {
       balance: {
         async charge(input) {
           charges.push({
-            amount_microcredits: input.amount_microcredits,
+            credits: input.credits,
             note: input.note,
             ref: input.ref,
             metadata: input.metadata,
@@ -432,7 +432,7 @@ test("AIService uses provider bill when model bill is not set", async () => {
 
     assert.equal(response.status, 200)
     assert.deepEqual(charges, [{
-      amount_microcredits: 222,
+      credits: 222,
       note: "provider bill",
       ref: "msg_provider_bill",
       metadata: {
@@ -803,7 +803,7 @@ test("AIService lets model bill override provider bill", async () => {
 
     bill() {
       return {
-        amount_microcredits: 222,
+        credits: 222,
         note: "provider bill",
       }
     }
@@ -819,7 +819,7 @@ test("AIService lets model bill override provider bill", async () => {
       balance: {
         async charge(input) {
           charges.push({
-            amount_microcredits: input.amount_microcredits,
+            credits: input.credits,
             note: input.note,
           })
         },
@@ -832,7 +832,7 @@ test("AIService lets model bill override provider bill", async () => {
       default: ["text"],
       bill() {
         return {
-          amount_microcredits: 333,
+          credits: 333,
           note: "model bill",
         }
       },
@@ -868,7 +868,7 @@ test("AIService lets model bill override provider bill", async () => {
 
     assert.equal(response.status, 200)
     assert.deepEqual(charges, [{
-      amount_microcredits: 333,
+      credits: 333,
       note: "model bill",
     }])
   } finally {
@@ -1421,7 +1421,7 @@ test("AIService charges image jobs only after provider result succeeds", async (
       bill(ctx, output) {
         return {
           user_id: output.metadata.user_id,
-          amount_microcredits: 777,
+          credits: 777,
           note: "AI image result",
           ref: output.job_id,
           metadata: {
@@ -1501,7 +1501,7 @@ test("AIService charges image jobs only after provider result succeeds", async (
     assert.equal(resultResponse.status, 200)
     assert.deepEqual(charges, [{
       user_id: "user_1",
-      amount_microcredits: 777,
+      credits: 777,
       note: "AI image result",
       ref: body.job_id,
       metadata: {
@@ -1545,7 +1545,7 @@ test("AIService prefers action charge over model bill", async () => {
       balance: {
         async charge(input) {
           charges.push({
-            amount_microcredits: input.amount_microcredits,
+            credits: input.credits,
             note: input.note,
           })
         },
@@ -1558,7 +1558,7 @@ test("AIService prefers action charge over model bill", async () => {
       default: ["text"],
       bill() {
         return {
-          amount_microcredits: 999,
+          credits: 999,
           note: "model bill",
         }
       },
@@ -1570,7 +1570,7 @@ test("AIService prefers action charge over model bill", async () => {
             parts: [{ type: "text", text: "ok" }],
           },
           charge: {
-            amount_microcredits: 111,
+            credits: 111,
             note: "action charge",
           },
         }),
@@ -1608,7 +1608,7 @@ test("AIService prefers action charge over model bill", async () => {
 
     assert.equal(response.status, 200)
     assert.deepEqual(charges, [{
-      amount_microcredits: 111,
+      credits: 111,
       note: "action charge",
     }])
   } finally {

@@ -24,7 +24,7 @@ That is why the service exposes:
 
 ```ts
 const topup = await user.service("balance").action("topups/create").invoke({
-  amount: 500,
+  credits: 500_000_000,
   note: "manual recharge",
 });
 ```
@@ -49,7 +49,7 @@ It also writes a `topup` ledger entry.
 ## User-side endpoints
 
 - `GET /v1/balance/me`
-  returns user-facing `balance` in credits, plus exact `microcredits`
+  returns user-facing ``credits`, plus `usd`, `display`, and `conversion`
 - `GET /v1/balance/history/me`
 - `GET /v1/balance/topups/me`
 - `POST /v1/balance/topups/create`

@@ -48,7 +48,7 @@ export async function prompt_federation(): Promise<FederationProfile | null> {
   return servers.find((server) => server.federation_url === federation_url) ?? null;
 }
 export async function prompt_recharge_input(): Promise<{
-  amount: number;
+  credits: number;
   method_id?: string;
   note?: string;
   open_checkout?: boolean;
@@ -56,8 +56,8 @@ export async function prompt_recharge_input(): Promise<{
   const response = (await prompts([
     {
       type: "number",
-      name: "amount",
-      message: "充值金额",
+      name: "credits",
+      message: "充值金额（credits，1 USD = 1,000,000 credits）",
       min: 1,
       validate: (value: number) =>
         Number.isInteger(value) && value > 0 ? true : "请输入正整数",
@@ -75,16 +75,16 @@ export async function prompt_recharge_input(): Promise<{
       initial: true,
     },
   ])) as {
-    amount?: number;
+    credits?: number;
     note?: string;
     open_checkout?: boolean;
   };
 
-  const amount = Number(response.amount);
-  if (!Number.isInteger(amount) || amount <= 0) return null;
+  const credits = Number(response.credits);
+  if (!Number.isInteger(credits) || credits <= 0) return null;
 
   return {
-    amount,
+    credits,
     method_id: "stripe",
     note: readCityString(response.note),
     open_checkout: response.open_checkout !== false,

@@ -2,10 +2,9 @@
  * Balance 服务对外类型定义。
  *
  * 关键说明（中文）
- * - 存储与计算使用 microcredits，1 credit = 1_000_000 microcredits
- * - 管理端与内部账务字段使用普通业务名：`balance` / `amount` / `balance_after`
- * - 这些账务字段的数值单位是 microcredits；说明只放在文档里，不放字段名里
- * - 用户侧 `/v1/balance/me` 以 credits 作为主展示单位，并附带 microcredits 与换算信息
+ * - credits 是唯一账务单位，1 USD = 1_000_000 credits
+ * - `credits` / `credits_delta` / `credits_after` 的数值单位均为 credits 整数
+ * - 用户侧 `/v1/balance/me` 以 `credits` 作为主字段，并附带 USD 展示信息
  * - `redeem_code` 是一次性兑换码，用于直接给用户充值
  * - 充值单 `topup` 与 `redeem_code` 是两条不同语义的充值链路
  */
@@ -16,18 +15,9 @@
 export interface BalanceServiceOptions {
   /**
    * 首次自动开户时要发放的初始余额，单位为 credits。
-   *
-   * 默认值为 `0`。允许最多 6 位小数，内部会转成 microcredits。
+   * 默认值为 `0`。
    */
-  init?: number;
-
-  /**
-   * 首次自动开户时要发放的初始余额，单位为 microcredits。
-   *
-   * 设置后优先级高于 `init`。
-   */
-  init_microcredits?: number;
-
+  init_credits?: number;
 }
 
 /**
@@ -84,9 +74,9 @@ export interface BalanceAccount extends Record<string, unknown> {
   user_id: string;
 
   /**
-   * 当前可用余额，单位为 microcredits。
+   * 当前可用余额，单位为 credits。
    */
-  balance: number;
+  credits: number;
 
   /**
    * 账户创建时间。
@@ -100,18 +90,18 @@ export interface BalanceAccount extends Record<string, unknown> {
 }
 
 /**
- * credits 换算说明。
+ * credits 与 USD 换算说明。
  */
 export interface BalanceCreditsConversion extends Record<string, unknown> {
   /**
-   * 一个 credit 对应多少 microcredits。
+   * 1 USD 对应多少 credits。
    */
-  microcredits_per_credit: number;
+  credits_per_usd: number;
 
   /**
-   * credits 最多保留的小数位数。
+   * USD 展示最多保留的小数位数。
    */
-  credit_decimals: number;
+  usd_decimals: number;
 }
 
 /**
@@ -126,7 +116,7 @@ export interface BalanceUserBalance extends Record<string, unknown> {
   /**
    * 当前余额，单位为 credits。
    */
-  balance: number;
+  credits: number;
 
   /**
    * 主余额字段的单位。
@@ -134,17 +124,17 @@ export interface BalanceUserBalance extends Record<string, unknown> {
   unit: "credits";
 
   /**
-   * 对应的原始 microcredits 整数。
+   * 当前余额换算后的 USD 数字。
    */
-  microcredits: number;
+  usd: number;
 
   /**
-   * credits 与 microcredits 的换算说明。
+   * credits 与 USD 的换算说明。
    */
   conversion: BalanceCreditsConversion;
 
   /**
-   * 适合直接展示给用户的 credits 文本。
+   * 适合直接展示给用户的 USD 文本。
    */
   display: string;
 
@@ -179,18 +169,18 @@ export interface BalanceLedgerEntry extends Record<string, unknown> {
   kind: BalanceLedgerKind;
 
   /**
-   * 本次变动金额，单位为 microcredits。
+   * 本次变动的 credits。
    *
    * 约定：
    * - 加款为正数
    * - 扣款为负数
    */
-  amount: number;
+  credits_delta: number;
 
   /**
-   * 本次变动后的余额快照，单位为 microcredits。
+   * 本次变动后的余额快照，单位为 credits。
    */
-  balance_after: number;
+  credits_after: number;
 
   /**
    * 流水说明。
@@ -228,14 +218,14 @@ export interface BalanceTopup extends Record<string, unknown> {
   user_id: string;
 
   /**
-   * 充值金额，单位为 microcredits。
+   * 充值额度，单位为 credits。
    */
-  amount: number;
+  credits: number;
 
   /**
    * 充值金额，单位为 USD cents。
    */
-  amount_usd_cents: number;
+  usd_cents: number;
 
   /**
    * 当前状态。
@@ -278,9 +268,9 @@ export interface BalanceRedeemCode extends Record<string, unknown> {
   redeem_code_id: string;
 
   /**
-   * 充值金额，单位为 microcredits。
+   * 充值额度，单位为 credits。
    */
-  amount: number;
+  credits: number;
 
   /**
    * 当前状态。
@@ -338,10 +328,8 @@ export interface BalanceRedeemCode extends Record<string, unknown> {
 export interface BalanceCreateRedeemCodeInput extends BalanceExtra {
   /**
    * 兑换成功后要充值到用户账户的额度，单位为 credits。
-   *
-   * 服务内部会转换成 microcredits 存储。
    */
-  amount: number;
+  credits: number;
 
   /**
    * 可选自定义兑换码明文。
@@ -388,9 +376,9 @@ export interface BalanceChargeInput extends BalanceExtra {
   user_id: string;
 
   /**
-   * 扣费金额，单位为 microcredits。
+   * 扣费额度，单位为 credits。
    */
-  amount_microcredits: number;
+  credits: number;
 
   /**
    * 结构化扣费审计信息。
@@ -416,14 +404,9 @@ export interface BalanceCharge extends Record<string, unknown> {
   user_id: string;
 
   /**
-   * 扣费金额，单位为 credits。
+   * 扣费额度，单位为 credits。
    */
-  amount: number;
-
-  /**
-   * 扣费金额，单位为 microcredits。
-   */
-  amount_microcredits: number;
+  credits: number;
 
   /**
    * 扣费状态。

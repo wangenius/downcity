@@ -37,10 +37,10 @@ export interface PaymentTopupRecord extends Record<string, unknown> {
   topup_id: string;
   /** 充值目标用户 ID。 */
   user_id: string;
-  /** 充值金额，单位为 microcredits。 */
-  amount: number;
+  /** 充值额度，单位为 credits。 */
+  credits: number;
   /** 充值金额，单位为 USD cents，用于支付 provider。 */
-  amount_usd_cents?: number;
+  usd_cents?: number;
   /** 充值单状态。 */
   status: string;
   /** 充值说明。 */
@@ -245,8 +245,8 @@ export interface PaymentRecord extends Record<string, unknown> {
   provider_payment_id: string;
   /** provider order ID。 */
   provider_order_id: string;
-  /** 本次充值金额。 */
-  amount: number;
+  /** 本次充值额度，单位为 credits。 */
+  credits: number;
   /** 结算币种。 */
   currency: string;
   /** 当前支付状态。 */

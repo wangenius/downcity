@@ -1147,7 +1147,7 @@ export class AIService extends Service {
     ctx.locals.ai_charge_handled = true;
     const promise = Promise.resolve(charge)
       .then(async (line) => {
-        if (!line || line.amount_microcredits <= 0) return;
+        if (!line || line.credits <= 0) return;
         const user_id = line.user_id ?? ctx.user?.user_id;
         if (!user_id) return;
         await this.balance?.charge({

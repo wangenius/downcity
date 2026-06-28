@@ -20,7 +20,7 @@ export const paymentPayments = sqliteTable("service_payment_payments", {
   provider_session_id: text("provider_session_id").notNull(),
   provider_payment_id: text("provider_payment_id").notNull(),
   provider_order_id: text("provider_order_id").notNull(),
-  amount: integer("amount").notNull(),
+  credits: integer("credits").notNull(),
   currency: text("currency").notNull(),
   status: text("status").notNull(),
   checkout_url: text("checkout_url").notNull(),

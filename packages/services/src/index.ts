@@ -58,12 +58,11 @@ export type {
   BalanceUserBalance,
 } from "./balance/types.js";
 export {
-  CREDIT_DECIMAL_PLACES,
-  MICROCREDITS_PER_CREDIT,
+  CREDITS_PER_USD,
+  USD_DECIMAL_PLACES,
 } from "./types/Amount.js";
 export type {
   Credits,
-  Microcredits,
 } from "./types/Amount.js";
 
 export {

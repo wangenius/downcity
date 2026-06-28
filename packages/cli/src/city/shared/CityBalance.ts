@@ -1,5 +1,5 @@
 /**
- * City City user 余额与充值流程。
+ * City user 余额与充值流程。
  *
  * 关键点（中文）
  * - 只面向当前 City 已登录的 City user，不提供 admin 加款入口。
@@ -22,7 +22,7 @@ const DEFAULT_PAYMENT_METHOD_ID = "stripe";
 const cityUserManager = new CityUserManager();
 
 /**
- * 读取当前 City City user 的余额。
+ * 读取当前 City user 的余额。
  */
 export async function readCurrentCityBalance(): Promise<CityBalanceAccount> {
   const { user, client } = await cityUserManager.createUserClient();
@@ -32,16 +32,16 @@ export async function readCurrentCityBalance(): Promise<CityBalanceAccount> {
 }
 
 /**
- * 给当前 City City user 发起充值。
+ * 给当前 City user 发起充值。
  */
 export async function rechargeCurrentCityUser(
   input: CityRechargeInput,
 ): Promise<CityRechargeResult> {
   const { client } = await cityUserManager.createUserClient();
-  const amount = normalizePositiveInteger(input.amount, "amount");
+  const credits = normalizePositiveInteger(input.credits, "credits");
   const method_id = normalizeText(input.method_id) || DEFAULT_PAYMENT_METHOD_ID;
   const topup = await client.service("balance").action("topups/create").invoke<CityBalanceTopup>({
-    amount,
+    credits,
     note: normalizeText(input.note) || "City user recharge",
     ref: normalizeText(input.ref),
     meta: {
@@ -90,10 +90,11 @@ export async function emitCurrentCityBalance(): Promise<void> {
   emitCliBlock({
     tone: "success",
     title: "User balance",
-    summary: String(account.balance),
+    summary: account.display || String(account.credits),
     facts: [
       { label: "user", value: account.user_id },
-      { label: "balance", value: String(account.balance) },
+      { label: "credits", value: String(account.credits) },
+      ...(typeof account.usd === "number" ? [{ label: "usd", value: String(account.usd) }] : []),
       { label: "updated", value: account.updated_at },
     ],
   });
@@ -109,7 +110,10 @@ export function emitCityRechargeResult(result: CityRechargeResult): void {
     title: "User recharge",
     summary: result.topup.status,
     facts: [
-      { label: "amount", value: String(result.topup.amount) },
+      { label: "credits", value: String(result.topup.credits) },
+      ...(typeof result.topup.usd_cents === "number"
+        ? [{ label: "usd_cents", value: String(result.topup.usd_cents) }]
+        : []),
       { label: "topup", value: result.topup.topup_id },
       { label: "method", value: result.method_id },
       ...(result.checkout.payment_id
@@ -125,11 +129,11 @@ export function emitCityRechargeResult(result: CityRechargeResult): void {
 }
 
 function normalizePositiveInteger(value: unknown, label: string): number {
-  const amount = typeof value === "number" ? value : Number(value);
-  if (!Number.isInteger(amount) || amount <= 0) {
+  const credits = typeof value === "number" ? value : Number(value);
+  if (!Number.isInteger(credits) || credits <= 0) {
     throw new TypeError(`${label} must be a positive integer`);
   }
-  return amount;
+  return credits;
 }
 
 function normalizeText(value: unknown): string {

@@ -1,9 +1,9 @@
 /**
- * City City user 余额与充值类型。
+ * City user 余额与充值类型。
  *
  * 关键点（中文）
  * - 这些类型只描述 City CLI 用户侧展示与调用结果。
- * - `balance` / `amount` 的数值单位是 microcredits。
+ * - `credits` / `usd_cents` 的数值单位清晰表达在字段名中。
  * - 真实余额账户、充值单与支付记录仍由 City 的 balance/payment 服务定义。
  */
 
@@ -17,9 +17,19 @@ export interface CityBalanceAccount extends Record<string, unknown> {
   user_id: string;
 
   /**
-   * 当前可用余额，单位为 microcredits。
+   * 当前可用余额，单位为 credits。
    */
-  balance: number;
+  credits: number;
+
+  /**
+   * 当前余额换算后的 USD 数字。
+   */
+  usd?: number;
+
+  /**
+   * 适合直接展示给用户的余额文本。
+   */
+  display?: string;
 
   /**
    * 账户创建时间。
@@ -47,9 +57,14 @@ export interface CityBalanceTopup extends Record<string, unknown> {
   user_id: string;
 
   /**
-   * 充值金额。
+   * 充值额度，单位为 credits。
    */
-  amount: number;
+  credits: number;
+
+  /**
+   * 充值金额，单位为 USD cents。
+   */
+  usd_cents?: number;
 
   /**
    * 充值单状态。
@@ -142,9 +157,9 @@ export interface CityRechargeResult {
  */
 export interface CityRechargeInput {
   /**
-   * 充值金额。
+   * 充值额度，单位为 credits。
    */
-  amount: number;
+  credits: number;
 
   /**
    * 支付方式 ID。

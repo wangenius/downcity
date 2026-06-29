@@ -490,9 +490,7 @@ export class Executor implements SessionExecutor {
   private resolveModelOrThrow(): LanguageModel {
     const model = this.getModel();
     if (!model) {
-      throw new Error(
-        `Executor for session "${this.sessionId}" requires a configured model. Pass model to new Agent({ model }) or call session.set({ model }) before execution.`,
-      );
+      throw new Error("requires a configured model.");
     }
     return model;
   }

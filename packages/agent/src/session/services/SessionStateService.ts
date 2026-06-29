@@ -196,9 +196,7 @@ export class SessionStateService {
   async ensure_runnable(): Promise<void> {
     await this.ensure_ready_for_execution();
     if (!this.state.sessionConfig.model) {
-      throw new Error(
-        `Session "${this.session_id}" requires a configured model. Pass model to new Agent({ model }) or call session.set({ model }) first.`,
-      );
+      throw new Error("requires a configured model.");
     }
   }
 

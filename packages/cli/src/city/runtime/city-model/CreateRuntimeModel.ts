@@ -7,11 +7,11 @@
  * - 真实 provider、密钥、endpoint 与模型实现都由 City 的 AIService 负责。
  */
 
-import type { DowncityConfig } from "@downcity/agent";
 import { getLogger } from "@downcity/agent";
 import { normalizeAgentModel } from "@downcity/agent/internal/model/CityModelAdapter.js";
 import type { LanguageModel } from "ai";
 import { createCityAiAgentModel } from "@/city/runtime/city-model/CityAiServiceBinding.js";
+import type { StoredAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
 
 type ModelLogContext = {
   /**
@@ -22,13 +22,13 @@ type ModelLogContext = {
 
 type RuntimeModelFactoryInput = {
   /**
-   * 当前项目配置。
+   * 当前 agent 配置。
    *
    * 关键点（中文）
    * - 这里只读取 `execution.modelId`。
    * - 模型能力目录来自 City AIService。
    */
-  config: DowncityConfig;
+  config: StoredAgentConfig;
 
   /**
    * 可选 session run scope。
@@ -63,7 +63,7 @@ function normalizeRuntimeEnv(
 }
 
 function readProjectExecutionBinding(
-  config: DowncityConfig,
+  config: StoredAgentConfig,
 ): { type: "api"; modelId: string } | null {
   const execution = config.execution;
   if (!execution || typeof execution !== "object") return null;

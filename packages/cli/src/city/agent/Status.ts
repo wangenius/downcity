@@ -13,8 +13,9 @@ import {
   readDaemonMeta,
   readDaemonPid,
 } from "@/city/process/daemon/Manager.js";
-import { getProfileMdPath, getDowncityJsonPath } from "@/city/config/Paths.js";
+import { getProfileMdPath } from "@/city/config/Paths.js";
 import { emitCliBlock } from "@/shared/CliReporter.js";
+import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
 
 /**
  * daemon 状态查询入口。
@@ -31,8 +32,8 @@ export async function statusCommand(cwd: string = "."): Promise<void> {
   if (!fs.existsSync(getProfileMdPath(projectRoot))) {
     missingInitFiles.push("PROFILE.md");
   }
-  if (!fs.existsSync(getDowncityJsonPath(projectRoot))) {
-    missingInitFiles.push("downcity.json");
+  if (!readAgentConfig(projectRoot)) {
+    missingInitFiles.push("global DB agent config");
   }
 
   const pid = await readDaemonPid(projectRoot);

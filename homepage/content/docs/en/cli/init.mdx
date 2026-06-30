@@ -5,19 +5,18 @@ description: How to create and initialize a new Agent project with the CLI
 
 # Project Init
 
-The `downcity agent init` command creates a new Agent project with the minimum files needed to run.
+The `city agent create` command creates a new Agent project with the minimum files needed to run and stores agent config in the CLI global DB.
 
 ## Basic usage
 
 ```bash
-downcity agent init my-project
+city agent create my-project
 ```
 
 This creates:
 
 ```text
 my-project/
-├── downcity.json
 ├── PROFILE.md
 ├── SOUL.md
 ├── .downcity/
@@ -26,32 +25,26 @@ my-project/
 
 ## Generated files
 
-- `downcity.json` — project configuration. See [downcity.json](/en/docs/cli/downcity-json).
 - `PROFILE.md` — the agent's visible role and response style. See [Profile](/en/docs/cli/profile).
 - `SOUL.md` — deeper, long-term operating principles. See [Profile](/en/docs/cli/profile).
 - `.downcity/` — runtime data directory (sessions, logs, cache).
 - `.env` — environment variables for the project.
+- Agent config in the CLI global DB — agent ID, model binding, startup options, and plugin options.
 
 ## Options
 
 ```bash
-# Initialize with a specific template
-downcity agent init my-project --template chatbot
-
-# Skip creating default files
-downcity agent init my-project --minimal
-
-# Specify a custom directory
-downcity agent init my-project --dir ./projects
+# Allow overwriting existing Agent config
+city agent create my-project --force
 ```
 
 ## After init
 
-1. Edit `downcity.json` to set your agent ID and model binding.
-2. Edit `PROFILE.md` and `SOUL.md` to shape behavior.
-3. Run `downcity agent start` to start the agent.
+1. Edit `PROFILE.md` and `SOUL.md` to shape behavior.
+2. Use `city agent config` or the interactive `city agent` manager for model, port, and chat account binding.
+3. Run `city agent start` to start the agent.
 
 Continue with:
 
 - [Project Structure](/en/docs/cli/project)
-- [downcity.json](/en/docs/cli/downcity-json)
+- [legacy downcity.json](/en/docs/cli/downcity-json)

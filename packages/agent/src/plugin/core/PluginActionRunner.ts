@@ -1,106 +1,56 @@
 /**
- * PluginActionRunner：主动型 plugin action/command 执行模块。
+ * PluginActionRunner：plugin command/action 兼容执行模块。
+ *
+ * 关键点（中文）
+ * - 新模型中注册即生效，不再要求 plugin 处于 running 状态。
+ * - `command` 仅作为 CLI/RPC 对 action 的兼容入口；优先执行同名 action。
+ * - 延迟调度仍复用本模块，保证 schedule 到点后走统一 action 规则。
  */
 
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
-import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
 import type {
   PluginAction,
   PluginActionResult,
   PluginCommandResult,
-  PluginStateControlAction,
   PluginStateSnapshot,
 } from "@/plugin/types/Plugin.js";
 import type { PluginActionScheduleInput } from "@/plugin/types/ActionSchedule.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import { ActionScheduleStore } from "@/plugin/core/ActionScheduleStore.js";
 import { normalizeRunAtMsOrThrow } from "@/plugin/core/ActionScheduleTime.js";
-import {
-  controlPluginState,
-  ensurePluginStateRecord,
-  markPluginCommand,
-  markPluginState,
-  resolvePluginByName,
-  toPluginStateSnapshot,
-} from "@/plugin/core/PluginStateController.js";
-
-function resolveLifecycle(plugin: BasePlugin) {
-  return plugin.lifecycle;
-}
 
 /**
- * 按名称解析主动型 plugin action。
+ * 按名称解析 plugin action。
  */
 export function resolvePluginAction(
-  plugin: BasePlugin,
+  plugin: {
+    actions?: Record<string, PluginAction<JsonValue, JsonValue>>;
+  },
   actionName: string,
 ): PluginAction<JsonValue, JsonValue> | null {
   const key = String(actionName || "").trim();
   if (!key) return null;
-  return plugin.actions[key] || null;
+  return plugin.actions?.[key] || null;
 }
 
 /**
- * 执行一个主动型 plugin action。
+ * 执行一个 plugin action。
  */
 export async function invokePluginAction(params: {
-  plugin: BasePlugin;
+  pluginName: string;
   actionName: string;
   payload?: JsonValue;
   context: AgentContext;
 }): Promise<PluginActionResult<JsonValue>> {
-  const action = resolvePluginAction(params.plugin, params.actionName);
-  if (!action) {
-    return {
-      success: false,
-      error: `Plugin "${params.plugin.name}" does not implement action "${params.actionName}"`,
-    };
-  }
-
-  try {
-    const payload = (params.payload ?? {}) as JsonValue;
-    const schema = action.input_schema?.zod;
-    const parsed_payload = schema ? schema.safeParse(payload) : null;
-    if (parsed_payload && !parsed_payload.success) {
-      return {
-        success: false,
-        error: `Invalid payload for ${params.plugin.name}.${params.actionName}: ${parsed_payload.error.message}`,
-      };
-    }
-    const input_payload = parsed_payload?.success
-      ? parsed_payload.data as JsonValue
-      : payload;
-    return await action.execute({
-      context: params.context,
-      payload: input_payload,
-      input: input_payload,
-      pluginName: params.plugin.name,
-      actionName: params.actionName,
-    });
-  } catch (error) {
-    return {
-      success: false,
-      error: String(error),
-    };
-  }
-}
-
-function toControlCommandAction(
-  command: string,
-): PluginStateControlAction | null {
-  if (
-    command === "status" ||
-    command === "start" ||
-    command === "stop" ||
-    command === "restart"
-  ) {
-    return command;
-  }
-  return null;
+  return await params.context.plugins.runAction({
+    plugin: params.pluginName,
+    action: params.actionName,
+    payload: params.payload,
+  });
 }
 
 async function schedulePluginAction(params: {
-  plugin: BasePlugin;
+  pluginName: string;
   command: string;
   payload?: JsonValue;
   schedule: JsonValue | PluginActionScheduleInput;
@@ -116,7 +66,7 @@ async function schedulePluginAction(params: {
     const store = new ActionScheduleStore(params.context.rootPath);
     try {
       const job = store.createJob({
-        pluginName: params.plugin.name,
+        pluginName: params.pluginName,
         actionName: params.command,
         payload: params.payload ?? null,
         runAtMs,
@@ -144,7 +94,7 @@ async function schedulePluginAction(params: {
 }
 
 /**
- * 统一执行主动型 plugin command。
+ * 统一执行 plugin command。
  */
 export async function runPluginCommand(params: {
   pluginName: string;
@@ -153,104 +103,74 @@ export async function runPluginCommand(params: {
   schedule?: JsonValue | PluginActionScheduleInput;
   context: AgentContext;
 }): Promise<PluginCommandResult & { plugin?: PluginStateSnapshot }> {
-  const plugin = resolvePluginByName(params.pluginName, {
-    context: params.context,
-  });
-  if (!plugin) {
+  const pluginName = String(params.pluginName || "").trim();
+  const command = String(params.command || "")
+    .trim()
+    .toLowerCase();
+  const plugin = params.context.plugins.get(pluginName);
+  const snapshot = params.context.plugins.status(pluginName) || undefined;
+
+  if (!plugin || !snapshot) {
     return {
       success: false,
       message: `Unknown plugin: ${params.pluginName}`,
     };
   }
 
-  const record = ensurePluginStateRecord(plugin);
-  const command = String(params.command || "")
-    .trim()
-    .toLowerCase();
   if (!command) {
     return {
       success: false,
-      plugin: toPluginStateSnapshot(record, plugin),
+      plugin: snapshot,
       message: "command is required",
     };
   }
 
-  markPluginCommand(record, command);
+  if (command === "status") {
+    return {
+      success: true,
+      plugin: snapshot,
+    };
+  }
 
   const action = resolvePluginAction(plugin, command);
   if (params.schedule !== undefined && params.schedule !== null) {
     if (!action) {
       return {
         success: false,
-        plugin: toPluginStateSnapshot(record, plugin),
+        plugin: snapshot,
         message: `Scheduling only supports plugin actions. "${plugin.name}.${command}" is not a schedulable action.`,
       };
     }
 
     return await schedulePluginAction({
-      plugin,
+      pluginName: plugin.name,
       command,
       payload: params.payload,
       schedule: params.schedule,
-      recordSnapshot: toPluginStateSnapshot(record, plugin),
+      recordSnapshot: snapshot,
       context: params.context,
     });
   }
 
   if (action) {
-    if (record.state !== "running") {
-      return {
-        success: false,
-        plugin: toPluginStateSnapshot(record, plugin),
-        message: `Plugin "${plugin.name}" is not running`,
-      };
-    }
-
-    const result = await invokePluginAction({
-      plugin,
-      actionName: command,
+    const result = await params.context.plugins.runAction({
+      plugin: plugin.name,
+      action: command,
       payload: params.payload,
-      context: params.context,
     });
 
-    if (!result.success) {
-      return {
-        success: false,
-        plugin: toPluginStateSnapshot(record, plugin),
-        message: result.error || "plugin action failed",
-      };
-    }
-
-    return {
-      success: true,
-      plugin: toPluginStateSnapshot(record, plugin),
-      ...(result.data !== undefined ? { data: result.data } : {}),
-    };
-  }
-
-  const controlAction = toControlCommandAction(command);
-  if (controlAction) {
-    const result = await controlPluginState({
-      pluginName: plugin.name,
-      action: controlAction,
-      context: params.context,
-    });
     return {
       success: result.success,
-      ...(result.plugin ? { plugin: result.plugin } : {}),
-      ...(result.error ? { message: result.error } : {}),
+      plugin: params.context.plugins.status(plugin.name) || snapshot,
+      ...(result.message || result.error
+        ? { message: result.message || result.error }
+        : {}),
+      ...(result.data !== undefined ? { data: result.data } : {}),
+      ...(result.error ? { error: result.error } : {}),
     };
   }
 
-  if (record.state !== "running") {
-    return {
-      success: false,
-      plugin: toPluginStateSnapshot(record, plugin),
-      message: `Plugin "${plugin.name}" is not running`,
-    };
-  }
-
-  const handler = resolveLifecycle(plugin)?.command;
+  const handler = plugin.lifecycle?.command;
   if (handler) {
     try {
       const result = await handler({
@@ -260,13 +180,12 @@ export async function runPluginCommand(params: {
       });
       return {
         ...result,
-        plugin: toPluginStateSnapshot(record, plugin),
+        plugin: params.context.plugins.status(plugin.name) || snapshot,
       };
     } catch (error) {
-      markPluginState(record, "error", String(error));
       return {
         success: false,
-        plugin: toPluginStateSnapshot(record, plugin),
+        plugin: params.context.plugins.status(plugin.name) || snapshot,
         message: String(error),
       };
     }
@@ -274,7 +193,7 @@ export async function runPluginCommand(params: {
 
   return {
     success: false,
-    plugin: toPluginStateSnapshot(record, plugin),
+    plugin: snapshot,
     message: `Plugin "${plugin.name}" does not implement command "${command}"`,
   };
 }

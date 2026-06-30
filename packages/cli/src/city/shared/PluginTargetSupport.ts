@@ -10,7 +10,7 @@
 
 import path from "node:path";
 import fs from "node:fs";
-import { getProfileMdPath, getDowncityJsonPath } from "@/city/config/Paths.js";
+import { getProfileMdPath } from "@/city/config/Paths.js";
 import { listManagedAgentEntries } from "@/city/process/registry/CityRegistry.js";
 import type { JsonValue } from "@downcity/agent";
 import { resolveAgentId } from "@/shared/IndexSupport.js";
@@ -57,7 +57,7 @@ export async function checkShellSandboxHostPreflight(): Promise<void> {
  *
  * 关键点（中文）
  * - 收敛 start/restart/status 等命令的前置校验逻辑。
- * - 按顺序检查，首个失败即抛 CliError（sandbox → PROFILE.md → downcity.json → binding）。
+ * - 按顺序检查，首个失败即抛 CliError（sandbox → PROFILE.md → DB config → binding）。
  *
  * @throws {CliError} 任一校验失败时抛出。
  */
@@ -74,15 +74,6 @@ export async function checkAgentPreflight(
     throw new CliError({
       title: "Project not initialized",
       note: `PROFILE.md not found at ${projectRoot}`,
-      fix: "city agent create",
-    });
-  }
-
-  const downcityJsonPath = getDowncityJsonPath(projectRoot);
-  if (!fs.existsSync(downcityJsonPath)) {
-    throw new CliError({
-      title: "downcity.json not found",
-      note: `project: ${projectRoot}`,
       fix: "city agent create",
     });
   }
@@ -235,9 +226,6 @@ export async function resolvePluginScheduleProjectRoot(options: PluginCliBaseOpt
  */
 export function validateAgentProjectRoot(projectRoot: string): string | null {
   const missing: string[] = [];
-  if (!fs.existsSync(getDowncityJsonPath(projectRoot))) {
-    missing.push("downcity.json");
-  }
   if (!fs.existsSync(getProfileMdPath(projectRoot))) {
     missing.push("PROFILE.md");
   }

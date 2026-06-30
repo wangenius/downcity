@@ -7,7 +7,7 @@ description: "Understand Ship's current chat user authorization model"
 
 The user-facing permission system in the current version is `chat user authorization`.
 
-Project `downcity.json` no longer exposes a separate `permissions` block.
+Agent config no longer exposes a separate `permissions` block.
 
 Runtime execution boundaries follow the built-in behavior of the current release, while chat authorization controls who can talk to the agent and what they can do.
 
@@ -33,7 +33,7 @@ There is no special `master` or `owner` identity in this model. Everything is ha
 
 ### Where it is stored
 
-Chat user authorization is not written back to project `downcity.json`.
+Chat user authorization is not written back into the Agent project directory.
 
 It is stored in the city-global `~/.downcity/downcity.db`, which keeps permission management centralized and avoids exposing user authorization in plaintext project config. A role assigned to the same `telegram:12345678`, `feishu:ou_xxx`, or `qq:123456` principal applies across agents connected to that platform.
 

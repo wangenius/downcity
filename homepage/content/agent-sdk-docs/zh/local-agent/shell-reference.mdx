@@ -48,7 +48,7 @@ const agent = new Agent({
 
 ## 沙箱
 
-沙箱通过项目 `downcity.json` 配置，运行时由 SDK 自动解析。沙箱后端会根据宿主平台自动选择：
+沙箱通过宿主传入的 Agent 配置或 Shell 构造参数配置。沙箱后端会根据宿主平台自动选择：
 
 - `macos-seatbelt` — macOS 沙箱
 - `linux-bubblewrap` — Linux 沙箱

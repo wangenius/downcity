@@ -2,7 +2,7 @@
  * ProjectSetup：本地 Agent 启动前项目结构准备模块。
  *
  * 关键点（中文）
- * - 统一校验初始化必要文件（PROFILE.md / downcity.json）。
+ * - 统一校验初始化必要文件（PROFILE.md）。
  * - 统一确保 `.downcity/*` 目录结构存在，避免调用方重复拼装目录逻辑。
  */
 
@@ -17,7 +17,6 @@ import {
   getDowncityDataDirPath,
   getDowncityDebugDirPath,
   getDowncityDirPath,
-  getDowncityJsonPath,
   getDowncityProfileDirPath,
   getDowncityPublicDirPath,
   getDowncityTasksDirPath,
@@ -35,12 +34,6 @@ function ensureContextFiles(projectRoot: string): void {
     process.exit(1);
   }
 
-  if (!fs.existsSync(getDowncityJsonPath(projectRoot))) {
-    console.error(
-      '❌ downcity.json does not exist. Please run "downcity agent create" first',
-    );
-    process.exit(1);
-  }
 }
 
 /**

@@ -13,7 +13,6 @@
 import path from "node:path";
 import {
   Agent,
-  loadDowncityConfig,
   loadStaticSystemPrompts,
   StaticPromptCatalog,
 } from "@downcity/agent";
@@ -26,13 +25,14 @@ import { mergeProcessEnvWithPlatformGlobalEnv } from "@/city/env/ProcessEnv.js";
 import { resolveAgentId } from "@/shared/IndexSupport.js";
 import { startAgentHttpGateway } from "@/city/agent/AgentHttpGateway.js";
 import { createCityBuiltinPlugins } from "@/city/runtime/plugins/CityBuiltinPlugins.js";
+import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
 
 /**
  * 前台启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
  *
  * 职责（中文）
  * - 初始化 agent 状态（配置、日志、services 依赖）
- * - 解析并合并启动参数（CLI > downcity.json > 默认值）
+ * - 解析并合并启动参数（CLI > 全局 DB agent config > 默认值）
  * - 启动 agent 本机 RPC 与 City 托管的 HTTP gateway（双端口）
  * - 启动 services（例如 task cron）
  * - 统一处理进程信号并优雅停机
@@ -59,11 +59,18 @@ export async function runCommand(
     }
     return num;
   };
+  const config = readAgentConfig(projectRoot);
+  if (!config) {
+    throw new CliError({
+      title: "Agent config not found",
+      note: "Run `city agent create` first.",
+    });
+  }
   // Resolve startup options: CLI flags override built-in defaults.
   let port: number;
   let rpc_port: number;
   try {
-    port = parsePort(options.port, "port") ?? 5314;
+    port = parsePort(options.port, "port") ?? config.start?.port ?? 5314;
     rpc_port = parsePort(options.rpcPort, "rpcPort") ?? 15314;
   } catch (error) {
     throw new CliError({
@@ -78,11 +85,10 @@ export async function runCommand(
     });
   }
 
-  const host = (options.host ?? "0.0.0.0").trim();
+  const host = (options.host ?? config.start?.host ?? "0.0.0.0").trim();
   const rpc_host = "127.0.0.1";
-  const agentId = resolveAgentId(projectRoot);
+  const agentId = config.id || resolveAgentId(projectRoot);
   let currentSystems = loadStaticSystemPrompts(projectRoot);
-  const config = loadDowncityConfig(projectRoot);
   const model = await createRuntimeModel({
     config,
     env: hostEnv,
@@ -99,6 +105,7 @@ export async function runCommand(
     plugins,
     model,
     env: hostEnv,
+    config,
   });
 
   const promptCatalog = new StaticPromptCatalog({

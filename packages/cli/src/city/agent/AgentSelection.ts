@@ -10,7 +10,7 @@
 import { existsSync } from "fs";
 import { resolve } from "path";
 import prompts from "@/city/tui/Prompts.js";
-import { getDowncityJsonPath, getProfileMdPath } from "@/city/config/Paths.js";
+import { getProfileMdPath } from "@/city/config/Paths.js";
 import { listManagedAgentEntries } from "@/city/process/registry/CityRegistry.js";
 import type { ManagedAgentRegistryEntry } from "@downcity/agent";
 import type {
@@ -24,12 +24,13 @@ import { printResult } from "@/city/utils/cli/CliOutput.js";
 import { CliError } from "@/shared/CliError.js";
 import { resolveAgentId } from "@/shared/IndexSupport.js";
 import { resolveRunningManagedAgents } from "@/city/shared/CityAgentRuntime.js";
+import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
 
 /**
  * 判断一个目录是否已经满足最小 agent 初始化条件。
  */
 function isInitializedAgentProject(projectRoot: string): boolean {
-  return existsSync(getProfileMdPath(projectRoot)) && existsSync(getDowncityJsonPath(projectRoot));
+  return existsSync(getProfileMdPath(projectRoot)) && Boolean(readAgentConfig(projectRoot));
 }
 
 /**

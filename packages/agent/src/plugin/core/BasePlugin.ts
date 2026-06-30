@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 主动运行型能力与被动扩展型能力统一收敛到 plugin 概念。
  * - plugin 的长期状态归属于实例本身，而不是模块级单例。
- * - 旧生命周期模型暂时通过 `lifecycle` 兼容，后续可逐步收敛到 `start/stop/command`。
+ * - Agent 注册 plugin 时自动启动 lifecycle；卸载时自动停止 lifecycle。
  */
 
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
@@ -19,9 +19,9 @@ import type {
   PluginLifecycle,
   PluginResolves,
   PluginSetupDefinition,
-  PluginStateRecord,
   PluginUsageDefinition,
 } from "@/plugin/types/Plugin.js";
+import type { PluginRuntimeRecord } from "@/types/plugin/PluginState.js";
 import type { StructuredConfig } from "@/types/runtime/agent/AgentContext.js";
 
 /**
@@ -29,12 +29,15 @@ import type { StructuredConfig } from "@/types/runtime/agent/AgentContext.js";
  */
 export abstract class BasePlugin implements Plugin {
   /**
-   * 当前实例持有的通用 plugin 运行状态记录。
+   * 当前实例持有的 plugin 注册状态记录。
    */
-  public readonly pluginStateRecord: PluginStateRecord = {
-    state: "stopped",
-    updatedAt: Date.now(),
+  public readonly pluginStateRecord: PluginRuntimeRecord = {
+    plugin: this,
+    state: "ready",
+    registered_at: Date.now(),
+    updated_at: Date.now(),
     chain: Promise.resolve(),
+    lifecycle_started: false,
   };
 
   /**

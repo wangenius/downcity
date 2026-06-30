@@ -1,26 +1,26 @@
 /**
- * Plugin 激活判定工具。
+ * Plugin 激活兼容工具。
  *
  * 关键点（中文）
- * - 统一收敛“某个 plugin 在当前项目配置下是否启用”的规则。
- * - plugin 启用态直接来自项目 `downcity.json` 的 `plugins.<name>.enabled`。
+ * - 新模型不再读取 `downcity.json.plugins.<name>.enabled`。
+ * - 传入 plugin 本身就表示调用方希望它可见；Agent runtime 以注册表作为真实边界。
+ * - 该函数仅为旧内部集成保留，后续应优先使用 `context.plugins.has/status`。
  */
 
-import { readProjectPluginEnabled } from "@/plugin/core/ProjectConfigStore.js";
 import type { Plugin } from "@/plugin/types/Plugin.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 
 /**
- * 读取当前项目配置下的 plugin 启用态。
+ * 判断当前 plugin 是否可被视为启用。
  */
 export function isPluginEnabled(params: {
   plugin: Plugin;
-  context?: Pick<AgentContext, "config">;
+  context?: Pick<AgentContext, "plugins">;
 }): boolean {
   const pluginName = String(params.plugin.name || "").trim();
   if (!pluginName) return false;
-  return readProjectPluginEnabled({
-    pluginName,
-    config: params.context?.config,
-  });
+  if (params.context?.plugins) {
+    return params.context.plugins.status(pluginName)?.status === "ready";
+  }
+  return true;
 }

@@ -3,7 +3,7 @@
  *
  * 职责说明：
  * 1. 提供 plugin catalog / state / availability 接口。
- * 2. 提供 plugin lifecycle 控制接口。
+ * 2. 提供 plugin 注册状态查询与卸载接口。
  * 3. 提供 plugin command / action 桥接接口。
  */
 
@@ -45,9 +45,7 @@ export function createPluginsRouter(
   router.get("/api/plugins/list", (c) => {
     return c.json({
       success: true,
-      plugins: listPluginStates({
-        context: options.getAgentContext(),
-      }),
+      plugins: listPluginStates({ context: options.getAgentContext() }),
     });
   });
 
@@ -64,7 +62,7 @@ export function createPluginsRouter(
     if (!action) {
       return c.json({ success: false, error: "action is required" }, 400);
     }
-    if (!["start", "stop", "restart", "status"].includes(action)) {
+    if (!["status", "unregister"].includes(action)) {
       return c.json({ success: false, error: "invalid action" }, 400);
     }
 

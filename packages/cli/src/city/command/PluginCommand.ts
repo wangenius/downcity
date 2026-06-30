@@ -22,11 +22,11 @@ import {
   parseCommandPayload,
   promptPluginSelection,
   resolvePluginProjectRoot,
-
   runPluginInfoCommand,
   runPluginListCommand,
   validatePluginProjectRoot,
 } from "./plugin/PluginHelpers.js";
+import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
 
 export async function runInteractivePluginManager(): Promise<void> {
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
@@ -92,11 +92,12 @@ async function runPluginActionCommand(params: {
       success: false,
       title: "plugin action failed",
       payload: {
-        error: pluginPathError || `Invalid plugin project path: ${resolved.projectRoot}. Missing: downcity.json`,
+        error: pluginPathError,
       },
     });
     return;
   }
+  const config = readAgentConfig(resolved.projectRoot);
 
   const payload = parseCommandPayload(params.payload);
   const local = await runLocalPluginAction({
@@ -104,6 +105,7 @@ async function runPluginActionCommand(params: {
     projectRoot: resolved.projectRoot,
     pluginName: params.pluginName,
     actionName: params.actionName,
+    ...(config ? { config } : {}),
     ...(payload !== undefined ? { payload } : {}),
   });
   printResult({

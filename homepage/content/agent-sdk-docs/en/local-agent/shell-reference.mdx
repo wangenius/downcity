@@ -54,7 +54,7 @@ interface ShellOptions {
 
 ## Sandbox
 
-Sandboxing is configured through the project's `downcity.json` and resolved at runtime by the SDK. The sandbox backend is selected automatically based on the host platform:
+Sandboxing is configured through host-provided agent config or Shell constructor options. The sandbox backend is selected automatically based on the host platform:
 
 - `macos-seatbelt` — macOS sandbox
 - `linux-bubblewrap` — Linux sandbox

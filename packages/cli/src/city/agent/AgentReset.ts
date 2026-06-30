@@ -3,32 +3,27 @@
  *
  * 关键点（中文）
  * - 当 agent 启动失败（如 model not found）时，不必删除重建，直接重选模型。
- * - 从 City AIService 中选择可用模型，更新 downcity.json.execution.modelId。
+ * - 从 City AIService 中选择可用模型，更新 CLI 全局 DB 中的 execution.modelId。
  * - 仅修改 execution.modelId，不触碰 PROFILE.md / SOUL.md / channels 等其他配置。
  */
 
 import path from "node:path";
-import fs from "fs-extra";
 import prompts from "@/city/tui/Prompts.js";
-import { getDowncityJsonPath } from "@/city/config/Paths.js";
 import { emitCliBlock } from "@/shared/CliReporter.js";
 import { CliError } from "@/shared/CliError.js";
 import { resolveAgentId } from "@/shared/IndexSupport.js";
 import { listPlatformModelChoices } from "@/city/runtime/city-model/ExecutionModelBinding.js";
+import {
+  readAgentConfig,
+  upsertAgentConfig,
+} from "@/city/process/registry/AgentConfigStore.js";
 
 /**
  * 读取当前 agent 的 execution.modelId。
  */
-function readCurrentModelId(projectRoot: string): { shipJsonPath: string; current: string } {
-  const shipJsonPath = getDowncityJsonPath(projectRoot);
-  if (!fs.existsSync(shipJsonPath)) {
-    throw new Error(`downcity.json not found: ${shipJsonPath}`);
-  }
-  const raw = fs.readJsonSync(shipJsonPath) as Record<string, unknown>;
-  const current = String(raw?.execution && typeof raw.execution === "object"
-    ? (raw.execution as Record<string, unknown>).modelId || ""
-    : "").trim();
-  return { shipJsonPath, current };
+function readCurrentModelId(projectRoot: string): string {
+  const config = readAgentConfig(projectRoot);
+  return String(config?.execution?.type === "api" ? config.execution.modelId || "" : "").trim();
 }
 
 /**
@@ -37,18 +32,17 @@ function readCurrentModelId(projectRoot: string): { shipJsonPath: string; curren
 export async function agentResetCommand(cwd: string = "."): Promise<void> {
   const projectRoot = path.resolve(cwd);
 
-  // 1) 校验项目文件存在
-  const shipJsonPath = getDowncityJsonPath(projectRoot);
-  if (!fs.existsSync(shipJsonPath)) {
+  const currentConfig = readAgentConfig(projectRoot);
+  if (!currentConfig) {
     throw new CliError({
-      title: "downcity.json not found",
+      title: "Agent config not found",
       note: `project: ${projectRoot}`,
       fix: "city agent create <path>",
     });
   }
 
   // 2) 读取当前 modelId
-  const { current } = readCurrentModelId(projectRoot);
+  const current = readCurrentModelId(projectRoot);
 
   // 3) 获取可用模型列表
   const choices = await listPlatformModelChoices();
@@ -92,10 +86,12 @@ export async function agentResetCommand(cwd: string = "."): Promise<void> {
     return;
   }
 
-  // 5) 写入 downcity.json
-  const raw = fs.readJsonSync(shipJsonPath) as Record<string, unknown>;
-  raw.execution = { type: "api", modelId: nextModelId };
-  fs.writeJsonSync(shipJsonPath, raw, { spaces: 2 });
+  // 5) 写入 CLI 全局 DB
+  upsertAgentConfig({
+    ...currentConfig,
+    projectRoot,
+    execution: { type: "api", modelId: nextModelId },
+  });
 
   emitCliBlock({
     tone: "success",

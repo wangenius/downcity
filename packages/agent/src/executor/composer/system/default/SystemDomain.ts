@@ -8,7 +8,6 @@
 
 import type { SystemModelMessage } from "ai";
 import { transformPromptsIntoSystemMessages } from "@executor/composer/system/default/PromptRenderer.js";
-import { isPluginEnabled } from "@/plugin/core/Activation.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import { buildRuntimeClockSystemPrompt } from "@executor/composer/system/default/variables/VariableReplacer.js";
 import {
@@ -177,7 +176,7 @@ export async function loadManagedPluginSystemPrompts(input: {
     if (disabledPluginNames.has(plugin.name)) continue;
     if (typeof plugin.system !== "function") continue;
     try {
-      if (!isPluginEnabled({ plugin, context: input.context })) continue;
+      if (input.context.plugins.status(plugin.name)?.status !== "ready") continue;
       if (typeof plugin.availability === "function") {
         const availability = await plugin.availability(input.context);
         if (!availability.available) continue;

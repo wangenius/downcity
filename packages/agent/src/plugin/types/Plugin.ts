@@ -10,7 +10,8 @@ export type {
   PluginState,
   PluginStateControlAction,
   PluginStateControlResult,
-  PluginStateRecord,
+  PluginRuntimeRecord,
+  PluginSnapshot,
   PluginStateSnapshot,
 } from "@/types/plugin/PluginState.js";
 export type {

@@ -4,7 +4,7 @@
 
 import type { JsonValue } from "@/types/common/Json.js";
 
-export type PluginControlAction = "start" | "stop" | "restart" | "status";
+export type PluginControlAction = "status" | "unregister";
 
 /**
  * 单个 plugin 的对外状态视图。
@@ -12,20 +12,20 @@ export type PluginControlAction = "start" | "stop" | "restart" | "status";
 export type PluginStateView = {
   /** plugin 稳定名称。 */
   name: string;
-  /** 当前运行状态。 */
-  state: "running" | "stopped" | "starting" | "stopping" | "error";
-  /** 最近一次状态更新时间（毫秒时间戳）。 */
+  /** 当前注册状态。 */
+  state: "ready" | "error";
+  /** 当前注册状态。 */
+  status: "ready" | "error";
+  /** 注册时间（毫秒时间戳）。 */
+  registered_at: number;
+  /** 最近更新时间（毫秒时间戳）。 */
+  updated_at: number;
+  /** 兼容旧字段的最近一次状态更新时间。 */
   updatedAt: number;
   /** 最近一次错误信息。 */
   lastError?: string;
-  /** 最近一次执行的命令名称。 */
-  lastCommand?: string;
-  /** 最近一次执行命令的时间（毫秒时间戳）。 */
-  lastCommandAt?: number;
-  /** 当前 plugin 是否支持显式 start/stop 生命周期控制。 */
-  supportsLifecycle: boolean;
-  /** 当前 plugin 是否支持 command/action 调用。 */
-  supportsCommand: boolean;
+  /** 最近一次错误信息。 */
+  last_error?: string;
 };
 
 /**

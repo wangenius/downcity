@@ -7,7 +7,6 @@
  */
 
 import prompts from "@/city/tui/Prompts.js";
-import fs from "fs-extra";
 import { initCommand } from "@/city/agent/Init.js";
 import { runCommand } from "@/city/agent/Run.js";
 import { startCommand } from "@/city/agent/Start.js";
@@ -18,12 +17,15 @@ import { listRegisteredAgentsForCli } from "@/city/agent/AgentSelection.js";
 import { emitCliBlock, emitCliList } from "@/shared/CliReporter.js";
 import { injectAgentContext } from "@/shared/IndexSupport.js";
 import { prepareForegroundAgent } from "@/city/shared/CityAgentRuntime.js";
-import { getDowncityJsonPath } from "@/city/config/Paths.js";
 import { PlatformStore } from "@/city/runtime/store/index.js";
 import { t } from "@/shared/CliLocale.js";
 import type { AgentStartOptions } from "@/city/types/AgentStartOptions.js";
 import type { DowncityConfig } from "@downcity/agent";
 import type { StoredChannelAccount, StoredChannelAccountChannel } from "@downcity/agent";
+import {
+  readAgentConfig as readStoredAgentConfig,
+  upsertAgentConfig,
+} from "@/city/process/registry/AgentConfigStore.js";
 import type {
   AgentManagerAgentAction,
   AgentManagerConfigAction,
@@ -77,11 +79,7 @@ export async function reloadAgentSummary(
 }
 
 export function readAgentConfig(projectRoot: string): DowncityConfig | null {
-  try {
-    return fs.readJsonSync(getDowncityJsonPath(projectRoot)) as DowncityConfig;
-  } catch {
-    return null;
-  }
+  return readStoredAgentConfig(projectRoot) as DowncityConfig | null;
 }
 
 export function readAgentExecutionBinding(config: DowncityConfig | null): string {
@@ -362,8 +360,8 @@ export async function promptAgentConfigAction(
       {
         title: t({ zh: "配置 ID", en: "Configure ID" }),
         description: t({
-          zh: `当前：${agent.id}。修改后会写入该 Agent 项目的 downcity.json。`,
-          en: `Current: ${agent.id}. Changes are written to this agent project's downcity.json.`,
+          zh: `当前：${agent.id}。修改后会写入 CLI 全局 DB。`,
+          en: `Current: ${agent.id}. Changes are written to the CLI global DB.`,
         }),
         value: "configureId",
       },
@@ -458,10 +456,12 @@ export async function configureAgentId(agent: AgentManagerAgentSummary): Promise
     return agent;
   }
 
-  const shipJsonPath = getDowncityJsonPath(agent.projectRoot);
-  const raw = fs.readJsonSync(shipJsonPath) as DowncityConfig;
-  raw.id = nextId;
-  await fs.writeJson(shipJsonPath, raw, { spaces: 2 });
+  const raw = readStoredAgentConfig(agent.projectRoot);
+  upsertAgentConfig({
+    ...(raw || {}),
+    projectRoot: agent.projectRoot,
+    id: nextId,
+  });
   emitCliBlock({
     tone: "success",
     title: "Agent id updated",
@@ -524,11 +524,15 @@ export async function promptChannelAccountId(params: {
 export async function connectAgentChannels(
   agent: AgentManagerAgentSummary,
 ): Promise<AgentManagerAgentSummary> {
-  const shipJsonPath = getDowncityJsonPath(agent.projectRoot);
-  const raw = fs.readJsonSync(shipJsonPath) as DowncityConfig;
-  const chatConfig = (((raw.plugins ??= {}) as NonNullable<DowncityConfig["plugins"]>).chat ??= {});
+  const raw = readStoredAgentConfig(agent.projectRoot) as DowncityConfig | null;
+  const nextRaw: DowncityConfig = {
+    id: agent.id,
+    version: "1.0.0",
+    ...(raw || {}),
+  };
+  const chatConfig = (((nextRaw.plugins ??= {}) as NonNullable<DowncityConfig["plugins"]>).chat ??= {});
   const channelConfigs = chatConfig.channels ??= {};
-  const dangling = findDanglingChannelAccounts(raw);
+  const dangling = findDanglingChannelAccounts(nextRaw);
   if (dangling.length > 0) {
     emitCliList({
       tone: "warning",
@@ -551,7 +555,10 @@ export async function connectAgentChannels(
         enabled: current?.enabled === true,
       };
     }
-    await fs.writeJson(shipJsonPath, raw, { spaces: 2 });
+    upsertAgentConfig({
+      ...nextRaw,
+      projectRoot: agent.projectRoot,
+    });
 
     const nextConfig = readAgentConfig(agent.projectRoot);
     const cleanedAgent = {
@@ -613,7 +620,10 @@ export async function connectAgentChannels(
     };
   }
 
-  await fs.writeJson(shipJsonPath, raw, { spaces: 2 });
+  upsertAgentConfig({
+    ...nextRaw,
+    projectRoot: agent.projectRoot,
+  });
   const nextConfig = readAgentConfig(agent.projectRoot);
   const nextAgent = {
     ...agent,

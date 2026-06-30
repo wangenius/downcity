@@ -16,7 +16,7 @@ import type {
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { AgentPlugins } from "@/plugin/types/Plugin.js";
-import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
+import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import type {
   SessionMetadataV1,
   SessionMessageV1,
@@ -249,7 +249,7 @@ export interface AgentContextOptions {
   /** 当前可见的 plugin 配置持久化能力集合。 */
   pluginConfig: AgentPluginConfigRuntime;
   /** 当前 agent 持有的插件实例集合。 */
-  pluginInstances: Map<string, BasePlugin>;
+  pluginInstances: Map<string, Plugin>;
   /** Session 能力入口。 */
   session: SessionCollectionPort;
   /** Plugin 调用入口。 */
@@ -282,7 +282,7 @@ export class AgentContext {
   /** 当前可见的 plugin 配置持久化能力集合。 */
   readonly pluginConfig: AgentPluginConfigRuntime;
   /** 当前 agent 持有的插件实例集合。 */
-  readonly pluginInstances: Map<string, BasePlugin>;
+  readonly pluginInstances: Map<string, Plugin>;
   /** Session 能力入口。 */
   readonly session: SessionCollectionPort;
   /** Plugin 调用入口。 */

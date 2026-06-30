@@ -8,8 +8,9 @@
 
 import type { Tool } from "ai";
 import type { Shell } from "@downcity/shell";
-import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
+import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import type { AgentModel } from "@/model/CityModelAdapter.js";
+import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type {
   AgentManagedSession,
   SessionOptions,
@@ -84,12 +85,12 @@ export interface AgentOptions {
    * 当前 agent 显式持有的插件实例集合。
    *
    * 关键点（中文）
-   * - 这里接收已经实例化好的 `BasePlugin` 对象，而不是 plugin class。
+   * - 这里接收已经创建好的 `Plugin` 对象，而不是 plugin class。
    * - `Agent` 会在构造阶段按名称注册这些实例，并自动绑定到当前 runtime。
    * - 同名 plugin 会直接报错，避免 action / hook / resolve 行为被静默覆盖。
    * - SDK 不再自动注入任何 built-in plugin；需要的能力都应由宿主显式传入。
    */
-  plugins?: BasePlugin[];
+  plugins?: Plugin[];
 
   /**
    * 当前 agent 使用的本地 Session 类。
@@ -110,4 +111,13 @@ export interface AgentOptions {
    * - 覆盖后的最终 env 会参与配置解析与运行时上下文装配，但不会回写到宿主环境。
    */
   env?: Record<string, string>;
+
+  /**
+   * 宿主显式传入的运行时配置。
+   *
+   * 关键点（中文）
+   * - SDK 不要求项目目录存在 `downcity.json`。
+   * - CLI / Console 可从自己的配置存储读取后传入这里。
+   */
+  config?: DowncityConfig;
 }

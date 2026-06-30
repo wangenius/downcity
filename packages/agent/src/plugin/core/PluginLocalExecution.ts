@@ -4,18 +4,18 @@
  * 关键点（中文）
  * - 这里不创建或维护任何全局注册表，调用方必须显式传入 plugin 集合。
  * - 用于 CLI / 控制面这类没有运行中 Agent 实例、但需要执行 setup action 的场景。
- * - 真正运行中的 Agent 仍应优先使用 `PluginRegistry.runAction`。
+ * - 真正运行中的 Agent 仍应优先使用 `Agent.plugins.runAction`。
  */
 
 import path from "node:path";
 import { logger as defaultLogger } from "@/utils/logger/Logger.js";
-import { loadDowncityConfig, resolveAgentEnv } from "@/config/Config.js";
-import { isPluginEnabled } from "@/plugin/core/Activation.js";
+import { resolveAgentEnv } from "@/config/Config.js";
 import { findPluginByName } from "@/plugin/core/PluginCatalog.js";
 import {
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,
 } from "@/agent/local/AgentRuntimeAssembly.js";
+import { createFallbackSdkConfig } from "@/agent/local/AgentInstructions.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type {
   Plugin,
@@ -24,14 +24,28 @@ import type {
   PluginCommandContext,
 } from "@/plugin/types/Plugin.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
+
+type LocalPluginCommandContextInput = {
+  /** 当前项目根目录。 */
+  projectRoot: string;
+  /** 宿主显式传入的 agent 配置。 */
+  config?: DowncityConfig;
+};
 
 /**
  * 创建本地 plugin 命令上下文。
  */
-export function createLocalPluginCommandContext(projectRoot: string): PluginCommandContext {
+export function createLocalPluginCommandContext(
+  input: string | LocalPluginCommandContextInput,
+): PluginCommandContext {
+  const projectRoot = typeof input === "string" ? input : input.projectRoot;
   const rootPath = path.resolve(String(projectRoot || "").trim() || ".");
   const env = resolveAgentEnv(rootPath);
-  const config = loadDowncityConfig(rootPath);
+  const config = typeof input === "string" || !input.config
+    ? createFallbackSdkConfig(path.basename(rootPath) || "agent")
+    : input.config;
+  const agent_id = String(config.id || "").trim() || path.basename(rootPath) || "agent";
 
   defaultLogger.bindProjectRoot(rootPath);
 
@@ -43,7 +57,7 @@ export function createLocalPluginCommandContext(projectRoot: string): PluginComm
     env,
     paths: createAgentPathRuntime(
       rootPath,
-      String(config.id || "").trim() || path.basename(rootPath) || "agent",
+      agent_id,
     ),
     pluginConfig: createAgentPluginConfigRuntime(rootPath),
   };
@@ -56,6 +70,7 @@ export async function getLocalPluginAvailability(params: {
   plugins: Iterable<Plugin>;
   projectRoot: string;
   pluginName: string;
+  config?: DowncityConfig;
 }): Promise<PluginAvailability> {
   const plugin = findPluginByName(params.plugins, params.pluginName);
   if (!plugin) {
@@ -66,18 +81,12 @@ export async function getLocalPluginAvailability(params: {
     };
   }
 
-  const context = createLocalPluginCommandContext(params.projectRoot);
+  const context = createLocalPluginCommandContext({
+    projectRoot: params.projectRoot,
+    config: params.config,
+  });
   if (plugin.availability) {
     return await plugin.availability(context);
-  }
-
-  const enabled = isPluginEnabled({ plugin, context });
-  if (!enabled) {
-    return {
-      enabled: false,
-      available: false,
-      reasons: [`Plugin "${plugin.name}" is disabled`],
-    };
   }
 
   return {
@@ -96,6 +105,7 @@ export async function runLocalPluginAction(params: {
   pluginName: string;
   actionName: string;
   payload?: JsonValue;
+  config?: DowncityConfig;
 }): Promise<PluginActionResult<JsonValue>> {
   const plugin = findPluginByName(params.plugins, params.pluginName);
   if (!plugin) {
@@ -124,15 +134,10 @@ export async function runLocalPluginAction(params: {
     };
   }
 
-  const context = createLocalPluginCommandContext(params.projectRoot);
-  const enabled = isPluginEnabled({ plugin, context });
-  if (!enabled && action.allowWhenDisabled !== true) {
-    return {
-      success: false,
-      error: `Plugin "${plugin.name}" is disabled`,
-      message: `Plugin "${plugin.name}" is disabled`,
-    };
-  }
+  const context = createLocalPluginCommandContext({
+    projectRoot: params.projectRoot,
+    config: params.config,
+  });
 
   try {
     const payload = (params.payload ?? {}) as JsonValue;

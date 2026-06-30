@@ -1,22 +1,22 @@
 ---
 title: Plugin Availability
-description: Understand the difference between enabled and available, and the gap between static catalog state and runtime usability
+description: Understand plugin registration state and runtime availability
 ---
 
 # Plugin Availability
 
-Plugins currently expose two states that are easy to confuse:
+There are two facts that are easy to confuse:
 
-- `enabled`
+- registered
 - `available`
 
-## `enabled`
+## Registered
 
 This means:
 
-- whether the plugin is turned on at city scope
+- whether the plugin is currently registered on the Agent
 
-Think of it as the lifecycle switch.
+In snapshots, the legacy `enabled` field means "registered", not a project config switch.
 
 ## `available`
 
@@ -28,7 +28,7 @@ Think of it as runtime readiness or health.
 
 A plugin can absolutely be:
 
-- `enabled = true`
+- registered
 - but `available = false`
 
 For example:
@@ -39,11 +39,11 @@ For example:
 
 ## Why two layers exist
 
-Because "the user enabled it" and "the dependency chain is actually ready" are different facts.
+Because "the Agent registered it" and "the dependency chain is actually ready" are different facts.
 
 That split lets UI describe:
 
-- switch state
+- registration state
 - health state
 
 ## Static catalog vs runtime availability
@@ -53,7 +53,7 @@ That split lets UI describe:
 The control-plane catalog mainly answers:
 
 - does this plugin exist
-- is it enabled at city scope
+- can an Agent register it
 
 It does not always have a full runtime context to perform deep checks.
 
@@ -79,7 +79,7 @@ That means it no longer appears as its own catalog entry. Whether chat authoriza
 
 Remember it as:
 
-- `enabled` is the switch
+- registration is the switch
 - `available` is the health
 
 ## Related docs

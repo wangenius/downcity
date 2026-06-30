@@ -8,7 +8,7 @@
  */
 
 import type { LanguageModel, Tool } from "ai";
-import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
+import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { AgentPlugins } from "@/plugin/types/Plugin.js";
@@ -101,7 +101,7 @@ export interface AgentAssemblyResult {
   /**
    * 当前 plugin 实例集合。
    */
-  plugin_instances: Map<string, BasePlugin>;
+  plugin_instances: Map<string, Plugin>;
 
   /**
    * 当前 plugin 注册表。
@@ -165,16 +165,15 @@ export class AgentAssemblyService {
     const env = resolveAgentEnv(path, this.options.env);
     const instruction = normalizeInstructionInput(this.options.instruction);
     const config = this.load_config(id, path);
-    const plugin_instances = new Map<string, BasePlugin>();
-
-    this.register_plugins(plugin_instances, this.options.plugins || []);
+    const plugin_instances = new Map<string, Plugin>();
 
     // 关键点（中文）
     // - plugin_registry 仍然延迟读取 agent_context（避免循环依赖）。
     // - context 一构造完就赋值，registry 第一次读 get_context 时已经是非空。
     let agent_context: AgentContext | undefined;
     const plugin_registry = createAgentPluginRegistry({
-      plugins: [...plugin_instances.values()],
+      plugins: this.options.plugins || [],
+      plugin_instances,
       get_context: () => {
         if (!agent_context) {
           throw new Error("AgentContext is not assembled yet");
@@ -248,6 +247,13 @@ export class AgentAssemblyService {
   }
 
   private load_config(agent_id: string, project_root: string): DowncityConfig {
+    if (this.options.config) {
+      return {
+        ...this.options.config,
+        id: String(this.options.config.id || "").trim() || agent_id,
+        version: String(this.options.config.version || "").trim() || "1.0.0",
+      };
+    }
     try {
       return loadDowncityConfig(project_root);
     } catch {
@@ -255,27 +261,11 @@ export class AgentAssemblyService {
     }
   }
 
-  private register_plugins(
-    plugin_instances: Map<string, BasePlugin>,
-    plugins: BasePlugin[],
-  ): void {
-    for (const plugin of plugins) {
-      const name = String(plugin?.name || "").trim();
-      if (!name) {
-        throw new Error("Agent received a plugin without a valid name");
-      }
-      if (plugin_instances.has(name)) {
-        throw new Error(`Duplicate plugin registration: ${name}`);
-      }
-      plugin_instances.set(name, plugin);
-    }
-  }
-
   /**
    * 判断是否需要自动注册 plugin_call tool。
    */
   private should_register_plugin_call_tool(
-    plugin_instances: Map<string, BasePlugin>,
+    plugin_instances: Map<string, Plugin>,
   ): boolean {
     for (const plugin of plugin_instances.values()) {
       if (

@@ -10,6 +10,7 @@ import { readFileSync, existsSync } from "fs";
 import { basename, dirname, join, resolve } from "path";
 import { emitCliHeader, emitCliBlock, resetCliSectionFlow } from "@/shared/CliReporter.js";
 import { CliError } from "@/shared/CliError.js";
+import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
 
 /**
  * 在关键运行命令执行前打印当前终端命令版本。
@@ -132,6 +133,9 @@ export function resolveAgentId(projectRoot: string): string {
     .replace(/^_+|_+$/g, "")
     .replace(/_{2,}/g, "_")
     .trim() || basename(projectRoot);
+  const stored = readAgentConfig(projectRoot);
+  if (stored?.id) return stored.id;
+
   const shipJsonPath = join(projectRoot, "downcity.json");
   if (!existsSync(shipJsonPath)) return fallback;
 

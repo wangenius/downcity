@@ -79,6 +79,12 @@ await http.server().listen({ host: "127.0.0.1", port: 5314 });
 
 你可以直接用它做：
 
+- `agent.plugins.register(plugin)`
+- `agent.plugins.unregister(pluginName)`
+- `agent.plugins.has(pluginName)`
+- `agent.plugins.get(pluginName)`
+- `agent.plugins.status(pluginName)`
+- `agent.plugins.snapshots()`
 - `agent.plugins.list()`
 - `agent.plugins.availability(pluginName)`
 - `agent.plugins.runAction({ plugin, action, payload })`

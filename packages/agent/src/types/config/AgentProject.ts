@@ -7,7 +7,6 @@
  */
 
 import type { ExecutionBindingConfig } from "@/types/config/ExecutionBinding.js";
-import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 
 /**
  * 可选的 chat channel 标识。
@@ -28,7 +27,7 @@ export interface AgentProjectInitializationInput {
    *
    * 关键点（中文）
    * - 为空时会自动回退到目录名推导出的默认 id。
-   * - 该字段会直接写入 `downcity.json.id`。
+   * - CLI 可把该字段写入自己的全局配置存储。
    */
   id?: string;
 
@@ -41,25 +40,13 @@ export interface AgentProjectInitializationInput {
   execution: ExecutionBindingConfig;
 
   /**
-   * 需要一并写入项目的 plugin 配置补丁。
-   *
-   * 说明（中文）
-   * - 这里只承载初始化时的最小配置，不负责 city 级 plugin lifecycle。
-   */
-  plugins?: DowncityConfig["plugins"];
-
-  /**
    * 需要启用的 chat channels。
    *
    * 关键点（中文）
-   * - 仅写入用户选择的渠道，未选择的渠道不会写入 `downcity.json`。
+   * - SDK 初始化器只返回选择结果，不负责配置持久化。
    */
   channels?: AgentProjectChannel[];
 
-  /**
-   * 是否允许覆盖已存在的 `downcity.json`。
-   */
-  forceOverwriteShipJson?: boolean;
 }
 
 /**
@@ -80,6 +67,11 @@ export interface AgentProjectInitializationResult {
    * 最终启用的 chat channels。
    */
   channels: AgentProjectChannel[];
+
+  /**
+   * 最终选择的 City AIService 模型 ID。
+   */
+  modelId?: string;
 
   /**
    * 本次实际创建/写入的文件列表。

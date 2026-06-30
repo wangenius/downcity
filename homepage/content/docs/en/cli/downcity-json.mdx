@@ -1,13 +1,15 @@
 ---
-title: downcity.json
-description: The project configuration file that the CLI reads and passes to the Agent SDK
+title: legacy downcity.json
+description: The old project config file and its role in the new CLI config model
 ---
 
-# downcity.json
+# legacy downcity.json
 
-`downcity.json` is the project configuration file. The CLI reads it at startup and passes its contents to the Agent SDK constructor. You can also use it as a reference when configuring the SDK directly.
+New projects no longer need `downcity.json`. `city agent create` stores agent ID, startup options, model binding, and plugin options in the CLI global DB. The project directory keeps `PROFILE.md`, `SOUL.md`, `.env`, and `.downcity/` runtime data.
 
-## Minimal structure
+If an older project still has `downcity.json`, the CLI can read it once as a legacy migration source; later writes go to the global DB.
+
+## Old structure
 
 ```json
 {
@@ -29,19 +31,21 @@ description: The project configuration file that the CLI reads and passes to the
 ## Key fields
 
 - `id` — stable agent identifier. Used for session storage and runtime directories.
-- `start` — runtime startup config (port, host). CLI flags override this if provided.
+- `start` — runtime startup config (port, host).
 - `execution` — binds the project to a model ID from the connected Federation AIService.
-- `plugins` — plugin-level configuration.
+- `plugins` — plugin runtime options.
+
+In the new model, these fields are stored in the CLI global DB rather than in a project file.
 
 ## What should not live here
 
 - Full model provider definitions (those live in City / Federation AIService).
-- Plaintext API keys or bot credentials (those live in `~/.downcity/downcity.db` or are injected through env).
+- Plaintext API keys or bot credentials (those live in the CLI global DB or are injected through env).
 - Console-level control plane settings.
 
 ## Relationship to SDK
 
-When you use the SDK directly, you pass the same values as constructor options. `downcity.json` is just a serialized form of those options for CLI convenience.
+When you use the SDK directly, you pass the same values as constructor options, for example `new Agent({ id, path, model, plugins, config })`. The SDK does not require `downcity.json` to exist in the project directory.
 
 Continue with:
 

@@ -5,13 +5,12 @@ description: Agent 项目目录包含什么，以及文件之间的关系
 
 # 项目结构
 
-Agent 项目是 CLI 能够识别和运行的目录。它包含配置、提示词和运行时数据。
+Agent 项目是 CLI 能够识别和运行的目录。项目目录主要保存提示词、环境变量和运行时数据；Agent ID、模型绑定、启动参数和 plugin 参数由 CLI 全局 DB 管理。
 
 ## 目录布局
 
 ```text
 my-project/
-├── downcity.json      # 项目配置
 ├── PROFILE.md         # Agent 角色定义
 ├── SOUL.md            # 长期原则
 ├── .env               # 环境变量
@@ -23,10 +22,6 @@ my-project/
 ```
 
 ## 关键文件
-
-### downcity.json
-
-项目配置文件。CLI 在启动时读取它，并将其值传给 Agent SDK 构造函数。见 [downcity.json](/zh/docs/cli/downcity-json)。
 
 ### PROFILE.md
 
@@ -46,9 +41,13 @@ my-project/
 
 ## 多个项目
 
-你可以在同一个机器上有多个项目。每个项目都是独立的：自己的配置、自己的会话、自己的运行时。CLI 操作当前工作目录中的项目。
+你可以在同一个机器上有多个项目。每个项目都是独立的：自己的全局 DB 配置、自己的会话、自己的运行时。CLI 操作当前工作目录中的项目。
+
+## 配置存放在哪里
+
+`city agent create` 会把 Agent 配置写入 CLI 全局 DB，而不是项目目录中的 `downcity.json`。旧项目里的 `downcity.json` 仍可被读取一次用于迁移；迁移后新的写入都进入全局 DB。
 
 继续阅读：
 
-- [downcity.json](/zh/docs/cli/downcity-json)
+- [legacy downcity.json](/zh/docs/cli/downcity-json)
 - [Profile](/zh/docs/cli/profile)

@@ -11,7 +11,6 @@ import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { ActionScheduleRuntimeHandle } from "@/plugin/core/ActionScheduleRuntime.js";
 import { startActionScheduleRuntime } from "@/plugin/core/ActionScheduleRuntime.js";
-import { startAllPlugins, stopAllPlugins } from "@/plugin/core/Manager.js";
 import type { Shell } from "@downcity/shell";
 
 type AgentBackgroundServiceOptions = {
@@ -73,7 +72,7 @@ export class AgentBackgroundService {
     }
     if (this.plugins_started) {
       await this.stop_action_schedule_runtime();
-      await stopAllPlugins(this.agent_context);
+      await this.agent_context.plugins.unregisterAll();
       this.plugins_started = false;
     }
     await this.get_shell?.()?.dispose();
@@ -85,12 +84,12 @@ export class AgentBackgroundService {
 
   private async ensure_plugins_started(): Promise<void> {
     if (this.plugins_started) return;
-    const lifecycle = await startAllPlugins(this.agent_context);
+    const snapshots = await this.agent_context.plugins.startAll();
     this.plugins_started = true;
-    for (const item of lifecycle.results) {
-      if (!item.success) {
+    for (const item of snapshots) {
+      if (item.status === "error") {
         this.logger.error(
-          `Plugin start failed: ${item.plugin?.name || "unknown"} - ${item.error || "unknown error"}`,
+          `Plugin start failed: ${item.name} - ${item.last_error || "unknown error"}`,
         );
       }
     }

@@ -1,144 +1,29 @@
 /**
- * PluginStateController：主动型 plugin 状态控制与状态记录模块。
+ * Plugin 注册状态兼容控制模块。
+ *
+ * 关键点（中文）
+ * - 新模型中 plugin 只有注册 / 卸载，不再暴露 start / stop / restart。
+ * - 该模块保留旧内部函数名，方便 RPC、CLI 与内建 plugin 渐进迁移。
  */
 
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type {
-  PluginLifecycle,
-  PluginState,
   PluginStateControlAction,
   PluginStateControlResult,
-  PluginStateRecord,
   PluginStateSnapshot,
 } from "@/plugin/types/Plugin.js";
-import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
-
-function nowMs(): number {
-  return Date.now();
-}
-
-function resolveLifecycle(plugin: BasePlugin): PluginLifecycle | undefined {
-  return plugin.lifecycle;
-}
 
 /**
- * 列出当前进程内可见的主动型 plugin 实例。
- */
-export function listPluginInstances(input?: {
-  context?: AgentContext;
-}): BasePlugin[] {
-  const contextPlugins = input?.context?.pluginInstances;
-  if (contextPlugins instanceof Map && contextPlugins.size > 0) {
-    return [...contextPlugins.values()];
-  }
-  return [];
-}
-
-/**
- * 按名称解析主动型 plugin 实例。
- */
-export function resolvePluginByName(
-  name: string,
-  input?: {
-    context?: AgentContext;
-  },
-): BasePlugin | null {
-  const key = String(name || "").trim();
-  if (!key) return null;
-  return listPluginInstances(input).find((plugin) => plugin.name === key) || null;
-}
-
-/**
- * 确保 plugin 对应的状态记录存在。
- */
-export function ensurePluginStateRecord(
-  plugin: BasePlugin,
-): PluginStateRecord {
-  return plugin.pluginStateRecord;
-}
-
-function hasCommandActions(plugin: BasePlugin): boolean {
-  return Object.values(plugin.actions).some((action) => Boolean(action.command));
-}
-
-/**
- * 把内部 record 映射为对外快照。
- */
-export function toPluginStateSnapshot(
-  record: PluginStateRecord,
-  plugin: BasePlugin,
-): PluginStateSnapshot {
-  const lifecycle = resolveLifecycle(plugin);
-  return {
-    name: plugin.name,
-    state: record.state,
-    updatedAt: record.updatedAt,
-    ...(record.lastError ? { lastError: record.lastError } : {}),
-    ...(record.lastCommand ? { lastCommand: record.lastCommand } : {}),
-    ...(typeof record.lastCommandAt === "number"
-      ? { lastCommandAt: record.lastCommandAt }
-      : {}),
-    supportsLifecycle: Boolean(lifecycle?.start || lifecycle?.stop),
-    supportsCommand: Boolean(lifecycle?.command) || hasCommandActions(plugin),
-  };
-}
-
-async function runSerialByPlugin(
-  record: PluginStateRecord,
-  step: () => Promise<void> | void,
-): Promise<void> {
-  const next = record.chain.then(() => Promise.resolve(step()));
-  record.chain = next.then(
-    () => undefined,
-    () => undefined,
-  );
-  await next;
-}
-
-/**
- * 标记 plugin 当前状态。
- */
-export function markPluginState(
-  record: PluginStateRecord,
-  state: PluginState,
-  error?: string,
-): void {
-  record.state = state;
-  record.updatedAt = nowMs();
-  if (error) {
-    record.lastError = error;
-    return;
-  }
-  delete record.lastError;
-}
-
-/**
- * 标记最近一次 plugin command。
- */
-export function markPluginCommand(
-  record: PluginStateRecord,
-  command: string,
-): void {
-  record.lastCommand = command;
-  record.lastCommandAt = nowMs();
-  record.updatedAt = nowMs();
-}
-
-/**
- * 列出全部主动型 plugin 状态快照。
+ * 列出当前 Agent 已注册 plugin 快照。
  */
 export function listPluginStates(input?: {
   context?: AgentContext;
 }): PluginStateSnapshot[] {
-  return listPluginInstances(input)
-    .map((plugin) =>
-      toPluginStateSnapshot(ensurePluginStateRecord(plugin), plugin),
-    )
-    .sort((a, b) => a.name.localeCompare(b.name));
+  return input?.context?.plugins.snapshots() || [];
 }
 
 /**
- * 判断指定主动型 plugin 是否处于运行中。
+ * 判断指定 plugin 是否已注册且 ready。
  */
 export function isPluginRunning(
   pluginName: string,
@@ -146,154 +31,79 @@ export function isPluginRunning(
     context?: AgentContext;
   },
 ): boolean {
-  const plugin = resolvePluginByName(pluginName, input);
-  if (!plugin) return false;
-  return ensurePluginStateRecord(plugin).state === "running";
-}
-
-async function startPluginInternal(
-  plugin: BasePlugin,
-  context: AgentContext,
-): Promise<PluginStateControlResult> {
-  const record = ensurePluginStateRecord(plugin);
-  const lifecycle = resolveLifecycle(plugin);
-  try {
-    await runSerialByPlugin(record, async () => {
-      if (record.state === "running") return;
-      markPluginState(record, "starting");
-      try {
-        await lifecycle?.start?.(context);
-        markPluginState(record, "running");
-      } catch (error) {
-        markPluginState(record, "error", String(error));
-        throw error;
-      }
-    });
-    return {
-      success: true,
-      plugin: toPluginStateSnapshot(record, plugin),
-    };
-  } catch (error) {
-    return {
-      success: false,
-      plugin: toPluginStateSnapshot(record, plugin),
-      error: String(error),
-    };
-  }
-}
-
-async function stopPluginInternal(
-  plugin: BasePlugin,
-  context: AgentContext,
-): Promise<PluginStateControlResult> {
-  const record = ensurePluginStateRecord(plugin);
-  const lifecycle = resolveLifecycle(plugin);
-  try {
-    await runSerialByPlugin(record, async () => {
-      if (record.state === "stopped") return;
-      markPluginState(record, "stopping");
-      try {
-        await lifecycle?.stop?.(context);
-        markPluginState(record, "stopped");
-      } catch (error) {
-        markPluginState(record, "error", String(error));
-        throw error;
-      }
-    });
-    return {
-      success: true,
-      plugin: toPluginStateSnapshot(record, plugin),
-    };
-  } catch (error) {
-    return {
-      success: false,
-      plugin: toPluginStateSnapshot(record, plugin),
-      error: String(error),
-    };
-  }
+  return input?.context?.plugins.status(pluginName)?.status === "ready";
 }
 
 /**
- * 执行单个主动型 plugin 状态控制动作。
+ * 执行兼容 plugin 控制动作。
  */
 export async function controlPluginState(params: {
   pluginName: string;
   action: PluginStateControlAction;
   context: AgentContext;
 }): Promise<PluginStateControlResult> {
-  const plugin = resolvePluginByName(params.pluginName, {
-    context: params.context,
-  });
-  if (!plugin) {
+  const pluginName = String(params.pluginName || "").trim();
+  if (!pluginName) {
     return {
       success: false,
-      error: `Unknown plugin: ${params.pluginName}`,
+      error: "pluginName is required",
     };
   }
 
-  if (params.action === "status") {
-    const record = ensurePluginStateRecord(plugin);
-    return {
-      success: true,
-      plugin: toPluginStateSnapshot(record, plugin),
-    };
+  const action = String(params.action || "").trim().toLowerCase();
+  if (action === "status" || action === "start" || action === "restart") {
+    const plugin = params.context.plugins.status(pluginName);
+    return plugin
+      ? { success: true, plugin }
+      : { success: false, error: `Unknown plugin: ${pluginName}` };
   }
 
-  if (params.action === "start") {
-    return await startPluginInternal(plugin, params.context);
+  if (action === "unregister" || action === "stop") {
+    const plugin = params.context.plugins.status(pluginName) || undefined;
+    const success = await params.context.plugins.unregister(pluginName);
+    return success
+      ? { success: true, ...(plugin ? { plugin } : {}) }
+      : { success: false, error: `Unknown plugin: ${pluginName}` };
   }
 
-  if (params.action === "stop") {
-    return await stopPluginInternal(plugin, params.context);
-  }
-
-  const stopResult = await stopPluginInternal(plugin, params.context);
-  if (!stopResult.success) return stopResult;
-  return await startPluginInternal(plugin, params.context);
+  return {
+    success: false,
+    error: `Unsupported plugin control action: ${params.action}`,
+  };
 }
 
 /**
- * 启动当前上下文中全部主动型 plugin。
+ * 启动当前上下文中全部已挂载 plugin。
  */
 export async function startAllPlugins(context: AgentContext): Promise<{
   success: boolean;
   results: PluginStateControlResult[];
 }> {
-  const results: PluginStateControlResult[] = [];
-  for (const plugin of listPluginInstances({ context })) {
-    results.push(
-      await controlPluginState({
-        pluginName: plugin.name,
-        action: "start",
-        context,
-      }),
-    );
-  }
+  const snapshots = await context.plugins.startAll();
   return {
-    success: results.every((item) => item.success),
-    results,
+    success: snapshots.every((item) => item.status === "ready"),
+    results: snapshots.map((plugin) => ({
+      success: plugin.status === "ready",
+      plugin,
+      ...(plugin.last_error ? { error: plugin.last_error } : {}),
+    })),
   };
 }
 
 /**
- * 停止当前上下文中全部主动型 plugin。
+ * 卸载当前上下文中全部 plugin。
  */
 export async function stopAllPlugins(context: AgentContext): Promise<{
   success: boolean;
   results: PluginStateControlResult[];
 }> {
-  const results: PluginStateControlResult[] = [];
-  for (const plugin of listPluginInstances({ context })) {
-    results.push(
-      await controlPluginState({
-        pluginName: plugin.name,
-        action: "stop",
-        context,
-      }),
-    );
-  }
+  const snapshots = context.plugins.snapshots();
+  await context.plugins.unregisterAll();
   return {
-    success: results.every((item) => item.success),
-    results,
+    success: true,
+    results: snapshots.map((plugin) => ({
+      success: true,
+      plugin,
+    })),
   };
 }

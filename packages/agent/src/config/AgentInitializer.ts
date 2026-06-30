@@ -3,8 +3,8 @@
  *
  * 职责说明（中文）
  * - CLI `downcity agent create` 与 Console 共用同一套初始化逻辑，避免模板与目录结构分叉。
- * - 负责创建项目骨架、静态 prompt、默认 `downcity.json`、基础目录与 schema 文件。
- * - 负责把用户在创建阶段提供的最小执行配置与渠道配置写入项目。
+ * - 负责创建项目骨架、静态 prompt、基础目录与 schema 文件。
+ * - CLI 侧运行配置应写入宿主配置存储，不再由 SDK 初始化器写项目配置文件。
  *
  * 边界说明（中文）
  * - 这里只处理“初始化一个新项目”所需的静态文件与目录，不处理 downcity 托管进程启停。
@@ -22,20 +22,14 @@ import {
   getDowncityDataDirPath,
   getDowncityDebugDirPath,
   getDowncityDirPath,
-  getDowncityJsonPath,
   getDowncityProfileDirPath,
   getDowncityProfileOtherPath,
   getDowncityProfilePrimaryPath,
   getDowncityPublicDirPath,
   getDowncityResourcesDirPath,
-  getDowncitySchemaPath,
   getDowncityTasksDirPath,
   getSoulMdPath,
 } from "@/config/Paths.js";
-import { DEFAULT_DOWNCITY_JSON } from "@/config/Defaults.js";
-import { DOWNCITY_JSON_SCHEMA } from "@/config/DowncitySchema.js";
-import type { DowncityConfig } from "@/config/Config.js";
-import type { DowncityChatPluginChannelsConfig } from "@/types/config/DowncityConfig.js";
 import {
   DEFAULT_PROFILE_MD_TEMPLATE,
   DEFAULT_SOUL_MD_TEMPLATE,
@@ -44,14 +38,14 @@ import type { EnvFileEntry } from "@/types/common/EnvFile.js";
 import { appendMissingEnvEntries } from "@/config/EnvFile.js";
 import { ensureGitignoreEntry } from "@/config/Gitignore.js";
 import { renderTemplateVariables } from "@/utils/Template.js";
-import { ensureDir, saveJson } from "@/utils/storage/index.js";
+import { ensureDir } from "@/utils/storage/index.js";
 import type {
   AgentProjectChannel,
   AgentProjectInitializationInput,
   AgentProjectInitializationResult,
 } from "@/types/config/AgentProject.js";
-import { assertProjectExecutionTarget } from "@/config/ExecutionBinding.js";
 import type { ExecutionBindingConfig } from "@/types/config/ExecutionBinding.js";
+import { assertProjectExecutionTarget } from "@/config/ExecutionBinding.js";
 
 /**
  * 规范化默认 Agent ID。
@@ -92,21 +86,20 @@ function normalizeChannels(input: AgentProjectChannel[] | undefined): AgentProje
  * 判断项目是否已经具备最小初始化文件。
  *
  * 关键点（中文）
- * - 当前只检查 `PROFILE.md` 与 `downcity.json`，用于快速判断是否已初始化过。
+ * - 当前只检查 `PROFILE.md`，用于快速判断项目行为资产是否已初始化过。
  * - 不把 `.downcity/` 目录作为硬性条件，避免用户手动清理缓存后被误判为未初始化。
  */
 export async function isAgentProjectInitialized(projectRoot: string): Promise<boolean> {
   const normalizedRoot = path.resolve(String(projectRoot || "").trim() || ".");
   const profileReady = await fs.pathExists(getProfileMdPath(normalizedRoot));
-  const shipReady = await fs.pathExists(getDowncityJsonPath(normalizedRoot));
-  return profileReady && shipReady;
+  return profileReady;
 }
 
 /**
  * 初始化 agent 项目骨架。
  *
  * 关键点（中文）
- * - 会创建 prompt 文件、配置文件、`.downcity` 目录结构以及 schema 快照。
+ * - 会创建 prompt 文件、`.downcity` 目录结构以及 schema 快照。
  * - 对已存在文件采取“能跳过就跳过、明确冲突则报错”的策略，降低误覆盖风险。
  * - 返回结果只描述本次初始化写入摘要，方便 CLI 与控制台直接展示。
  */
@@ -135,12 +128,6 @@ export async function initializeAgentProject(
 
   const profileMdPath = getProfileMdPath(projectRoot);
   const soulMdPath = getSoulMdPath(projectRoot);
-  const shipJsonPath = getDowncityJsonPath(projectRoot);
-  const existingShipJson = await fs.pathExists(shipJsonPath);
-  if (existingShipJson && input.forceOverwriteShipJson !== true) {
-    throw new Error(`downcity.json already exists: ${shipJsonPath}`);
-  }
-
   const initTemplateVariables = {
     agent_id,
   };
@@ -165,37 +152,6 @@ export async function initializeAgentProject(
     await fs.writeFile(file.filePath, file.content, "utf-8");
     createdFiles.push(file.filename);
   }
-
-  const channelsConfig: DowncityChatPluginChannelsConfig = {};
-  if (channels.includes("telegram")) {
-    channelsConfig.telegram = { enabled: true };
-  }
-  if (channels.includes("feishu")) {
-    channelsConfig.feishu = { enabled: true };
-  }
-  if (channels.includes("qq")) {
-    channelsConfig.qq = { enabled: true };
-  }
-
-  const shipConfig: DowncityConfig = {
-    $schema: DEFAULT_DOWNCITY_JSON.$schema,
-    id: agent_id,
-    version: "1.0.0",
-    execution,
-    plugins: {
-      ...(input.plugins || {}),
-      ...(Object.keys(channelsConfig).length > 0
-        ? {
-            chat: {
-              ...input.plugins?.chat,
-              channels: channelsConfig,
-            },
-          }
-        : {}),
-    },
-  };
-  await saveJson(shipJsonPath, shipConfig);
-  createdFiles.push("downcity.json");
 
   await appendMissingEnvEntries(
     dotEnvPath,
@@ -227,17 +183,11 @@ export async function initializeAgentProject(
     getDowncityResourcesDirPath(projectRoot),
     getDowncityConfigDirPath(projectRoot),
     path.join(projectRoot, ".agents", "skills"),
-    path.join(getDowncityDirPath(projectRoot), "schema"),
     getDowncityDebugDirPath(projectRoot),
   ];
   for (const dir of dirs) {
     await ensureDir(dir);
   }
-
-  const shipSchemaPath = getDowncitySchemaPath(projectRoot);
-  await ensureDir(path.dirname(shipSchemaPath));
-  await saveJson(shipSchemaPath, DOWNCITY_JSON_SCHEMA);
-  createdFiles.push(".downcity/schema/downcity.schema.json");
 
   try {
     await ensureDir(getDowncityProfileDirPath(projectRoot));

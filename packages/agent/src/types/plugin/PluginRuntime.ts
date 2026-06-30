@@ -13,6 +13,9 @@ import type {
 import type { JsonValue } from "@/types/common/Json.js";
 import type { PluginActionResult } from "@/types/plugin/PluginAction.js";
 import type { PluginActionExample } from "@/types/plugin/PluginAction.js";
+import type { Plugin } from "@/types/plugin/PluginDefinition.js";
+import type { AgentSessionSystemBlock } from "@/types/agent/AgentTypes.js";
+import type { PluginSnapshot } from "@/types/plugin/PluginState.js";
 
 /**
  * Plugin 概览视图。
@@ -80,9 +83,9 @@ export interface PluginReadView {
  * Plugin 可用性结果。
  */
 export interface PluginAvailability {
-  /** Plugin 是否启用。 */
+  /** Plugin 是否已注册。 */
   enabled: boolean;
-  /** Plugin 当前是否可用。 */
+  /** Plugin 当前环境是否可用。 */
   available: boolean;
   /** 不可用原因列表。 */
   reasons: string[];
@@ -92,6 +95,22 @@ export interface PluginAvailability {
  * 当前 Agent 可用的 plugin 调用面。
  */
 export interface AgentPlugins {
+  /** 注册或替换一个 plugin。 */
+  register(plugin: Plugin): Promise<PluginSnapshot>;
+  /** 卸载一个 plugin。 */
+  unregister(pluginName: string): Promise<boolean>;
+  /** 启动全部已挂载 plugin lifecycle。 */
+  startAll(): Promise<PluginSnapshot[]>;
+  /** 卸载全部 plugin。 */
+  unregisterAll(): Promise<void>;
+  /** 判断 plugin 是否已注册。 */
+  has(pluginName: string): boolean;
+  /** 读取单个 plugin 定义。 */
+  get(pluginName: string): Plugin | null;
+  /** 读取单个 plugin 注册快照。 */
+  status(pluginName: string): PluginSnapshot | null;
+  /** 列出全部已注册 plugin 快照。 */
+  snapshots(): PluginSnapshot[];
   /** 列出全部已注册 plugin。 */
   list(): PluginView[];
   /** 读取 plugin / action metadata。 */
@@ -112,6 +131,8 @@ export interface AgentPlugins {
     /** Action Payload（可选）。 */
     payload?: JsonValue;
   }): Promise<PluginActionResult<JsonValue>>;
+  /** 读取当前生效的 plugin system blocks。 */
+  systemBlocks(): Promise<AgentSessionSystemBlock[]>;
   /** 运行 pipeline 点，按顺序链式变换值。 */
   pipeline<T = JsonValue>(pointName: string, value: T): Promise<T>;
   /** 运行 guard 点；任一插件抛错即终止。 */

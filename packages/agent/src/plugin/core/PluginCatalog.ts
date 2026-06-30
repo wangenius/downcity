@@ -7,7 +7,6 @@
  * - Agent 的视角只有“传入的 plugin”，目录视图和可用性检查都从这些实例推导。
  */
 
-import { isPluginEnabled } from "@/plugin/core/Activation.js";
 import type {
   Plugin,
   PluginAvailability,
@@ -90,7 +89,7 @@ export function listPluginViews(plugins: Iterable<Plugin>): PluginView[] {
  *
  * 关键点（中文）
  * - 传入 context 时会调用 plugin 自己的 availability。
- * - 未传 context 时只做静态启用态检查，适合 Console 或 CLI 的目录回退展示。
+ * - 未传 context 时只返回静态目录说明，适合 Console 或 CLI 的目录回退展示。
  */
 export async function resolvePluginAvailability(params: {
   plugins: Iterable<Plugin>;
@@ -109,18 +108,6 @@ export async function resolvePluginAvailability(params: {
 
   if (params.context && plugin.availability) {
     return await plugin.availability(params.context);
-  }
-
-  const enabled = isPluginEnabled({
-    plugin,
-    ...(params.context ? { context: params.context } : {}),
-  });
-  if (!enabled) {
-    return {
-      enabled: false,
-      available: false,
-      reasons: [`Plugin "${plugin.name}" is disabled`],
-    };
   }
 
   const agentReason = String(params.agentError || "").trim();
@@ -155,15 +142,6 @@ export function buildStaticPluginAvailability(params: {
       enabled: false,
       available: false,
       reasons: [`Unknown plugin: ${params.pluginName}`],
-    };
-  }
-
-  const enabled = isPluginEnabled({ plugin });
-  if (!enabled) {
-    return {
-      enabled: false,
-      available: false,
-      reasons: [`Plugin "${plugin.name}" is disabled`],
     };
   }
 

@@ -2,18 +2,18 @@
  * `city agent create`：在目标目录生成最小可用的 Downcity 工程骨架与配置文件。
  *
  * 目标
- * - 生成 `PROFILE.md` / `SOUL.md` / `downcity.json` / `.downcity/` 目录结构与 schema 文件
+ * - 生成 `PROFILE.md` / `SOUL.md` / `.downcity/` 目录结构与 schema 文件
  * - 通过交互式问题收集必要配置（模型、channels 等）
  *
  * 设计要点
- * - Chat channels 支持多选：仅写入用户选择的 channels（未选择的不出现在 `downcity.json`）
+ * - Chat channels 支持多选：选择结果写入 CLI 全局 DB 中的 agent 配置
  * - 避免写入无意义的默认值：能省则省，保持配置简洁
  */
 
 import path from "path";
 import prompts from "@/city/tui/Prompts.js";
 import fs from "fs-extra";
-import { getProfileMdPath, getDowncityJsonPath, getSoulMdPath } from "@/city/config/Paths.js";
+import { getProfileMdPath, getSoulMdPath } from "@/city/config/Paths.js";
 import {
   initializeAgentProject,
   normalizeDefaultAgentId,
@@ -26,12 +26,24 @@ import {
   assertPlatformModelReady,
   listPlatformModelChoices,
 } from "@/city/runtime/city-model/ExecutionModelBinding.js";
+import {
+  readAgentConfig,
+  upsertAgentConfig,
+} from "@/city/process/registry/AgentConfigStore.js";
+import { upsertManagedAgentEntry } from "@/city/process/registry/CityRegistry.js";
 
 type InitPromptResponse = {
   id?: string;
   primaryModelId?: string;
   channels?: string[];
 };
+
+type ChatChannelsConfig = Partial<Record<AgentProjectChannel, {
+  /** 当前渠道是否启用。 */
+  enabled?: boolean;
+  /** 绑定的 City chat account id。 */
+  channelAccountId?: string;
+}>>;
 
 
 /**
@@ -67,7 +79,7 @@ export async function initCommand(
   // Check if core initialization files already exist
   const existingProfileMd = fs.existsSync(getProfileMdPath(projectRoot));
   const existingSoulMd = fs.existsSync(getSoulMdPath(projectRoot));
-  const existingShipJson = fs.existsSync(getDowncityJsonPath(projectRoot));
+  const existingAgentConfig = readAgentConfig(projectRoot);
   const modelChoices = await listPlatformModelChoices();
   const modelChoiceIds = modelChoices.map((item) => item.value);
   if (modelChoiceIds.length === 0) {
@@ -78,14 +90,14 @@ export async function initCommand(
     });
   }
 
-  // 关键点（中文）：已存在的 PROFILE.md 永远不覆盖，只在 downcity.json 已存在时询问覆盖。
-  if (existingShipJson) {
+  // 关键点（中文）：已存在的 PROFILE.md 永远不覆盖，只在 DB 配置已存在时询问覆盖。
+  if (existingAgentConfig) {
     if (!allowOverwrite) {
       const confirmResponse = (await prompts({
         type: "confirm",
         name: "overwrite",
         message:
-          "downcity.json already exists. Overwrite existing downcity.json and continue?",
+          "Agent config already exists in the global DB. Overwrite it and continue?",
         initial: false,
       })) as { overwrite?: boolean };
 
@@ -117,7 +129,7 @@ export async function initCommand(
       initial: 0,
     },
     {
-      // 关键交互（中文）：Chat platforms 允许多选，未选择的就不写入 downcity.json。
+      // 关键交互（中文）：Chat platforms 允许多选，未选择的就不写入 DB 配置。
       type: "multiselect",
       name: "channels",
       message: "Select chat platforms (multi-select)",
@@ -129,7 +141,7 @@ export async function initCommand(
     },
   ])) as InitPromptResponse;
 
-  // 关键点（中文）：agent_id 同时用于 `downcity.json.id` 与 init 模板变量渲染，避免两处来源不一致。
+  // 关键点（中文）：agent_id 同时用于 DB 配置与 init 模板变量渲染，避免两处来源不一致。
   const agent_id =
     String(response.id || "").trim() || default_agent_id;
   const primaryModelId =
@@ -142,15 +154,32 @@ export async function initCommand(
   const selectedChannels = Array.isArray(response.channels)
     ? (response.channels as AgentProjectChannel[])
     : [];
+  const channels_config: ChatChannelsConfig = {};
+  for (const channel of selectedChannels) {
+    channels_config[channel] = { enabled: true };
+  }
   const initResult = await initializeAgentProject(
     {
       projectRoot,
       id: agent_id,
       execution,
       channels: selectedChannels,
-      forceOverwriteShipJson: allowOverwrite,
     },
   );
+  upsertAgentConfig({
+    projectRoot,
+    id: agent_id,
+    version: "1.0.0",
+    execution,
+    plugins: Object.keys(channels_config).length > 0
+      ? {
+          chat: {
+            channels: channels_config,
+          },
+        }
+      : undefined,
+  });
+  await upsertManagedAgentEntry({ projectRoot });
 
   const createdItems: string[] = [];
   const skippedItems: string[] = [];
@@ -164,7 +193,7 @@ export async function initCommand(
   } else if (existingSoulMd) {
     skippedItems.push("SOUL.md");
   }
-  createdItems.push("downcity.json", ".downcity/", "downcity.schema.json");
+  createdItems.push(".downcity/", "global DB agent config");
   skippedItems.push(".env", ".env.example");
 
   emitCliBlock({
@@ -257,10 +286,10 @@ export async function initCommand(
   const nextSteps: string[] = [
     "Edit PROFILE.md to customize agent behavior",
     "Edit SOUL.md to customize your core operating principles",
-    "Edit downcity.json.execution to adjust execution target",
+    "Use city agent reset to adjust execution target",
   ];
   if (primaryModelId) {
-    nextSteps.push("Edit downcity.json.execution.modelId (bind to City AIService model id)");
+    nextSteps.push("Use city agent reset to bind another City AIService model id");
     nextSteps.push('Use "city agent start" to confirm the Agent can reach its configured model');
   }
 

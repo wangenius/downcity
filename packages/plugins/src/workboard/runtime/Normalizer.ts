@@ -184,7 +184,9 @@ export function toWorkboardSignals(params: {
   plugins: PluginStateSnapshot[];
   taskResult: TaskListResponse;
 }): WorkboardSignalItem[] {
-  const degradedCount = params.plugins.filter((item) => item.state !== "running").length;
+  const degradedCount = params.plugins.filter(
+    (item) => String(item.state) !== "ready",
+  ).length;
   const taskCount = Array.isArray(params.taskResult.tasks) ? params.taskResult.tasks.length : 0;
 
   return [

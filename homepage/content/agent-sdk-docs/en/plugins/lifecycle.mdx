@@ -1,31 +1,70 @@
 ---
 title: Plugin Lifecycle
-description: Understand lifecycle-owned plugins, plugin runtime states, and how start, stop, and command differ from enablement and availability
+description: Understand Agent plugin registration, unregistration, and when lifecycle.start / lifecycle.stop run
 ---
 
 # Plugin Lifecycle
 
-Plugin lifecycle is about long-lived runtime ownership.
+Plugins belong to an Agent.
 
-It is not the same thing as:
+The lifecycle can be simplified to two operations:
 
-- static enablement
-- runtime availability
-- one-shot actions
+- register: the plugin enters `agent.plugins` and immediately participates in actions, system text, hooks, and resolves
+- unregister: the plugin is removed from `agent.plugins` and becomes invisible
 
-## The lifecycle surface
+You no longer need a separate start, stop, restart, or project-level enabled switch.
 
-A lifecycle-capable plugin may declare:
+## Registration Is Enablement
+
+Plugins passed to the Agent constructor are registered automatically:
+
+```ts
+const agent = new Agent({
+  id: "agent",
+  path: process.cwd(),
+  plugins: [new WebPlugin()],
+});
+
+await agent.ready();
+```
+
+After the Agent is instantiated, you can register more plugins:
+
+```ts
+await agent.plugins.register(new SkillPlugin());
+```
+
+Registering the same plugin name replaces the old instance. The runtime unregisters the old plugin before registering the new one.
+
+## Unregistration Is Disablement
+
+```ts
+await agent.plugins.unregister("skill");
+```
+
+After unregistering:
+
+- `agent.plugins.get("skill")` returns `null`
+- `agent.plugins.runAction({ plugin: "skill", ... })` returns unknown plugin
+- that plugin's system text, hooks, and resolves no longer participate in future runs
+
+## lifecycle.start / lifecycle.stop
+
+Plugins can still declare lifecycle hooks:
 
 - `lifecycle.start`
 - `lifecycle.stop`
 - `lifecycle.command`
 
-These hooks are for plugin-owned runtime behavior, not for normal one-shot capability calls.
+But they are no longer a public state machine.
 
-## When lifecycle is the right shape
+The rules are:
 
-Use lifecycle when the plugin must own:
+- `register(plugin)` automatically calls `plugin.lifecycle?.start(context)`
+- `unregister(name)` automatically calls `plugin.lifecycle?.stop(context)`
+- `agent.dispose()` unregisters all plugins
+
+Lifecycle is useful for:
 
 - workers
 - poll loops
@@ -33,45 +72,9 @@ Use lifecycle when the plugin must own:
 - in-memory runtime state
 - recoverable runtime engines
 
-Typical examples:
-
-- `chat`
-- `task`
-- `memory`
-- `shell`
-
-ActionSchedule is not a plugin. It is an Agent-level action scheduling loop that boots together with plugin lifecycles when the Agent is constructed.
-
-## Runtime state is not enablement
-
-These are different facts:
-
-- `enabled`: whether the current project config says the plugin is on
-- `available`: whether runtime checks say the plugin is usable now
-- `running`: whether the lifecycle runtime is currently started
-
-## Runtime state snapshots
-
-Current runtime state snapshots use states such as:
-
-- `running`
-- `stopped`
-- `starting`
-- `stopping`
-- `error`
-
-## What starts lifecycle plugins
-
-In the local SDK, plugin lifecycles boot automatically inside `new Agent(...)`. Call `await agent.ready()` to wait for them, and `await agent.dispose()` to stop them.
-
-Advanced runtime code may also use exported helpers such as:
-
-- `startAllPlugins(context)`
-- `stopAllPlugins(context)`
-
 ## Lifecycle command vs action
 
-Use `lifecycle.command` when the plugin needs one runtime-control command such as:
+Use `lifecycle.command` when the plugin needs a runtime-control command such as:
 
 - reload
 - reschedule
@@ -81,12 +84,26 @@ Use `actions` when the plugin is exposing normal capability work.
 
 `task` is a good example of a plugin that has both.
 
-## Managed vs local plugin mental model
+## Inspecting Registration State
 
-One useful distinction is:
+```ts
+agent.plugins.snapshots();
+agent.plugins.status("skill");
+agent.plugins.has("skill");
+```
 
-- local plugin: does not depend on a running lifecycle
-- managed plugin: owns lifecycle behavior
+States are intentionally small:
+
+- `ready`
+- `error`
+
+An unregistered plugin does not need a state because it is no longer in the registry.
+
+## ActionSchedule
+
+ActionSchedule is not a plugin.
+
+It is an Agent-level action scheduling loop. Due jobs call actions on currently registered plugins.
 
 ## Related docs
 

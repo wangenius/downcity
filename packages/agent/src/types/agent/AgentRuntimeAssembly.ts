@@ -68,7 +68,7 @@ export interface AgentPathRuntime {
  */
 export interface AgentPluginConfigRuntime {
   /**
-   * 将当前 `plugins` 配置块写回项目 `downcity.json`。
+   * 将当前 `plugins` 配置块写回宿主配置存储。
    */
   persistProjectPlugins(plugins: DowncityConfig["plugins"] | undefined): Promise<string>;
 }

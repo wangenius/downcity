@@ -16,7 +16,7 @@ The Chat plugin connects your Agent to messaging channels like Telegram, Feishu,
 
 ## Configuration
 
-Channels are configured under `plugins.chat.channels` in `downcity.json`:
+Channels are configured under `plugins.chat.channels` in agent config. CLI-managed projects store this config in the global DB:
 
 ```json
 {
@@ -39,7 +39,7 @@ Channels are configured under `plugins.chat.channels` in `downcity.json`:
 
 ## Channel accounts
 
-The actual bot credentials live in `~/.downcity/downcity.db` (managed by City). The project only references them by `channelAccountId`.
+The actual bot credentials live in the CLI global DB (managed by City). Agent config only references them by `channelAccountId`.
 
 ## Supported channels
 

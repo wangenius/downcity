@@ -78,8 +78,8 @@ export function registerAgentCommands(
       en: "create and initialize an Agent project",
     }))
     .option("-f, --force [enabled]", t({
-      zh: "允许覆盖已有 downcity.json（危险操作）",
-      en: "allow overwriting an existing downcity.json (dangerous)",
+      zh: "允许覆盖已有 Agent 配置（危险操作）",
+      en: "allow overwriting existing Agent config (dangerous)",
     }), parseBoolean)
     .helpOption("--help", helpText())
     .action(createVersionBanner(context.version, async (cwd: string = ".", options: { force?: boolean }) => {

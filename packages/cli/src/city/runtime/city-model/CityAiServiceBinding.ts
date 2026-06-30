@@ -24,7 +24,7 @@ export interface CityAiModelChoice {
   title: string;
 
   /**
-   * 写入 `downcity.json.execution.modelId` 的模型 ID。
+   * 写入 Agent 配置 `execution.modelId` 的模型 ID。
    */
   value: string;
 

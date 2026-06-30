@@ -2,20 +2,22 @@
  * `city config` 命令组。
  *
  * 目标（中文）
- * - 提供 downcity.json 的通用读写能力（get/set/unset）。
+ * - 提供 CLI 全局 DB 中 agent 配置的通用读写能力（get/set/unset）。
  * - 提供 alias 写入能力。
  * - 所有输出统一支持 JSON（默认）与可读文本两种模式。
  */
 
 import path from "node:path";
-import fs from "fs-extra";
 import type { Command } from "commander";
-import { getDowncityJsonPath } from "@/city/config/Paths.js";
 import { printResult } from "@/city/utils/cli/CliOutput.js";
 import { aliasCommand } from "@/city/shared/Alias.js";
 import { parseBoolean } from "@/shared/IndexSupport.js";
-import type { DowncityConfig } from "@downcity/agent";
 import { helpText, t } from "@/shared/CliLocale.js";
+import {
+  readAgentConfig,
+  upsertAgentConfig,
+  type StoredAgentConfig,
+} from "@/city/process/registry/AgentConfigStore.js";
 
 /**
  * 解析项目根目录。
@@ -54,34 +56,19 @@ function parseConfigValue(rawValue: string): unknown {
   }
 }
 
-function readDowncityConfigByPath(
-  downcityJsonPath: string,
-  scope: "project" | "console",
-): { downcityJsonPath: string; config: DowncityConfig } {
-  if (!fs.existsSync(downcityJsonPath)) {
-    const hint =
-      scope === "console"
-        ? 'Run "city init" first.'
-        : 'Run "city agent create" first.';
-    throw new Error(`downcity.json not found at ${downcityJsonPath}. ${hint}`);
+function readStoredConfig(projectRoot: string): StoredAgentConfig {
+  const config = readAgentConfig(projectRoot);
+  if (!config) {
+    throw new Error(`Agent config not found in global DB. Run "city agent create" first.`);
   }
-  const raw = fs.readJsonSync(downcityJsonPath) as unknown;
-  if (!isPlainObject(raw)) {
-    throw new Error("Invalid downcity.json: expected object");
-  }
-  const candidate = raw as Partial<DowncityConfig>;
-  if (typeof candidate.id !== "string" || typeof candidate.version !== "string") {
-    throw new Error("Invalid downcity.json: missing required fields id/version");
-  }
-  return { downcityJsonPath, config: candidate as DowncityConfig };
+  return config;
 }
 
-function readDowncityConfig(projectRoot: string): { downcityJsonPath: string; config: DowncityConfig } {
-  return readDowncityConfigByPath(getDowncityJsonPath(projectRoot), "project");
-}
-
-function writeDowncityConfig(downcityJsonPath: string, config: DowncityConfig): void {
-  fs.writeJsonSync(downcityJsonPath, config, { spaces: 2 });
+function writeStoredConfig(projectRoot: string, config: StoredAgentConfig): void {
+  upsertAgentConfig({
+    ...config,
+    projectRoot,
+  });
 }
 
 function getByPath(
@@ -154,8 +141,7 @@ function runConfigCommand(
   options: { path?: string; json?: boolean },
   handler: (input: {
     projectRoot: string;
-    downcityJsonPath: string;
-    config: DowncityConfig;
+    config: StoredAgentConfig;
   }) => {
     title: string;
     payload: Record<string, unknown>;
@@ -165,10 +151,10 @@ function runConfigCommand(
   const asJson = options.json !== false;
   try {
     const projectRoot = resolveProjectRoot(options.path);
-    const { downcityJsonPath, config } = readDowncityConfig(projectRoot);
-    const result = handler({ projectRoot, downcityJsonPath, config });
+    const config = readStoredConfig(projectRoot);
+    const result = handler({ projectRoot, config });
     if (result.save) {
-      writeDowncityConfig(downcityJsonPath, config);
+      writeStoredConfig(projectRoot, config);
     }
     printResult({
       asJson,
@@ -176,7 +162,6 @@ function runConfigCommand(
       title: result.title,
       payload: {
         projectRoot,
-        downcityJsonPath,
         ...result.payload,
       },
     });
@@ -212,8 +197,8 @@ export function registerConfigCommand(program: Command): void {
   const config = program
     .command("config")
     .description(t({
-      zh: "管理 downcity.json 配置与 alias",
-      en: "manage downcity.json configuration and shell aliases",
+      zh: "管理 CLI 全局 DB 中的 Agent 配置与 alias",
+      en: "manage Agent config in the CLI global DB and shell aliases",
     }))
     .helpOption("--help", helpText());
 
@@ -221,8 +206,8 @@ export function registerConfigCommand(program: Command): void {
     config
       .command("get [keyPath]")
       .description(t({
-        zh: "读取 downcity.json（可选读取单个路径）",
-        en: "read downcity.json, optionally from a single path",
+        zh: "读取 Agent 配置（可选读取单个路径）",
+        en: "read Agent config, optionally from a single path",
       }))
       .helpOption("--help", helpText()),
   ).action((keyPath: string | undefined, options: { path?: string; json?: boolean }) => {
@@ -252,8 +237,8 @@ export function registerConfigCommand(program: Command): void {
     config
       .command("set <keyPath> <value>")
       .description(t({
-        zh: "设置 downcity.json 指定路径的值（value 支持 JSON 字面量）",
-        en: "set a value at a downcity.json path (value supports JSON literals)",
+        zh: "设置 Agent 配置指定路径的值（value 支持 JSON 字面量）",
+        en: "set a value at an Agent config path (value supports JSON literals)",
       }))
       .helpOption("--help", helpText()),
   ).action(
@@ -288,8 +273,8 @@ export function registerConfigCommand(program: Command): void {
     config
       .command("unset <keyPath>")
       .description(t({
-        zh: "删除 downcity.json 指定路径",
-        en: "remove a value at a downcity.json path",
+        zh: "删除 Agent 配置指定路径",
+        en: "remove a value at an Agent config path",
       }))
       .helpOption("--help", helpText()),
   ).action((keyPath: string, options: { path?: string; json?: boolean }) => {

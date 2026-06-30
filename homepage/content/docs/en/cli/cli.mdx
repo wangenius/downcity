@@ -5,26 +5,25 @@ description: How to use the CLI to manage Agent projects
 
 # Agent CLI
 
-The `downcity` CLI is a convenience wrapper around the Agent SDK. It reads `downcity.json` from your project directory and passes those values to the Agent SDK constructor, then handles lifecycle commands like start, stop, and restart.
+The `city` CLI is a convenience wrapper around the Agent SDK. It reads agent config from the CLI global DB, passes model, plugin, and startup options to the Agent SDK constructor, then handles lifecycle commands like start, stop, and restart.
 
 ## Project initialization
 
 ```bash
-downcity agent init my-project
+city agent create my-project
 ```
 
 This generates:
 
-- `downcity.json`
 - `PROFILE.md`
 - `SOUL.md`
 - `.downcity/`
+- Agent config in the CLI global DB
 
 ## Project directory structure
 
 ```text
 my-project/
-├── downcity.json
 ├── PROFILE.md
 ├── SOUL.md
 ├── .downcity/
@@ -33,18 +32,18 @@ my-project/
 
 ## Key commands
 
-- `downcity agent start` — start the agent in the current project
-- `downcity agent stop` — stop the running agent
-- `downcity agent restart` — restart the agent
-- `downcity agent status` — check if the agent is running
-- `downcity agent logs` — view runtime logs
+- `city agent start` — start the agent in the current project
+- `city agent stop` — stop the running agent
+- `city agent restart` — restart the agent
+- `city agent status` — check if the agent is running
+- `city agent logs` — view runtime logs
 
 ## What the CLI does
 
-1. Reads `downcity.json` from the project directory
+1. Reads agent config from the CLI global DB
 2. Resolves `execution.modelId` through the connected Federation AIService
 3. Passes the resolved config to `new Agent(...)`
-4. Calls `agent.start()`
+4. Starts the Agent process
 5. Maintains daemon state so you can inspect, stop, or restart later
 
 ## CLI vs SDK
@@ -54,5 +53,4 @@ The CLI is for day-to-day project management. The SDK is for embedding agent beh
 Continue with:
 
 - [Agent SDK](/en/docs/agent/sdk)
-- [downcity.json](/en/docs/agent/downcity-json)
 - [Agent Lifecycle](/en/docs/agent/lifecycle)

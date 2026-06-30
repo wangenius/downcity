@@ -146,6 +146,47 @@ export class HookRegistry {
   }
 
   /**
+   * 移除指定 plugin 注册的全部扩展点。
+   */
+  unregisterPlugin(pluginName: string): void {
+    const key = String(pluginName || "").trim();
+    if (!key) return;
+
+    for (const [pointName, bucket] of this.pipelineHooks.entries()) {
+      const next = bucket.filter((item) => item.pluginName !== key);
+      if (next.length > 0) {
+        this.pipelineHooks.set(pointName, next);
+      } else {
+        this.pipelineHooks.delete(pointName);
+      }
+    }
+
+    for (const [pointName, bucket] of this.guardHooks.entries()) {
+      const next = bucket.filter((item) => item.pluginName !== key);
+      if (next.length > 0) {
+        this.guardHooks.set(pointName, next);
+      } else {
+        this.guardHooks.delete(pointName);
+      }
+    }
+
+    for (const [pointName, bucket] of this.effectHooks.entries()) {
+      const next = bucket.filter((item) => item.pluginName !== key);
+      if (next.length > 0) {
+        this.effectHooks.set(pointName, next);
+      } else {
+        this.effectHooks.delete(pointName);
+      }
+    }
+
+    for (const [pointName, record] of this.resolveHooks.entries()) {
+      if (record.pluginName === key) {
+        this.resolveHooks.delete(pointName);
+      }
+    }
+  }
+
+  /**
    * 列出所有已注册扩展点。
    */
   list(): string[] {

@@ -8,7 +8,6 @@
  * - `action` 仍保留为高级入口，真正执行时依赖具体 agent 项目。
  */
 
-import fs from "node:fs";
 import prompts from "@/city/tui/Prompts.js";
 import {
   listPluginViews,
@@ -17,11 +16,11 @@ import {
 } from "@downcity/agent";
 import { printResult } from "@/city/utils/cli/CliOutput.js";
 import type { JsonValue, PluginCliBaseOptions } from "@downcity/agent";
-import { getDowncityJsonPath } from "@/city/config/Paths.js";
 import { emitCliBlock } from "@/shared/CliReporter.js";
 import { t } from "@/shared/CliLocale.js";
 import { resolveProjectRoot } from "@/city/shared/PluginTargetSupport.js";
 import { createCityStaticBuiltinPlugins } from "@/city/runtime/plugins/CityBuiltinPlugins.js";
+import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
 
 type StaticCatalogEntry = {
   name: string;
@@ -79,10 +78,9 @@ export async function resolvePluginProjectRoot(options: PluginCliBaseOptions): P
 }
 
 export function validatePluginProjectRoot(projectRoot: string): string | null {
-  const downcityJsonPath = getDowncityJsonPath(projectRoot);
-  return fs.existsSync(downcityJsonPath)
+  return readAgentConfig(projectRoot)
     ? null
-    : `Invalid plugin project path: ${projectRoot}. Missing: downcity.json`;
+    : `Invalid plugin project path: ${projectRoot}. Missing agent config. Run \`city agent create\` first.`;
 }
 
 export function parseCommandPayload(raw?: string): JsonValue | undefined {

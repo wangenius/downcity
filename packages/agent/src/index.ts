@@ -139,20 +139,13 @@ export {
   registerPluginActionCommandsForCli,
 } from "./plugin/core/PluginCommand.js";
 
-// Runtime plugin 运行集成
-export {
-  startAllPlugins,
-  stopAllPlugins,
-} from "./plugin/core/Manager.js";
+// Runtime plugin 调度集成
 export { ActionScheduleStore } from "./plugin/core/ActionScheduleStore.js";
 export { parseActionScheduleRunAtMsOrThrow } from "./plugin/core/ActionScheduleTime.js";
 export {
   pickLastSuccessfulChatSendText,
   resolveAssistantMessageForPersistence,
 } from "./executor/messages/UserVisibleText.js";
-
-// Plugin 与权限配置集成
-export { persistProjectPluginConfig } from "./plugin/core/ProjectConfigStore.js";
 
 // 项目与配置集成
 export {

@@ -37,8 +37,7 @@ import {
 } from "@/session/index.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
-import type { BasePlugin } from "@/plugin/core/BasePlugin.js";
-import { isPluginEnabled } from "@/plugin/core/Activation.js";
+import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import { createInstructionSystemBlocks } from "@/agent/local/AgentInstructions.js";
 
 function decodeMaybe(input: string): string {
@@ -86,7 +85,7 @@ type AgentSessionManagerOptions = {
   /**
    * 当前 plugin 实例集合。
    */
-  plugin_instances: Map<string, BasePlugin>;
+  plugin_instances: Map<string, Plugin>;
 
   /**
    * 当前默认模型实例。
@@ -109,7 +108,7 @@ export class AgentSessionManager {
   private readonly logger: Logger;
   private readonly get_agent_context: AgentSessionManagerOptions["get_agent_context"];
   private readonly get_instruction: AgentSessionManagerOptions["get_instruction"];
-  private readonly plugin_instances: Map<string, BasePlugin>;
+  private readonly plugin_instances: Map<string, Plugin>;
   private readonly default_model?: AgentModel;
   private readonly SessionClass: AgentSessionConstructor;
   private readonly sessions_by_id = new Map<string, AgentManagedSession>();
@@ -378,27 +377,6 @@ export class AgentSessionManager {
   }
 
   private async load_plugin_system_blocks(): Promise<AgentSessionSystemBlock[]> {
-    const context = this.get_agent_context();
-    const out: AgentSessionSystemBlock[] = [];
-    for (const plugin of this.plugin_instances.values()) {
-      if (typeof plugin.system !== "function") continue;
-      try {
-        if (!isPluginEnabled({ plugin, context })) continue;
-        if (typeof plugin.availability === "function") {
-          const availability = await plugin.availability(context);
-          if (!availability.available) continue;
-        }
-        const text = String(await plugin.system(context)).trim();
-        if (!text) continue;
-        out.push({
-          source: "plugin",
-          name: plugin.name,
-          content: text,
-        });
-      } catch {
-        // 单个 plugin system 失败不应阻断 SDK session 主链路。
-      }
-    }
-    return out;
+    return await this.get_agent_context().plugins.systemBlocks();
   }
 }

@@ -11,8 +11,6 @@ export {
   controlPluginState,
   isPluginRunning,
   listPluginStates,
-  startAllPlugins,
-  stopAllPlugins,
 } from "@/plugin/core/PluginStateController.js";
 export {
   runPluginCommand,

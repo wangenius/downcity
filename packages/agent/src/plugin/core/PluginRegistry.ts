@@ -1,12 +1,12 @@
 /**
- * Plugin 注册表。
+ * Agent plugin runtime。
  *
  * 关键点（中文）
- * - 统一管理 plugin 注册、可用性检查与显式 action 运行。
- * - Plugin 自身不维护独立状态机；可用性由 enabled 配置与 plugin 自定义 availability 决定。
+ * - Plugin 只属于 Agent：注册即生效，卸载即不可见。
+ * - 注册时自动启动 plugin lifecycle；卸载时自动停止 plugin lifecycle。
+ * - action、system、hook、resolve 都统一以“已注册且 ready”为生效边界。
  */
 
-import { isPluginEnabled } from "@/plugin/core/Activation.js";
 import { toPluginView } from "@/plugin/core/PluginCatalog.js";
 import type { HookRegistry } from "@/plugin/core/HookRegistry.js";
 import type {
@@ -18,42 +18,218 @@ import type {
   PluginReadView,
   PluginView,
 } from "@/plugin/types/Plugin.js";
+import type { AgentSessionSystemBlock } from "@/types/agent/AgentTypes.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { JsonValue } from "@/types/common/Json.js";
+import type {
+  PluginRuntimeRecord,
+  PluginSnapshot,
+} from "@/types/plugin/PluginState.js";
 
 type ContextResolver = () => AgentContext;
 
+function now_ms(): number {
+  return Date.now();
+}
+
+function normalize_plugin_name(plugin_name: string): string {
+  return String(plugin_name || "").trim();
+}
+
+function create_record(plugin: Plugin): PluginRuntimeRecord {
+  const current_time = now_ms();
+  return {
+    plugin,
+    state: "ready",
+    registered_at: current_time,
+    updated_at: current_time,
+    chain: Promise.resolve(),
+    lifecycle_started: false,
+  };
+}
+
+function to_plugin_snapshot(record: PluginRuntimeRecord): PluginSnapshot {
+  const plugin = record.plugin;
+  const last_error = String(record.last_error || "").trim();
+  return {
+    name: plugin.name,
+    title: String(plugin.title || plugin.name || "").trim(),
+    description: String(plugin.description || "").trim(),
+    status: record.state,
+    state: record.state,
+    registered_at: record.registered_at,
+    updated_at: record.updated_at,
+    updatedAt: record.updated_at,
+    ...(last_error ? { last_error, lastError: last_error } : {}),
+  };
+}
+
+function update_record_state(
+  record: PluginRuntimeRecord,
+  state: PluginRuntimeRecord["state"],
+  error?: string,
+): void {
+  record.state = state;
+  record.updated_at = now_ms();
+  const normalized_error = String(error || "").trim();
+  if (normalized_error) {
+    record.last_error = normalized_error;
+  } else {
+    delete record.last_error;
+  }
+}
+
+async function run_serial(
+  record: PluginRuntimeRecord,
+  step: () => Promise<void> | void,
+): Promise<void> {
+  const next = record.chain.then(() => Promise.resolve(step()));
+  record.chain = next.then(
+    () => undefined,
+    () => undefined,
+  );
+  await next;
+}
+
 /**
- * PluginRegistry：plugin 注册与调度实现。
+ * PluginRegistry：Agent plugin 注册、卸载与调用实现。
  */
 export class PluginRegistry implements AgentPlugins {
   private readonly contextResolver: ContextResolver;
 
   private readonly hookRegistry: HookRegistry;
 
-  private readonly plugins = new Map<string, Plugin>();
+  private readonly pluginInstances: Map<string, Plugin>;
+
+  private readonly records = new Map<string, PluginRuntimeRecord>();
 
   constructor(params: {
     contextResolver: ContextResolver;
     hookRegistry: HookRegistry;
+    pluginInstances: Map<string, Plugin>;
   }) {
     this.contextResolver = params.contextResolver;
     this.hookRegistry = params.hookRegistry;
+    this.pluginInstances = params.pluginInstances;
   }
 
   /**
-   * 注册单个 Plugin。
+   * 注册单个 plugin。
+   *
+   * 说明（中文）
+   * - 同名注册表示替换：先卸载旧实例，再注册并启动新实例。
+   * - 如果新实例启动失败，会自动回滚为未注册状态并抛错。
    */
-  register(plugin: Plugin): void {
-    const key = String(plugin.name || "").trim();
+  async register(plugin: Plugin): Promise<PluginSnapshot> {
+    const key = normalize_plugin_name(plugin.name);
     if (!key) {
       throw new Error("Plugin name is required");
     }
-    if (this.plugins.has(key)) {
+    if (this.records.has(key)) {
+      await this.unregister(key);
+    }
+
+    const record = create_record(plugin);
+    this.records.set(key, record);
+    this.register_hooks(plugin);
+    this.pluginInstances.set(key, plugin);
+
+    try {
+      await this.start_record(record);
+      return to_plugin_snapshot(record);
+    } catch (error) {
+      this.unregister_hooks(key);
+      this.records.delete(key);
+      this.pluginInstances.delete(key);
+      throw error;
+    }
+  }
+
+  /**
+   * 同步挂载 plugin 元信息。
+   *
+   * 说明（中文）
+   * - 仅供 Agent 构造期使用，避免构造函数里 await。
+   * - 后续 `startAll()` 会统一启动这些初始 plugin。
+   */
+  mount(plugin: Plugin): PluginSnapshot {
+    const key = normalize_plugin_name(plugin.name);
+    if (!key) {
+      throw new Error("Plugin name is required");
+    }
+    if (this.records.has(key)) {
       throw new Error(`Plugin already registered: ${key}`);
     }
-    this.plugins.set(key, plugin);
 
+    const record = create_record(plugin);
+    this.records.set(key, record);
+    this.register_hooks(plugin);
+    this.pluginInstances.set(key, plugin);
+    return to_plugin_snapshot(record);
+  }
+
+  /**
+   * 卸载指定 plugin。
+   */
+  async unregister(pluginName: string): Promise<boolean> {
+    const key = normalize_plugin_name(pluginName);
+    if (!key) return false;
+    const record = this.records.get(key);
+    if (!record) return false;
+
+    await this.stop_record(record);
+    this.unregister_hooks(key);
+    this.records.delete(key);
+    this.pluginInstances.delete(key);
+    return true;
+  }
+
+  /**
+   * 启动全部已挂载 plugin。
+   */
+  async startAll(): Promise<PluginSnapshot[]> {
+    const snapshots: PluginSnapshot[] = [];
+    for (const record of this.records.values()) {
+      await this.start_record(record);
+      snapshots.push(to_plugin_snapshot(record));
+    }
+    return snapshots;
+  }
+
+  /**
+   * 卸载全部 plugin。
+   */
+  async unregisterAll(): Promise<void> {
+    for (const name of Array.from(this.records.keys())) {
+      await this.unregister(name);
+    }
+  }
+
+  /**
+   * 判断 plugin 是否已注册且 ready。
+   */
+  isReady(pluginName: string): boolean {
+    const record = this.records.get(normalize_plugin_name(pluginName));
+    return Boolean(record && record.state === "ready");
+  }
+
+  /**
+   * 读取单个 plugin 快照。
+   */
+  status(pluginName: string): PluginSnapshot | null {
+    const record = this.records.get(normalize_plugin_name(pluginName));
+    return record ? to_plugin_snapshot(record) : null;
+  }
+
+  /**
+   * 判断 plugin 是否已注册。
+   */
+  has(pluginName: string): boolean {
+    return this.records.has(normalize_plugin_name(pluginName));
+  }
+
+  private register_hooks(plugin: Plugin): void {
+    const key = normalize_plugin_name(plugin.name);
     for (const [hookName, handlers] of Object.entries(
       plugin.hooks?.pipeline || {},
     )) {
@@ -81,6 +257,43 @@ export class PluginRegistry implements AgentPlugins {
     for (const [pointName, handler] of Object.entries(plugin.resolves || {})) {
       this.hookRegistry.resolve(pointName, key, handler);
     }
+  }
+
+  private unregister_hooks(pluginName: string): void {
+    this.hookRegistry.unregisterPlugin(pluginName);
+  }
+
+  private async start_record(record: PluginRuntimeRecord): Promise<void> {
+    if (record.lifecycle_started) {
+      update_record_state(record, "ready");
+      return;
+    }
+    await run_serial(record, async () => {
+      if (record.lifecycle_started) {
+        update_record_state(record, "ready");
+        return;
+      }
+      try {
+        await record.plugin.lifecycle?.start?.(this.contextResolver());
+        record.lifecycle_started = true;
+        update_record_state(record, "ready");
+      } catch (error) {
+        update_record_state(record, "error", String(error));
+        throw error;
+      }
+    });
+  }
+
+  private async stop_record(record: PluginRuntimeRecord): Promise<void> {
+    await run_serial(record, async () => {
+      if (!record.lifecycle_started) return;
+      try {
+        await record.plugin.lifecycle?.stop?.(this.contextResolver());
+      } finally {
+        record.lifecycle_started = false;
+        record.updated_at = now_ms();
+      }
+    });
   }
 
   /**
@@ -118,15 +331,24 @@ export class PluginRegistry implements AgentPlugins {
    * 获取单个 plugin 定义。
    */
   get(pluginName: string): Plugin | null {
-    return this.plugins.get(String(pluginName || "").trim()) || null;
+    return this.records.get(normalize_plugin_name(pluginName))?.plugin || null;
   }
 
   /**
    * 列出全部 plugin 概览视图。
    */
   list(): PluginView[] {
-    return Array.from(this.plugins.values())
-      .map((plugin) => toPluginView(plugin))
+    return Array.from(this.records.values())
+      .map((record) => toPluginView(record.plugin))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /**
+   * 列出全部 plugin 注册快照。
+   */
+  snapshots(): PluginSnapshot[] {
+    return Array.from(this.records.values())
+      .map((record) => to_plugin_snapshot(record))
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
@@ -158,7 +380,7 @@ export class PluginRegistry implements AgentPlugins {
     plugin?: string;
     action?: string;
   }): PluginReadView | { plugins: PluginView[] } {
-    const pluginName = String(params.plugin || "").trim();
+    const pluginName = normalize_plugin_name(params.plugin || "");
     if (!pluginName) {
       return { plugins: this.list() };
     }
@@ -171,7 +393,7 @@ export class PluginRegistry implements AgentPlugins {
         actions: [],
       };
     }
-    const actionName = String(params.action || "").trim();
+    const actionName = normalize_plugin_name(params.action || "");
     const actions = Object.entries(plugin.actions || {})
       .filter(([name]) => !actionName || name === actionName)
       .sort(([left], [right]) => left.localeCompare(right))
@@ -188,8 +410,9 @@ export class PluginRegistry implements AgentPlugins {
    * 检查 plugin 可用性。
    */
   async availability(pluginName: string): Promise<PluginAvailability> {
-    const plugin = this.get(pluginName);
-    if (!plugin) {
+    const key = normalize_plugin_name(pluginName);
+    const record = this.records.get(key);
+    if (!record) {
       return {
         enabled: false,
         available: false,
@@ -197,20 +420,18 @@ export class PluginRegistry implements AgentPlugins {
       };
     }
 
-    if (plugin.availability) {
-      return await plugin.availability(this.contextResolver());
-    }
-
-    const context = this.contextResolver();
-    const enabled = isPluginEnabled({ plugin, context });
-
-    if (!enabled) {
+    if (record.state !== "ready") {
       return {
-        enabled: false,
+        enabled: true,
         available: false,
-        reasons: [`Plugin "${plugin.name}" is disabled`],
+        reasons: [record.last_error || `Plugin "${record.plugin.name}" is not ready`],
       };
     }
+
+    if (record.plugin.availability) {
+      return await record.plugin.availability(this.contextResolver());
+    }
+
     return {
       enabled: true,
       available: true,
@@ -248,8 +469,9 @@ export class PluginRegistry implements AgentPlugins {
     action: string;
     payload?: JsonValue;
   }): Promise<PluginActionResult<JsonValue>> {
-    const plugin = this.get(params.plugin);
-    if (!plugin) {
+    const key = normalize_plugin_name(params.plugin);
+    const record = this.records.get(key);
+    if (!record) {
       return {
         success: false,
         error: `Unknown plugin: ${params.plugin}`,
@@ -257,7 +479,7 @@ export class PluginRegistry implements AgentPlugins {
       };
     }
 
-    const actionName = String(params.action || "").trim();
+    const actionName = normalize_plugin_name(params.action);
     if (!actionName) {
       return {
         success: false,
@@ -266,28 +488,26 @@ export class PluginRegistry implements AgentPlugins {
       };
     }
 
-    const action = plugin.actions?.[actionName];
-    if (!action) {
+    if (record.state !== "ready") {
       return {
         success: false,
-        error: `Plugin "${plugin.name}" does not implement action "${actionName}"`,
-        message: `Plugin "${plugin.name}" does not implement action "${actionName}"`,
+        error: `Plugin "${record.plugin.name}" is not ready`,
+        message: `Plugin "${record.plugin.name}" is not ready`,
       };
     }
 
-    const context = this.contextResolver();
-    const enabled = isPluginEnabled({ plugin, context });
-    if (!enabled && action.allowWhenDisabled !== true) {
+    const action = record.plugin.actions?.[actionName];
+    if (!action) {
       return {
         success: false,
-        error: `Plugin "${plugin.name}" is disabled`,
-        message: `Plugin "${plugin.name}" is disabled`,
+        error: `Plugin "${record.plugin.name}" does not implement action "${actionName}"`,
+        message: `Plugin "${record.plugin.name}" does not implement action "${actionName}"`,
       };
     }
 
     try {
       const parsed_payload = this.parseActionPayload({
-        pluginName: plugin.name,
+        pluginName: record.plugin.name,
         actionName,
         payload: (params.payload ?? {}) as JsonValue,
         action,
@@ -295,19 +515,53 @@ export class PluginRegistry implements AgentPlugins {
       if (!("input" in parsed_payload)) {
         return parsed_payload;
       }
-      return await action.execute({
-        context,
+      const result = await action.execute({
+        context: this.contextResolver(),
         payload: parsed_payload.input,
         input: parsed_payload.input,
-        pluginName: plugin.name,
+        pluginName: record.plugin.name,
         actionName,
       });
+      if (!result.success) {
+        update_record_state(record, "error", result.error || result.message);
+      }
+      return result;
     } catch (error) {
+      update_record_state(record, "error", String(error));
       return {
         success: false,
         error: String(error),
         message: String(error),
       };
     }
+  }
+
+  /**
+   * 读取当前生效的 plugin system blocks。
+   */
+  async systemBlocks(): Promise<AgentSessionSystemBlock[]> {
+    const context = this.contextResolver();
+    const out: AgentSessionSystemBlock[] = [];
+    for (const record of this.records.values()) {
+      const plugin = record.plugin;
+      if (record.state !== "ready") continue;
+      if (typeof plugin.system !== "function") continue;
+      try {
+        if (typeof plugin.availability === "function") {
+          const availability = await plugin.availability(context);
+          if (!availability.available) continue;
+        }
+        const text = String(await plugin.system(context)).trim();
+        if (!text) continue;
+        out.push({
+          source: "plugin",
+          name: plugin.name,
+          content: text,
+        });
+      } catch {
+        // 单个 plugin system 失败不应阻断 session 主链路。
+      }
+    }
+    return out;
   }
 }

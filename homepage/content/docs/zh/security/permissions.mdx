@@ -7,7 +7,7 @@ description: "了解 Ship 当前的聊天用户权限模型"
 
 当前版本面向用户暴露的权限系统，是 `聊天用户权限`。
 
-项目 `downcity.json` 不再提供单独的 `permissions` 配置块。
+Agent 配置不提供单独的 `permissions` 配置块。
 
 运行时执行边界由当前版本的内建行为负责；而“谁可以和 Agent 说话，以及能做什么”则由聊天授权控制。
 
@@ -33,7 +33,7 @@ description: "了解 Ship 当前的聊天用户权限模型"
 
 ### 配置保存在哪里
 
-聊天用户权限不会写进项目 `downcity.json`。
+聊天用户权限不会写进 Agent 项目目录。
 
 这部分统一保存在 city 全局 `~/.downcity/downcity.db` 中，便于集中管理，也不会把用户权限明文散落到项目配置里。同一个 `telegram:12345678`、`feishu:ou_xxx` 或 `qq:123456` 角色会对所有连接该平台的 agent 生效。
 

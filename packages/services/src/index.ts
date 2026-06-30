@@ -98,5 +98,18 @@ export type {
   WaffoPaymentProviderOptions,
 } from "./payment/types.js";
 
+export { FeedbackService, feedbackMessages } from "./feedback/index.js";
+export type {
+  FeedbackCreateInput,
+  FeedbackCreateResult,
+  FeedbackMessage,
+  FeedbackQueryInput,
+  FeedbackReplyInput,
+  FeedbackReplyResult,
+  FeedbackStatus,
+  FeedbackStatusUpdateInput,
+  FeedbackStatusUpdateResult,
+} from "./feedback/index.js";
+
 export { usageEvents, UsageService } from "./usage/index.js";
 export type { UsageServiceOptions } from "./usage/index.js";

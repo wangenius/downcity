@@ -8,12 +8,6 @@ import {
   Federation,
   AIService,
   Provider,
-  bodyLimit,
-  cors,
-  memoryRateLimitStore,
-  rateLimit,
-  requestTimeout,
-  securityHeaders,
 } from "../bin/index.js"
 import { createSqliteDb } from "./sqlite-db.mjs"
 
@@ -280,7 +274,18 @@ test("Federation middleware can short-circuit before action body read", async ()
     const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
     let action_called = false
 
-    base.middle(bodyLimit({ max_bytes: 3 }))
+    base.middle((ctx, next) => {
+      const content_length = Number.parseInt(ctx.request.headers.get("content-length") ?? "0", 10)
+      if (content_length > 3) {
+        return Response.json({
+          error: {
+            message: "Request body too large",
+            type: "request_too_large",
+          },
+        }, { status: 413 })
+      }
+      return next()
+    })
     base.use({
       id: "demo.limit",
       name: "Demo Limit",
@@ -341,81 +346,6 @@ test("Federation middleware reports duplicate next calls as middleware errors", 
       error: {
         message: "next() called multiple times",
         type: "middleware_error",
-      },
-    })
-  } finally {
-    process.chdir(cwd)
-    await fs.rm(tempDir, { recursive: true, force: true })
-  }
-})
-
-test("Federation built-in middleware helpers cover CORS, headers, rate limit, and timeout", async () => {
-  const cwd = process.cwd()
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-middleware-helpers-"))
-
-  try {
-    process.chdir(tempDir)
-    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
-    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
-    const store = memoryRateLimitStore()
-
-    base.middle(cors({
-      origins: ["https://app.example.com"],
-      methods: ["GET", "POST", "OPTIONS"],
-      headers: ["Content-Type", "Authorization"],
-      max_age: 60,
-    }))
-    base.middle(securityHeaders())
-    base.middle(rateLimit({
-      window_ms: 60_000,
-      max: 1,
-      key: () => "client_1",
-      match: (ctx) => new URL(ctx.request.url).pathname === "/health",
-      store,
-    }))
-
-    const preflight = await base.fetch(new Request("http://localhost/v1/demo", {
-      method: "OPTIONS",
-      headers: {
-        origin: "https://app.example.com",
-      },
-    }))
-    assert.equal(preflight.status, 204)
-    assert.equal(preflight.headers.get("access-control-allow-origin"), "https://app.example.com")
-    assert.equal(preflight.headers.get("access-control-max-age"), "60")
-
-    const first = await base.fetch(new Request("http://localhost/health", {
-      headers: {
-        origin: "https://app.example.com",
-      },
-    }))
-    assert.equal(first.status, 200)
-    assert.equal(first.headers.get("access-control-allow-origin"), "https://app.example.com")
-    assert.equal(first.headers.get("x-content-type-options"), "nosniff")
-    assert.equal(first.headers.get("x-ratelimit-limit"), "1")
-
-    const second = await base.fetch(new Request("http://localhost/health"))
-    assert.equal(second.status, 429)
-    assert.deepEqual(await second.json(), {
-      error: {
-        message: "Too many requests",
-        type: "rate_limited",
-      },
-    })
-
-    const timeoutBase = new Federation({ db, dialect: "sqlite", raw: db.raw })
-    timeoutBase.middle(requestTimeout({ ms: 1 }))
-    timeoutBase.middle(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 20))
-      return Response.json({ ok: true })
-    })
-
-    const timeoutResponse = await timeoutBase.fetch(new Request("http://localhost/health"))
-    assert.equal(timeoutResponse.status, 504)
-    assert.deepEqual(await timeoutResponse.json(), {
-      error: {
-        message: "Request timed out",
-        type: "request_timeout",
       },
     })
   } finally {

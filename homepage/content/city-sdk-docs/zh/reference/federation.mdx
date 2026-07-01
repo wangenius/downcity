@@ -109,37 +109,21 @@ serve({ fetch: (request) => base.fetch(request), port: 43127, hostname: "127.0.0
 
 ## HTTP Middleware
 
-`base.middle()` 用于注册 Federation 级 HTTP middleware。它们会在内部路由和 Action body 读取之前执行，适合放 CORS、安全响应头、body 大小限制、粗粒度限流和请求超时。
+`base.middle()` 用于注册 Federation 级 HTTP middleware。它们会在内部路由和 Action body 读取之前执行，因此调用方可以在 Federation 入口接入 CORS、安全响应头、body 大小限制、粗粒度限流、请求超时或其他 HTTP 策略。
+
+`@downcity/city` 只定义 middleware 接口，不实现也不导出 CORS、限流、超时、安全响应头、body 限制、客户端 IP 读取等 helper。这些策略应由你的应用、平台或 HTTP 框架提供。
 
 ```ts
-import {
-  bodyLimit,
-  clientIp,
-  cors,
-  memoryRateLimitStore,
-  rateLimit,
-  requestTimeout,
-  securityHeaders,
-} from "@downcity/city";
-
-base.middle(securityHeaders());
-base.middle(cors({
-  origins: ["https://app.example.com"],
-  methods: ["GET", "POST", "OPTIONS"],
-  headers: ["Content-Type", "Authorization"],
-  max_age: 86400,
-}));
-base.middle(bodyLimit({ max_bytes: 1_000_000 }));
-base.middle(rateLimit({
-  window_ms: 60_000,
-  max: 120,
-  key: (ctx) => clientIp(ctx.request),
-  match: (ctx) => new URL(ctx.request.url).pathname.startsWith("/v1/"),
-  store: memoryRateLimitStore(),
-}));
-base.middle(requestTimeout({
-  ms: 30_000,
-  exclude_paths: ["/v1/ai/stream", "/v1/ai/chat/completions"],
+base.middle(async (ctx, next) => {
+  const started_at = Date.now();
+  const response = await next();
+  const headers = new Headers(response.headers);
+  headers.set("X-Downcity-Time", String(Date.now() - started_at));
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }));
 ```
 

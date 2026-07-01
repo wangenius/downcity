@@ -23,27 +23,11 @@ export type {
   R2BucketLike,
   R2StorageOptions,
 } from "./federation/storage.js";
-export {
-  bodyLimit,
-  clientIp,
-  cors,
-  memoryRateLimitStore,
-  rateLimit,
-  requestTimeout,
-  securityHeaders,
-} from "./federation/middlewares.js";
 export type {
-  BodyLimitOptions,
-  CorsOptions,
   FederationMiddleware,
   FederationMiddlewareContext,
   FederationMiddlewareFederationRef,
   FederationMiddlewareNext,
-  RateLimitOptions,
-  RateLimitStore,
-  RateLimitStoreIncrementResult,
-  RequestTimeoutOptions,
-  SecurityHeadersOptions,
 } from "./types/FederationMiddleware.js";
 
 // ===========================================================================

@@ -103,6 +103,41 @@ export default {
 };
 ```
 
+## Scenario 3: Local RPC
+
+When Federation only needs to be called by trusted processes on the same machine, expose it with `FederationRPC` from `@downcity/server`:
+
+```ts
+import { Federation } from "@downcity/city";
+import { FederationRPC } from "@downcity/server";
+
+const base = new Federation({ db });
+
+const rpc = new FederationRPC(base);
+const binding = await rpc.listen({
+  host: "127.0.0.1",
+  port: 15315,
+});
+
+console.log(binding.url); // rpc://127.0.0.1:15315
+```
+
+Then point `City` at that RPC URL:
+
+```ts
+import { City } from "@downcity/city";
+
+const admin = new City({
+  role: "admin",
+  federation_url: "rpc://127.0.0.1:15315",
+  city_id: "city_demo",
+});
+
+await admin.listServices();
+```
+
+Local RPC is a trusted transport: `Admin City` does not need `admin_secret_key`, and `User City` does not need `user_token`. User calls still need `city_id` because that is product context. HTTP endpoints are unchanged and still require bearer tokens.
+
 ## Why Federation only takes db
 
 `@downcity/city` owns the logic that should stay stable across runtimes:
@@ -142,6 +177,7 @@ Services can then access it through `ctx.storage`. Built-in AI image jobs use th
 - `base.storage(...)`
 - `base.router()`
 - `base.handleRequest(request)`
+- `new FederationRPC(base)`
 - `base.health()`
 - `base.table(name)`
 

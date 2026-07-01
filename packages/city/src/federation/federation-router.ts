@@ -19,6 +19,7 @@ import type { Runtime } from "./runtime.js";
 import type { RuntimeUser } from "./auth/types.js";
 import { build_federation_instruction } from "./federation-instruction.js";
 import { collect_federation_env_catalog } from "./federation-env-catalog.js";
+import type { FederationTrustedIdentity } from "./types.js";
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -26,6 +27,14 @@ declare module "hono" {
     user?: RuntimeUser;
     city?: { city_id: string; status: string };
   }
+}
+
+/**
+ * Federation router 在单次请求里接收的进程内变量。
+ */
+interface FederationRouterEnv {
+  /** 由 `Federation.handleRequest()` 传入的进程内可信身份。 */
+  trusted_identity?: FederationTrustedIdentity;
 }
 
 /**
@@ -73,7 +82,7 @@ export function build_federation_router(params: {
 
   app.get("/v1/env/catalog", async (c) => {
     try {
-      authenticator.authorize(await authenticator.resolve(c.req.raw), ["admin"]);
+      await authorize_request(authenticator, trusted_identity_from_env(c.env), c.req.raw, ["admin"]);
 
       return c.json({ items: collect_federation_env_catalog(services, runtime.env) });
     } catch (error) {
@@ -83,7 +92,7 @@ export function build_federation_router(params: {
 
   app.get("/v1/federation/instruction", async (c) => {
     try {
-      authenticator.authorize(await authenticator.resolve(c.req.raw), ["admin"]);
+      await authorize_request(authenticator, trusted_identity_from_env(c.env), c.req.raw, ["admin"]);
 
       return new Response(await build_federation_instruction(services), {
         status: 200,
@@ -102,7 +111,7 @@ export function build_federation_router(params: {
       register_native_route(app, def.method, path, async (c) => {
         try {
           if (def.auth.length > 0) {
-            authenticator.authorize(await authenticator.resolve(c.req.raw), def.auth);
+            await authorize_request(authenticator, trusted_identity_from_env(c.env), c.req.raw, def.auth);
           }
           return await def.handler(c.req.raw);
         } catch (error) {
@@ -152,7 +161,7 @@ export function build_federation_router(params: {
         }
 
         try {
-          const identity = authenticator.authorize(await authenticator.resolve(c.req.raw), def.auth);
+          const identity = await authorize_request(authenticator, trusted_identity_from_env(c.env), c.req.raw, def.auth);
           ctx.identity = { kind: identity.level };
           ctx.user = identity.user;
           ctx.city = identity.city;
@@ -191,6 +200,29 @@ export function build_federation_router(params: {
   }
 
   return app;
+}
+
+/**
+ * 解析并校验当前请求身份。
+ *
+ * 关键说明（中文）
+ * - `trusted_identity` 来自 `Federation.handleRequest()` 的进程内 options。
+ * - 外部 HTTP 请求仍然只能通过 bearer token 进入 admin/user 身份。
+ */
+async function authorize_request(
+  authenticator: Authenticator,
+  trusted_identity: FederationTrustedIdentity | undefined,
+  request: Request,
+  auth: Parameters<Authenticator["authorize"]>[1],
+) {
+  const identity = trusted_identity
+    ? authenticator.resolveTrusted(trusted_identity)
+    : await authenticator.resolve(request);
+  return authenticator.authorize(identity, auth);
+}
+
+function trusted_identity_from_env(env: unknown): FederationTrustedIdentity | undefined {
+  return (env as FederationRouterEnv | undefined)?.trusted_identity;
 }
 
 /**

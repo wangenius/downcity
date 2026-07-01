@@ -124,7 +124,11 @@ export class Federation {
    */
   async handleRequest(request: Request, options: FederationHandleRequestOptions = {}): Promise<Response> {
     await this.ensure_ready();
-    return this.hono!.fetch(request, {}, options.execution as HonoExecutionContext | undefined);
+    return this.hono!.fetch(
+      request,
+      { trusted_identity: options.trusted_identity },
+      options.execution as HonoExecutionContext | undefined,
+    );
   }
 
   /**

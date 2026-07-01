@@ -167,3 +167,106 @@ export function isCityModel(value: unknown): value is CityModel {
     typeof invoker.connection === "function"
   );
 }
+
+/**
+ * Federation RPC 请求方法。
+ *
+ * 关键点（中文）
+ * - `federation.request` 表示把一次 HTTP 形态的 Federation 请求封装进本机 RPC。
+ * - RPC transport 只负责传输，不重新发明 service/action 协议。
+ */
+export type FederationRpcMethod = "federation.request";
+
+/**
+ * Federation RPC 可信身份。
+ *
+ * 关键点（中文）
+ * - 该身份只在本机 RPC server 内部转成 Federation 的进程内 trusted identity。
+ * - HTTP 请求不能通过 header 或 body 构造该身份。
+ */
+export type FederationRpcIdentity =
+  | {
+      /** 以管理端身份访问 Federation。 */
+      role: "admin";
+    }
+  | {
+      /** 以用户身份访问 Federation。 */
+      role: "user";
+      /** 当前用户所属的 City ID。 */
+      city_id: string;
+      /** 当前用户 ID，未传时由 server 使用本机默认用户。 */
+      user_id?: string;
+      /** 附带到 ctx.user.metadata 的业务元数据。 */
+      metadata?: Record<string, unknown>;
+    };
+
+/**
+ * Federation RPC 请求参数。
+ */
+export interface FederationRpcRequestParams {
+  /** HTTP 方法，例如 `GET` 或 `POST`。 */
+  method: string;
+  /** Federation 内部请求路径，必须以 `/` 开头，可包含 querystring。 */
+  path: string;
+  /** 请求头。 */
+  headers?: Record<string, string>;
+  /** 请求 body，按 UTF-8 文本传输。 */
+  body?: string;
+  /** 本机可信身份。 */
+  identity: FederationRpcIdentity;
+}
+
+/**
+ * Federation RPC 请求。
+ */
+export interface FederationRpcRequest {
+  /** 请求 id，用于匹配响应。 */
+  id: string;
+  /** RPC 方法名。 */
+  method: FederationRpcMethod;
+  /** 请求参数。 */
+  params: FederationRpcRequestParams;
+}
+
+/**
+ * Federation RPC 响应数据。
+ */
+export interface FederationRpcResponseData {
+  /** HTTP 状态码。 */
+  status: number;
+  /** 响应头。 */
+  headers: Record<string, string>;
+  /** 响应 body，按 UTF-8 文本传输。 */
+  body: string;
+}
+
+/**
+ * Federation RPC 成功响应帧。
+ */
+export interface FederationRpcSuccessFrame {
+  /** 响应对应的请求 id。 */
+  id: string;
+  /** 请求是否成功进入 Federation 并得到响应。 */
+  success: true;
+  /** Federation 响应数据。 */
+  data: FederationRpcResponseData;
+}
+
+/**
+ * Federation RPC 失败响应帧。
+ */
+export interface FederationRpcErrorFrame {
+  /** 响应对应的请求 id。 */
+  id: string;
+  /** 请求是否成功。 */
+  success: false;
+  /** 错误信息。 */
+  error: string;
+}
+
+/**
+ * Federation RPC 响应帧。
+ */
+export type FederationRpcResponseFrame =
+  | FederationRpcSuccessFrame
+  | FederationRpcErrorFrame;

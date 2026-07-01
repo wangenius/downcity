@@ -19,7 +19,8 @@ export interface CityBaseOptions {
   /**
    * Federation 的 HTTP 入口地址。
    *
-   * 示例：`https://city.example.com` 或 `http://localhost:43127`。
+   * 示例：`https://city.example.com`、`http://localhost:43127`
+   * 或本机可信 RPC：`rpc://127.0.0.1:15315`。
    */
   federation_url: string;
 
@@ -50,7 +51,8 @@ export interface AdminCityOptions extends CityBaseOptions {
   /**
    * Federation 管理密钥。
    *
-   * 未传入时会由 Federation 回退读取 `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY`。
+   * 未传入时会由 SDK 回退读取 `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY`。
+   * 使用 `rpc://` 本机可信 Federation 时不需要传入。
    */
   admin_secret_key?: string;
 }
@@ -73,6 +75,8 @@ export interface UserCityOptions extends CityBaseOptions {
 
   /**
    * 终端用户访问 token。
+   *
+   * 使用 `rpc://` 本机可信 Federation 时不需要传入。
    */
   user_token?: string;
 }

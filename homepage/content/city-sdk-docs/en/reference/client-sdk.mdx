@@ -16,6 +16,15 @@ If you want the integration story first, start with [@downcity/city](/en/city-sd
 | Common auth | `user_token` | `admin_secret_key` |
 | Safe in browser | yes | no |
 
+## HTTP and Local RPC
+
+`federation_url` supports two entry types:
+
+- `http://` / `https://`: remote HTTP entry, authenticated with `user_token` or `admin_secret_key`.
+- `rpc://127.0.0.1:15315`: trusted local RPC entry, no `user_token` or `admin_secret_key` required.
+
+RPC is for trusted processes on the same machine. HTTP authentication is unchanged and still requires bearer tokens.
+
 ## Four common call types
 
 ```ts

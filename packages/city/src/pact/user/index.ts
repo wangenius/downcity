@@ -7,14 +7,15 @@ import { PaymentInvoker } from "../invoker/payment/index.js";
 import { ServiceClient } from "../invoker/invoker.js";
 import type { UserPactAccessOptions, UserServiceInput, UserServiceSummary } from "./types.js";
 import {
-  defaultFetch,
-  normalizeBaseURL,
-  requestJSON,
-  requestRaw,
   requiredString,
-  type FetchLike,
   type RequestInitLike,
 } from "../http.js";
+import {
+  create_http_requester,
+  create_rpc_requester,
+  is_rpc_url,
+  type CityRequester,
+} from "../requester.js";
 
 export class UserPactAccess {
   readonly ai: AIInvoker;
@@ -24,17 +25,29 @@ export class UserPactAccess {
   readonly token: string | undefined;
 
   private readonly city_id?: string;
-  private readonly fetchImpl: FetchLike;
+  private readonly requester: CityRequester;
 
   constructor(options: UserPactAccessOptions) {
     if (!options || typeof options !== "object") {
       throw new TypeError("User City options are required");
     }
 
-    this.serverUrl = normalizeBaseURL(options.base_url, "base_url");
+    this.serverUrl = requiredString(options.base_url, "base_url").replace(/\/+$/, "");
     this.token = readOptional(options.user_token);
     this.city_id = readOptional(options.city_id);
-    this.fetchImpl = options.fetch ?? defaultFetch();
+    this.requester = is_rpc_url(this.serverUrl)
+      ? create_rpc_requester({
+          base_url: this.serverUrl,
+          identity: {
+            role: "user",
+            city_id: this.require_city_id(),
+          },
+        })
+      : create_http_requester({
+          base_url: this.serverUrl,
+          fetch: options.fetch,
+          with_auth: (init) => this.withAuth(init),
+        });
 
     this.ai = new AIInvoker({
       baseUrl: this.serverUrl,
@@ -76,20 +89,12 @@ export class UserPactAccess {
   // ===================================================================
 
   private json<T>(path: string, init: RequestInitLike): Promise<T> {
-    return requestJSON<T>({
-      fetch: this.fetchImpl,
-      url: `${this.serverUrl}${path}`,
-      init: this.withAuth(init),
-    });
+    return this.requester.json<T>(path, init);
   }
 
   private raw(path: string, init: RequestInitLike) {
-    this.requireToken();
-    return requestRaw({
-      fetch: this.fetchImpl,
-      url: `${this.serverUrl}${path}`,
-      init: this.withAuth(init),
-    });
+    if (!is_rpc_url(this.serverUrl)) this.requireToken();
+    return this.requester.raw(path, init);
   }
 
   private withAuth(init: RequestInitLike): RequestInitLike {

@@ -7,14 +7,15 @@ import { BalanceInvoker } from "../invoker/balance/index.js";
 import { EnvInvoker } from "../invoker/env/index.js";
 import { CitiesInvoker } from "../invoker/cities/index.js";
 import {
-  defaultFetch,
-  normalizeBaseURL,
-  requestJSON,
-  requestText,
   requiredString,
-  type FetchLike,
   type RequestInitLike,
 } from "../http.js";
+import {
+  create_http_requester,
+  create_rpc_requester,
+  is_rpc_url,
+  type CityRequester,
+} from "../requester.js";
 import type {
   AdminPactAccessOptions,
   AdminModelRecord,
@@ -28,21 +29,32 @@ export class AdminPactAccess {
 
   private readonly base_url: string;
   readonly city_id: string;
-  private readonly secret: string;
-  private readonly fetchImpl: FetchLike;
+  private readonly secret: string | undefined;
+  private readonly requester: CityRequester;
 
   constructor(options: AdminPactAccessOptions) {
     if (!options || typeof options !== "object") {
       throw new TypeError("Admin City options are required");
     }
 
-    this.base_url = normalizeBaseURL(options.base_url, "base_url");
+    this.base_url = requiredString(options.base_url, "base_url").replace(/\/+$/, "");
     this.city_id = requiredString(options.city_id, "city_id");
-    this.secret = requiredString(
-      options.admin_secret_key ?? process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
-      "admin_secret_key",
-    );
-    this.fetchImpl = options.fetch ?? defaultFetch();
+    this.secret = is_rpc_url(this.base_url)
+      ? undefined
+      : requiredString(
+          options.admin_secret_key ?? process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
+          "admin_secret_key",
+        );
+    this.requester = is_rpc_url(this.base_url)
+      ? create_rpc_requester({
+          base_url: this.base_url,
+          identity: { role: "admin" },
+        })
+      : create_http_requester({
+          base_url: this.base_url,
+          fetch: options.fetch,
+          with_auth: (init) => this.withAuth(init),
+        });
 
     const req = <T>(path: string, init: RequestInitLike) => this.json<T>(path, init);
     this.balance = new BalanceInvoker({ requestJSON: req });
@@ -83,19 +95,11 @@ export class AdminPactAccess {
   }
 
   private json<T>(path: string, init: RequestInitLike): Promise<T> {
-    return requestJSON<T>({
-      fetch: this.fetchImpl,
-      url: `${this.base_url}${path}`,
-      init: this.withAuth(init),
-    });
+    return this.requester.json<T>(path, init);
   }
 
   private text(path: string, init: RequestInitLike): Promise<string> {
-    return requestText({
-      fetch: this.fetchImpl,
-      url: `${this.base_url}${path}`,
-      init: this.withAuth(init),
-    });
+    return this.requester.text(path, init);
   }
 
 
@@ -123,6 +127,7 @@ export class AdminPactAccess {
    * - 默认仍然补 `content-type: application/json`，便于 POST action 统一行为
    */
   private withAuth(init: RequestInitLike): RequestInitLike {
+    if (!this.secret) return init;
     return {
       ...init,
       headers: {

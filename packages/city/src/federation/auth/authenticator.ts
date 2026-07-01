@@ -13,6 +13,7 @@ import { normalizeRouteAuth, type RouteAuth, type RouteIdentity } from "../../se
 import type { EnvProvider } from "../runtime.js";
 
 import type { CreateUserTokenInput, UserTokenPayload, UserTokenIssueResult, RuntimeUser } from "./types.js";
+import type { FederationTrustedIdentity } from "../types.js";
 
 /** 鉴权级别 */
 /** 鉴权结果 */
@@ -79,6 +80,24 @@ export class Authenticator {
     } catch {
       return { level: "guest" };
     }
+  }
+
+  /**
+   * 将进程内可信身份转换为统一鉴权结果。
+   *
+   * 关键点（中文）
+   * - 该方法只接受 `Federation.handleRequest()` options 里的值。
+   * - 不读取 HTTP header，避免外部请求伪造本机可信身份。
+   */
+  resolveTrusted(identity: FederationTrustedIdentity): AuthResult {
+    if (identity.level === "admin") {
+      return { level: "admin" };
+    }
+    return {
+      level: "user",
+      user: identity.user,
+      city: identity.city,
+    };
   }
 
   /**

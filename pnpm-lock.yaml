@@ -463,6 +463,9 @@ importers:
       '@downcity/shell':
         specifier: workspace:^
         version: link:../shell
+      '@downcity/type':
+        specifier: workspace:*
+        version: link:../type
       ai:
         specifier: ^6.0.193
         version: 6.0.193(zod@4.4.3)

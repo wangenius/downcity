@@ -6,6 +6,28 @@
 
 import type { Database } from "../store/db.js";
 import type { FederationStorage } from "./storage.js";
+import type { RuntimeUser } from "./auth/types.js";
+
+/**
+ * Federation 进程内可信身份。
+ *
+ * 关键点（中文）
+ * - 只允许同进程调用 `Federation.handleRequest()` 时传入。
+ * - 不能通过 HTTP header、query 或 body 构造，避免绕过公网 token 鉴权。
+ */
+export type FederationTrustedIdentity =
+  | {
+      /** 以管理端身份访问当前 Federation。 */
+      level: "admin";
+    }
+  | {
+      /** 以终端用户身份访问当前 Federation。 */
+      level: "user";
+      /** 当前用户信息，会注入到 `ctx.user`。 */
+      user: RuntimeUser;
+      /** 当前用户所属 City。 */
+      city: { city_id: string; status: string };
+    };
 
 /**
  * 单次请求的运行时执行上下文。
@@ -25,6 +47,14 @@ export interface FederationRequestExecutionContext {
 export interface FederationHandleRequestOptions {
   /** 单次请求的运行时执行上下文。 */
   execution?: FederationRequestExecutionContext;
+  /**
+   * 进程内可信身份。
+   *
+   * 关键点（中文）
+   * - 供本机 RPC / 嵌入式 server 调用使用。
+   * - HTTP 入口不会从请求内容自动生成该身份。
+   */
+  trusted_identity?: FederationTrustedIdentity;
 }
 
 /**

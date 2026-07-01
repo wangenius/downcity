@@ -99,6 +99,36 @@ test("Federation instruction endpoint requires admin auth and returns text", asy
   }
 })
 
+test("Federation trusted identity can access admin endpoints without bearer token", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-trusted-admin-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+
+    await base.health()
+
+    const guestResponse = await base.handleRequest(new Request("http://localhost/v1/federation/instruction", {
+      method: "GET",
+    }))
+    assert.equal(guestResponse.status, 401)
+
+    const trustedResponse = await base.handleRequest(new Request("http://localhost/v1/federation/instruction", {
+      method: "GET",
+    }), {
+      trusted_identity: { level: "admin" },
+    })
+
+    assert.equal(trustedResponse.status, 200)
+    assert.match(await trustedResponse.text(), /Downcity Federation Instruction/)
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
 test("Federation bootstraps internal secrets into the env table", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-env-bootstrap-"))

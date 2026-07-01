@@ -123,6 +123,41 @@ export default {
 - 你已经有现成网关或 API server
 - 想把 Federation 当成内部运行时，而不是单独开一个端口
 
+## 场景三：本机 RPC
+
+如果 Federation 只需要被同一台机器上的可信进程访问，可以用 `@downcity/server` 暴露本机 RPC：
+
+```ts
+import { Federation } from "@downcity/city";
+import { FederationRPC } from "@downcity/server";
+
+const base = new Federation({ db });
+
+const rpc = new FederationRPC(base);
+const binding = await rpc.listen({
+  host: "127.0.0.1",
+  port: 15315,
+});
+
+console.log(binding.url); // rpc://127.0.0.1:15315
+```
+
+然后 `City` 可以直接连接这个 RPC 地址：
+
+```ts
+import { City } from "@downcity/city";
+
+const admin = new City({
+  role: "admin",
+  federation_url: "rpc://127.0.0.1:15315",
+  city_id: "city_demo",
+});
+
+await admin.listServices();
+```
+
+本机 RPC 是可信 transport：`Admin City` 不需要 `admin_secret_key`，`User City` 不需要 `user_token`，但用户态调用仍然需要 `city_id` 表达产品上下文。HTTP 入口不受影响，仍然必须使用 bearer token。
+
 ## 为什么只传 db
 
 `@downcity/city` 负责的是跨运行时都应该稳定的逻辑：
@@ -166,6 +201,7 @@ base.storage(R2Storage({
 - `base.storage(...)`：注册默认文件存储后端
 - `base.router()`：拿到底层 HTTP router
 - `base.handleRequest(request)`：处理单次请求
+- `new FederationRPC(base)`：把当前 Federation 暴露为本机可信 RPC
 - `base.health()`：触发初始化并返回健康信息
 - `base.table(name)`：拿某张表的受控数据接口
 

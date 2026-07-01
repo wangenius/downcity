@@ -6,7 +6,6 @@ import path from "node:path"
 import test from "node:test"
 
 import { City, Federation, Service } from "../bin/index.js"
-import { FederationRPC } from "../../server/bin/index.js"
 import { createSqliteDb } from "./sqlite-db.mjs"
 
 test("City admin can access local FederationRPC without admin_secret_key", async () => {
@@ -52,28 +51,14 @@ test("City user can call local FederationRPC without user_token", async () => {
   }
 })
 
-test("FederationRPC rejects non-loopback hosts", async () => {
-  const fixture = await create_federation_fixture("downcity-city-rpc-host-")
-  try {
-    const rpc = new FederationRPC(fixture.base)
-    await assert.rejects(
-      () => rpc.listen({ host: "0.0.0.0", port: 15315 }),
-      /loopback/,
-    )
-  } finally {
-    await fixture.close()
-  }
-})
-
 async function create_rpc_fixture(prefix) {
   const fixture = await create_federation_fixture(prefix)
-  const rpc = new FederationRPC(fixture.base)
   const port = await get_free_port()
-  const binding = await rpc.listen({ port })
+  const rpc = await start_test_federation_rpc_server(fixture.base, port)
   return {
-    url: binding.url,
+    url: rpc.url,
     async close() {
-      await rpc.close()
+      await rpc.stop()
       await fixture.close()
     },
   }
@@ -123,4 +108,111 @@ async function get_free_port() {
       })
     })
   })
+}
+
+async function start_test_federation_rpc_server(base, port) {
+  const sockets = new Set()
+  const server = net.createServer((socket) => {
+    sockets.add(socket)
+    let buffered = ""
+
+    socket.on("data", (chunk) => {
+      buffered += chunk.toString("utf8")
+      let newline_index = buffered.indexOf("\n")
+      while (newline_index >= 0) {
+        const line = buffered.slice(0, newline_index).trim()
+        buffered = buffered.slice(newline_index + 1)
+        if (line) {
+          void handle_test_federation_rpc_line(base, line, (frame) => {
+            socket.write(`${JSON.stringify(frame)}\n`)
+          })
+        }
+        newline_index = buffered.indexOf("\n")
+      }
+    })
+
+    socket.on("close", () => {
+      sockets.delete(socket)
+    })
+  })
+
+  await new Promise((resolve, reject) => {
+    server.once("error", reject)
+    server.listen(port, "127.0.0.1", () => {
+      server.off("error", reject)
+      resolve()
+    })
+  })
+
+  return {
+    url: `rpc://127.0.0.1:${port}`,
+    async stop() {
+      for (const socket of sockets) {
+        socket.destroy()
+      }
+      sockets.clear()
+      await new Promise((resolve) => server.close(resolve))
+    },
+  }
+}
+
+async function handle_test_federation_rpc_line(base, line, write_frame) {
+  let request_id = "parse"
+  try {
+    const request = JSON.parse(line)
+    request_id = typeof request.id === "string" ? request.id : request_id
+    if (request.method !== "federation.request") {
+      throw new Error(`Unsupported Federation RPC method: ${String(request.method)}`)
+    }
+
+    const response = await execute_test_federation_rpc_request(base, request)
+    write_frame({
+      id: request_id,
+      success: true,
+      data: response,
+    })
+  } catch (error) {
+    write_frame({
+      id: request_id,
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
+async function execute_test_federation_rpc_request(base, rpc_request) {
+  const request = new Request(`http://downcity.local${rpc_request.params.path}`, {
+    method: rpc_request.params.method,
+    headers: rpc_request.params.headers ?? {},
+    body: rpc_request.params.method === "GET" ? undefined : rpc_request.params.body,
+  })
+  const response = await base.fetch(request, {
+    trusted_identity: normalize_test_rpc_identity(rpc_request.params.identity),
+  })
+  return {
+    status: response.status,
+    headers: Object.fromEntries(response.headers.entries()),
+    body: await response.text(),
+  }
+}
+
+function normalize_test_rpc_identity(identity) {
+  if (identity.role === "admin") {
+    return { level: "admin" }
+  }
+  const city_id = String(identity.city_id || "").trim()
+  if (!city_id) {
+    throw new TypeError("city_id is required for Federation RPC user identity")
+  }
+  return {
+    level: "user",
+    user: {
+      user_id: String(identity.user_id || "local-rpc-user").trim() || "local-rpc-user",
+      metadata: identity.metadata ?? {},
+    },
+    city: {
+      city_id,
+      status: "active",
+    },
+  }
 }

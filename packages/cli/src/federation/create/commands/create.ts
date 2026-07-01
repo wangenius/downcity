@@ -292,7 +292,7 @@ export default {
     if (request.method === "GET" && url.pathname === "/health") {
       return Response.json(await federation.health());
     }
-    return federation.handleRequest(request);
+    return federation.fetch(request);
   },
 };
 `;

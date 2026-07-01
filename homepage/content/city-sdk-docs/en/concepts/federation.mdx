@@ -29,7 +29,7 @@ const base = new Federation({ db });
 base.use(new Service({ id: "translate" }));
 
 await base.health();
-serve({ fetch: base.router().fetch, port: 3001 });
+serve({ fetch: (request) => base.fetch(request), port: 3001 });
 ```
 
 `Federation` owns:

@@ -28,7 +28,7 @@ test("paymentService lists enabled Dodo payment method for guests", async () => 
 
     await base.health()
 
-    const response = await base.handleRequest(new Request("http://localhost/v1/payment/methods"))
+    const response = await base.fetch(new Request("http://localhost/v1/payment/methods"))
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), {
       items: [{
@@ -76,17 +76,17 @@ test("paymentService creates Dodo checkout sessions and finishes topups through 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
     await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
-    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+    const city = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
-    const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
+    const tokenBody = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/tokens/apply",
       body: { city_id: city.city_id, user_id: "user_1" },
     }))).json()
 
     const topup = await balance.createTopup("user_1", 50_000_000, { note: "recharge" })
-    const checkoutResponse = await base.handleRequest(userRequest({
+    const checkoutResponse = await base.fetch(userRequest({
       token: tokenBody.user_token,
       path: "/v1/payment/checkout/create",
       body: { method_id: "dodo", topup_id: topup.topup_id },
@@ -103,7 +103,7 @@ test("paymentService creates Dodo checkout sessions and finishes topups through 
     assert.equal(dodoStub.lastBody().cancel_url, "https://base.example.com/v1/payment/redirect/cancel")
     assert.equal(dodoStub.lastBody().metadata.payment_id, checkout.payment_id)
 
-    const duplicateCheckout = await (await base.handleRequest(userRequest({
+    const duplicateCheckout = await (await base.fetch(userRequest({
       token: tokenBody.user_token,
       path: "/v1/payment/checkout/create",
       body: { method_id: "dodo", topup_id: topup.topup_id },
@@ -123,7 +123,7 @@ test("paymentService creates Dodo checkout sessions and finishes topups through 
         },
       },
     })
-    const webhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=dodo", {
+    const webhookResponse = await base.fetch(new Request("http://localhost/v1/payment/webhook?provider=dodo", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: completedPayload,
@@ -137,7 +137,7 @@ test("paymentService creates Dodo checkout sessions and finishes topups through 
     })
     assert.equal((await balance.read("user_1")).credits, 50_000_000)
 
-    const myPaymentsResponse = await base.handleRequest(userRequest({
+    const myPaymentsResponse = await base.fetch(userRequest({
       token: tokenBody.user_token,
       path: "/v1/payment/payments/me",
       method: "GET",

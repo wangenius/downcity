@@ -202,7 +202,7 @@ export default {
         version: WORKER_VERSION,
       }));
     }
-    const response = await federation.handleRequest(request, { execution: ctx });
+    const response = await federation.fetch(request, { execution: ctx });
     return withCors(response);
   },
 };

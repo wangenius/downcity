@@ -33,7 +33,7 @@ declare module "hono" {
  * Federation router 在单次请求里接收的进程内变量。
  */
 interface FederationRouterEnv {
-  /** 由 `Federation.handleRequest()` 传入的进程内可信身份。 */
+  /** 由 `Federation.fetch()` 传入的进程内可信身份。 */
   trusted_identity?: FederationTrustedIdentity;
 }
 
@@ -206,7 +206,7 @@ export function build_federation_router(params: {
  * 解析并校验当前请求身份。
  *
  * 关键说明（中文）
- * - `trusted_identity` 来自 `Federation.handleRequest()` 的进程内 options。
+ * - `trusted_identity` 来自 `Federation.fetch()` 的进程内 options。
  * - 外部 HTTP 请求仍然只能通过 bearer token 进入 admin/user 身份。
  */
 async function authorize_request(

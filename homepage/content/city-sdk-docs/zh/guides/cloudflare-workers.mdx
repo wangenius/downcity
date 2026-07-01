@@ -36,7 +36,7 @@ export default {
     const base = new Federation({ db });
 
     await base.health();
-    return base.handleRequest(request);
+    return base.fetch(request);
   },
 };
 ```

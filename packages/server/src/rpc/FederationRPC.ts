@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - RPC 只负责本机进程间传输，业务协议仍复用 Federation HTTP 路由。
  * - 默认只监听 loopback 地址，避免把免 token 的可信通道暴露到公网。
- * - 可信身份通过 `Federation.handleRequest(..., { trusted_identity })` 进程内传入，不走 HTTP header。
+ * - 可信身份通过 `Federation.fetch(..., { trusted_identity })` 进程内传入，不走 HTTP header。
  */
 
 import net from "node:net";
@@ -30,7 +30,7 @@ export interface FederationRpcTarget {
   /**
    * 处理一次 Federation 请求。
    */
-  handleRequest(request: Request, options?: {
+  fetch(request: Request, options?: {
     /** 进程内可信身份，由 FederationRPC 注入。 */
     trusted_identity?: TrustedFederationRpcIdentity;
   }): Promise<Response>;
@@ -227,7 +227,7 @@ async function execute_federation_rpc_request(
     headers: rpc_request.params.headers ?? {},
     body: normalize_request_body(rpc_request.params.method, rpc_request.params.body),
   });
-  const response = await federation.handleRequest(request, {
+  const response = await federation.fetch(request, {
     trusted_identity: identity,
   });
   return {

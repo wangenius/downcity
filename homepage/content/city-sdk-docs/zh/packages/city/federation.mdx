@@ -1,6 +1,6 @@
 ---
 title: Federation 运行时
-description: "Federation 实例、runtime、router、serve 和统一入口在 @downcity/city 里的角色。"
+description: "Federation 实例、runtime、serve 和统一入口在 @downcity/city 里的角色。"
 ---
 
 `Federation` 是 Downcity 的服务端长期运行容器（文档里也叫 Federation）。它不是一个零散函数集合，而是把 Drizzle db、service、鉴权和统一 `/v1/*` 路由收在同一个服务端入口里。产品侧访问它用的是 `City` 客户端，区别见 [Federation 与 City](/zh/city-sdk-docs/concepts/federation)。
@@ -23,7 +23,7 @@ description: "Federation 实例、runtime、router、serve 和统一入口在 @d
 
 - 你准备第一次真正把 Federation 跑起来
 - 你想理解为什么 `Federation` 只需要一个 Drizzle db
-- 你已经会写 service，但还不清楚 `router()`、`handleRequest()`、`serve()` 各自用在什么地方
+- 你已经会写 service，但还不清楚 `fetch()`、`serve()` 各自用在什么地方
 - 你要把 Federation 接到现有 Node 服务、Cloudflare Worker 或别的 HTTP 入口上
 
 ## 什么时候这页不是重点
@@ -76,7 +76,7 @@ base.use(ai);
 await base.health();
 
 serve({
-  fetch: base.router().fetch,
+  fetch: (request) => base.fetch(request),
   port: 43127,
   hostname: "127.0.0.1",
 });
@@ -86,7 +86,7 @@ serve({
 
 1. `db` 决定 Federation 使用哪一个 Drizzle 数据库
 2. `base.use(...)` 决定 Federation 暴露哪些能力
-3. `base.router()` / `base.handleRequest()` 决定你怎么把它接进 HTTP 层
+3. `base.fetch()` 决定你怎么把它接进 HTTP 层
 
 ## 场景一：Federation 自己就是主服务
 
@@ -96,7 +96,7 @@ serve({
 import { serve } from "@hono/node-server";
 
 await base.health();
-serve({ fetch: base.router().fetch, port: 3001, hostname: "127.0.0.1" });
+serve({ fetch: (request) => base.fetch(request), port: 3001, hostname: "127.0.0.1" });
 ```
 
 这种方式适合：
@@ -112,7 +112,7 @@ serve({ fetch: base.router().fetch, port: 3001, hostname: "127.0.0.1" });
 ```ts
 export default {
   async fetch(request: Request) {
-    return base.handleRequest(request);
+    return base.fetch(request);
   },
 };
 ```
@@ -199,8 +199,7 @@ base.storage(R2Storage({
 - `new Federation({ db })`：创建 Federation 实例
 - `base.use(...)`：挂 service、AIService 和官方服务
 - `base.storage(...)`：注册默认文件存储后端
-- `base.router()`：拿到底层 HTTP router
-- `base.handleRequest(request)`：处理单次请求
+- `base.fetch(request)`：处理单次请求
 - `new FederationRPC(base)`：把当前 Federation 暴露为本机可信 RPC
 - `base.health()`：触发初始化并返回健康信息
 - `base.table(name)`：拿某张表的受控数据接口

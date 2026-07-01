@@ -30,7 +30,7 @@ test("paymentService lists enabled Creem payment method for guests", async () =>
 
     await base.health()
 
-    const response = await base.handleRequest(new Request("http://localhost/v1/payment/methods"))
+    const response = await base.fetch(new Request("http://localhost/v1/payment/methods"))
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), {
       items: [{
@@ -69,7 +69,7 @@ test("paymentService marks Creem disabled when required config is missing", asyn
 
     await base.health()
 
-    const response = await base.handleRequest(new Request("http://localhost/v1/payment/methods"))
+    const response = await base.fetch(new Request("http://localhost/v1/payment/methods"))
     assert.equal(response.status, 200)
     assert.deepEqual(await response.json(), {
       items: [{
@@ -120,17 +120,17 @@ test("paymentService creates checkout sessions and finishes topups through webho
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
     await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
 
-    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+    const city = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
-    const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
+    const tokenBody = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/tokens/apply",
       body: { city_id: city.city_id, user_id: "user_1" },
     }))).json()
 
     const topup = await balance.createTopup("user_1", 50_000_000, { note: "recharge" })
-    const checkoutResponse = await base.handleRequest(userRequest({
+    const checkoutResponse = await base.fetch(userRequest({
       token: tokenBody.user_token,
       path: "/v1/payment/checkout/create",
       body: {
@@ -150,7 +150,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
     assert.equal(creemStub.lastBody().request_id, checkout.payment_id)
     assert.equal(creemStub.lastBody().metadata.topup_id, topup.topup_id)
 
-    const duplicateCheckoutResponse = await base.handleRequest(userRequest({
+    const duplicateCheckoutResponse = await base.fetch(userRequest({
       token: tokenBody.user_token,
       path: "/v1/payment/checkout/create",
       body: {
@@ -162,7 +162,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
     const duplicateCheckout = await duplicateCheckoutResponse.json()
     assert.equal(duplicateCheckout.payment_id, checkout.payment_id)
 
-    const invalidWebhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=creem", {
+    const invalidWebhookResponse = await base.fetch(new Request("http://localhost/v1/payment/webhook?provider=creem", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -188,7 +188,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
         },
       },
     })
-    const webhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=creem", {
+    const webhookResponse = await base.fetch(new Request("http://localhost/v1/payment/webhook?provider=creem", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -207,7 +207,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
     const afterTopup = await balance.read("user_1")
     assert.equal(afterTopup.credits, 50_000_000)
 
-    const repeatedWebhookResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=creem", {
+    const repeatedWebhookResponse = await base.fetch(new Request("http://localhost/v1/payment/webhook?provider=creem", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -224,7 +224,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
     })
     assert.equal((await balance.read("user_1")).credits, 50_000_000)
 
-    const myPaymentsResponse = await base.handleRequest(userRequest({
+    const myPaymentsResponse = await base.fetch(userRequest({
       token: tokenBody.user_token,
       path: "/v1/payment/payments/me",
       method: "GET",
@@ -236,7 +236,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
     assert.equal(myPayments.items[0].provider, "creem")
     assert.equal(myPayments.items[0].provider_order_id, "ord_test_order")
 
-    const allPaymentsResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const allPaymentsResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/payment/payments",
       method: "GET",
     }))
@@ -278,17 +278,17 @@ test("paymentService falls back to request origin for redirect URLs and exposes 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+    const city = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
-    const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
+    const tokenBody = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/tokens/apply",
       body: { city_id: city.city_id, user_id: "user_2" },
     }))).json()
 
     const topup = await balance.createTopup("user_2", 80_000_000, { note: "redirect fallback" })
-    const checkoutResponse = await base.handleRequest(userRequest({
+    const checkoutResponse = await base.fetch(userRequest({
       token: tokenBody.user_token,
       path: "/v1/payment/checkout/create",
       body: { method_id: "creem", topup_id: topup.topup_id },
@@ -299,12 +299,12 @@ test("paymentService falls back to request origin for redirect URLs and exposes 
       creemStub.lastBody().success_url,
       "https://runtime.example.com/v1/payment/redirect/success",
     )
-    const successPage = await base.handleRequest(new Request("https://runtime.example.com/v1/payment/redirect/success"))
+    const successPage = await base.fetch(new Request("https://runtime.example.com/v1/payment/redirect/success"))
     assert.equal(successPage.status, 200)
     assert.match(successPage.headers.get("content-type") || "", /^text\/html\b/)
     assert.match(await successPage.text(), /Payment completed/)
 
-    const cancelPage = await base.handleRequest(new Request("https://runtime.example.com/v1/payment/redirect/cancel"))
+    const cancelPage = await base.fetch(new Request("https://runtime.example.com/v1/payment/redirect/cancel"))
     assert.equal(cancelPage.status, 200)
     assert.match(cancelPage.headers.get("content-type") || "", /^text\/html\b/)
     assert.match(await cancelPage.text(), /Payment canceled/)
@@ -344,17 +344,17 @@ test("paymentService marks failed and expired payments without crediting balance
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
     await base.getService("env")._env.upsert({ key: "DOWNCITY_CITY_BASE_URL", value: "https://base.example.com/" })
 
-    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+    const city = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
-    const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
+    const tokenBody = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/tokens/apply",
       body: { city_id: city.city_id, user_id: "user_3" },
     }))).json()
 
     const expiredTopup = await balance.createTopup("user_3", 30_000_000, { note: "expired" })
-    const expiredCheckout = await (await base.handleRequest(userRequest({
+    const expiredCheckout = await (await base.fetch(userRequest({
       token: tokenBody.user_token,
       path: "/v1/payment/checkout/create",
       body: { method_id: "creem", topup_id: expiredTopup.topup_id },
@@ -372,7 +372,7 @@ test("paymentService marks failed and expired payments without crediting balance
         },
       },
     })
-    const expiredResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=creem", {
+    const expiredResponse = await base.fetch(new Request("http://localhost/v1/payment/webhook?provider=creem", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -387,7 +387,7 @@ test("paymentService marks failed and expired payments without crediting balance
       id: "ch_test_failed",
       checkout_url: "https://checkout.creem.test/ch_test_failed",
     })
-    const failedCheckout = await (await base.handleRequest(userRequest({
+    const failedCheckout = await (await base.fetch(userRequest({
       token: tokenBody.user_token,
       path: "/v1/payment/checkout/create",
       body: { method_id: "creem", topup_id: failedTopup.topup_id },
@@ -406,7 +406,7 @@ test("paymentService marks failed and expired payments without crediting balance
         },
       },
     })
-    const failedResponse = await base.handleRequest(new Request("http://localhost/v1/payment/webhook?provider=creem", {
+    const failedResponse = await base.fetch(new Request("http://localhost/v1/payment/webhook?provider=creem", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -416,7 +416,7 @@ test("paymentService marks failed and expired payments without crediting balance
     }))
     assert.equal(failedResponse.status, 200)
 
-    const paymentsResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const paymentsResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/payment/payments",
       method: "GET",
     }))

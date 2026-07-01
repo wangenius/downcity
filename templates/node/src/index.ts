@@ -165,7 +165,7 @@ await federation.health();
 await sync_local_env(federation);
 const env_table = await federation.table<EnvRow>("env");
 const admin_key = (await env_table.select({ key: "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY" }))[0]?.value ?? "(not set)";
-serve({ fetch: federation.router().fetch, port, hostname: host });
+serve({ fetch: (request) => federation.fetch(request), port, hostname: host });
 console.log(`Downcity http://${host}:${port}`);
 console.log(`SQLite: ${sqlite_path}`);
 console.log(`Admin key: ${admin_key}`);

@@ -58,8 +58,46 @@ base.use(new AccountsService({
 
 ```ts
 import { serve } from "@hono/node-server";
-serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
+serve({ fetch: (request) => base.fetch(request), port: 43127, hostname: "127.0.0.1" });
 ```
+
+## HTTP Middleware
+
+Use `base.middle()` to register Federation-level HTTP middleware. Middleware runs before the internal router and before Action body parsing, so it is the right layer for CORS, security headers, body size limits, coarse rate limits, and request timeouts.
+
+```ts
+import {
+  bodyLimit,
+  clientIp,
+  cors,
+  memoryRateLimitStore,
+  rateLimit,
+  requestTimeout,
+  securityHeaders,
+} from "@downcity/city";
+
+base.middle(securityHeaders());
+base.middle(cors({
+  origins: ["https://app.example.com"],
+  methods: ["GET", "POST", "OPTIONS"],
+  headers: ["Content-Type", "Authorization"],
+  max_age: 86400,
+}));
+base.middle(bodyLimit({ max_bytes: 1_000_000 }));
+base.middle(rateLimit({
+  window_ms: 60_000,
+  max: 120,
+  key: (ctx) => clientIp(ctx.request),
+  match: (ctx) => new URL(ctx.request.url).pathname.startsWith("/v1/"),
+  store: memoryRateLimitStore(),
+}));
+base.middle(requestTimeout({
+  ms: 30_000,
+  exclude_paths: ["/v1/ai/stream", "/v1/ai/chat/completions"],
+}));
+```
+
+Middleware enters in registration order and exits in reverse order. It can return a `Response` directly to short-circuit a request, or call `await next()` and then modify response headers.
 
 ## instruction aggregation
 

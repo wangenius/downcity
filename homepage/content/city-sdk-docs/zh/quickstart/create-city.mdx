@@ -52,7 +52,7 @@ const db = drizzle(env.DB);
 const base = new Federation({ db });
 ```
 
-Federation 会在第一次 `health()`、`handleRequest()`、`table()` 等运行时操作时自动初始化。
+Federation 会在第一次 `health()`、`fetch()`、`table()` 等运行时操作时自动初始化。
 
 如果你的 Federation 还需要自己的业务表，可以通过 Service 或服务声明表。表会挂在对应 Service 的命名空间下，并和 Federation 默认数据库使用同一个数据库连接：
 
@@ -89,7 +89,7 @@ await table.insert({
 import { serve } from "@hono/node-server";
 
 await base.health();
-serve({ fetch: base.router().fetch, port: 3001, hostname: "127.0.0.1" });
+serve({ fetch: (request) => base.fetch(request), port: 3001, hostname: "127.0.0.1" });
 ```
 
 这个服务就是后续多个产品共用的 Federation。管理和业务数据暂时通过你自己的数据库与产品后端处理。

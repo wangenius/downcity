@@ -150,7 +150,7 @@ export function formatInstructionDocument(input: {
   lines.push("1. 创建 Federation 实例。");
   lines.push("2. 通过 base.use(...) 注册业务 Service、AIService 或带 install(ctx) 生命周期的服务。");
   lines.push("3. 先调用 await base.health() 完成初始化。");
-  lines.push("4. 通过 base.router().fetch 或 base.handleRequest(...) 对外提供请求处理。");
+  lines.push("4. 通过 base.fetch 或 base.fetch(...) 对外提供请求处理。");
   lines.push("");
   lines.push(`内置服务：${input.base.builtin_services.join(", ")}`);
   lines.push(`当前已加载模块：${input.base.loaded_modules.join(", ")}`);

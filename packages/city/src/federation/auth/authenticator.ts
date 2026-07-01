@@ -86,7 +86,7 @@ export class Authenticator {
    * 将进程内可信身份转换为统一鉴权结果。
    *
    * 关键点（中文）
-   * - 该方法只接受 `Federation.handleRequest()` options 里的值。
+   * - 该方法只接受 `Federation.fetch()` options 里的值。
    * - 不读取 HTTP header，避免外部请求伪造本机可信身份。
    */
   resolveTrusted(identity: FederationTrustedIdentity): AuthResult {

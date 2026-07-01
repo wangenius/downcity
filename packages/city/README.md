@@ -60,7 +60,37 @@ base.use(ai);
 import { serve } from "@hono/node-server";
 
 await base.health();
-serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
+serve({ fetch: (request) => base.fetch(request), port: 43127, hostname: "127.0.0.1" });
+```
+
+## HTTP Middleware
+
+Federation 级 middleware 会在内部路由和 Action body 读取之前执行，适合统一放 CORS、安全响应头、body 大小限制、限流和超时：
+
+```ts
+import {
+  bodyLimit,
+  clientIp,
+  cors,
+  memoryRateLimitStore,
+  rateLimit,
+  requestTimeout,
+  securityHeaders,
+} from "@downcity/city";
+
+base.middle(securityHeaders());
+base.middle(cors({
+  origins: ["https://app.example.com"],
+  max_age: 86400,
+}));
+base.middle(bodyLimit({ max_bytes: 1_000_000 }));
+base.middle(rateLimit({
+  window_ms: 60_000,
+  max: 120,
+  key: (ctx) => clientIp(ctx.request),
+  store: memoryRateLimitStore(),
+}));
+base.middle(requestTimeout({ ms: 30_000 }));
 ```
 
 ## City 说明文档

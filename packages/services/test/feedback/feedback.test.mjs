@@ -20,7 +20,7 @@ test("feedbackService manages user feedback and admin replies", async () => {
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const servicesResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const servicesResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/services",
       method: "GET",
     }))
@@ -28,11 +28,11 @@ test("feedbackService manages user feedback and admin replies", async () => {
     const services = await servicesResponse.json()
     assert.ok(services.items.some((item) => item.id === "feedback"))
 
-    const cityOne = await (await base.handleRequest(adminRequest(adminSecret, {
+    const cityOne = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/create",
       body: { name: "City One" },
     }))).json()
-    const cityTwo = await (await base.handleRequest(adminRequest(adminSecret, {
+    const cityTwo = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/create",
       body: { name: "City Two" },
     }))).json()
@@ -41,14 +41,14 @@ test("feedbackService manages user feedback and admin replies", async () => {
     const userTwoToken = await issueUserToken(base, adminSecret, cityOne.city_id, "user_2")
     const userOtherCityToken = await issueUserToken(base, adminSecret, cityTwo.city_id, "user_1")
 
-    const emptyResponse = await base.handleRequest(userRequest({
+    const emptyResponse = await base.fetch(userRequest({
       token: userOneToken,
       path: "/v1/feedback/send",
       body: { message: "   " },
     }))
     assert.equal(emptyResponse.status, 400)
 
-    const createOneResponse = await base.handleRequest(userRequest({
+    const createOneResponse = await base.fetch(userRequest({
       token: userOneToken,
       path: "/v1/feedback/send",
       body: {
@@ -63,7 +63,7 @@ test("feedbackService manages user feedback and admin replies", async () => {
     assert.equal(createdOne.status, "open")
     assert.match(createdOne.created_at, /^\d{4}-\d{2}-\d{2}T/)
 
-    const createTwoResponse = await base.handleRequest(userRequest({
+    const createTwoResponse = await base.fetch(userRequest({
       token: userTwoToken,
       path: "/v1/feedback/send",
       body: { message: "Please add invoices", contact: "" },
@@ -71,14 +71,14 @@ test("feedbackService manages user feedback and admin replies", async () => {
     assert.equal(createTwoResponse.status, 200)
     const createdTwo = await createTwoResponse.json()
 
-    const createOtherCityResponse = await base.handleRequest(userRequest({
+    const createOtherCityResponse = await base.fetch(userRequest({
       token: userOtherCityToken,
       path: "/v1/feedback/send",
       body: { message: "City-specific issue" },
     }))
     assert.equal(createOtherCityResponse.status, 200)
 
-    const meResponse = await base.handleRequest(userRequest({
+    const meResponse = await base.fetch(userRequest({
       token: userOneToken,
       path: "/v1/feedback/me",
       method: "GET",
@@ -95,7 +95,7 @@ test("feedbackService manages user feedback and admin replies", async () => {
     assert.equal(me.items[0].replied_at, "")
     assert.equal(me.items[0].metadata_json, JSON.stringify({ page: "/billing", client_version: "1.2.3" }))
 
-    const queryStatusResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const queryStatusResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/feedback/messages?status=open&city_id=" + encodeURIComponent(cityOne.city_id),
       method: "GET",
     }))
@@ -107,7 +107,7 @@ test("feedbackService manages user feedback and admin replies", async () => {
       createdTwo.feedback_id,
     ]))
 
-    const queryUserResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const queryUserResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/feedback/messages?user_id=user_1",
       method: "GET",
     }))
@@ -116,13 +116,13 @@ test("feedbackService manages user feedback and admin replies", async () => {
     assert.equal(queryUser.items.length, 2)
     assert.ok(queryUser.items.every((item) => item.user_id === "user_1"))
 
-    const replyMissingResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const replyMissingResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/feedback/reply",
       body: { feedback_id: "fb_missing", reply: "not found" },
     }))
     assert.equal(replyMissingResponse.status, 404)
 
-    const replyResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const replyResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/feedback/reply",
       body: {
         feedback_id: createdOne.feedback_id,
@@ -136,7 +136,7 @@ test("feedbackService manages user feedback and admin replies", async () => {
     assert.equal(replied.status, "replied")
     assert.match(replied.replied_at, /^\d{4}-\d{2}-\d{2}T/)
 
-    const statusResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const statusResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/feedback/status",
       body: {
         feedback_id: createdOne.feedback_id,
@@ -147,7 +147,7 @@ test("feedbackService manages user feedback and admin replies", async () => {
     const closed = await statusResponse.json()
     assert.equal(closed.status, "closed")
 
-    const afterReplyResponse = await base.handleRequest(userRequest({
+    const afterReplyResponse = await base.fetch(userRequest({
       token: userOneToken,
       path: "/v1/feedback/me?status=closed",
       method: "GET",
@@ -160,7 +160,7 @@ test("feedbackService manages user feedback and admin replies", async () => {
     assert.notEqual(afterReply.items[0].replied_at, "")
     assert.equal(afterReply.items[0].status, "closed")
 
-    const invalidStatusResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const invalidStatusResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/feedback/status",
       body: {
         feedback_id: createdOne.feedback_id,
@@ -169,7 +169,7 @@ test("feedbackService manages user feedback and admin replies", async () => {
     }))
     assert.equal(invalidStatusResponse.status, 400)
 
-    const missingStatusResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const missingStatusResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/feedback/status",
       body: {
         feedback_id: "fb_missing",
@@ -178,14 +178,14 @@ test("feedbackService manages user feedback and admin replies", async () => {
     }))
     assert.equal(missingStatusResponse.status, 404)
 
-    const guestSendResponse = await base.handleRequest(new Request("http://localhost/v1/feedback/send", {
+    const guestSendResponse = await base.fetch(new Request("http://localhost/v1/feedback/send", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ message: "guest" }),
     }))
     assert.equal(guestSendResponse.status, 401)
 
-    const guestAdminResponse = await base.handleRequest(new Request("http://localhost/v1/feedback/messages", {
+    const guestAdminResponse = await base.fetch(new Request("http://localhost/v1/feedback/messages", {
       method: "GET",
     }))
     assert.equal(guestAdminResponse.status, 401)
@@ -218,7 +218,7 @@ function userRequest({ token, path: pathname, method = "POST", body }) {
 }
 
 async function issueUserToken(base, adminSecret, cityId, userId) {
-  const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
+  const tokenBody = await (await base.fetch(adminRequest(adminSecret, {
     path: "/v1/cities/tokens/apply",
     body: { city_id: cityId, user_id: userId },
   }))).json()

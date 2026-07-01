@@ -25,11 +25,11 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+    const city = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
-    const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
+    const tokenBody = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/tokens/apply",
       body: { city_id: city.city_id, user_id: "user_1" },
     }))).json()
@@ -40,7 +40,7 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     const debit = await balance.sub("user_1", 20_000_000, { note: "chat" })
     assert.equal(debit.credits, 80_000_000)
 
-    const meResponse = await base.handleRequest(userRequest({
+    const meResponse = await base.fetch(userRequest({
       token: tokenBody.user_token,
       path: "/v1/balance/me",
       method: "GET",
@@ -56,7 +56,7 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     })
     assert.equal(me.display, "$80.00")
 
-    const topupResponse = await base.handleRequest(userRequest({
+    const topupResponse = await base.fetch(userRequest({
       token: tokenBody.user_token,
       path: "/v1/balance/topups/create",
       body: { credits: 50_000_000, note: "recharge" },
@@ -67,14 +67,14 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     assert.equal(topup.credits, 50_000_000)
     assert.equal(topup.usd_cents, 5000)
 
-    const finishResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const finishResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/balance/topups/finish",
       body: { topup_id: topup.topup_id },
     }))
     assert.equal(finishResponse.status, 200)
     assert.equal((await finishResponse.json()).status, "paid")
 
-    const createRedeemCodeResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const createRedeemCodeResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/balance/redeem-codes/create",
       body: { credits: 40_000_000, note: "gift campaign" },
     }))
@@ -83,7 +83,7 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     assert.equal(redeemCode.status, "active")
     assert.match(redeemCode.code, /^[A-Z0-9-]+$/)
 
-    const redeemResponse = await base.handleRequest(userRequest({
+    const redeemResponse = await base.fetch(userRequest({
       token: tokenBody.user_token,
       path: "/v1/balance/redeem-codes/redeem",
       body: { code: redeemCode.code },
@@ -94,28 +94,28 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     assert.equal(redeemed.redeem_code.status, "redeemed")
     assert.equal(redeemed.redeem_code.redeemed_by_user_id, "user_1")
 
-    const redeemAgainResponse = await base.handleRequest(userRequest({
+    const redeemAgainResponse = await base.fetch(userRequest({
       token: tokenBody.user_token,
       path: "/v1/balance/redeem-codes/redeem",
       body: { code: redeemCode.code },
     }))
     assert.equal(redeemAgainResponse.status, 409)
 
-    const disableCreateResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const disableCreateResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/balance/redeem-codes/create",
       body: { credits: 25_000_000, note: "manual stop" },
     }))
     assert.equal(disableCreateResponse.status, 200)
     const toDisable = await disableCreateResponse.json()
 
-    const disableResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const disableResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/balance/redeem-codes/disable",
       body: { redeem_code_id: toDisable.redeem_code_id, note: "expired" },
     }))
     assert.equal(disableResponse.status, 200)
     assert.equal((await disableResponse.json()).status, "disabled")
 
-    const historyResponse = await base.handleRequest(userRequest({
+    const historyResponse = await base.fetch(userRequest({
       token: tokenBody.user_token,
       path: "/v1/balance/history/me?limit=10",
       method: "GET",
@@ -124,7 +124,7 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     const history = await historyResponse.json()
     assert.deepEqual(history.items.map((item) => item.kind), ["redeem", "topup", "sub", "init"])
 
-    const usersResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const usersResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/balance/users?limit=10",
       method: "GET",
     }))
@@ -132,7 +132,7 @@ test("balanceService manages global balance, ledger, and topups", async () => {
     const users = await usersResponse.json()
     assert.equal(users.items[0].credits, 170_000_000)
 
-    const redeemCodesResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const redeemCodesResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/balance/redeem-codes?limit=10",
       method: "GET",
     }))

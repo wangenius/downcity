@@ -4,7 +4,17 @@ import os from "node:os"
 import path from "node:path"
 import test from "node:test"
 
-import { Federation, AIService, Provider } from "../bin/index.js"
+import {
+  Federation,
+  AIService,
+  Provider,
+  bodyLimit,
+  cors,
+  memoryRateLimitStore,
+  rateLimit,
+  requestTimeout,
+  securityHeaders,
+} from "../bin/index.js"
 import { createSqliteDb } from "./sqlite-db.mjs"
 
 function useMemoryQueue(base) {
@@ -72,7 +82,7 @@ test("Federation instruction endpoint requires admin auth and returns text", asy
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const guestResponse = await base.handleRequest(new Request("http://localhost/v1/federation/instruction", {
+    const guestResponse = await base.fetch(new Request("http://localhost/v1/federation/instruction", {
       method: "GET",
     }))
     assert.equal(guestResponse.status, 401)
@@ -83,7 +93,7 @@ test("Federation instruction endpoint requires admin auth and returns text", asy
       },
     })
 
-    const adminResponse = await base.handleRequest(new Request("http://localhost/v1/federation/instruction", {
+    const adminResponse = await base.fetch(new Request("http://localhost/v1/federation/instruction", {
       method: "GET",
       headers: {
         authorization: `Bearer ${adminSecret}`,
@@ -110,12 +120,12 @@ test("Federation trusted identity can access admin endpoints without bearer toke
 
     await base.health()
 
-    const guestResponse = await base.handleRequest(new Request("http://localhost/v1/federation/instruction", {
+    const guestResponse = await base.fetch(new Request("http://localhost/v1/federation/instruction", {
       method: "GET",
     }))
     assert.equal(guestResponse.status, 401)
 
-    const trustedResponse = await base.handleRequest(new Request("http://localhost/v1/federation/instruction", {
+    const trustedResponse = await base.fetch(new Request("http://localhost/v1/federation/instruction", {
       method: "GET",
     }), {
       trusted_identity: { level: "admin" },
@@ -199,7 +209,7 @@ test("InstallableService route supports native Request handlers", async () => {
 
     await base.health()
 
-    const response = await base.handleRequest(new Request("http://example.com/v1/native/echo/deep/path?q=yes", {
+    const response = await base.fetch(new Request("http://example.com/v1/native/echo/deep/path?q=yes", {
       method: "PUT",
       headers: {
         "content-type": "text/plain",
@@ -215,6 +225,198 @@ test("InstallableService route supports native Request handlers", async () => {
       query: "yes",
       header: "kept",
       body: "raw body",
+    })
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("Federation fetch runs middleware in order and remains bindable", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-middleware-order-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+    const events = []
+
+    base.middle(async (ctx, next) => {
+      events.push("a before")
+      ctx.locals.request_id = "req_1"
+      const response = await next()
+      events.push("a after")
+      const headers = new Headers(response.headers)
+      headers.set("x-request-id", String(ctx.locals.request_id))
+      return new Response(response.body, { status: response.status, statusText: response.statusText, headers })
+    })
+    base.middle(async (_ctx, next) => {
+      events.push("b before")
+      const response = await next()
+      events.push("b after")
+      return response
+    })
+
+    const fetch = base.fetch
+    const response = await fetch(new Request("http://localhost/health"))
+
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get("x-request-id"), "req_1")
+    assert.deepEqual(events, ["a before", "b before", "b after", "a after"])
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("Federation middleware can short-circuit before action body read", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-middleware-short-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+    let action_called = false
+
+    base.middle(bodyLimit({ max_bytes: 3 }))
+    base.use({
+      id: "demo.limit",
+      name: "Demo Limit",
+      install(ctx) {
+        ctx.route({
+          method: "POST",
+          path: "/echo",
+          auth: [],
+          handler: async () => {
+            action_called = true
+            return { ok: true }
+          },
+        })
+      },
+    })
+
+    const response = await base.fetch(new Request("http://localhost/v1/demo.limit/echo", {
+      method: "POST",
+      headers: {
+        "content-length": "10",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ ok: true }),
+    }))
+
+    assert.equal(response.status, 413)
+    assert.equal(action_called, false)
+    assert.deepEqual(await response.json(), {
+      error: {
+        message: "Request body too large",
+        type: "request_too_large",
+      },
+    })
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("Federation middleware reports duplicate next calls as middleware errors", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-middleware-next-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+
+    base.middle(async (_ctx, next) => {
+      await next()
+      return await next()
+    })
+
+    const response = await base.fetch(new Request("http://localhost/health"))
+
+    assert.equal(response.status, 500)
+    assert.deepEqual(await response.json(), {
+      error: {
+        message: "next() called multiple times",
+        type: "middleware_error",
+      },
+    })
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("Federation built-in middleware helpers cover CORS, headers, rate limit, and timeout", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-city-middleware-helpers-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+    const store = memoryRateLimitStore()
+
+    base.middle(cors({
+      origins: ["https://app.example.com"],
+      methods: ["GET", "POST", "OPTIONS"],
+      headers: ["Content-Type", "Authorization"],
+      max_age: 60,
+    }))
+    base.middle(securityHeaders())
+    base.middle(rateLimit({
+      window_ms: 60_000,
+      max: 1,
+      key: () => "client_1",
+      match: (ctx) => new URL(ctx.request.url).pathname === "/health",
+      store,
+    }))
+
+    const preflight = await base.fetch(new Request("http://localhost/v1/demo", {
+      method: "OPTIONS",
+      headers: {
+        origin: "https://app.example.com",
+      },
+    }))
+    assert.equal(preflight.status, 204)
+    assert.equal(preflight.headers.get("access-control-allow-origin"), "https://app.example.com")
+    assert.equal(preflight.headers.get("access-control-max-age"), "60")
+
+    const first = await base.fetch(new Request("http://localhost/health", {
+      headers: {
+        origin: "https://app.example.com",
+      },
+    }))
+    assert.equal(first.status, 200)
+    assert.equal(first.headers.get("access-control-allow-origin"), "https://app.example.com")
+    assert.equal(first.headers.get("x-content-type-options"), "nosniff")
+    assert.equal(first.headers.get("x-ratelimit-limit"), "1")
+
+    const second = await base.fetch(new Request("http://localhost/health"))
+    assert.equal(second.status, 429)
+    assert.deepEqual(await second.json(), {
+      error: {
+        message: "Too many requests",
+        type: "rate_limited",
+      },
+    })
+
+    const timeoutBase = new Federation({ db, dialect: "sqlite", raw: db.raw })
+    timeoutBase.middle(requestTimeout({ ms: 1 }))
+    timeoutBase.middle(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      return Response.json({ ok: true })
+    })
+
+    const timeoutResponse = await timeoutBase.fetch(new Request("http://localhost/health"))
+    assert.equal(timeoutResponse.status, 504)
+    assert.deepEqual(await timeoutResponse.json(), {
+      error: {
+        message: "Request timed out",
+        type: "request_timeout",
+      },
     })
   } finally {
     process.chdir(cwd)
@@ -248,7 +450,7 @@ test("Federation rejects mismatched city_id for authenticated user requests", as
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const bay_response = await base.handleRequest(new Request("http://localhost/v1/cities/create", {
+    const bay_response = await base.fetch(new Request("http://localhost/v1/cities/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -266,7 +468,7 @@ test("Federation rejects mismatched city_id for authenticated user requests", as
       user_id: "user_1",
     })
 
-    const response = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
+    const response = await base.fetch(new Request("http://localhost/v1/ai/text", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -335,7 +537,7 @@ test("AIService requires explicit model id for executable AI calls", async () =>
       { path: "/v1/ai/chat/completions", body: { messages: [{ role: "user", content: "hi" }] } },
       { path: "/v1/ai/image/create", body: { prompt: "draw" } },
     ]) {
-      const response = await base.handleRequest(new Request(`http://localhost${input.path}`, {
+      const response = await base.fetch(new Request(`http://localhost${input.path}`, {
         method: "POST",
         headers,
         body: JSON.stringify(input.body),
@@ -400,7 +602,7 @@ test("AIService charges explicit provider charge lines", async () => {
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const city = await (await base.handleRequest(new Request("http://localhost/v1/cities/create", {
+    const city = await (await base.fetch(new Request("http://localhost/v1/cities/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -408,7 +610,7 @@ test("AIService charges explicit provider charge lines", async () => {
       },
       body: JSON.stringify({ name: "Demo" }),
     }))).json()
-    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/cities/tokens/apply", {
+    const tokenBody = await (await base.fetch(new Request("http://localhost/v1/cities/tokens/apply", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -417,7 +619,7 @@ test("AIService charges explicit provider charge lines", async () => {
       body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
     }))).json()
 
-    const response = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
+    const response = await base.fetch(new Request("http://localhost/v1/ai/text", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -495,7 +697,7 @@ test("AIService uses provider bill when model bill is not set", async () => {
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    const city = await (await base.handleRequest(new Request("http://localhost/v1/cities/create", {
+    const city = await (await base.fetch(new Request("http://localhost/v1/cities/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -503,7 +705,7 @@ test("AIService uses provider bill when model bill is not set", async () => {
       },
       body: JSON.stringify({ name: "Demo" }),
     }))).json()
-    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/cities/tokens/apply", {
+    const tokenBody = await (await base.fetch(new Request("http://localhost/v1/cities/tokens/apply", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -511,7 +713,7 @@ test("AIService uses provider bill when model bill is not set", async () => {
       },
       body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
     }))).json()
-    const response = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
+    const response = await base.fetch(new Request("http://localhost/v1/ai/text", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -591,7 +793,7 @@ test("AIService falls back to image-capable model for UIMessage image parts", as
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    const city = await (await base.handleRequest(new Request("http://localhost/v1/cities/create", {
+    const city = await (await base.fetch(new Request("http://localhost/v1/cities/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -599,7 +801,7 @@ test("AIService falls back to image-capable model for UIMessage image parts", as
       },
       body: JSON.stringify({ name: "Demo" }),
     }))).json()
-    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/cities/tokens/apply", {
+    const tokenBody = await (await base.fetch(new Request("http://localhost/v1/cities/tokens/apply", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -608,7 +810,7 @@ test("AIService falls back to image-capable model for UIMessage image parts", as
       body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
     }))).json()
 
-    const response = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
+    const response = await base.fetch(new Request("http://localhost/v1/ai/text", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -714,7 +916,7 @@ test("AIService selects fallback rule by UIMessage file media type", async () =>
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    const city = await (await base.handleRequest(new Request("http://localhost/v1/cities/create", {
+    const city = await (await base.fetch(new Request("http://localhost/v1/cities/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -722,7 +924,7 @@ test("AIService selects fallback rule by UIMessage file media type", async () =>
       },
       body: JSON.stringify({ name: "Demo" }),
     }))).json()
-    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/cities/tokens/apply", {
+    const tokenBody = await (await base.fetch(new Request("http://localhost/v1/cities/tokens/apply", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -731,7 +933,7 @@ test("AIService selects fallback rule by UIMessage file media type", async () =>
       body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
     }))).json()
 
-    const response = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
+    const response = await base.fetch(new Request("http://localhost/v1/ai/text", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -822,7 +1024,7 @@ test("AIService falls back for OpenAI chat completions with image_url parts", as
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    const city = await (await base.handleRequest(new Request("http://localhost/v1/cities/create", {
+    const city = await (await base.fetch(new Request("http://localhost/v1/cities/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -830,7 +1032,7 @@ test("AIService falls back for OpenAI chat completions with image_url parts", as
       },
       body: JSON.stringify({ name: "Demo" }),
     }))).json()
-    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/cities/tokens/apply", {
+    const tokenBody = await (await base.fetch(new Request("http://localhost/v1/cities/tokens/apply", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -839,7 +1041,7 @@ test("AIService falls back for OpenAI chat completions with image_url parts", as
       body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
     }))).json()
 
-    const response = await base.handleRequest(new Request("http://localhost/v1/ai/chat/completions", {
+    const response = await base.fetch(new Request("http://localhost/v1/ai/chat/completions", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -925,7 +1127,7 @@ test("AIService lets model bill override provider bill", async () => {
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    const city = await (await base.handleRequest(new Request("http://localhost/v1/cities/create", {
+    const city = await (await base.fetch(new Request("http://localhost/v1/cities/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -933,7 +1135,7 @@ test("AIService lets model bill override provider bill", async () => {
       },
       body: JSON.stringify({ name: "Demo" }),
     }))).json()
-    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/cities/tokens/apply", {
+    const tokenBody = await (await base.fetch(new Request("http://localhost/v1/cities/tokens/apply", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -941,7 +1143,7 @@ test("AIService lets model bill override provider bill", async () => {
       },
       body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
     }))).json()
-    const response = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
+    const response = await base.fetch(new Request("http://localhost/v1/ai/text", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1015,7 +1217,7 @@ test("Federation AI image jobs advance and finish through provider result", asyn
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    const createResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+    const createResponse = await base.fetch(new Request("http://localhost/v1/ai/image/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1037,7 +1239,7 @@ test("Federation AI image jobs advance and finish through provider result", asyn
 
     await base.queue.call(queueMessages.shift())
 
-    const resultResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+    const resultResponse = await base.fetch(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1104,7 +1306,7 @@ test("Federation AI image jobs require provider create and result actions", asyn
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    const createResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+    const createResponse = await base.fetch(new Request("http://localhost/v1/ai/image/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1118,7 +1320,7 @@ test("Federation AI image jobs require provider create and result actions", asyn
     assert.equal(created.status, "running")
     await base.queue.call(queueMessages.shift())
 
-    const resultResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+    const resultResponse = await base.fetch(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1185,7 +1387,7 @@ test("Federation AI image jobs return provider result as-is", async () => {
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    const createResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+    const createResponse = await base.fetch(new Request("http://localhost/v1/ai/image/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1198,7 +1400,7 @@ test("Federation AI image jobs return provider result as-is", async () => {
     const created = await createResponse.json()
     await base.queue.call(queueMessages.shift())
 
-    const resultResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+    const resultResponse = await base.fetch(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1269,7 +1471,7 @@ test("Federation AI image jobs store remote file parts through federation storag
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    const createResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+    const createResponse = await base.fetch(new Request("http://localhost/v1/ai/image/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1282,7 +1484,7 @@ test("Federation AI image jobs store remote file parts through federation storag
     const created = await createResponse.json()
     await base.queue.call(queueMessages.shift())
 
-    const resultResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+    const resultResponse = await base.fetch(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1352,7 +1554,7 @@ test("Federation AI image jobs keep source URL when storage fails", async () => 
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    const createResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+    const createResponse = await base.fetch(new Request("http://localhost/v1/ai/image/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1365,7 +1567,7 @@ test("Federation AI image jobs keep source URL when storage fails", async () => 
     const created = await createResponse.json()
     await base.queue.call(queueMessages.shift())
 
-    const resultResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+    const resultResponse = await base.fetch(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1411,7 +1613,7 @@ test("Federation AI image direct endpoint is not exposed", async () => {
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    const response = await base.handleRequest(new Request("http://localhost/v1/ai/image", {
+    const response = await base.fetch(new Request("http://localhost/v1/ai/image", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1450,7 +1652,7 @@ test("Federation AI image jobs reject incomplete provider actions", async () => 
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    const response = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+    const response = await base.fetch(new Request("http://localhost/v1/ai/image/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1533,7 +1735,7 @@ test("AIService charges image jobs only after provider result succeeds", async (
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const city = await (await base.handleRequest(new Request("http://localhost/v1/cities/create", {
+    const city = await (await base.fetch(new Request("http://localhost/v1/cities/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1541,7 +1743,7 @@ test("AIService charges image jobs only after provider result succeeds", async (
       },
       body: JSON.stringify({ name: "Demo" }),
     }))).json()
-    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/cities/tokens/apply", {
+    const tokenBody = await (await base.fetch(new Request("http://localhost/v1/cities/tokens/apply", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1550,7 +1752,7 @@ test("AIService charges image jobs only after provider result succeeds", async (
       body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
     }))).json()
 
-    const response = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+    const response = await base.fetch(new Request("http://localhost/v1/ai/image/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1565,7 +1767,7 @@ test("AIService charges image jobs only after provider result succeeds", async (
     assert.deepEqual(charges, [])
     await base.queue.call(queueMessages.shift())
 
-    const resultResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+    const resultResponse = await base.fetch(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1589,7 +1791,7 @@ test("AIService charges image jobs only after provider result succeeds", async (
       },
     }])
 
-    const cachedResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+    const cachedResponse = await base.fetch(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1655,7 +1857,7 @@ test("AIService prefers action charge over model bill", async () => {
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    const city = await (await base.handleRequest(new Request("http://localhost/v1/cities/create", {
+    const city = await (await base.fetch(new Request("http://localhost/v1/cities/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1663,7 +1865,7 @@ test("AIService prefers action charge over model bill", async () => {
       },
       body: JSON.stringify({ name: "Demo" }),
     }))).json()
-    const tokenBody = await (await base.handleRequest(new Request("http://localhost/v1/cities/tokens/apply", {
+    const tokenBody = await (await base.fetch(new Request("http://localhost/v1/cities/tokens/apply", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1672,7 +1874,7 @@ test("AIService prefers action charge over model bill", async () => {
       body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
     }))).json()
 
-    const response = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
+    const response = await base.fetch(new Request("http://localhost/v1/ai/text", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1759,7 +1961,7 @@ test("Federation AI image jobs can advance through result polling", async () => 
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    const createResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+    const createResponse = await base.fetch(new Request("http://localhost/v1/ai/image/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1772,7 +1974,7 @@ test("Federation AI image jobs can advance through result polling", async () => 
     assert.equal(calls, 1)
 
     await base.queue.call(queueMessages.shift())
-    const firstResult = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+    const firstResult = await base.fetch(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1791,7 +1993,7 @@ test("Federation AI image jobs can advance through result polling", async () => 
     assert.equal(calls, 2)
 
     await base.queue.call(queueMessages.shift())
-    const result = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+    const result = await base.fetch(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1810,7 +2012,7 @@ test("Federation AI image jobs can advance through result polling", async () => 
     })
     assert.equal(calls, 3)
 
-    const cached = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+    const cached = await base.fetch(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1868,7 +2070,7 @@ test("Federation AI image jobs fail after max pending duration", async () => {
 
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
-    const createResponse = await base.handleRequest(new Request("http://localhost/v1/ai/image/create", {
+    const createResponse = await base.fetch(new Request("http://localhost/v1/ai/image/create", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1888,7 +2090,7 @@ test("Federation AI image jobs fail after max pending duration", async () => {
     await base.queue.call(queueMessages.shift())
     assert.equal(fetchCalls, 0)
 
-    const result = await base.handleRequest(new Request("http://localhost/v1/ai/image/result", {
+    const result = await base.fetch(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1949,7 +2151,7 @@ test("Federation exposes service env requirements and env catalog", async () => 
 
     await base.health()
 
-    const response = await base.handleRequest(new Request("http://localhost/v1/services", {
+    const response = await base.fetch(new Request("http://localhost/v1/services", {
       method: "GET",
     }))
     assert.equal(response.status, 200)
@@ -1968,7 +2170,7 @@ test("Federation exposes service env requirements and env catalog", async () => 
     await base.getService("env")._env.upsert({ key: "STRIPE_SECRET_KEY", value: "sk_test" })
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const catalogResponse = await base.handleRequest(new Request("http://localhost/v1/env/catalog", {
+    const catalogResponse = await base.fetch(new Request("http://localhost/v1/env/catalog", {
       method: "GET",
       headers: {
         authorization: `Bearer ${adminSecret}`,
@@ -2036,7 +2238,7 @@ test("Federation refreshes runtime env only after explicit env refresh", async (
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const beforeResponse = await base.handleRequest(new Request("http://localhost/v1/demo.env/value", {
+    const beforeResponse = await base.fetch(new Request("http://localhost/v1/demo.env/value", {
       method: "GET",
     }))
     assert.equal(beforeResponse.status, 200)
@@ -2052,13 +2254,13 @@ test("Federation refreshes runtime env only after explicit env refresh", async (
       updated_at: now,
     })
 
-    const cachedResponse = await base.handleRequest(new Request("http://localhost/v1/demo.env/value", {
+    const cachedResponse = await base.fetch(new Request("http://localhost/v1/demo.env/value", {
       method: "GET",
     }))
     assert.equal(cachedResponse.status, 200)
     assert.deepEqual(await cachedResponse.json(), { google_client_id: null })
 
-    const refreshResponse = await base.handleRequest(new Request("http://localhost/v1/env/refresh", {
+    const refreshResponse = await base.fetch(new Request("http://localhost/v1/env/refresh", {
       method: "POST",
       headers: {
         authorization: `Bearer ${adminSecret}`,
@@ -2070,13 +2272,13 @@ test("Federation refreshes runtime env only after explicit env refresh", async (
     assert.equal(typeof refreshBody.count, "number")
     assert.ok(refreshBody.count >= 1)
 
-    const afterResponse = await base.handleRequest(new Request("http://localhost/v1/demo.env/value", {
+    const afterResponse = await base.fetch(new Request("http://localhost/v1/demo.env/value", {
       method: "GET",
     }))
     assert.equal(afterResponse.status, 200)
     assert.deepEqual(await afterResponse.json(), { google_client_id: "google-client-id-live" })
 
-    const catalogResponse = await base.handleRequest(new Request("http://localhost/v1/env/catalog", {
+    const catalogResponse = await base.fetch(new Request("http://localhost/v1/env/catalog", {
       method: "GET",
       headers: {
         authorization: `Bearer ${adminSecret}`,

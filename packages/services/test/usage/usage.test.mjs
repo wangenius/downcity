@@ -34,16 +34,16 @@ test("usageService records successful service calls", async () => {
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+    const city = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
-    const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
+    const tokenBody = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/tokens/apply",
       body: { city_id: city.city_id, user_id: "user_1" },
     }))).json()
 
-    const invokeResponse = await base.handleRequest(new Request("http://localhost/v1/ai/text", {
+    const invokeResponse = await base.fetch(new Request("http://localhost/v1/ai/text", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -53,7 +53,7 @@ test("usageService records successful service calls", async () => {
     }))
     assert.equal(invokeResponse.status, 200)
 
-    const eventsResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const eventsResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/usage/events",
       method: "GET",
     }))
@@ -63,7 +63,7 @@ test("usageService records successful service calls", async () => {
     assert.equal(events.items[0].service, "ai")
     assert.equal(events.items[0].status, "success")
 
-    const summaryResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const summaryResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/usage/summary",
       method: "GET",
     }))

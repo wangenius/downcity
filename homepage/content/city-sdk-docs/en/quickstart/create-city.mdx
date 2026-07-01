@@ -52,7 +52,7 @@ const db = drizzle(env.DB);
 const base = new Federation({ db });
 ```
 
-Federation initializes itself automatically on the first `health()`, `handleRequest()`, `table()`, or similar runtime call.
+Federation initializes itself automatically on the first `health()`, `fetch()`, `table()`, or similar runtime call.
 
 If your Federation needs its own business tables, declare them on a Service or service:
 
@@ -89,7 +89,7 @@ Start the HTTP service:
 import { serve } from "@hono/node-server";
 
 await base.health();
-serve({ fetch: base.router().fetch, port: 3001, hostname: "127.0.0.1" });
+serve({ fetch: (request) => base.fetch(request), port: 3001, hostname: "127.0.0.1" });
 ```
 
 This service is the shared Federation used by later cities. Management and business data are handled through your own database and city backend for now.

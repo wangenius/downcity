@@ -22,11 +22,11 @@ test("balanceService charges users with generic metadata", async () => {
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+    const city = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
-    const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
+    const tokenBody = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/tokens/apply",
       body: { city_id: city.city_id, user_id: "user_1" },
     }))).json()
@@ -52,7 +52,7 @@ test("balanceService charges users with generic metadata", async () => {
     const account = await balance.read("user_1")
     assert.equal(account.credits, 876_544)
 
-    const chargesResponse = await base.handleRequest(adminRequest(adminSecret, {
+    const chargesResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/balance/charges?limit=10",
       method: "GET",
     }))
@@ -61,7 +61,7 @@ test("balanceService charges users with generic metadata", async () => {
     assert.equal(charges.items.length, 1)
     assert.equal(charges.items[0].charge_id, charge.charge_id)
 
-    const myChargesResponse = await base.handleRequest(userRequest({
+    const myChargesResponse = await base.fetch(userRequest({
       token: tokenBody.user_token,
       path: "/v1/balance/charges/me?limit=10",
       method: "GET",
@@ -128,16 +128,16 @@ test("AIService submits provider charges through BalanceService", async () => {
     await base.health()
     const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
 
-    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+    const city = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
-    const tokenBody = await (await base.handleRequest(adminRequest(adminSecret, {
+    const tokenBody = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/tokens/apply",
       body: { city_id: city.city_id, user_id: "user_1" },
     }))).json()
 
-    const response = await base.handleRequest(userRequest({
+    const response = await base.fetch(userRequest({
       token: tokenBody.user_token,
       path: "/v1/ai/text",
       body: { prompt: "hi", model: "priced-text" },

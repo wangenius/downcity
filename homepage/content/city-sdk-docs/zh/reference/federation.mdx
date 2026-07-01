@@ -104,8 +104,46 @@ svc.hook.before(logRequest);
 
 ```ts
 import { serve } from "@hono/node-server";
-serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
+serve({ fetch: (request) => base.fetch(request), port: 43127, hostname: "127.0.0.1" });
 ```
+
+## HTTP Middleware
+
+`base.middle()` 用于注册 Federation 级 HTTP middleware。它们会在内部路由和 Action body 读取之前执行，适合放 CORS、安全响应头、body 大小限制、粗粒度限流和请求超时。
+
+```ts
+import {
+  bodyLimit,
+  clientIp,
+  cors,
+  memoryRateLimitStore,
+  rateLimit,
+  requestTimeout,
+  securityHeaders,
+} from "@downcity/city";
+
+base.middle(securityHeaders());
+base.middle(cors({
+  origins: ["https://app.example.com"],
+  methods: ["GET", "POST", "OPTIONS"],
+  headers: ["Content-Type", "Authorization"],
+  max_age: 86400,
+}));
+base.middle(bodyLimit({ max_bytes: 1_000_000 }));
+base.middle(rateLimit({
+  window_ms: 60_000,
+  max: 120,
+  key: (ctx) => clientIp(ctx.request),
+  match: (ctx) => new URL(ctx.request.url).pathname.startsWith("/v1/"),
+  store: memoryRateLimitStore(),
+}));
+base.middle(requestTimeout({
+  ms: 30_000,
+  exclude_paths: ["/v1/ai/stream", "/v1/ai/chat/completions"],
+}));
+```
+
+middleware 按注册顺序进入，按相反顺序退出。middleware 可以直接返回 `Response` 来短路请求，也可以 `await next()` 后修改响应头。
 
 ## instruction 文档聚合
 

@@ -55,6 +55,6 @@ await agent.dispose();
 
 - AgentRPC 仅封装 NDJSON over TCP，不带 auth；本机使用。
 - FederationRPC 仅允许 loopback host；City 通过 `rpc://` 连接时不需要 `admin_secret_key` 或 `user_token`。
-- FederationRPC 的可信身份通过进程内 `Federation.handleRequest()` options 注入，不通过 HTTP header 传递。
+- FederationRPC 的可信身份通过进程内 `Federation.fetch()` options 注入，不通过 HTTP header 传递。
 - AgentHTTP 仅承载 RemoteAgent SDK transport；平台级路由请由调用方自行装配。
 - AgentRPC / AgentHTTP / FederationRPC 都是按需启动，互不依赖。

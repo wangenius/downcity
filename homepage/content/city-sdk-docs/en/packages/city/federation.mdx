@@ -1,6 +1,6 @@
 ---
 title: Federation
-description: "The role of the Federation instance, runtime, router, and serve inside @downcity/city."
+description: "The role of the Federation instance, runtime and serve inside @downcity/city."
 ---
 
 `@downcity/city`'s `Federation` is the long-running server container of Downcity (also called the Federation in these docs). It is where the Drizzle db, services, auth, and the shared `/v1/*` route space come together. Product-side access uses the `City` client; see [Federation and City](/en/city-sdk-docs/concepts/federation) for the distinction.
@@ -23,7 +23,7 @@ That process owns:
 
 - you are about to run a real Federation for the first time
 - you want to understand why `Federation` only needs a Drizzle db
-- you want clarity on `router()`, `handleRequest()`, and `serve()`
+- you want clarity on `fetch()`, and `serve()`
 - you want to mount Federation into Node, Workers, or another HTTP host
 
 ## Minimal runnable example
@@ -68,7 +68,7 @@ base.use(ai);
 await base.health();
 
 serve({
-  fetch: base.router().fetch,
+  fetch: (request) => base.fetch(request),
   port: 43127,
   hostname: "127.0.0.1",
 });
@@ -78,7 +78,7 @@ The important ideas in that example are:
 
 1. `db` decides which Drizzle database Federation uses.
 2. `base.use(...)` decides which capabilities Federation exposes.
-3. `base.router()` and `base.handleRequest()` decide how Federation enters your HTTP layer.
+3. `base.fetch()` decides how Federation enters your HTTP layer.
 
 ## Scenario 1: Federation is the main service
 
@@ -88,7 +88,7 @@ If you want Federation itself to be the main HTTP entry, `serve()` is the cleare
 import { serve } from "@hono/node-server";
 
 await base.health();
-serve({ fetch: base.router().fetch, port: 3001, hostname: "127.0.0.1" });
+serve({ fetch: (request) => base.fetch(request), port: 3001, hostname: "127.0.0.1" });
 ```
 
 ## Scenario 2: Federation is mounted into your existing server
@@ -98,7 +98,7 @@ If you already have a server framework, handing requests into Federation is ofte
 ```ts
 export default {
   async fetch(request: Request) {
-    return base.handleRequest(request);
+    return base.fetch(request);
   },
 };
 ```
@@ -175,8 +175,7 @@ Services can then access it through `ctx.storage`. Built-in AI image jobs use th
 - `new Federation({ db })`
 - `base.use(...)`
 - `base.storage(...)`
-- `base.router()`
-- `base.handleRequest(request)`
+- `base.fetch(request)`
 - `new FederationRPC(base)`
 - `base.health()`
 - `base.table(name)`

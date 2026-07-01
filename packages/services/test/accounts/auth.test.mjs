@@ -21,12 +21,12 @@ test("accountsService registers users, logs in, and issues Federation tokens", a
     process.chdir(tempDir)
     const { base, adminSecret } = await setupBase(tempDir)
 
-    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+    const city = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
 
-    const registerResponse = await base.handleRequest(jsonRequest("/v1/accounts/register", {
+    const registerResponse = await base.fetch(jsonRequest("/v1/accounts/register", {
       email: "USER@example.com",
       password: "password123",
     }))
@@ -36,7 +36,7 @@ test("accountsService registers users, logs in, and issues Federation tokens", a
     assert.equal(typeof registered.user_id, "string")
 
     if (registered.verification_token) {
-      const verifyResponse = await base.handleRequest(jsonRequest("/v1/accounts/verify-email", {
+      const verifyResponse = await base.fetch(jsonRequest("/v1/accounts/verify-email", {
         token: registered.verification_token,
         city_id: city.city_id,
       }))
@@ -45,7 +45,7 @@ test("accountsService registers users, logs in, and issues Federation tokens", a
       assert.equal(verified.user_token.startsWith("ub_"), true)
     }
 
-    const loginResponse = await base.handleRequest(jsonRequest("/v1/accounts/login", {
+    const loginResponse = await base.fetch(jsonRequest("/v1/accounts/login", {
       email: "user@example.com",
       password: "password123",
       city_id: city.city_id,
@@ -55,7 +55,7 @@ test("accountsService registers users, logs in, and issues Federation tokens", a
     assert.equal(loggedIn.user_token.startsWith("ub_"), true)
     assert.equal(loggedIn.user_id, registered.user_id)
 
-    const meResponse = await base.handleRequest(new Request("http://localhost/v1/accounts/me", {
+    const meResponse = await base.fetch(new Request("http://localhost/v1/accounts/me", {
       method: "GET",
       headers: {
         authorization: `Bearer ${loggedIn.user_token}`,
@@ -82,7 +82,7 @@ test("accountsService reports enabled providers from server state", async () => 
       WECHAT_CLIENT_SECRET: "wechat_client_secret",
     })
 
-    const response = await base.handleRequest(new Request("http://localhost/v1/accounts/providers"))
+    const response = await base.fetch(new Request("http://localhost/v1/accounts/providers"))
     assert.equal(response.status, 200)
 
     const body = await response.json()
@@ -122,7 +122,7 @@ test("accountsService exposes better-auth passthrough as an installed public rou
     process.chdir(tempDir)
     const { base } = await setupBase(tempDir)
 
-    const response = await base.handleRequest(new Request("http://localhost/v1/accounts/auth/session", {
+    const response = await base.fetch(new Request("http://localhost/v1/accounts/auth/session", {
       method: "GET",
       headers: {
         "x-demo": "kept",
@@ -149,11 +149,11 @@ test("accountsService does not expose email login without an email provider", as
     base.use(new AccountsService({ token_ttl: "7d" }))
     await base.health()
 
-    const providersResponse = await base.handleRequest(new Request("http://localhost/v1/accounts/providers"))
+    const providersResponse = await base.fetch(new Request("http://localhost/v1/accounts/providers"))
     assert.equal(providersResponse.status, 200)
     assert.deepEqual(await providersResponse.json(), { items: [] })
 
-    const loginResponse = await base.handleRequest(jsonRequest("/v1/accounts/login", {
+    const loginResponse = await base.fetch(jsonRequest("/v1/accounts/login", {
       email: "user@example.com",
       password: "password123",
       city_id: "city_demo",
@@ -178,12 +178,12 @@ test("accountsService completes Google OAuth callback and resolves the state tok
       GOOGLE_CLIENT_SECRET: "google_client_secret",
     })
 
-    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+    const city = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
 
-    const startResponse = await base.handleRequest(jsonRequest("/v1/accounts/oauth/start", {
+    const startResponse = await base.fetch(jsonRequest("/v1/accounts/oauth/start", {
       provider: "google",
       city_id: city.city_id,
     }))
@@ -216,17 +216,17 @@ test("accountsService completes Google OAuth callback and resolves the state tok
       throw new Error(`Unexpected fetch URL: ${url}`)
     }
 
-    const callbackResponse = await base.handleRequest(new Request(`http://localhost/v1/accounts/oauth/callback?state=${start.state}&code=test-google-code`))
+    const callbackResponse = await base.fetch(new Request(`http://localhost/v1/accounts/oauth/callback?state=${start.state}&code=test-google-code`))
     assert.equal(callbackResponse.status, 200)
     assert.match(await callbackResponse.text(), /Login Successful/)
 
-    const resultResponse = await base.handleRequest(new Request(`http://localhost/v1/accounts/oauth/result?state=${start.state}`))
+    const resultResponse = await base.fetch(new Request(`http://localhost/v1/accounts/oauth/result?state=${start.state}`))
     assert.equal(resultResponse.status, 200)
     const result = await resultResponse.json()
     assert.equal(result.status, "done")
     assert.equal(result.user_token.startsWith("ub_"), true)
 
-    const meResponse = await base.handleRequest(new Request("http://localhost/v1/accounts/me", {
+    const meResponse = await base.fetch(new Request("http://localhost/v1/accounts/me", {
       method: "GET",
       headers: {
         authorization: `Bearer ${result.user_token}`,
@@ -255,12 +255,12 @@ test("accountsService completes WeChat website OAuth callback and resolves the s
       WECHAT_CLIENT_SECRET: "wechat_client_secret",
     })
 
-    const city = await (await base.handleRequest(adminRequest(adminSecret, {
+    const city = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/create",
       body: { name: "Demo" },
     }))).json()
 
-    const startResponse = await base.handleRequest(jsonRequest("/v1/accounts/oauth/start", {
+    const startResponse = await base.fetch(jsonRequest("/v1/accounts/oauth/start", {
       provider: "wechat",
       city_id: city.city_id,
     }))
@@ -305,17 +305,17 @@ test("accountsService completes WeChat website OAuth callback and resolves the s
       throw new Error(`Unexpected fetch URL: ${url}`)
     }
 
-    const callbackResponse = await base.handleRequest(new Request(`http://localhost/v1/accounts/oauth/callback?state=${start.state}&code=test-wechat-code`))
+    const callbackResponse = await base.fetch(new Request(`http://localhost/v1/accounts/oauth/callback?state=${start.state}&code=test-wechat-code`))
     assert.equal(callbackResponse.status, 200)
     assert.match(await callbackResponse.text(), /Login Successful/)
 
-    const resultResponse = await base.handleRequest(new Request(`http://localhost/v1/accounts/oauth/result?state=${start.state}`))
+    const resultResponse = await base.fetch(new Request(`http://localhost/v1/accounts/oauth/result?state=${start.state}`))
     assert.equal(resultResponse.status, 200)
     const result = await resultResponse.json()
     assert.equal(result.status, "done")
     assert.equal(result.user_token.startsWith("ub_"), true)
 
-    const meResponse = await base.handleRequest(new Request("http://localhost/v1/accounts/me", {
+    const meResponse = await base.fetch(new Request("http://localhost/v1/accounts/me", {
       method: "GET",
       headers: {
         authorization: `Bearer ${result.user_token}`,

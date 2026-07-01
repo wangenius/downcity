@@ -12,7 +12,7 @@ import type { RuntimeUser } from "./auth/types.js";
  * Federation 进程内可信身份。
  *
  * 关键点（中文）
- * - 只允许同进程调用 `Federation.handleRequest()` 时传入。
+ * - 只允许同进程调用 `Federation.fetch()` 时传入。
  * - 不能通过 HTTP header、query 或 body 构造，避免绕过公网 token 鉴权。
  */
 export type FederationTrustedIdentity =
@@ -42,9 +42,9 @@ export interface FederationRequestExecutionContext {
 }
 
 /**
- * Federation.handleRequest 的可选参数。
+ * Federation.fetch 的可选参数。
  */
-export interface FederationHandleRequestOptions {
+export interface FederationFetchOptions {
   /** 单次请求的运行时执行上下文。 */
   execution?: FederationRequestExecutionContext;
   /**

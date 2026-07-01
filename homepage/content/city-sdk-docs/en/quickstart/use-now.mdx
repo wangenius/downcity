@@ -61,7 +61,7 @@ ai.use(echo.model({ id: "local-echo", name: "Local Echo" }));
 base.use(ai);
 
 await base.health();
-serve({ fetch: base.router().fetch, port: 43127, hostname: "127.0.0.1" });
+serve({ fetch: (request) => base.fetch(request), port: 43127, hostname: "127.0.0.1" });
 ```
 
 ## 2. Create City & Token

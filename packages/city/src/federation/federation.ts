@@ -20,18 +20,21 @@ import { initialize_federation } from "./federation-init.js";
 import { build_federation_router } from "./federation-router.js";
 import { create_federation_runtime } from "./federation-runtime.js";
 import { FederationQueue } from "./queue.js";
-import type { FederationOptions, FederationHealthStatus, FederationHandleRequestOptions } from "./types.js";
+import { run_federation_middlewares } from "./federation-middleware.js";
+import type { FederationOptions, FederationHealthStatus, FederationFetchOptions } from "./types.js";
 import type { FederationStorage } from "./storage.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Runtime } from "./runtime.js";
 import type { CityTableApi } from "../store/table-api.js";
 import type { CityStore } from "../service/cities/city-store.js";
 import type { Database, DbClient } from "../store/db.js";
+import type { FederationMiddleware, FederationMiddlewareContext } from "../types/FederationMiddleware.js";
 
 export class Federation {
   private readonly runtime: Runtime;
   readonly queue: FederationQueue;
   private readonly services = new Map<string, Service>();
+  private readonly middlewares: FederationMiddleware[] = [];
 
   private database?: Database;
   private client?: { $client: DbClient };
@@ -78,6 +81,19 @@ export class Federation {
   }
 
   /**
+   * 注册 Federation HTTP middleware。
+   *
+   * 关键说明（中文）
+   * - middleware 在内部 Hono router 之前执行。
+   * - 适合 CORS、body limit、rate limit、request id、timeout 等 HTTP 横切能力。
+   * - 不用于依赖 `ctx.user` / `ctx.city` 的业务生命周期逻辑。
+   */
+  middle(...middlewares: FederationMiddleware[]): this {
+    this.middlewares.push(...middlewares);
+    return this;
+  }
+
+  /**
    * 获取单个 service。
    */
   getService(id: string): Service | undefined {
@@ -112,24 +128,27 @@ export class Federation {
   }
 
   /**
-   * 返回已构建好的 Hono router。
-   */
-  router(): Hono {
-    this.require_ready_sync();
-    return this.hono!;
-  }
-
-  /**
    * 处理 HTTP 请求。
    */
-  async handleRequest(request: Request, options: FederationHandleRequestOptions = {}): Promise<Response> {
+  readonly fetch = async (request: Request, options: FederationFetchOptions = {}): Promise<Response> => {
     await this.ensure_ready();
-    return this.hono!.fetch(
+    const ctx: FederationMiddlewareContext = {
       request,
-      { trusted_identity: options.trusted_identity },
-      options.execution as HonoExecutionContext | undefined,
-    );
-  }
+      execution: options.execution,
+      runtime: this.runtime,
+      federation: {
+        services: () => this.getServices(),
+      },
+      locals: {},
+    };
+
+    return run_federation_middlewares(this.middlewares, ctx, () =>
+      Promise.resolve(this.hono!.fetch(
+        ctx.request,
+        { trusted_identity: options.trusted_identity },
+        options.execution as HonoExecutionContext | undefined,
+      )));
+  };
 
   /**
    * 健康检查。
@@ -186,15 +205,6 @@ export class Federation {
       this.init_promise = this.initialize();
     }
     await this.init_promise;
-  }
-
-  /**
-   * 同步要求初始化完成。
-   */
-  private require_ready_sync(): void {
-    if (!this.hono) {
-      throw new Error("Federation init has not completed yet");
-    }
   }
 
   /**

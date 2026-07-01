@@ -7,10 +7,10 @@
  */
 
 import type {
-  FederationRpcIdentity,
   FederationRpcRequest,
   FederationRpcResponseData,
   FederationRpcResponseFrame,
+  FederationRpcTrustedAccess,
 } from "@downcity/type";
 
 /**
@@ -45,8 +45,8 @@ interface RpcSocketLike {
 export interface FederationRpcClientRequest {
   /** RPC URL，例如 `rpc://127.0.0.1:15315`。 */
   url: string;
-  /** 本机可信身份。 */
-  identity: FederationRpcIdentity;
+  /** 本机可信访问级别，仅 Admin City 使用。 */
+  trusted_access?: FederationRpcTrustedAccess;
   /** HTTP 方法。 */
   method: string;
   /** Federation 请求路径。 */
@@ -74,7 +74,7 @@ export async function request_federation_rpc(
       path: input.path,
       headers: input.headers,
       body: input.body,
-      identity: input.identity,
+      trusted_access: input.trusted_access,
     },
   };
 

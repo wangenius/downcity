@@ -11,6 +11,7 @@ import { TableApi } from "../store/table-api.js";
 import type { CityTableApi } from "../store/table-api.js";
 import type { CreateUserTokenInput, UserTokenIssueResult, RuntimeUser } from "../federation/auth/types.js";
 import type { InstructionDefinition } from "./instruction.js";
+import type { FederationRequestTransport } from "../federation/types.js";
 
 // ===========================================================================
 // ServiceInstallContext
@@ -76,6 +77,8 @@ export interface ServiceRouteContext {
   city?: { city_id: string; status: string };
   /** 原始 HTTP 请求 */
   request: Request;
+  /** 当前请求来源 transport。 */
+  transport?: FederationRequestTransport;
   /** 读取已解析 JSON 请求体 */
   json<T extends Record<string, unknown> = Record<string, unknown>>(): Promise<T>;
   /** 读取原始文本请求体 */
@@ -149,6 +152,7 @@ export abstract class InstallableService extends Service {
             user: svcCtx.user,
             city: svcCtx.city,
             request: svcCtx.request ?? new Request("http://local"),
+            transport: svcCtx.transport,
             json: async <T extends Record<string, unknown> = Record<string, unknown>>() => svcCtx.input as T,
             text: async () => svcCtx.raw_body ?? JSON.stringify(svcCtx.input),
             jsonResponse: (body, status) => new Response(JSON.stringify(body), {

@@ -27,20 +27,34 @@ test("City admin can access local FederationRPC without admin_secret_key", async
   }
 })
 
-test("City user can call local FederationRPC without user_token", async () => {
+test("City user over local FederationRPC still needs user_token for authenticated actions", async () => {
   const fixture = await create_rpc_fixture("downcity-city-rpc-user-")
   try {
+    const guestCity = new City({
+      role: "user",
+      federation_url: fixture.url,
+      city_id: "city_demo",
+    })
+
+    await assert.rejects(
+      () => guestCity.service("echo").action("inspect").invoke({ value: 42 }),
+      /Downcity request failed with 401/,
+    )
+
+    await create_city(fixture.base, "city_demo")
+    const user_token = await issue_user_token(fixture.base, "city_demo")
     const city = new City({
       role: "user",
       federation_url: fixture.url,
       city_id: "city_demo",
+      user_token,
     })
 
     const result = await city.service("echo").action("inspect").invoke({ value: 42 })
     assert.deepEqual(result, {
       identity: "user",
       city_id: "city_demo",
-      user_id: "local-rpc-user",
+      user_id: "user_demo",
       input: {
         city_id: "city_demo",
         value: 42,
@@ -57,6 +71,7 @@ async function create_rpc_fixture(prefix) {
   const rpc = await start_test_federation_rpc_server(fixture.base, port)
   return {
     url: rpc.url,
+    base: fixture.base,
     async close() {
       await rpc.stop()
       await fixture.close()
@@ -187,7 +202,8 @@ async function execute_test_federation_rpc_request(base, rpc_request) {
     body: rpc_request.params.method === "GET" ? undefined : rpc_request.params.body,
   })
   const response = await base.fetch(request, {
-    trusted_identity: normalize_test_rpc_identity(rpc_request.params.identity),
+    trusted_identity: rpc_request.params.trusted_access === "admin" ? { level: "admin" } : undefined,
+    transport: "rpc",
   })
   return {
     status: response.status,
@@ -196,23 +212,39 @@ async function execute_test_federation_rpc_request(base, rpc_request) {
   }
 }
 
-function normalize_test_rpc_identity(identity) {
-  if (identity.role === "admin") {
-    return { level: "admin" }
-  }
-  const city_id = String(identity.city_id || "").trim()
-  if (!city_id) {
-    throw new TypeError("city_id is required for Federation RPC user identity")
-  }
-  return {
-    level: "user",
-    user: {
-      user_id: String(identity.user_id || "local-rpc-user").trim() || "local-rpc-user",
-      metadata: identity.metadata ?? {},
+async function create_city(base, city_id) {
+  const envTable = await base.table("env")
+  const envRows = await envTable.select({ key: "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY" })
+  const adminSecret = envRows[0]?.value ?? ""
+  const response = await base.fetch(new Request("http://localhost/v1/cities/create", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${adminSecret}`,
     },
-    city: {
+    body: JSON.stringify({
       city_id,
-      status: "active",
+      name: "Demo",
+    }),
+  }))
+  assert.equal(response.status, 200)
+}
+
+async function issue_user_token(base, city_id) {
+  const envTable = await base.table("env")
+  const envRows = await envTable.select({ key: "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY" })
+  const adminSecret = envRows[0]?.value ?? ""
+  const response = await base.fetch(new Request("http://localhost/v1/cities/tokens/apply", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${adminSecret}`,
     },
-  }
+    body: JSON.stringify({
+      city_id,
+      user_id: "user_demo",
+    }),
+  }))
+  assert.equal(response.status, 200)
+  return (await response.json()).user_token
 }

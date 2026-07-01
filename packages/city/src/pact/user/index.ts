@@ -38,10 +38,7 @@ export class UserPactAccess {
     this.requester = is_rpc_url(this.serverUrl)
       ? create_rpc_requester({
           base_url: this.serverUrl,
-          identity: {
-            role: "user",
-            city_id: this.require_city_id(),
-          },
+          with_auth: (init) => this.withAuth(init),
         })
       : create_http_requester({
           base_url: this.serverUrl,
@@ -93,7 +90,7 @@ export class UserPactAccess {
   }
 
   private raw(path: string, init: RequestInitLike) {
-    if (!is_rpc_url(this.serverUrl)) this.requireToken();
+    this.requireToken();
     return this.requester.raw(path, init);
   }
 

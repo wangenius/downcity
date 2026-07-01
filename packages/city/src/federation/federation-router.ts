@@ -19,7 +19,7 @@ import type { Runtime } from "./runtime.js";
 import type { RuntimeUser } from "./auth/types.js";
 import { build_federation_instruction } from "./federation-instruction.js";
 import { collect_federation_env_catalog } from "./federation-env-catalog.js";
-import type { FederationTrustedIdentity } from "./types.js";
+import type { FederationRequestTransport, FederationTrustedIdentity } from "./types.js";
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -35,6 +35,8 @@ declare module "hono" {
 interface FederationRouterEnv {
   /** 由 `Federation.fetch()` 传入的进程内可信身份。 */
   trusted_identity?: FederationTrustedIdentity;
+  /** 当前请求来源 transport。 */
+  transport?: FederationRequestTransport;
 }
 
 /**
@@ -145,6 +147,7 @@ export function build_federation_router(params: {
           locals: {},
           request: c.req.raw,
           raw_body,
+          transport: transport_from_env(c.env),
           db,
           identity: { kind: "guest" },
           env: (key) => runtime.env.get(key),
@@ -223,6 +226,10 @@ async function authorize_request(
 
 function trusted_identity_from_env(env: unknown): FederationTrustedIdentity | undefined {
   return (env as FederationRouterEnv | undefined)?.trusted_identity;
+}
+
+function transport_from_env(env: unknown): FederationRequestTransport {
+  return (env as FederationRouterEnv | undefined)?.transport ?? "http";
 }
 
 /**

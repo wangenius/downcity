@@ -76,7 +76,8 @@ export interface UserCityOptions extends CityBaseOptions {
   /**
    * 终端用户访问 token。
    *
-   * 使用 `rpc://` 本机可信 Federation 时不需要传入。
+   * RPC 入口不会自动注入用户身份；调用需要 user 身份的 action 时仍需传入。
+   * 仅访问 public action（例如 accounts 本地登录）时可以暂不传。
    */
   user_token?: string;
 }

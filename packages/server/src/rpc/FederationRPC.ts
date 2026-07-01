@@ -3,13 +3,13 @@
  *
  * 关键点（中文）
  * - RPC 只负责本机进程间传输，业务协议仍复用 Federation HTTP 路由。
- * - 默认只监听 loopback 地址，避免把免 token 的可信通道暴露到公网。
- * - 可信身份通过 `Federation.fetch(..., { trusted_identity })` 进程内传入，不走 HTTP header。
+ * - 默认只监听 loopback 地址，避免把本机可信管理通道暴露到公网。
+ * - Admin 可信身份通过 `Federation.fetch(..., { trusted_identity })` 进程内传入，不走 HTTP header。
+ * - User 请求仍然使用普通 bearer user_token，RPC 只标记 transport 来源。
  */
 
 import net from "node:net";
 import type {
-  FederationRpcIdentity,
   FederationRpcRequest,
   FederationRpcResponseData,
   FederationRpcResponseFrame,
@@ -33,6 +33,8 @@ export interface FederationRpcTarget {
   fetch(request: Request, options?: {
     /** 进程内可信身份，由 FederationRPC 注入。 */
     trusted_identity?: TrustedFederationRpcIdentity;
+    /** 当前请求来自本机 RPC transport。 */
+    transport?: "rpc";
   }): Promise<Response>;
 }
 
@@ -40,18 +42,10 @@ export interface FederationRpcTarget {
  * FederationRPC 注入到 Federation 的可信身份。
  */
 export type TrustedFederationRpcIdentity =
-  | {
-      /** 管理端身份。 */
-      level: "admin";
-    }
-  | {
-      /** 用户身份。 */
-      level: "user";
-      /** 当前用户信息。 */
-      user: { user_id: string; metadata?: Record<string, unknown> };
-      /** 当前用户所属 City。 */
-      city: { city_id: string; status: string };
-    };
+  {
+    /** 管理端身份。 */
+    level: "admin";
+  };
 
 /**
  * RPC server 运行实例。
@@ -221,14 +215,14 @@ async function execute_federation_rpc_request(
   federation: FederationRpcTarget,
   rpc_request: FederationRpcRequest,
 ): Promise<FederationRpcResponseData> {
-  const identity = normalize_rpc_identity(rpc_request.params.identity);
   const request = new Request(build_request_url(rpc_request.params.path), {
     method: normalize_method(rpc_request.params.method),
     headers: rpc_request.params.headers ?? {},
     body: normalize_request_body(rpc_request.params.method, rpc_request.params.body),
   });
   const response = await federation.fetch(request, {
-    trusted_identity: identity,
+    trusted_identity: resolve_trusted_identity(rpc_request),
+    transport: "rpc",
   });
   return {
     status: response.status,
@@ -237,32 +231,13 @@ async function execute_federation_rpc_request(
   };
 }
 
-function normalize_rpc_identity(identity: FederationRpcIdentity): TrustedFederationRpcIdentity {
-  if (!identity || typeof identity !== "object") {
-    throw new TypeError("Federation RPC identity is required");
-  }
-  if (identity.role === "admin") {
+function resolve_trusted_identity(
+  rpc_request: FederationRpcRequest,
+): TrustedFederationRpcIdentity | undefined {
+  if (rpc_request.params.trusted_access === "admin") {
     return { level: "admin" };
   }
-  if (identity.role !== "user") {
-    throw new TypeError("Unsupported Federation RPC identity role");
-  }
-  const city_id = String(identity.city_id || "").trim();
-  if (!city_id) {
-    throw new TypeError("city_id is required for Federation RPC user identity");
-  }
-  const user_id = String(identity.user_id || "local-rpc-user").trim() || "local-rpc-user";
-  return {
-    level: "user",
-    user: {
-      user_id,
-      metadata: identity.metadata ?? {},
-    },
-    city: {
-      city_id,
-      status: "active",
-    },
-  };
+  return undefined;
 }
 
 function normalize_loopback_host(value: unknown): string {

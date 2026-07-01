@@ -54,6 +54,15 @@ export {
 
 const OAUTH_STATE_TTL_MS = 5 * 60 * 1000;
 const AUTH_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const LOCAL_RPC_USER_ID = "local-rpc-user";
+const LOCAL_RPC_PROVIDER: AccountsProviderItem = {
+  id: "local",
+  type: "local",
+  enabled: true,
+  label: "Local Account",
+  login_enabled: true,
+  login_action: "local/login",
+};
 
 /**
  * Accounts 服务自身 env。
@@ -415,10 +424,38 @@ export class AccountsService extends InstallableService {
     });
 
     ctx.route({
+      method: "POST",
+      path: "/local/login",
+      public: true,
+      handler: async (c) => {
+        if (c.transport !== "rpc") {
+          return c.jsonResponse({ error: "local login is only available over rpc transport" }, 404);
+        }
+
+        const body = await c.json<{ city_id?: string }>();
+        const city_id = String(body.city_id ?? "").trim();
+        if (!city_id) {
+          return c.jsonResponse({ error: "city_id required" }, 400);
+        }
+
+        const userToken = await ctx.createUserToken({
+          city_id,
+          user_id: LOCAL_RPC_USER_ID,
+          ttl: this.options.token_ttl,
+        });
+
+        return c.jsonResponse({
+          user_token: userToken.user_token,
+          user_id: LOCAL_RPC_USER_ID,
+        });
+      },
+    });
+
+    ctx.route({
       method: "GET",
       path: "/providers",
       public: true,
-      handler: async (c) => c.jsonResponse({ items: this.listProviders().filter((item) => item.enabled) }),
+      handler: async (c) => c.jsonResponse({ items: this.listVisibleProviders(c.transport) }),
     });
 
     ctx.route({
@@ -572,6 +609,16 @@ export class AccountsService extends InstallableService {
    */
   private listProviders(): AccountsProviderItem[] {
     return this.providers.map((provider) => provider.method(this.getProviderContext()));
+  }
+
+  /**
+   * 根据 transport 返回产品侧可见登录方式。
+   */
+  private listVisibleProviders(transport: "http" | "rpc" | undefined): AccountsProviderItem[] {
+    if (transport === "rpc") {
+      return [LOCAL_RPC_PROVIDER];
+    }
+    return this.listProviders().filter((item) => item.enabled);
   }
 
   /**

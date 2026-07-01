@@ -21,9 +21,9 @@ If you want the integration story first, start with [@downcity/city](/en/city-sd
 `federation_url` supports two entry types:
 
 - `http://` / `https://`: remote HTTP entry, authenticated with `user_token` or `admin_secret_key`.
-- `rpc://127.0.0.1:15315`: trusted local RPC entry, no `user_token` or `admin_secret_key` required.
+- `rpc://127.0.0.1:15315`: trusted local RPC entry. Admin City does not need `admin_secret_key`; User City still uses guest / `user_token`.
 
-RPC is for trusted processes on the same machine. HTTP authentication is unchanged and still requires bearer tokens.
+RPC is for trusted processes on the same machine. It changes the transport, not the product login model. If `AccountsService` is installed, RPC requests to `/v1/accounts/providers` expose the local login method, and `accounts/local/login` returns a normal `user_token`.
 
 ## Four common call types
 

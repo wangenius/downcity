@@ -20,6 +20,7 @@ import type { InstructionActionDefinition, InstructionCapable, InstructionDefini
 import type { RuntimeMetering } from "../types/Metering.js";
 import type { FederationQueue } from "../federation/queue.js";
 import type { FederationStorage } from "../federation/storage.js";
+import type { FederationRequestTransport } from "../federation/types.js";
 
 // ===========================================================================
 // 鉴权级别
@@ -43,6 +44,8 @@ export interface Context {
   request?: Request;
   /** 原始请求 body 文本，服务 webhook 等需要验签时使用 */
   raw_body?: string;
+  /** 当前请求来源 transport。 */
+  transport?: FederationRequestTransport;
   /** Action 执行结果（after 阶段可用） */
   output?: unknown;
   /** 当前用户（user_token 解析成功时可用） */

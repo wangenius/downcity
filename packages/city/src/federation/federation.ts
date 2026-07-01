@@ -145,7 +145,10 @@ export class Federation {
     return run_federation_middlewares(this.middlewares, ctx, () =>
       Promise.resolve(this.hono!.fetch(
         ctx.request,
-        { trusted_identity: options.trusted_identity },
+        {
+          trusted_identity: options.trusted_identity,
+          transport: options.transport,
+        },
         options.execution as HonoExecutionContext | undefined,
       )));
   };

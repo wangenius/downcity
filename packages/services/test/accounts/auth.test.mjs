@@ -114,6 +114,71 @@ test("accountsService reports enabled providers from server state", async () => 
   }
 })
 
+test("accountsService exposes local login only for RPC transport", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-accounts-rpc-local-"))
+
+  try {
+    process.chdir(tempDir)
+    const { base, adminSecret } = await setupBase(tempDir)
+
+    const city = await (await base.fetch(adminRequest(adminSecret, {
+      path: "/v1/cities/create",
+      body: { name: "RPC Demo" },
+    }))).json()
+
+    const httpProvidersResponse = await base.fetch(new Request("http://localhost/v1/accounts/providers"))
+    assert.equal(httpProvidersResponse.status, 200)
+    const httpProviders = await httpProvidersResponse.json()
+    assert.ok(httpProviders.items.some((item) => item.id === "email"))
+    assert.equal(httpProviders.items.some((item) => item.id === "local"), false)
+
+    const rpcProvidersResponse = await base.fetch(new Request("http://localhost/v1/accounts/providers"), {
+      transport: "rpc",
+    })
+    assert.equal(rpcProvidersResponse.status, 200)
+    assert.deepEqual(await rpcProvidersResponse.json(), {
+      items: [
+        {
+          id: "local",
+          type: "local",
+          enabled: true,
+          label: "Local Account",
+          login_enabled: true,
+          login_action: "local/login",
+        },
+      ],
+    })
+
+    const httpLoginResponse = await base.fetch(jsonRequest("/v1/accounts/local/login", {
+      city_id: city.city_id,
+    }))
+    assert.equal(httpLoginResponse.status, 404)
+
+    const rpcLoginResponse = await base.fetch(jsonRequest("/v1/accounts/local/login", {
+      city_id: city.city_id,
+    }), {
+      transport: "rpc",
+    })
+    assert.equal(rpcLoginResponse.status, 200)
+    const session = await rpcLoginResponse.json()
+    assert.equal(session.user_id, "local-rpc-user")
+    assert.equal(session.user_token.startsWith("ub_"), true)
+
+    const meResponse = await base.fetch(new Request("http://localhost/v1/accounts/me", {
+      method: "GET",
+      headers: {
+        authorization: `Bearer ${session.user_token}`,
+      },
+    }))
+    assert.equal(meResponse.status, 200)
+    assert.equal((await meResponse.json()).user.user_id, "local-rpc-user")
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
 test("accountsService exposes better-auth passthrough as an installed public route", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-accounts-auth-route-"))

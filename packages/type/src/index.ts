@@ -178,27 +178,14 @@ export function isCityModel(value: unknown): value is CityModel {
 export type FederationRpcMethod = "federation.request";
 
 /**
- * Federation RPC 可信身份。
+ * Federation RPC 可信访问级别。
  *
  * 关键点（中文）
- * - 该身份只在本机 RPC server 内部转成 Federation 的进程内 trusted identity。
- * - HTTP 请求不能通过 header 或 body 构造该身份。
+ * - RPC transport 只负责传输，不重新发明 service/action 协议。
+ * - 仅 Admin City 可以声明本机可信管理访问，避免携带 admin_secret_key。
+ * - User City 不通过 RPC 协议注入身份，仍然使用 guest / user_token 模型。
  */
-export type FederationRpcIdentity =
-  | {
-      /** 以管理端身份访问 Federation。 */
-      role: "admin";
-    }
-  | {
-      /** 以用户身份访问 Federation。 */
-      role: "user";
-      /** 当前用户所属的 City ID。 */
-      city_id: string;
-      /** 当前用户 ID，未传时由 server 使用本机默认用户。 */
-      user_id?: string;
-      /** 附带到 ctx.user.metadata 的业务元数据。 */
-      metadata?: Record<string, unknown>;
-    };
+export type FederationRpcTrustedAccess = "admin";
 
 /**
  * Federation RPC 请求参数。
@@ -212,8 +199,12 @@ export interface FederationRpcRequestParams {
   headers?: Record<string, string>;
   /** 请求 body，按 UTF-8 文本传输。 */
   body?: string;
-  /** 本机可信身份。 */
-  identity: FederationRpcIdentity;
+  /**
+   * 本机可信访问级别。
+   *
+   * 只有 Admin City 会传 `admin`；普通用户请求不传该字段。
+   */
+  trusted_access?: FederationRpcTrustedAccess;
 }
 
 /**

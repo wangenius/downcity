@@ -136,7 +136,9 @@ const admin = new City({
 await admin.listServices();
 ```
 
-Local RPC is a trusted transport: `Admin City` does not need `admin_secret_key`, and `User City` does not need `user_token`. User calls still need `city_id` because that is product context. HTTP endpoints are unchanged and still require bearer tokens.
+Local RPC is a trusted transport for admin access: `Admin City` does not need `admin_secret_key`. `User City` still follows the same product-side model as HTTP: public actions can be called as guest, and authenticated actions require a normal `user_token`.
+
+If `AccountsService` is installed, RPC requests to `/v1/accounts/providers` only return the local login method. Call `accounts/local/login` with `city_id` to receive a normal `user_token`, then recreate or update User City with `city_id + user_token`.
 
 ## Why Federation only takes db
 

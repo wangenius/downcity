@@ -48,7 +48,8 @@ export class AdminPactAccess {
     this.requester = is_rpc_url(this.base_url)
       ? create_rpc_requester({
           base_url: this.base_url,
-          identity: { role: "admin" },
+          trusted_access: "admin",
+          with_auth: (init) => this.withAuth(init),
         })
       : create_http_requester({
           base_url: this.base_url,

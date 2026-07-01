@@ -7,8 +7,8 @@
  */
 
 import type {
-  FederationRpcIdentity,
   FederationRpcResponseData,
+  FederationRpcTrustedAccess,
 } from "@downcity/type";
 import {
   defaultFetch,
@@ -75,18 +75,21 @@ export function create_http_requester(options: {
 export function create_rpc_requester(options: {
   /** Federation RPC 入口地址。 */
   base_url: string;
-  /** 本机可信身份。 */
-  identity: FederationRpcIdentity;
+  /** 本机可信访问级别，仅 Admin City 使用。 */
+  trusted_access?: FederationRpcTrustedAccess;
+  /** 请求头增强函数。 */
+  with_auth(init: RequestInitLike): RequestInitLike;
 }): CityRequester {
   const base_url = normalizeBaseURL(options.base_url, "base_url");
   const request = async (path: string, init: RequestInitLike): Promise<FederationRpcResponseData> => {
+    const request_init = options.with_auth(init);
     const response = await request_federation_rpc({
       url: base_url,
-      identity: options.identity,
-      method: init.method ?? "GET",
+      trusted_access: options.trusted_access,
+      method: request_init.method ?? "GET",
       path,
-      headers: init.headers,
-      body: init.body,
+      headers: request_init.headers,
+      body: request_init.body,
     });
     if (response.status < 200 || response.status >= 300) {
       throw rpc_error(response);

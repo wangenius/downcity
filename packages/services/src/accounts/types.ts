@@ -12,7 +12,7 @@ import type { OAuthProviderConfig, OAuthProviderId } from "./oauth.js";
 /**
  * Accounts 登录方式类型。
  */
-export type AccountsProviderType = "password" | "oauth";
+export type AccountsProviderType = "password" | "oauth" | "local";
 
 /**
  * Accounts 登录方式不可用原因。
@@ -62,6 +62,15 @@ export interface AccountsProviderItem {
    * email register 是否启用。
    */
   register_enabled?: boolean;
+
+  /**
+   * 登录 action 路径。
+   *
+   * 关键说明（中文）
+   * - 仅当 provider 需要非默认登录入口时返回。
+   * - RPC 本地账户会返回 `local/login`，产品侧可按同一 accounts action 流程调用。
+   */
+  login_action?: string;
 
   /**
    * 未启用原因。

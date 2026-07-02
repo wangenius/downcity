@@ -1,12 +1,12 @@
 {
-  "topBadge": "Agent Infrastructure for AI Builders",
-  "title": "Build Many",
-  "titleItalic": "Agent Products",
-  "titleEnd": "",
-  "subtitle": "Use one reusable runtime for agents, models, tools, tasks, memory, services, permissions, usage, billing, and control surfaces.",
+  "topBadge": "Open-source agent infrastructure",
+  "title": "Ship many",
+  "titleItalic": "agent products",
+  "titleEnd": "on one runtime",
+  "subtitle": "Downcity is open-source agent infrastructure for AI builders. CLI + Agent SDK + City + UI SDK form a reusable runtime layer, so you can power multiple product surfaces without rebuilding the backend each time.",
   "tag1": "Reusable",
   "tag2": "Operable",
   "tag3": "Extensible",
   "verticalText": "AGENT INFRA",
-  "start": "Start Building"
+  "start": "Start building"
 }

@@ -1,21 +1,24 @@
-import { HomeRebuildSection } from "@/components/sections/HomeRebuildSection";
+import { HomeHeroSection } from "@/components/sections/HomeHeroSection";
+import { FeaturesSection } from "@/components/sections/FeaturesSection";
+import { CTASection } from "@/components/sections/CTASection";
+import { Footer } from "@/components/sections/Footer";
+import { Navbar } from "@/components/sections/navbar";
 import { product } from "@/lib/product";
 
 /**
  * 首页营销落地页路由。
  * 说明：
- * 1. 首页文案直接对齐当前 City / Downcity 命名与 quickstart 文档，避免能力描述失真。
- * 2. 采用“用户目标 -> runtime 逻辑”映射方式呈现，不堆砌开发细节。
+ * 1. 采用 Vibecape 式“产品演示为核心”的首页结构：Navbar + Hero Demo + Features + CTA + Footer。
+ * 2. Hero Demo 直接展示 Downcity 的真实使用路径（CLI / SDK / Console），避免抽象文案。
+ * 3. 文案与元信息对齐当前 City / Downcity 命名与 quickstart 文档。
  */
 export function meta() {
   const baseUrl = product.homepage || "https://downcity.ai";
   const title = `${product.productName} — Agent Infrastructure for AI Builders`;
   const description = product.description;
-
-  const social_image = `${baseUrl}/social-icon.png`;
+  const socialImage = `${baseUrl}/social-icon.png`;
 
   return [
-    // Essential meta tags (required, not inherited from parent)
     { charSet: "utf-8" },
     { name: "viewport", content: "width=device-width, initial-scale=1" },
     { title },
@@ -46,7 +49,7 @@ export function meta() {
     },
     {
       property: "og:image",
-      content: social_image,
+      content: socialImage,
     },
     {
       property: "og:image:type",
@@ -64,8 +67,6 @@ export function meta() {
       property: "og:image:alt",
       content: "Downcity - Agent Infrastructure for AI Builders",
     },
-    // X / Twitter
-    // social-icon.png 为不透明高对比图片，避免 X 把透明 logo 放到深色背景后不可见。
     {
       name: "twitter:card",
       content: "summary",
@@ -84,7 +85,7 @@ export function meta() {
     },
     {
       name: "twitter:image",
-      content: social_image,
+      content: socialImage,
     },
     {
       name: "twitter:image:width",
@@ -108,10 +109,14 @@ export function meta() {
 
 export default function Home() {
   return (
-    <div className="min-h-full">
-      <main>
-        <HomeRebuildSection />
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <Navbar />
+      <main className="flex-1">
+        <HomeHeroSection />
+        <FeaturesSection />
+        <CTASection />
       </main>
+      <Footer />
     </div>
   );
 }

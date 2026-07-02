@@ -1,9 +1,9 @@
 {
-  "topBadge": "给 AI builders 的 Agent 基础设施",
+  "topBadge": "开源 Agent 基础设施",
   "title": "构建多个",
   "titleItalic": "Agent 产品",
-  "titleEnd": "",
-  "subtitle": "用一套可复用运行层承载 Agent、模型、工具、任务、记忆、服务、权限、usage、计费和控制台。",
+  "titleEnd": "，只搭一次运行层",
+  "subtitle": "Downcity 是面向 AI builders 的开源基础设施。CLI、Agent SDK、City 与 UI SDK 共同组成可复用的 Agent 运行层，让你把同一个后端复用到多个产品入口。",
   "tag1": "可复用",
   "tag2": "可运营",
   "tag3": "可扩展",

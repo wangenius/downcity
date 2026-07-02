@@ -4,42 +4,37 @@ import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   IconBrandGithub,
+  IconBrandX,
   IconCheck,
   IconCopy,
   IconPlayerPlayFilled,
   IconTerminal2,
   IconCode,
   IconLayoutDashboard,
-  IconCommand,
   IconBolt,
-  IconCircle,
   IconPoint,
   IconPointFilled,
 } from "@tabler/icons-react";
-import { marketingTheme } from "@/lib/marketing-theme";
 import { cn } from "@/lib/utils";
 
 /**
- * 首页主视觉模块。
+ * 首页主视觉模块（极简版）。
  * 说明：
- * 1. 参考 Vibecape 首页“产品演示为核心”的模式，但将演示内容改为 Downcity 的 CLI/SDK/Console。
- * 2. 左侧承担品牌叙事与安装入口，右侧通过可切换的交互式面板展示真实使用路径。
- * 3. 所有文案直接对齐 README 与 quickstart，避免抽象概念失真。
+ * 1. 去除复杂导航，页面只保留品牌条、核心文案、安装入口与产品演示。
+ * 2. 参考 Vibecape 首页的克制排版：大量留白、细边框、小字号标签、真实界面截图/模拟。
+ * 3. 演示面板展示 Downcity 的真实使用路径：CLI / SDK / Console。
  */
 
 const INSTALL_COMMAND = "npm i -g downcity";
-
 const GITHUB_URL = "https://github.com/wangenius/downcity";
+const TWITTER_URL = "https://x.com/downcity_ai";
 
 type DemoTab = "cli" | "sdk" | "console";
 
-/**
- * 命令行演示的每一行输出。
- */
 interface CliLine {
   prompt: string;
   output: string;
-  status?: "ok" | "info" | "muted";
+  status?: "ok" | "info";
 }
 
 const CLI_STEPS: CliLine[] = [
@@ -79,7 +74,6 @@ const CONSOLE_ROWS = [
   { label: "Runtime", value: "daemon", state: "online" },
   { label: "Workspace", value: "repo-native", state: "idle" },
   { label: "City", value: "connected", state: "online" },
-  { label: "Last task", value: "summarize repo", state: "idle" },
 ] as const;
 
 /**
@@ -99,18 +93,18 @@ function InstallCommand() {
       type="button"
       onClick={copy}
       className={cn(
-        "group inline-flex w-full items-center justify-between gap-3 rounded-[14px] border border-line bg-surface px-4 py-3.5",
-        "font-mono text-[0.84rem] text-foreground transition-colors hover:border-line-strong hover:bg-surface-hover md:w-auto"
+        "group inline-flex w-full items-center justify-between gap-4 rounded-xl border border-line bg-surface px-4 py-3.5",
+        "font-mono text-[0.84rem] text-foreground transition-colors hover:border-line-strong hover:bg-surface-hover sm:w-auto"
       )}
     >
       <span className="flex items-center gap-3">
-        <IconTerminal2 className="size-4 text-text-soft" />
+        <IconTerminal2 className="size-4 text-text-subtle" />
         <span>{INSTALL_COMMAND}</span>
       </span>
       <span
         className={cn(
-          "inline-flex size-8 items-center justify-center rounded-[10px] border border-line bg-background transition-colors",
-          copied ? "text-success" : "text-text-soft group-hover:text-foreground"
+          "inline-flex size-8 items-center justify-center rounded-lg border border-line bg-background transition-colors",
+          copied ? "text-success" : "text-text-subtle group-hover:text-foreground"
         )}
       >
         {copied ? <IconCheck className="size-3.5" /> : <IconCopy className="size-3.5" />}
@@ -120,7 +114,7 @@ function InstallCommand() {
 }
 
 /**
- * 单个 CLI 步骤，带打字机效果。
+ * CLI 单步骤打字机效果。
  */
 function CliStep({ line, index, activeIndex }: { line: CliLine; index: number; activeIndex: number }) {
   const isVisible = index <= activeIndex;
@@ -165,9 +159,7 @@ function CliStep({ line, index, activeIndex }: { line: CliLine; index: number; a
       <div
         className={cn(
           "pl-4 font-mono text-[0.74rem] leading-5",
-          line.status === "ok" && "text-success",
-          line.status === "info" && "text-text-soft",
-          line.status === "muted" && "text-text-subtle"
+          line.status === "ok" ? "text-success" : "text-text-soft"
         )}
       >
         {line.output}
@@ -177,16 +169,14 @@ function CliStep({ line, index, activeIndex }: { line: CliLine; index: number; a
 }
 
 /**
- * CLI 标签演示面板。
+ * CLI 演示面板。
  */
 function CliDemo() {
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
     if (activeIndex >= CLI_STEPS.length - 1) return;
-    const timer = setTimeout(() => {
-      setActiveIndex((i) => i + 1);
-    }, 1600);
+    const timer = setTimeout(() => setActiveIndex((i) => i + 1), 1600);
     return () => clearTimeout(timer);
   }, [activeIndex]);
 
@@ -204,11 +194,9 @@ function CliDemo() {
  */
 function SdkDemo() {
   return (
-    <div className="relative">
-      <pre className="overflow-x-auto font-mono text-[0.74rem] leading-[1.75] text-foreground">
-        <code>{SDK_SNIPPET}</code>
-      </pre>
-    </div>
+    <pre className="overflow-x-auto font-mono text-[0.74rem] leading-[1.75] text-foreground">
+      <code>{SDK_SNIPPET}</code>
+    </pre>
   );
 }
 
@@ -217,41 +205,23 @@ function SdkDemo() {
  */
 function ConsoleDemo() {
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        {CONSOLE_ROWS.slice(0, 4).map((row) => (
-          <div
-            key={row.label}
-            className="rounded-[12px] border border-line bg-surface-muted p-3 transition-colors hover:border-line-strong"
-          >
-            <div className="flex items-center gap-1.5 text-[0.65rem] uppercase tracking-[0.12em] text-text-subtle">
-              {row.state === "online" ? (
-                <IconPointFilled className="size-3 text-success" />
-              ) : (
-                <IconPoint className="size-3 text-text-subtle" />
-              )}
-              {row.label}
-            </div>
-            <div className="mt-1.5 text-[0.84rem] font-medium text-foreground">{row.value}</div>
+    <div className="grid grid-cols-2 gap-3">
+      {CONSOLE_ROWS.map((row) => (
+        <div
+          key={row.label}
+          className="rounded-xl border border-line bg-surface-muted p-3 transition-colors hover:border-line-strong"
+        >
+          <div className="flex items-center gap-1.5 text-[0.65rem] uppercase tracking-[0.12em] text-text-subtle">
+            {row.state === "online" ? (
+              <IconPointFilled className="size-3 text-success" />
+            ) : (
+              <IconPoint className="size-3 text-text-subtle" />
+            )}
+            {row.label}
           </div>
-        ))}
-      </div>
-      <div className="rounded-[12px] border border-line bg-surface-muted p-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-[0.65rem] uppercase tracking-[0.12em] text-text-subtle">Last task</div>
-            <div className="mt-1 text-[0.84rem] font-medium text-foreground">{CONSOLE_ROWS[4].value}</div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-7 items-center rounded-lg border border-line bg-surface px-2.5 text-[0.7rem] text-text-soft">
-              Pause
-            </span>
-            <span className="inline-flex h-7 items-center rounded-lg border border-line bg-surface px-2.5 text-[0.7rem] text-text-soft">
-              Logs
-            </span>
-          </div>
+          <div className="mt-1.5 text-[0.84rem] font-medium text-foreground">{row.value}</div>
         </div>
-      </div>
+      ))}
     </div>
   );
 }
@@ -266,26 +236,21 @@ function DemoPanel() {
 
   const tabs: { key: DemoTab; label: string; icon: typeof IconTerminal2 }[] = [
     { key: "cli", label: isZh ? "命令行" : "CLI", icon: IconTerminal2 },
-    { key: "sdk", label: isZh ? "SDK" : "SDK", icon: IconCode },
+    { key: "sdk", label: "SDK", icon: IconCode },
     { key: "console", label: isZh ? "控制台" : "Console", icon: IconLayoutDashboard },
   ];
 
   return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-[24px] border border-line bg-surface shadow-[var(--shadow-panel)]",
-        "before:pointer-events-none before:absolute before:inset-0 before:rounded-[24px] before:shadow-[inset_0_1px_0_var(--white-alpha-strong)]"
-      )}
-    >
-      <div className="flex items-center justify-between border-b border-line px-4 py-3 md:px-5">
+    <div className="relative overflow-hidden rounded-2xl border border-line bg-surface shadow-[var(--shadow-panel)]">
+      <div className="flex items-center justify-between border-b border-line px-4 py-3">
         <div className="flex items-center gap-2">
           <div className="flex gap-1.5">
             <span className="size-2.5 rounded-full bg-danger/80" />
             <span className="size-2.5 rounded-full bg-[#d4a017]/80" />
             <span className="size-2.5 rounded-full bg-success/80" />
           </div>
-          <span className="ml-3 font-mono text-[0.65rem] uppercase tracking-[0.12em] text-text-subtle">
-            {isZh ? "downcity 演示" : "downcity demo"}
+          <span className="ml-2 font-mono text-[0.65rem] uppercase tracking-[0.12em] text-text-subtle">
+            {isZh ? "downcity" : "downcity"}
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -298,13 +263,13 @@ function DemoPanel() {
                 type="button"
                 onClick={() => setTab(t.key)}
                 className={cn(
-                  "inline-flex h-8 items-center gap-1.5 rounded-[10px] px-3 text-[0.72rem] font-medium transition-colors",
+                  "inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-[0.7rem] font-medium transition-colors",
                   active
-                    ? "bg-surface-strong text-primary-foreground"
-                    : "text-text-soft hover:bg-surface-hover hover:text-foreground"
+                    ? "bg-foreground text-background"
+                    : "text-text-subtle hover:bg-surface-hover hover:text-foreground"
                 )}
               >
-                <Icon className="size-3.5" />
+                <Icon className="size-3" />
                 {t.label}
               </button>
             );
@@ -312,14 +277,14 @@ function DemoPanel() {
         </div>
       </div>
 
-      <div className="min-h-[320px] bg-surface-soft/50 p-4 md:min-h-[360px] md:p-5">
+      <div className="min-h-[280px] bg-surface-soft/40 p-4 md:min-h-[300px] md:p-5">
         <AnimatePresence mode="wait">
           <motion.div
             key={tab}
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18 }}
           >
             {tab === "cli" && <CliDemo />}
             {tab === "sdk" && <SdkDemo />}
@@ -328,6 +293,80 @@ function DemoPanel() {
         </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+/**
+ * 极简顶部品牌条。
+ */
+function BrandBar() {
+  const { i18n } = useTranslation();
+  const isZh = i18n.language.toLowerCase().startsWith("zh");
+  const docsPath = isZh ? "/zh/docs" : "/en/docs";
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-transparent bg-background/80 backdrop-blur-md">
+      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 md:px-6">
+        <Link to={isZh ? "/zh" : "/"} className="inline-flex items-center gap-2.5 text-foreground">
+          <img src="/icon.svg" alt="" className="brand-logo size-6 object-contain opacity-95" />
+          <span className="text-[0.92rem] font-semibold tracking-tight">Downcity</span>
+        </Link>
+
+        <div className="flex items-center gap-4">
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-text-subtle transition-colors hover:text-foreground"
+            aria-label="GitHub"
+          >
+            <IconBrandGithub className="size-4" />
+          </a>
+          <a
+            href={TWITTER_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-text-subtle transition-colors hover:text-foreground"
+            aria-label="X"
+          >
+            <IconBrandX className="size-4" />
+          </a>
+          <Link
+            to={docsPath}
+            className="ml-1 text-[0.72rem] font-medium uppercase tracking-[0.12em] text-text-subtle transition-colors hover:text-foreground"
+          >
+            {isZh ? "文档" : "Docs"}
+          </Link>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/**
+ * 极简页脚。
+ */
+function TinyFooter() {
+  const { i18n } = useTranslation();
+  const isZh = i18n.language.toLowerCase().startsWith("zh");
+  const currentYear = new Date().getFullYear();
+
+  return (
+    <footer className="border-t border-line-soft py-8">
+      <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-4 text-[0.72rem] text-text-subtle md:flex-row md:px-6">
+        <span>
+          © {currentYear} Downcity. {isZh ? "MIT 协议开源" : "Open source under MIT"}.
+        </span>
+        <span className="flex items-center gap-4">
+          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+            GitHub
+          </a>
+          <a href={TWITTER_URL} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+            X
+          </a>
+        </span>
+      </div>
+    </footer>
   );
 }
 
@@ -341,79 +380,50 @@ export function HomeHeroSection() {
   const docsPath = isZh ? "/zh/docs" : "/en/docs";
 
   return (
-    <section className="relative overflow-hidden border-b border-line-soft">
-      <div className="pointer-events-none absolute inset-0 marketing-backdrop-grid opacity-40" />
+    <section className="relative">
+      <BrandBar />
 
-      <div className="relative mx-auto w-full max-w-7xl px-4 pb-16 pt-10 md:px-6 md:pb-24 md:pt-16 lg:pt-20">
-        <div className="grid items-start gap-10 lg:grid-cols-[1fr_1.05fr] lg:gap-14">
-          {/* 左侧叙事区 */}
-          <div className="flex flex-col gap-8 pt-2 lg:pt-8">
-            <div className="space-y-6">
-              <span className={cn(marketingTheme.badge, "w-fit")}>
-                <IconBolt className="size-3.5" />
-                {t("hero:topBadge")}
-              </span>
+      <div className="mx-auto max-w-5xl px-4 pb-20 pt-16 md:px-6 md:pb-28 md:pt-24">
+        <div className="flex flex-col items-center text-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[0.65rem] font-medium uppercase tracking-[0.16em] text-text-subtle">
+            <IconBolt className="size-3" />
+            {t("hero:topBadge")}
+          </span>
 
-              <h1 className="text-balance font-semibold leading-[0.96] tracking-tight text-[clamp(2.5rem,7.2vw,5.2rem)]">
-                {t("hero:title")}
-                <br />
-                <span className="text-foreground/70">{t("hero:titleItalic")}</span>
-                {t("hero:titleEnd") ? <> {t("hero:titleEnd")}</> : null}
-              </h1>
+          <h1 className="mt-7 max-w-3xl text-balance text-[clamp(2.5rem,7vw,5rem)] font-semibold leading-[0.98] tracking-tight">
+            {t("hero:title")}{" "}
+            <span className="text-foreground/70">{t("hero:titleItalic")}</span>
+            {t("hero:titleEnd") ? <> {t("hero:titleEnd")}</> : null}
+          </h1>
 
-              <p className="max-w-xl text-pretty text-base leading-7 text-text-soft md:text-lg">
-                {t("hero:subtitle")}
-              </p>
-            </div>
+          <p className="mt-5 max-w-2xl text-pretty text-base leading-7 text-text-soft md:text-lg">
+            {t("hero:subtitle")}
+          </p>
 
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <InstallCommand />
-              <div className="flex items-center gap-3">
-                <Link
-                  to={startPath}
-                  className={cn(
-                    marketingTheme.primaryButton,
-                    "h-12 gap-2 rounded-[14px] px-5 text-[0.92rem]"
-                  )}
-                >
-                  <IconPlayerPlayFilled className="size-3.5" />
-                  {t("hero:start")}
-                </Link>
-                <a
-                  href={GITHUB_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(
-                    marketingTheme.secondaryButton,
-                    "h-12 gap-2 rounded-[14px] px-5 text-[0.92rem]"
-                  )}
-                >
-                  <IconBrandGithub className="size-4" />
-                  GitHub
-                </a>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[0.75rem] text-text-subtle">
-              <span className="inline-flex items-center gap-1.5">
-                <IconCommand className="size-3.5" />
-                {isZh ? "CLI + City 管理" : "CLI + City admin"}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <IconCode className="size-3.5" />
-                {isZh ? "Agent / City / UI SDK" : "Agent / City / UI SDK"}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <IconCircle className="size-3.5" />
-                {isZh ? "开源 MIT" : "Open source MIT"}
-              </span>
-            </div>
+          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
+            <InstallCommand />
+            <Link
+              to={startPath}
+              className="inline-flex h-[3.25rem] items-center gap-2 rounded-xl border border-foreground bg-foreground px-5 text-[0.9rem] font-medium text-background transition-colors hover:bg-foreground/90"
+            >
+              <IconPlayerPlayFilled className="size-3.5" />
+              {t("hero:start")}
+            </Link>
+            <Link
+              to={docsPath}
+              className="inline-flex h-[3.25rem] items-center rounded-xl border border-line bg-surface px-5 text-[0.9rem] font-medium text-foreground transition-colors hover:bg-surface-hover"
+            >
+              {isZh ? "查看文档" : "Read docs"}
+            </Link>
           </div>
+        </div>
 
-          {/* 右侧演示区 */}
+        <div className="mt-14 md:mt-20">
           <DemoPanel />
         </div>
       </div>
+
+      <TinyFooter />
     </section>
   );
 }

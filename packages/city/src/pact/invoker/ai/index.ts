@@ -6,6 +6,10 @@
 
 import { parseAIStreamBody } from "./stream.js";
 import {
+  create_openai_compatible_transport,
+  type OpenAICompatibleTransport,
+} from "./openai-transport.js";
+import {
   CITY_MODEL_INVOKER,
   CITY_MODEL_KIND,
   type CityModel,
@@ -79,6 +83,18 @@ export class AIInvoker {
   }
 
   /**
+   * 返回给 OpenAI-compatible AI SDK provider 使用的 transport。
+   *
+   * 关键说明（中文）
+   * - HTTP Federation 返回 `{ baseURL }`，provider 使用默认 fetch。
+   * - RPC Federation 返回 `{ baseURL, fetch }`，fetch 会复用 Federation RPC。
+   * - transport 只负责传输，不替换 user_token，也不注入 trusted identity。
+   */
+  transport(): OpenAICompatibleTransport {
+    return create_openai_compatible_transport(this.baseUrl);
+  }
+
+  /**
    * 返回当前模型的 OpenAI-compatible 连接信息。
    *
    * 关键点（中文）
@@ -90,9 +106,11 @@ export class AIInvoker {
     if (!resolved_model_id) {
       throw new TypeError("modelId is required");
     }
+    const transport = this.transport();
     return {
-      base_url: `${this.baseUrl}/v1/ai`,
+      base_url: transport.baseURL,
       api_key: this.token,
+      fetch: transport.fetch,
       model_id: resolved_model_id,
       request_body: this.input({ model: resolved_model_id } as UserServiceInput),
     };

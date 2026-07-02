@@ -65,6 +65,53 @@ test("City user over local FederationRPC still needs user_token for authenticate
   }
 })
 
+test("AI transport fetch sends OpenAI-compatible requests over FederationRPC", async () => {
+  const capture = await start_capture_rpc_server()
+  try {
+    const city = new City({
+      role: "user",
+      federation_url: capture.url,
+      city_id: "city_demo",
+      user_token: "ub_test",
+    })
+    const transport = city.ai.transport()
+    assert.equal(transport.baseURL, `${capture.url}/v1/ai`)
+    assert.equal(typeof transport.fetch, "function")
+
+    const response = await transport.fetch(`${transport.baseURL}/chat/completions?x=1`, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer ub_test",
+        "content-type": "application/json",
+        "x-demo": "kept",
+      },
+      body: JSON.stringify({
+        city_id: "city_demo",
+        model: "gpt-5.4",
+        messages: [],
+        stream: true,
+      }),
+    })
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), { ok: true })
+    assert.equal(capture.requests.length, 1)
+    assert.equal(capture.requests[0].method, "POST")
+    assert.equal(capture.requests[0].path, "/v1/ai/chat/completions?x=1")
+    assert.equal(capture.requests[0].headers.authorization, "Bearer ub_test")
+    assert.equal(capture.requests[0].headers["content-type"], "application/json")
+    assert.equal(capture.requests[0].headers["x-demo"], "kept")
+    assert.deepEqual(JSON.parse(capture.requests[0].body), {
+      city_id: "city_demo",
+      model: "gpt-5.4",
+      messages: [],
+      stream: true,
+    })
+  } finally {
+    await capture.close()
+  }
+})
+
 async function create_rpc_fixture(prefix) {
   const fixture = await create_federation_fixture(prefix)
   const port = await get_free_port()
@@ -162,6 +209,63 @@ async function start_test_federation_rpc_server(base, port) {
   return {
     url: `rpc://127.0.0.1:${port}`,
     async stop() {
+      for (const socket of sockets) {
+        socket.destroy()
+      }
+      sockets.clear()
+      await new Promise((resolve) => server.close(resolve))
+    },
+  }
+}
+
+async function start_capture_rpc_server() {
+  const port = await get_free_port()
+  const requests = []
+  const sockets = new Set()
+  const server = net.createServer((socket) => {
+    sockets.add(socket)
+    let buffered = ""
+
+    socket.on("data", (chunk) => {
+      buffered += chunk.toString("utf8")
+      let newline_index = buffered.indexOf("\n")
+      while (newline_index >= 0) {
+        const line = buffered.slice(0, newline_index).trim()
+        buffered = buffered.slice(newline_index + 1)
+        if (line) {
+          const request = JSON.parse(line)
+          requests.push(request.params)
+          socket.write(`${JSON.stringify({
+            id: request.id,
+            success: true,
+            data: {
+              status: 200,
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ ok: true }),
+            },
+          })}\n`)
+        }
+        newline_index = buffered.indexOf("\n")
+      }
+    })
+
+    socket.on("close", () => {
+      sockets.delete(socket)
+    })
+  })
+
+  await new Promise((resolve, reject) => {
+    server.once("error", reject)
+    server.listen(port, "127.0.0.1", () => {
+      server.off("error", reject)
+      resolve()
+    })
+  })
+
+  return {
+    url: `rpc://127.0.0.1:${port}`,
+    requests,
+    async close() {
       for (const socket of sockets) {
         socket.destroy()
       }

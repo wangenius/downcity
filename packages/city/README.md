@@ -223,6 +223,29 @@ await client.ai.text({
 });
 ```
 
+## OpenAI-compatible transport
+
+如果宿主需要继续使用自己的 AI SDK provider（例如 `createOpenAICompatible()` 或
+`createDeepSeek()`），不要手写 `federation_url + "/v1/ai"`。使用
+`client.ai.transport()`，SDK 会在 HTTP / RPC 之间保持一致：
+
+```ts
+const transport = client.ai.transport();
+
+const provider = createOpenAICompatible({
+  name: "downcity",
+  apiKey: user_token,
+  ...transport,
+  transformRequestBody: (body) => ({
+    ...body,
+    city_id,
+  }),
+});
+```
+
+- HTTP Federation：返回 `{ baseURL: "https://.../v1/ai" }`
+- RPC Federation：返回 `{ baseURL: "rpc://.../v1/ai", fetch }`
+
 ## 文档
 
 - 仓库首页：[downcity](https://github.com/wangenius/downcity)

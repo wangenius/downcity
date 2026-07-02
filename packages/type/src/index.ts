@@ -107,6 +107,15 @@ export interface CityModelConnection {
   api_key?: string;
 
   /**
+   * 可选自定义 fetch。
+   *
+   * 关键说明（中文）
+   * - HTTP Federation 通常不需要。
+   * - RPC Federation 会提供一个把 OpenAI-compatible request 转成 RPC frame 的 fetch。
+   */
+  fetch?: typeof globalThis.fetch;
+
+  /**
    * 当前模型的调用 ID，默认写入 OpenAI-compatible 请求体的 `model` 字段。
    */
   model_id: string;

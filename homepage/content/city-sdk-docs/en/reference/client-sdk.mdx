@@ -40,6 +40,9 @@ const client = new City({
 await client.ai.text({ prompt: "hello", model: "deepseek-v4-flash" });
 await client.ai.stream({ prompt: "hello", model: "deepseek-v4-flash" });
 
+// OpenAI-compatible AI SDK provider transport
+const transport = client.ai.transport(); // { baseURL, fetch? }
+
 // Custom Service
 await client.service("translate").action("zh2en").invoke({ text: "hello" });
 await client.service("accounts").action("login").invoke({ email: "a@b.com", password: "..." });

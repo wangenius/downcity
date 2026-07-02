@@ -37,6 +37,30 @@ while (true) {
 
 ## OpenAI 兼容通路
 
+使用 AI SDK provider 时，优先使用 `client.ai.transport()`，不要自己拼
+`federation_url + "/v1/ai"`。同一段代码可以同时支持 HTTP 和本机 RPC
+Federation URL。
+
+```ts
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+
+const provider = createOpenAICompatible({
+  name: "downcity",
+  apiKey: user_token,
+  ...client.ai.transport(),
+  transformRequestBody: (body) => ({
+    ...body,
+    city_id,
+  }),
+});
+
+const model = provider.languageModel("deepseek-v4-flash");
+```
+
+HTTP Federation 下 transport 只返回 `baseURL`。`rpc://` Federation 下还会返回
+`fetch`，它会把 OpenAI-compatible request 转成 Federation RPC，并保留 header、
+query string 和 body。
+
 ### curl
 
 ```bash

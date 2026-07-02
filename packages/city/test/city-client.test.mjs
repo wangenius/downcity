@@ -3,6 +3,19 @@ import test from "node:test"
 
 import { City } from "../bin/index.js"
 
+test("AIInvoker.transport() returns OpenAI-compatible HTTP transport", async () => {
+  const client = new City({
+    role: "user",
+    federation_url: "https://api.example.com/base/",
+    city_id: "city_demo",
+    user_token: "ub_test",
+  })
+
+  const transport = client.ai.transport()
+  assert.equal(transport.baseURL, "https://api.example.com/base/v1/ai")
+  assert.equal(transport.fetch, undefined)
+})
+
 test("AIInvoker.text() posts to /v1/ai/text", async () => {
   const requests = []
   const msg = { id: "msg_1", role: "assistant", parts: [{ type: "text", text: "hello", state: "done" }] }

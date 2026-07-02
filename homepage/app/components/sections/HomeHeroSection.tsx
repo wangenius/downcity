@@ -322,7 +322,7 @@ export function HomeHeroSection() {
             {t("hero:subtitle")}
           </p>
 
-          <div className="relative z-10 mt-8 flex flex-col items-center gap-3 sm:flex-row">
+          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
             <InstallCommand />
             <Link
               to={startPath}
@@ -340,7 +340,7 @@ export function HomeHeroSection() {
           </div>
         </div>
 
-        <div className="relative z-10 mt-14 md:mt-20">
+        <div className="mt-14 md:mt-20">
           <DemoPanel />
         </div>
       </div>

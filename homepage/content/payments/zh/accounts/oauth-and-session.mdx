@@ -1,21 +1,24 @@
 ---
-title: OAuth 与 Session
-description: "@downcity/services 里的 oauth 入口、session、me 和 logout 在产品链路里的位置。"
+title: 登录与 Session
+description: "@downcity/services 里的统一登录入口、OAuth callback、session、me 和 logout 在产品链路里的位置。"
 ---
 
 accounts service 承载账号表、better-auth runtime、OAuth callback、会话、profile 和 City `user_token` 签发。具体登录方式由 provider 决定。
 
-## OAuth 入口怎么理解
+## 登录入口怎么理解
 
-通常有两段：
+产品侧登录是一个统一状态机：
 
 - `providers`
-- `oauth/start`
-- `oauth/result`
+- `login/start`
+- `login/continue`
+- `login/result`
 
-常见产品接法里，`providers` 先负责告诉前端“当前 City 真的开放了哪些登录方式”；`oauth/start` 负责发起入口；`oauth/result` 负责确认或轮询结果。
+常见产品接法里，`providers` 先负责告诉前端“当前 City 真的开放了哪些登录方式，以及它属于 `oauth` 还是 `input` 流程”；`login/start` 创建一次登录流程并返回下一步；`login/continue` 提交 input 流程需要的输入；`login/result` 统一读取最终 `user_token`。
 
 `GET /v1/accounts/providers` 是面向客户端的已启用列表。provider 虽然已经在代码里挂载，但如果缺少 required env 或 runtime 配置，就不会出现在这里。配置目录和缺失项仍然通过 Federation env catalog 或 admin workspace 查看。
+
+`oauth` 流程会在 `login/start` 返回授权 URL；`input` 流程会在 `login/start` 返回当前步骤的 `inputs`，例如 email 需要 `email/password`。Local Account 也是 input 流程，只是 `inputs` 为空，并且 `login/start` 会直接返回 `status: "done"`。无论哪一种，最终都通过 `login/result` 读取 token。
 
 当前官方 accounts service 可以按服务端配置开放邮箱、GitHub、Google、WeChat 网站应用登录。前端应该始终以 `providers` 返回为准，不要把登录按钮写死。
 

@@ -54,7 +54,9 @@ For example:
 So the calling pattern stays the same:
 
 ```ts
-await client.service("accounts").action("login").invoke(...)
+await client.service("accounts").action("login/start").invoke(...)
+await client.service("accounts").action("login/continue").invoke(...)
+await client.service("accounts").get("login/result", ...)
 await client.service("usage").get("me")
 await client.service("payment").get("methods")
 ```

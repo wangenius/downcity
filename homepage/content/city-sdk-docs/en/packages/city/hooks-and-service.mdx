@@ -92,17 +92,28 @@ base.use(new UsageService({
 }));
 ```
 
-In this setup, `AccountsService` owns the accounts HTTP surface. Mounting it once exposes `/providers`, `me`, admin reads, the better-auth passthrough route, and the OAuth callback route. Concrete login methods appear only when the matching provider is mounted and configured.
+In this setup, `AccountsService` owns the accounts HTTP surface. Mounting it once exposes `/providers`, the unified login entry, `me`, admin reads, the better-auth passthrough route, and the OAuth callback route. Concrete login methods appear only when the matching provider is mounted and configured.
 
 ## How product-side callers reach services
 
 Once mounted, services still look like normal services from the product side:
 
 ```ts
-const session = await guest.service("accounts").action("login").invoke({
-  email: "user@example.com",
-  password: "password123",
+const login = await guest.service("accounts").action("login/start").invoke({
+  provider: "email",
   city_id: "city_demo",
+});
+
+await guest.service("accounts").action("login/continue").invoke({
+  login_id: login.login_id,
+  input: {
+    email: "user@example.com",
+    password: "password123",
+  },
+});
+
+const session = await guest.service("accounts").get("login/result", {
+  login_id: login.login_id,
 });
 
 const usage = await admin.service("usage").get("summary");

@@ -26,8 +26,9 @@ City 的登录问题，最终都落到一个目标：
 
 ```txt
 前端创建 guest User City
-  -> 调 accounts.register / login
-  -> service 返回 user_token
+  -> 调 accounts.providers
+  -> 按 provider type 调 accounts.login/start / continue / result 或注册流程
+  -> login/result 返回 user_token
   -> 前端创建正常 User City
 ```
 
@@ -50,9 +51,10 @@ const guest = new City({
 这个阶段通常只拿来调免登录 Action，例如：
 
 - `accounts.register`
-- `accounts.login`
-- `accounts.oauth/start`
-- `accounts.oauth/result`
+- `accounts.providers`
+- `accounts.login/start`
+- `accounts.login/continue`
+- `accounts.login/result`
 
 ## 切到正常 User City
 

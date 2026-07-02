@@ -137,8 +137,8 @@ router.post("/login", async (c) => {
 
 ### 模式 B：accounts 服务做登录
 
-- 前端先用 guest `User City` 调 `accounts.login/register`
-- accounts service 直接返回 `user_token`
+- 前端先用 guest `User City` 走 `accounts.login/start -> login/continue -> login/result` 或注册流程
+- accounts service 通过 `login/result` 返回 `user_token`
 - 前端切换到正常 `User City`
 
 所以：

@@ -23,7 +23,7 @@ If you want the integration story first, start with [@downcity/city](/en/city-sd
 - `http://` / `https://`: remote HTTP entry, authenticated with `user_token` or `admin_secret_key`.
 - `http://127.0.0.1:15315`: local loopback HTTP entry, authenticated with the same `user_token` or `admin_secret_key` model.
 
-When you expose Federation from your own local HTTP server, products still use normal HTTP. If `AccountsService` is configured with `local_login: true`, `/v1/accounts/providers` exposes the local login method, and `accounts/local/login` returns a normal `user_token`.
+When you expose Federation from your own local HTTP server, products still use normal HTTP. If `AccountsService` is configured with `local_login: true`, `/v1/accounts/providers` exposes the local login method, and `accounts.login/start` with `provider: "local"` returns a `login_id`; read the normal `user_token` from `accounts.login/result`.
 
 ## Four common call types
 
@@ -51,7 +51,14 @@ const language_model = provider.languageModel("deepseek-v4-flash");
 
 // Custom Service
 await client.service("translate").action("zh2en").invoke({ text: "hello" });
-await client.service("accounts").action("login").invoke({ email: "a@b.com", password: "..." });
+const login = await client.service("accounts").action("login/start").invoke({
+  provider: "email",
+});
+await client.service("accounts").action("login/continue").invoke({
+  login_id: login.login_id,
+  input: { email: "a@b.com", password: "..." },
+});
+const session = await client.service("accounts").get("login/result", { login_id: login.login_id });
 
 // GET action
 const items = await client.service("cities").get("list");
@@ -103,7 +110,7 @@ From the caller's point of view, they all live in the same City route space.
 The two most common paths are:
 
 1. your backend finishes login first, then uses `Admin City` to request `user_token`
-2. the frontend uses a guest `User City` to call `accounts.login/register`, and the accounts service returns `user_token`
+2. the frontend uses a guest `User City` to run `accounts.login/start -> login/continue -> login/result` or the registration flow, and the accounts service returns `user_token`
 
 Both paths end in the same user context:
 

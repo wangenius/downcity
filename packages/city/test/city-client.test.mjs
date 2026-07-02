@@ -240,9 +240,9 @@ test("ServiceClient.get() appends query params for GET actions", async () => {
     user_token: "t",
     fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) },
   })
-  const result = await client.service("accounts").get("oauth/result", { state: "abc_123" })
+  const result = await client.service("accounts").get("login/result", { login_id: "abc_123" })
   assert.deepEqual(result, { ok: true })
-  assert.equal(requests[0].url, "https://api.example.com/base/v1/accounts/oauth/result?state=abc_123")
+  assert.equal(requests[0].url, "https://api.example.com/base/v1/accounts/login/result?login_id=abc_123")
   assert.equal(requests[0].init.method, "GET")
 })
 

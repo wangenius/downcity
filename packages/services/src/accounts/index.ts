@@ -4,17 +4,26 @@
  * 设计边界：
  * - better-auth 作为认证事实源，统一落到 `auth_users/auth_accounts/auth_sessions/auth_verifications`
  * - 服务自己只维护 `auth_profiles`
- * - OAuth 为兼容当前 CLI 轮询交互，保留自定义 callback 外壳
+ * - OAuth 使用自定义 callback 外壳，最终统一回填到 login state
  */
 
 import { InstallableService } from "@downcity/city";
 import type { EnvRequirement, ServiceInstallContext } from "@downcity/city";
 import { betterAuth } from "better-auth/minimal";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { readPreparedAll, readPreparedFirst, runPrepared } from "./db.js";
+import { readPreparedFirst, runPrepared } from "./db.js";
 import { mergeAccountsEnvRequirements, normalizeAccountsProviders } from "./helpers.js";
+import { listAccountSessions, listAccountUsers } from "./admin-queries.js";
+import { oauthErrorResponse, oauthSuccessResponse } from "./oauth-pages.js";
 import {
-  ACCOUNTS_OAUTH_STATE_TABLE,
+  normalizeBool,
+  prefixedId,
+  randomToken,
+  readErrorMessage,
+  toRecord,
+} from "./utils.js";
+import {
+  ACCOUNTS_LOGIN_STATE_TABLE,
   AUTH_ACCOUNT_TABLE,
   AUTH_SESSION_TABLE,
   AUTH_USER_TABLE,
@@ -24,7 +33,7 @@ import {
   authSessions,
   authUsers,
   authVerifications,
-  accountsOAuthStates,
+  accountsLoginStates,
   userProfiles,
   type UserProfileRow,
 } from "./schema.js";
@@ -36,11 +45,19 @@ import {
   type OAuthProviderId,
   type OAuthProviderProfile,
 } from "./oauth.js";
+import type { AuthAccountRow, AuthUserRow, LoginStateRow } from "./rows.js";
 import type {
+  AccountsLoginContinueRequest,
+  AccountsLoginDoneResult,
+  AccountsLoginInputRequiredResult,
+  AccountsLoginRedirectRequiredResult,
+  AccountsLoginResult,
+  AccountsLoginStartRequest,
   AccountsEmailProvider,
   AccountsProvider,
   AccountsProviderContext,
   AccountsProviderItem,
+  AccountsServiceOptions,
   AccountsOAuthProvider,
 } from "./types.js";
 
@@ -52,16 +69,16 @@ export {
   wechatAccountsProvider,
 } from "./providers/index.js";
 
-const OAUTH_STATE_TTL_MS = 5 * 60 * 1000;
+const LOGIN_STATE_TTL_MS = 5 * 60 * 1000;
 const AUTH_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const LOCAL_USER_ID = "local-user";
 const LOCAL_PROVIDER: AccountsProviderItem = {
   id: "local",
-  type: "local",
+  type: "input",
   enabled: true,
   label: "Local Account",
+  inputs: [],
   login_enabled: true,
-  login_action: "local/login",
 };
 
 /**
@@ -71,114 +88,7 @@ const accountsEnv: EnvRequirement[] = [
   { key: "BETTER_AUTH_SECRET", description: "better-auth signing secret", required: true },
 ];
 
-/**
- * Accounts 服务配置。
- */
-export interface AccountsServiceOptions {
-  /**
-   * 登录、验证邮箱或 OAuth 完成后签发的 City user_token 有效期。
-   */
-  token_ttl?: string;
-
-  /**
-   * 当前 City 启用的账号 provider。
-   */
-  providers?: AccountsProvider[];
-
-  /**
-   * 是否启用本机账户登录。
-   *
-   * 关键说明（中文）
-   * - 开启后 `/providers` 只返回 `local` 登录方式。
-   * - 仅建议在监听 `127.0.0.1` / `localhost` 的本机 Federation HTTP 服务中开启。
-   */
-  local_login?: boolean;
-}
-
-/**
- * better-auth 用户表读取结果。
- */
-interface AuthUserRow extends Record<string, unknown> {
-  /**
-   * `auth_users.id`。
-   */
-  id: string;
-
-  /**
-   * 主邮箱。
-   */
-  email: string;
-
-  /**
-   * 邮箱是否已验证。
-   */
-  emailVerified: number | boolean;
-
-  /**
-   * better-auth 原生展示名。
-   */
-  name: string;
-
-  /**
-   * better-auth 原生头像 URL。
-   */
-  image: string | null;
-
-  /**
-   * 创建时间。
-   */
-  createdAt: string;
-
-  /**
-   * 更新时间。
-   */
-  updatedAt: string;
-}
-
-/**
- * better-auth account 表读取结果。
- */
-interface AuthAccountRow extends Record<string, unknown> {
-  /**
-   * `auth_accounts.id`。
-   */
-  id: string;
-
-  /**
-   * 绑定的 `auth_users.id`。
-   */
-  userId: string;
-}
-
-/**
- * OAuth state 记录。
- */
-interface OAuthStateRow extends Record<string, unknown> {
-  /**
-   * OAuth state。
-   */
-  state: string;
-
-  /**
-   * 目标 city_id。
-   */
-  city_id: string;
-
-  /**
-   * provider 标识。
-   */
-  provider: string;
-
-  /**
-   * 完成后回填的 City user_token。
-   */
-  user_token: string;
-
-  /**
-   * 创建时间戳。
-   */
-  created_at: number;
-}
+export type { AccountsServiceOptions } from "./types.js";
 
 export class AccountsService extends InstallableService {
   readonly id = "accounts";
@@ -186,7 +96,7 @@ export class AccountsService extends InstallableService {
   readonly version = "0.4.0";
   readonly schema = {
     profile: userProfiles,
-    oauth_states: accountsOAuthStates,
+    login_states: accountsLoginStates,
     auth_users: authUsers,
     auth_sessions: authSessions,
     auth_accounts: authAccounts,
@@ -206,7 +116,7 @@ export class AccountsService extends InstallableService {
     this.instruction = ({ actions }) => [
       "提供 Downcity 的统一账号服务容器，具体登录方式由 email / phone / OAuth 等 provider 决定。",
       "provider 满足 required env 或 runtime 配置后，才会出现在 /providers 中供客户端使用。",
-      "登录成功时传入 city_id 后，接口会返回绑定该 city 的 City user_token。",
+      "登录成功时传入 city_id 后，通过 login/result 读取绑定该 city 的 City user_token。",
       "OAuth 回调地址固定为 /v1/accounts/oauth/callback，服务会根据 City 公网地址生成完整回调 URL。",
       `当前暴露 ${actions.length} 个动作，常用流程由 /providers 返回的 provider 决定。`,
     ].join("\n");
@@ -259,6 +169,106 @@ export class AccountsService extends InstallableService {
   }
 
   install(ctx: ServiceInstallContext): void {
+    ctx.route({
+      method: "POST",
+      path: "/login/start",
+      public: true,
+      handler: async (c) => {
+        const body = await c.json<AccountsLoginStartRequest>();
+        const provider = String(body.provider ?? "").trim();
+        const city_id = String(body.city_id ?? "").trim() || "city_downcity";
+
+        if (!provider) {
+          return c.jsonResponse({ error: "provider required" }, 400);
+        }
+
+        if (provider === "local") {
+          if (!this.options.local_login) {
+            return c.jsonResponse({ error: "local login is not enabled" }, 404);
+          }
+          const result = await this.startLocalLogin(ctx, city_id);
+          return c.jsonResponse(result);
+        }
+
+        if (provider === "email") {
+          const result = await this.startEmailLogin(city_id);
+          if ("error" in result) {
+            return c.jsonResponse({ error: result.error }, result.status);
+          }
+          return c.jsonResponse(result.data);
+        }
+
+        const oauth_provider = readOAuthProviderId(provider);
+        if (!oauth_provider) {
+          return c.jsonResponse({ error: "provider not supported" }, 400);
+        }
+
+        const result = await this.createOAuthStartResult(city_id, oauth_provider);
+        if ("error" in result) {
+          return c.jsonResponse({ error: result.error }, result.status);
+        }
+        return c.jsonResponse(result.data);
+      },
+    });
+
+    ctx.route({
+      method: "POST",
+      path: "/login/continue",
+      public: true,
+      handler: async (c) => {
+        const body = await c.json<AccountsLoginContinueRequest>();
+        const login_id = String(body.login_id ?? "").trim();
+        if (!login_id) return c.jsonResponse({ error: "login_id required" }, 400);
+
+        const entry = await this.readLoginState(login_id);
+        if (!entry) return c.jsonResponse({ error: "login expired or invalid" }, 404);
+
+        if (entry.provider === "email") {
+          const input = toRecord(body.input);
+          const result = await this.createEmailLoginToken(ctx, {
+            email: input ? String(input.email ?? "") : "",
+            password: input ? String(input.password ?? "") : "",
+            city_id: entry.city_id,
+          });
+          if ("error" in result) {
+            return c.jsonResponse({ error: result.error }, result.status);
+          }
+          await this.resolveLoginState(login_id, result.user_token);
+          return c.jsonResponse({
+            status: "done",
+            login_id,
+            provider: "email",
+          });
+        }
+
+        if (entry.provider === "local") {
+          return c.jsonResponse({
+            status: entry.user_token ? "done" : "pending",
+            login_id,
+            provider: "local",
+          });
+        }
+
+        return c.jsonResponse({ error: "login does not accept input" }, 400);
+      },
+    });
+
+    ctx.route({
+      method: "GET",
+      path: "/login/result",
+      public: true,
+      handler: async (c) => {
+        const login_id = String(new URL(c.request.url).searchParams.get("login_id") ?? "").trim();
+        if (!login_id) return c.jsonResponse({ error: "login_id required" }, 400);
+
+        const result = await this.readLoginResult(login_id);
+        if ("error" in result) {
+          return c.jsonResponse({ error: result.error }, result.status);
+        }
+        return c.jsonResponse(result.data);
+      },
+    });
+
     ctx.route({
       method: "ALL",
       path: "/auth/*",
@@ -376,135 +386,10 @@ export class AccountsService extends InstallableService {
     });
 
     ctx.route({
-      method: "POST",
-      path: "/login",
-      public: true,
-      handler: async (c) => {
-        const email_provider = this.getEnabledEmailProvider();
-        if (!email_provider) {
-          return c.jsonResponse({ error: "email provider not configured" }, 400);
-        }
-
-        const body = await c.json<{ email?: string; password?: string; city_id?: string }>();
-        const email = String(body.email ?? "").trim().toLowerCase();
-        const password = String(body.password ?? "");
-
-        if (!email || !password) {
-          return c.jsonResponse({ error: "email and password required" }, 400);
-        }
-
-        try {
-          const result = await this.auth.api.signInEmail({
-            body: { email, password },
-            asResponse: true,
-          });
-
-          if (!result.ok) {
-            const err = await result.json().catch(() => ({})) as { message?: string };
-            return c.jsonResponse({ error: err.message ?? "invalid email or password" }, 401);
-          }
-
-          const data = await result.json() as { user?: { id: string; email: string; name?: string; image?: string | null } };
-          const user_id = String(data.user?.id ?? "");
-          if (user_id) {
-            await this.upsertProfile({
-              user_id,
-              email: String(data.user?.email ?? ""),
-              display_name: String(data.user?.name ?? data.user?.email?.split("@")[0] ?? ""),
-              avatar_url: String(data.user?.image ?? ""),
-            });
-          }
-
-          const userToken = await ctx.createUserToken({
-            city_id: String(body.city_id ?? ""),
-            user_id,
-            ttl: this.options.token_ttl,
-          });
-
-          return c.jsonResponse({
-            user_token: userToken.user_token,
-            user_id,
-            email: data.user?.email,
-          });
-        } catch (e) {
-          return c.jsonResponse({ error: readErrorMessage(e) }, 500);
-        }
-      },
-    });
-
-    ctx.route({
-      method: "POST",
-      path: "/local/login",
-      public: true,
-      handler: async (c) => {
-        if (!this.options.local_login) {
-          return c.jsonResponse({ error: "local login is not enabled" }, 404);
-        }
-
-        const body = await c.json<{ city_id?: string }>();
-        const city_id = String(body.city_id ?? "").trim();
-        if (!city_id) {
-          return c.jsonResponse({ error: "city_id required" }, 400);
-        }
-
-        const userToken = await ctx.createUserToken({
-          city_id,
-          user_id: LOCAL_USER_ID,
-          ttl: this.options.token_ttl,
-        });
-
-        return c.jsonResponse({
-          user_token: userToken.user_token,
-          user_id: LOCAL_USER_ID,
-        });
-      },
-    });
-
-    ctx.route({
       method: "GET",
       path: "/providers",
       public: true,
       handler: async (c) => c.jsonResponse({ items: this.listVisibleProviders() }),
-    });
-
-    ctx.route({
-      method: "POST",
-      path: "/oauth/start",
-      public: true,
-      handler: async (c) => {
-        const body = await c.json<{ provider?: string; city_id?: string }>();
-        const provider = readOAuthProviderId(String(body.provider ?? "").trim());
-        if (!provider) {
-          return c.jsonResponse({ error: "provider must be github, google, or wechat" }, 400);
-        }
-
-        const config = this.getEnabledOAuthProviderConfig(provider);
-        if (!config) {
-          return c.jsonResponse({ error: "provider not configured" }, 400);
-        }
-
-        const city_id = String(body.city_id ?? "").trim() || "city_downcity";
-        const state = randomToken(24);
-        await this.createOAuthState(city_id, provider, state);
-        const url = buildOAuthAuthorizeURL(config, this.getOAuthCallbackURL(), state);
-        return c.jsonResponse({ url, state, provider });
-      },
-    });
-
-    ctx.route({
-      method: "GET",
-      path: "/oauth/result",
-      public: true,
-      handler: async (c) => {
-        const state = String(new URL(c.request.url).searchParams.get("state") ?? "").trim();
-        if (!state) return c.jsonResponse({ error: "state required" }, 400);
-
-        const entry = await this.readOAuthState(state);
-        if (!entry) return c.jsonResponse({ error: "state expired or invalid" }, 404);
-        if (!entry.user_token) return c.jsonResponse({ status: "pending" });
-
-        return c.jsonResponse({ status: "done", user_token: entry.user_token });
-      },
     });
 
     ctx.route({
@@ -533,7 +418,7 @@ export class AccountsService extends InstallableService {
       auth: ["admin"],
       handler: async (c) => {
         try {
-          return c.jsonResponse({ items: await this.listUsers() });
+          return c.jsonResponse({ items: await listAccountUsers((sql) => this.rawPrepare(sql)) });
         } catch {
           return c.jsonResponse({ items: [] });
         }
@@ -546,7 +431,7 @@ export class AccountsService extends InstallableService {
       auth: ["admin"],
       handler: async (c) => {
         try {
-          return c.jsonResponse({ items: await this.listSessions() });
+          return c.jsonResponse({ items: await listAccountSessions((sql) => this.rawPrepare(sql)) });
         } catch {
           return c.jsonResponse({ items: [] });
         }
@@ -554,9 +439,6 @@ export class AccountsService extends InstallableService {
     });
   }
 
-  /**
-   * 获取 better-auth 的 HTTP handler。
-   */
   getAuthHandler() {
     return this.auth.handler;
   }
@@ -572,17 +454,14 @@ export class AccountsService extends InstallableService {
 
     if (error) {
       const desc = url.searchParams.get("error_description") ?? error;
-      return new Response(OAUTH_ERROR_HTML.replace("{{ERROR}}", escapeHTML(desc)), {
-        status: 200,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
+      return oauthErrorResponse(desc);
     }
 
     try {
       if (!state || !code) throw new Error("Missing state or code");
 
-      const entry = await this.readOAuthState(state);
-      if (!entry) throw new Error("OAuth state expired or invalid");
+      const entry = await this.readLoginState(state);
+      if (!entry) throw new Error("login expired or invalid");
 
       const provider = readOAuthProviderId(String(entry.provider));
       if (!provider) throw new Error("Invalid OAuth provider");
@@ -599,18 +478,166 @@ export class AccountsService extends InstallableService {
         user_id: authUserId,
         ttl: this.options.token_ttl,
       });
-      await this.resolveOAuthState(state, result.user_token);
+      await this.resolveLoginState(state, result.user_token);
     } catch (e) {
-      return new Response(OAUTH_ERROR_HTML.replace("{{ERROR}}", escapeHTML(readErrorMessage(e))), {
-        status: 200,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
+      return oauthErrorResponse(readErrorMessage(e));
     }
 
-    return new Response(OAUTH_SUCCESS_HTML, {
-      status: 200,
-      headers: { "content-type": "text/html; charset=utf-8" },
+    return oauthSuccessResponse();
+  }
+
+  private async createOAuthStartResult(
+    city_id: string,
+    provider: OAuthProviderId,
+  ): Promise<{ data: AccountsLoginRedirectRequiredResult } | { error: string; status: number }> {
+    const config = this.getEnabledOAuthProviderConfig(provider);
+    if (!config) {
+      return { error: "provider not configured", status: 400 };
+    }
+
+    const login_id = randomToken(24);
+    await this.createLoginState(city_id, provider, login_id);
+    return {
+      data: {
+        status: "redirect_required",
+        login_id,
+        provider,
+        url: buildOAuthAuthorizeURL(config, this.getOAuthCallbackURL(), login_id),
+        state: login_id,
+      },
+    };
+  }
+
+  private async startEmailLogin(city_id: string): Promise<{ data: AccountsLoginInputRequiredResult } | { error: string; status: number }> {
+    const email_provider = this.getEnabledEmailProvider();
+    if (!email_provider) {
+      return { error: "email provider not configured", status: 400 };
+    }
+
+    const login_id = randomToken(24);
+    await this.createLoginState(city_id, "email", login_id);
+    return {
+      data: {
+        status: "input_required",
+        login_id,
+        provider: "email",
+        inputs: email_provider.method(this.getProviderContext()).inputs,
+      },
+    };
+  }
+
+  private async createEmailLoginToken(
+    ctx: ServiceInstallContext,
+    input: {
+      email?: unknown;
+      password?: unknown;
+      city_id?: unknown;
+    },
+  ): Promise<{ provider: "email"; user_token: string; user_id?: string; email?: string } | { error: string; status: number }> {
+    const email_provider = this.getEnabledEmailProvider();
+    if (!email_provider) {
+      return { error: "email provider not configured", status: 400 };
+    }
+
+    const email = String(input.email ?? "").trim().toLowerCase();
+    const password = String(input.password ?? "");
+
+    if (!email || !password) {
+      return { error: "email and password required", status: 400 };
+    }
+
+    try {
+      const result = await this.auth.api.signInEmail({
+        body: { email, password },
+        asResponse: true,
+      });
+
+      if (!result.ok) {
+        const err = await result.json().catch(() => ({})) as { message?: string };
+        return { error: err.message ?? "invalid email or password", status: 401 };
+      }
+
+      const data = await result.json() as { user?: { id: string; email: string; name?: string; image?: string | null } };
+      const user_id = String(data.user?.id ?? "");
+      if (user_id) {
+        await this.upsertProfile({
+          user_id,
+          email: String(data.user?.email ?? ""),
+          display_name: String(data.user?.name ?? data.user?.email?.split("@")[0] ?? ""),
+          avatar_url: String(data.user?.image ?? ""),
+        });
+      }
+
+      const userToken = await ctx.createUserToken({
+        city_id: String(input.city_id ?? ""),
+        user_id,
+        ttl: this.options.token_ttl,
+      });
+
+      return {
+        provider: "email",
+        user_token: userToken.user_token,
+        user_id,
+        email: data.user?.email,
+      };
+    } catch (e) {
+      return { error: readErrorMessage(e), status: 500 };
+    }
+  }
+
+  private async startLocalLogin(
+    ctx: ServiceInstallContext,
+    city_id: string,
+  ): Promise<AccountsLoginDoneResult> {
+    const login_id = randomToken(24);
+    const result = await this.createLocalLoginToken(ctx, city_id);
+    await this.createLoginState(city_id, "local", login_id, result.user_token);
+
+    return {
+      status: "done",
+      login_id,
+      provider: "local",
+    };
+  }
+
+  private async createLocalLoginToken(
+    ctx: ServiceInstallContext,
+    city_id: string,
+  ): Promise<{ provider: "local"; user_token: string; user_id: string }> {
+    const userToken = await ctx.createUserToken({
+      city_id,
+      user_id: LOCAL_USER_ID,
+      ttl: this.options.token_ttl,
     });
+
+    return {
+      provider: "local",
+      user_token: userToken.user_token,
+      user_id: LOCAL_USER_ID,
+    };
+  }
+
+  private async readLoginResult(login_id: string): Promise<{ data: AccountsLoginResult } | { error: string; status: number }> {
+    const entry = await this.readLoginState(login_id);
+    if (!entry) return { error: "login expired or invalid", status: 404 };
+    if (!entry.user_token) {
+      return {
+        data: {
+          status: "pending",
+          login_id,
+          provider: entry.provider,
+        },
+      };
+    }
+    return {
+      data: {
+        status: "done",
+        login_id,
+        provider: entry.provider,
+        user_token: entry.user_token,
+        user_id: entry.provider === "local" ? LOCAL_USER_ID : undefined,
+      },
+    };
   }
 
   /**
@@ -772,37 +799,37 @@ export class AccountsService extends InstallableService {
   }
 
   /**
-   * 创建 OAuth state。
+   * 创建登录 state。
    */
-  private async createOAuthState(city_id: string, provider: OAuthProviderId, state: string): Promise<void> {
+  private async createLoginState(city_id: string, provider: string, state: string, user_token = ""): Promise<void> {
     await runPrepared(
-      this.rawPrepare(`INSERT INTO ${ACCOUNTS_OAUTH_STATE_TABLE} (state, city_id, provider, user_token, created_at) VALUES (?, ?, ?, ?, ?)`),
-      [state, city_id, provider, "", Date.now()],
+      this.rawPrepare(`INSERT INTO ${ACCOUNTS_LOGIN_STATE_TABLE} (state, city_id, provider, user_token, created_at) VALUES (?, ?, ?, ?, ?)`),
+      [state, city_id, provider, user_token, Date.now()],
     );
   }
 
   /**
-   * 读取 OAuth state。
+   * 读取登录 state。
    */
-  private async readOAuthState(state: string): Promise<OAuthStateRow | null> {
+  private async readLoginState(state: string): Promise<LoginStateRow | null> {
     const row = await readPreparedFirst(
-      this.rawPrepare(`SELECT state, city_id, provider, user_token, created_at FROM ${ACCOUNTS_OAUTH_STATE_TABLE} WHERE state = ?`),
+      this.rawPrepare(`SELECT state, city_id, provider, user_token, created_at FROM ${ACCOUNTS_LOGIN_STATE_TABLE} WHERE state = ?`),
       [state],
-    ) as OAuthStateRow | null;
+    ) as LoginStateRow | null;
     if (!row) return null;
-    if (Date.now() - Number(row.created_at) > OAUTH_STATE_TTL_MS) {
-      await runPrepared(this.rawPrepare(`DELETE FROM ${ACCOUNTS_OAUTH_STATE_TABLE} WHERE state = ?`), [state]);
+    if (Date.now() - Number(row.created_at) > LOGIN_STATE_TTL_MS) {
+      await runPrepared(this.rawPrepare(`DELETE FROM ${ACCOUNTS_LOGIN_STATE_TABLE} WHERE state = ?`), [state]);
       return null;
     }
     return row;
   }
 
   /**
-   * 回填 OAuth state 的 City token。
+   * 回填登录 state 的 City token。
    */
-  private async resolveOAuthState(state: string, user_token: string): Promise<void> {
+  private async resolveLoginState(state: string, user_token: string): Promise<void> {
     await runPrepared(
-      this.rawPrepare(`UPDATE ${ACCOUNTS_OAUTH_STATE_TABLE} SET user_token = ? WHERE state = ?`),
+      this.rawPrepare(`UPDATE ${ACCOUNTS_LOGIN_STATE_TABLE} SET user_token = ? WHERE state = ?`),
       [user_token, state],
     );
   }
@@ -868,58 +895,10 @@ export class AccountsService extends InstallableService {
     );
   }
 
-  /**
-   * 管理侧用户列表。
-   */
-  private async listUsers(): Promise<Record<string, unknown>[]> {
-    return await readPreparedAll(
-      this.rawPrepare(
-        `SELECT
-          u.id as user_id,
-          u.email as auth_email,
-          u.emailVerified as email_verified,
-          u.name as auth_name,
-          u.image as auth_image,
-          u.createdAt as auth_created_at,
-          u.updatedAt as auth_updated_at,
-          p.email as profile_email,
-          p.display_name,
-          p.avatar_url,
-          p.bio,
-          p.created_at as profile_created_at,
-          p.updated_at as profile_updated_at
-        FROM ${AUTH_USER_TABLE} u
-        LEFT JOIN ${USER_PROFILE_TABLE} p ON p.user_id = u.id
-        ORDER BY u.createdAt DESC`,
-      ),
-      [],
-    );
-  }
-
-  /**
-   * 管理侧 session 列表。
-   */
-  private async listSessions(): Promise<Record<string, unknown>[]> {
-    const rows = await readPreparedAll(
-      this.rawPrepare(`SELECT id as session_id, userId as user_id, expiresAt as expires_at, createdAt as created_at FROM ${AUTH_SESSION_TABLE} ORDER BY expiresAt DESC`),
-      [],
-    );
-    return rows.map((row) => ({
-      ...row,
-      status: new Date(String(row.expires_at ?? "")).getTime() > Date.now() ? "active" : "expired",
-    }));
-  }
-
-  /**
-   * 创建原始 statement。
-   */
   private rawPrepare(sql: string): any {
     return (this._raw as any).prepare(sql);
   }
 
-  /**
-   * 读取 City 注入的 Drizzle database。
-   */
   private readDrizzleDb(): NonNullable<typeof this._db> {
     if (!this._db) {
       throw new Error("Accounts service database is not ready");
@@ -927,103 +906,3 @@ export class AccountsService extends InstallableService {
     return this._db;
   }
 }
-
-/**
- * 生成带前缀的稳定 ID。
- */
-function prefixedId(prefix: string): string {
-  return `${prefix}_${crypto.randomUUID().replaceAll("-", "")}`;
-}
-
-/**
- * 生成 URL-safe token。
- */
-function randomToken(size: number): string {
-  const buf = new Uint8Array(size);
-  crypto.getRandomValues(buf);
-  let binary = "";
-  for (let i = 0; i < buf.length; i++) binary += String.fromCharCode(buf[i]);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-/**
- * 归一化布尔值到 SQLite 整数。
- */
-function normalizeBool(value: unknown): number {
-  return value ? 1 : 0;
-}
-
-/**
- * 读取错误消息。
- */
-function readErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-/**
- * 转义 HTML。
- */
-function escapeHTML(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll("\"", "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-// ===========================================================================
-// OAuth 成功页面
-// ===========================================================================
-
-/**
- * OAuth 登录失败页面。
- */
-const OAUTH_ERROR_HTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login Failed — Downcity</title>
-<style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-         display: flex; justify-content: center; align-items: center;
-         min-height: 100vh; margin: 0; background: #0a0a0a; color: #e0e0e0; }
-  .box { text-align: center; padding: 2rem; }
-  h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: #ff7c7c; }
-  p { color: #888; font-size: 0.9rem; }
-</style>
-</head>
-<body>
-<div class="box">
-  <h1>✗ Login Failed</h1>
-  <p>Error: {{ERROR}}</p>
-</div>
-</body>
-</html>`;
-
-/**
- * OAuth 登录成功页面。
- */
-const OAUTH_SUCCESS_HTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login Successful — Downcity</title>
-<style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-         display: flex; justify-content: center; align-items: center;
-         min-height: 100vh; margin: 0; background: #0a0a0a; color: #e0e0e0; }
-  .box { text-align: center; padding: 2rem; }
-  h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: #7cff7c; }
-  p { color: #888; font-size: 0.9rem; }
-</style>
-</head>
-<body>
-<div class="box">
-  <h1>✓ Login Successful</h1>
-  <p>You can close this window and return to the CLI.</p>
-</div>
-</body>
-</html>`;

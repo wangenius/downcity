@@ -87,20 +87,20 @@ const providers = await guest.service("accounts").get("providers");
 
 再展示“微信登录”入口。
 
-发起登录时：
+发起登录时统一调用 `login/start`：
 
 ```ts
-const start = await guest.service("accounts").action("oauth/start").invoke({
+const start = await guest.service("accounts").action("login/start").invoke({
   provider: "wechat",
   city_id: "city_demo",
 });
 ```
 
-然后把用户带到返回的 `start.url`，再通过 `oauth/result` 轮询或确认结果：
+当 `start.status === "redirect_required"` 时，把用户带到返回的 `start.url`。OAuth callback 完成后，通过 `login/result` 轮询或确认结果：
 
 ```ts
-const result = await guest.service("accounts").get("oauth/result", {
-  state: start.state,
+const result = await guest.service("accounts").get("login/result", {
+  login_id: start.login_id,
 });
 ```
 

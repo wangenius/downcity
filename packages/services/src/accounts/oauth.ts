@@ -15,46 +15,6 @@ import type { BetterAuthOptions } from "better-auth";
 export type OAuthProviderId = "github" | "google" | "wechat";
 
 /**
- * Accounts 登录方式标识。
- */
-export type AccountsProviderId = "email" | OAuthProviderId;
-
-/**
- * Accounts 登录方式返回项。
- */
-export interface AccountsProviderItem {
-  /**
-   * 登录方式唯一标识。
-   */
-  id: AccountsProviderId;
-
-  /**
-   * 登录方式类别。
-   */
-  type: "password" | "oauth";
-
-  /**
-   * 当前 City 是否实际启用该登录方式。
-   */
-  enabled: boolean;
-
-  /**
-   * 邮箱登录是否开放。
-   */
-  login_enabled?: boolean;
-
-  /**
-   * 邮箱注册是否开放。
-   */
-  register_enabled?: boolean;
-
-  /**
-   * 关闭原因。
-   */
-  reason?: "not_configured" | "not_supported";
-}
-
-/**
  * 单个 OAuth provider 的运行时配置。
  */
 export interface OAuthProviderConfig {

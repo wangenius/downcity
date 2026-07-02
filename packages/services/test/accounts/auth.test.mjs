@@ -45,24 +45,44 @@ test("accountsService registers users, logs in, and issues Federation tokens", a
       assert.equal(verified.user_token.startsWith("ub_"), true)
     }
 
-    const loginResponse = await base.fetch(jsonRequest("/v1/accounts/login", {
-      email: "user@example.com",
-      password: "password123",
+    const authStartResponse = await base.fetch(jsonRequest("/v1/accounts/login/start", {
+      provider: "email",
       city_id: city.city_id,
     }))
-    assert.equal(loginResponse.status, 200)
-    const loggedIn = await loginResponse.json()
-    assert.equal(loggedIn.user_token.startsWith("ub_"), true)
-    assert.equal(loggedIn.user_id, registered.user_id)
+    assert.equal(authStartResponse.status, 200)
+    const authStarted = await authStartResponse.json()
+    assert.equal(authStarted.status, "input_required")
+    assert.equal(authStarted.provider, "email")
+    assert.equal(typeof authStarted.login_id, "string")
+    assert.equal(authStarted.inputs.length, 2)
+
+    const authContinueResponse = await base.fetch(jsonRequest("/v1/accounts/login/continue", {
+      login_id: authStarted.login_id,
+      input: {
+        email: "user@example.com",
+        password: "password123",
+      },
+    }))
+    assert.equal(authContinueResponse.status, 200)
+    const authContinued = await authContinueResponse.json()
+    assert.equal(authContinued.status, "done")
+    assert.equal(authContinued.login_id, authStarted.login_id)
+
+    const authResultResponse = await base.fetch(new Request(`http://localhost/v1/accounts/login/result?login_id=${authStarted.login_id}`))
+    assert.equal(authResultResponse.status, 200)
+    const authResult = await authResultResponse.json()
+    assert.equal(authResult.status, "done")
+    assert.equal(authResult.provider, "email")
+    assert.equal(authResult.user_token.startsWith("ub_"), true)
 
     const meResponse = await base.fetch(new Request("http://localhost/v1/accounts/me", {
       method: "GET",
       headers: {
-        authorization: `Bearer ${loggedIn.user_token}`,
+        authorization: `Bearer ${authResult.user_token}`,
       },
     }))
     assert.equal(meResponse.status, 200)
-    assert.equal((await meResponse.json()).user.user_id, loggedIn.user_id)
+    assert.equal((await meResponse.json()).user.user_id, registered.user_id)
   } finally {
     process.chdir(cwd)
     await fs.rm(tempDir, { recursive: true, force: true })
@@ -89,9 +109,23 @@ test("accountsService reports enabled providers from server state", async () => 
     assert.deepEqual(body.items, [
       {
         id: "email",
-        type: "password",
+        type: "input",
         enabled: true,
         label: "Email",
+        inputs: [
+          {
+            name: "email",
+            type: "text",
+            label: "Email",
+            required: true,
+          },
+          {
+            name: "password",
+            type: "password",
+            label: "Password",
+            required: true,
+          },
+        ],
         login_enabled: true,
         register_enabled: true,
       },
@@ -100,12 +134,14 @@ test("accountsService reports enabled providers from server state", async () => 
         type: "oauth",
         enabled: true,
         label: "GitHub",
+        inputs: [],
       },
       {
         id: "wechat",
         type: "oauth",
         enabled: true,
         label: "WeChat",
+        inputs: [],
       },
     ])
   } finally {
@@ -133,27 +169,37 @@ test("accountsService exposes local login when enabled", async () => {
       items: [
         {
           id: "local",
-          type: "local",
+          type: "input",
           enabled: true,
           label: "Local Account",
+          inputs: [],
           login_enabled: true,
-          login_action: "local/login",
         },
       ],
     })
 
-    const localLoginResponse = await base.fetch(jsonRequest("/v1/accounts/local/login", {
+    const authStartResponse = await base.fetch(jsonRequest("/v1/accounts/login/start", {
+      provider: "local",
       city_id: city.city_id,
     }))
-    assert.equal(localLoginResponse.status, 200)
-    const session = await localLoginResponse.json()
-    assert.equal(session.user_id, "local-user")
-    assert.equal(session.user_token.startsWith("ub_"), true)
+    assert.equal(authStartResponse.status, 200)
+    const authStarted = await authStartResponse.json()
+    assert.equal(authStarted.status, "done")
+    assert.equal(authStarted.provider, "local")
+    assert.equal(typeof authStarted.login_id, "string")
+
+    const authResultResponse = await base.fetch(new Request(`http://localhost/v1/accounts/login/result?login_id=${authStarted.login_id}`))
+    assert.equal(authResultResponse.status, 200)
+    const authResult = await authResultResponse.json()
+    assert.equal(authResult.status, "done")
+    assert.equal(authResult.provider, "local")
+    assert.equal(authResult.user_id, "local-user")
+    assert.equal(authResult.user_token.startsWith("ub_"), true)
 
     const meResponse = await base.fetch(new Request("http://localhost/v1/accounts/me", {
       method: "GET",
       headers: {
-        authorization: `Bearer ${session.user_token}`,
+        authorization: `Bearer ${authResult.user_token}`,
       },
     }))
     assert.equal(meResponse.status, 200)
@@ -203,9 +249,8 @@ test("accountsService does not expose email login without an email provider", as
     assert.equal(providersResponse.status, 200)
     assert.deepEqual(await providersResponse.json(), { items: [] })
 
-    const loginResponse = await base.fetch(jsonRequest("/v1/accounts/login", {
-      email: "user@example.com",
-      password: "password123",
+    const loginResponse = await base.fetch(jsonRequest("/v1/accounts/login/start", {
+      provider: "email",
       city_id: "city_demo",
     }))
     assert.equal(loginResponse.status, 400)
@@ -233,12 +278,15 @@ test("accountsService completes Google OAuth callback and resolves the state tok
       body: { name: "Demo" },
     }))).json()
 
-    const startResponse = await base.fetch(jsonRequest("/v1/accounts/oauth/start", {
+    const startResponse = await base.fetch(jsonRequest("/v1/accounts/login/start", {
       provider: "google",
       city_id: city.city_id,
     }))
     assert.equal(startResponse.status, 200)
     const start = await startResponse.json()
+    assert.equal(start.status, "redirect_required")
+    assert.equal(typeof start.login_id, "string")
+    assert.equal(start.state, start.login_id)
     assert.equal(typeof start.state, "string")
     assert.equal(start.provider, "google")
     assert.match(start.url, /^https:\/\/accounts\.google\.com\/o\/oauth2\/v2\/auth\?/)
@@ -270,16 +318,17 @@ test("accountsService completes Google OAuth callback and resolves the state tok
     assert.equal(callbackResponse.status, 200)
     assert.match(await callbackResponse.text(), /Login Successful/)
 
-    const resultResponse = await base.fetch(new Request(`http://localhost/v1/accounts/oauth/result?state=${start.state}`))
-    assert.equal(resultResponse.status, 200)
-    const result = await resultResponse.json()
-    assert.equal(result.status, "done")
-    assert.equal(result.user_token.startsWith("ub_"), true)
+    const loginResultResponse = await base.fetch(new Request(`http://localhost/v1/accounts/login/result?login_id=${start.login_id}`))
+    assert.equal(loginResultResponse.status, 200)
+    const loginResult = await loginResultResponse.json()
+    assert.equal(loginResult.status, "done")
+    assert.equal(loginResult.provider, "google")
+    assert.equal(loginResult.user_token.startsWith("ub_"), true)
 
     const meResponse = await base.fetch(new Request("http://localhost/v1/accounts/me", {
       method: "GET",
       headers: {
-        authorization: `Bearer ${result.user_token}`,
+        authorization: `Bearer ${loginResult.user_token}`,
       },
     }))
     assert.equal(meResponse.status, 200)
@@ -310,12 +359,15 @@ test("accountsService completes WeChat website OAuth callback and resolves the s
       body: { name: "Demo" },
     }))).json()
 
-    const startResponse = await base.fetch(jsonRequest("/v1/accounts/oauth/start", {
+    const startResponse = await base.fetch(jsonRequest("/v1/accounts/login/start", {
       provider: "wechat",
       city_id: city.city_id,
     }))
     assert.equal(startResponse.status, 200)
     const start = await startResponse.json()
+    assert.equal(start.status, "redirect_required")
+    assert.equal(typeof start.login_id, "string")
+    assert.equal(start.state, start.login_id)
     assert.equal(typeof start.state, "string")
     assert.equal(start.provider, "wechat")
     assert.match(start.url, /^https:\/\/open\.weixin\.qq\.com\/connect\/qrconnect\?/)
@@ -359,16 +411,17 @@ test("accountsService completes WeChat website OAuth callback and resolves the s
     assert.equal(callbackResponse.status, 200)
     assert.match(await callbackResponse.text(), /Login Successful/)
 
-    const resultResponse = await base.fetch(new Request(`http://localhost/v1/accounts/oauth/result?state=${start.state}`))
-    assert.equal(resultResponse.status, 200)
-    const result = await resultResponse.json()
-    assert.equal(result.status, "done")
-    assert.equal(result.user_token.startsWith("ub_"), true)
+    const loginResultResponse = await base.fetch(new Request(`http://localhost/v1/accounts/login/result?login_id=${start.login_id}`))
+    assert.equal(loginResultResponse.status, 200)
+    const loginResult = await loginResultResponse.json()
+    assert.equal(loginResult.status, "done")
+    assert.equal(loginResult.provider, "wechat")
+    assert.equal(loginResult.user_token.startsWith("ub_"), true)
 
     const meResponse = await base.fetch(new Request("http://localhost/v1/accounts/me", {
       method: "GET",
       headers: {
-        authorization: `Bearer ${result.user_token}`,
+        authorization: `Bearer ${loginResult.user_token}`,
       },
     }))
     assert.equal(meResponse.status, 200)

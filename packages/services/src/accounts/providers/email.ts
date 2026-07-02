@@ -22,9 +22,23 @@ export function emailAccountsProvider(options: EmailAccountsProviderOptions): Ac
       const enabled = options.enabled ? options.enabled(ctx) : true;
       return {
         id: "email",
-        type: "password",
+        type: "input",
         enabled,
         label,
+        inputs: [
+          {
+            name: "email",
+            type: "text",
+            label: "Email",
+            required: true,
+          },
+          {
+            name: "password",
+            type: "password",
+            label: "Password",
+            required: true,
+          },
+        ],
         login_enabled: enabled,
         register_enabled: enabled,
         reason: enabled ? undefined : "not_configured",

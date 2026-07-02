@@ -30,8 +30,8 @@ await openai.chat.completions.create({ model: "deepseek-v4-flash", messages: [..
 // 自定义 Service
 const result = await client.service("translate").action("zh2en").invoke({ text: "你好" });
 
-// GET action（如轮询 OAuth 结果）
-const oauth = await client.service("accounts").get("oauth/result", { state: "state_xxx" });
+// GET action（如读取登录结果）
+const login = await client.service("accounts").get("login/result", { login_id: "login_xxx" });
 ```
 
 创建 city、暂停 city、签发 `user_token` 和维护 Runtime env 都属于可信环境动作，用 `Admin City` 完成，不放到产品前端。

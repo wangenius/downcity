@@ -137,8 +137,8 @@ The two common patterns are:
 
 ### Pattern B: the accounts service owns login
 
-- the frontend uses a guest `User City` to call `accounts.login/register`
-- the accounts service returns `user_token` directly
+- the frontend uses a guest `User City` to run `accounts.login/start -> login/continue -> login/result` or the registration flow
+- the accounts service returns `user_token` through `login/result`
 - the frontend switches to a normal `User City`
 
 So:

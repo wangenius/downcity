@@ -29,9 +29,9 @@ Admin GET                GET  /v1/{service}/{action}
 | `/v1/ai/video` | `POST` | 视频生成 |
 | `/v1/ai/chat/completions` | `POST` | OpenAI 兼容端点 |
 | `/v1/ai/models` | `GET` | 按身份返回模型目录 |
-| `/v1/accounts/login` | `POST` | Accounts 登录 |
-| `/v1/accounts/oauth/start` | `POST` | 发起 OAuth |
-| `/v1/accounts/oauth/result` | `GET` | 轮询 OAuth 结果 |
+| `/v1/accounts/login/start` | `POST` | 创建登录流程；返回 input、redirect 或 done |
+| `/v1/accounts/login/continue` | `POST` | 提交 input 登录步骤 |
+| `/v1/accounts/login/result` | `GET` | 读取登录结果和 `user_token` |
 | `/v1/accounts/oauth/callback` | `GET` | 第三方 OAuth 回调入口 |
 | `/v1/{service}/{action}` | `POST` | 通用 Action 调用 |
 | `/v1/services` | `GET` | Service 列表 |

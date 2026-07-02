@@ -16,10 +16,10 @@ import type {
 } from "@/city/types/CitySession.js";
 import type {
   AccountsProviderItem,
+  AuthContinueResult,
+  AuthStartResult,
   AuthOption,
-  LoginResult,
-  OAuthPollResult,
-  OAuthStartResult,
+  LoginPollResult,
   RegisterResult,
   CityAuthMethod,
   VerifyResult,
@@ -65,7 +65,7 @@ function mapProvidersToOptions(items: AccountsProviderItem[]): AuthOption[] {
   const options: AuthOption[] = [];
   for (const item of items) {
     if (!item.enabled) continue;
-    if (item.id === "email" && item.type === "password") {
+    if (item.id === "email" && item.type === "input") {
       if (item.login_enabled !== false) {
         options.push({
           title: "Email Login",
@@ -82,12 +82,21 @@ function mapProvidersToOptions(items: AccountsProviderItem[]): AuthOption[] {
       }
       continue;
     }
+    if (item.type === "input" && typeof item.id === "string" && item.id.trim()) {
+      const provider = item.id.trim();
+      options.push({
+        title: item.label?.trim() || formatProviderLabel(provider),
+        value: `input:${provider}`,
+        description: `Sign in with ${item.label?.trim() || formatProviderLabel(provider)}`,
+      });
+      continue;
+    }
     if (item.type === "oauth" && typeof item.id === "string" && item.id.trim()) {
       const provider = item.id.trim();
       options.push({
-        title: formatOAuthProviderLabel(provider),
+        title: formatProviderLabel(provider),
         value: `oauth:${provider}`,
-        description: `Sign in with ${formatOAuthProviderLabel(provider)} OAuth`,
+        description: `Sign in with ${formatProviderLabel(provider)} OAuth`,
       });
     }
   }
@@ -147,13 +156,26 @@ async function emailLogin(input: CityLoginInput): Promise<CityUserSession | null
   if (!email || !email.includes("@") || !password) return null;
 
   const client = new City({ role: "user", federation_url: input.federation_url });
-  const result = await client.service("accounts").action("login").invoke<LoginResult>({
-    email,
-    password,
+  const accounts = client.service("accounts");
+  const started = await accounts.action("login/start").invoke<AuthStartResult>({
+    provider: "email",
     city_id: input.city_id,
   });
-  if (result.error || !result.user_token) {
-    throw new Error(result.error || "login failed: no token");
+  if (started.error || started.status !== "input_required" || !started.login_id) {
+    throw new Error(started.error || "failed to start email login");
+  }
+
+  const continued = await accounts.action("login/continue").invoke<AuthContinueResult>({
+    login_id: started.login_id,
+    input: { email, password },
+  });
+  if (continued.error || continued.status !== "done") {
+    throw new Error(continued.error || "login failed");
+  }
+
+  const result = await readLoginResult(client, started.login_id);
+  if (!result || result.error || !result.user_token) {
+    throw new Error(result?.error || "login failed: no token");
   }
   return await buildVerifiedUserSession({
     ...input,
@@ -232,11 +254,11 @@ async function oauthAuth(
 ): Promise<CityUserSession | null> {
   const client = new City({ role: "user", federation_url: input.federation_url });
   const accounts = client.service("accounts");
-  const started = await accounts.action("oauth/start").invoke<OAuthStartResult>({
+  const started = await accounts.action("login/start").invoke<AuthStartResult>({
     provider,
     city_id: input.city_id,
   });
-  if (started.error || !started.url || !started.state) {
+  if (started.error || started.status !== "redirect_required" || !started.url || !started.login_id) {
     throw new Error(started.error || "failed to start OAuth");
   }
 
@@ -244,12 +266,12 @@ async function oauthAuth(
   if (options?.silent !== true) {
     emitCliBlock({
       tone: opened ? "info" : "warning",
-      title: `OAuth: ${formatOAuthProviderLabel(provider)}`,
+      title: `OAuth: ${formatProviderLabel(provider)}`,
       note: opened ? "Waiting for browser authorization..." : started.url,
     });
   }
 
-  const result = await pollOAuth(client, started.state);
+  const result = await pollLoginResult(client, started.login_id);
   if (!result || result.error || !result.user_token) {
     throw new Error(result?.error || "OAuth failed");
   }
@@ -261,19 +283,46 @@ async function oauthAuth(
   });
 }
 
-async function pollOAuth(client: City, state: string): Promise<OAuthPollResult | null> {
-  const accounts = client.service("accounts");
+async function inputAuth(
+  input: CityLoginInput,
+  provider: string,
+): Promise<CityUserSession | null> {
+  const client = new City({ role: "user", federation_url: input.federation_url });
+  const started = await client.service("accounts").action("login/start").invoke<AuthStartResult>({
+    provider,
+    city_id: input.city_id,
+  });
+  if (started.error || started.status !== "done" || !started.login_id) {
+    throw new Error(started.error || "login failed");
+  }
+  const result = await readLoginResult(client, started.login_id);
+  if (!result || result.error || !result.user_token) {
+    throw new Error(result?.error || "login failed: no token");
+  }
+  return await buildVerifiedUserSession({
+    ...input,
+    user_token: result.user_token,
+    user_id: result.user_id,
+    user_label: result.email || result.user_id || provider,
+  });
+}
+
+async function pollLoginResult(client: City, login_id: string): Promise<LoginPollResult | null> {
   for (let index = 0; index < 180; index += 1) {
     try {
-      const result = await accounts.get<OAuthPollResult>("oauth/result", { state });
+      const result = await readLoginResult(client, login_id);
       if (result.error) return result;
       if (result.status === "done") return result;
     } catch {
-      // 关键点（中文）：OAuth result 短暂不可达时继续轮询，避免网络抖动直接中断登录。
+      // 关键点（中文）：登录结果短暂不可达时继续轮询，避免网络抖动直接中断登录。
     }
     await sleep(1000);
   }
-  return { error: "OAuth timed out" };
+  return { error: "login timed out" };
+}
+
+async function readLoginResult(client: City, login_id: string): Promise<LoginPollResult> {
+  return await client.service("accounts").get<LoginPollResult>("login/result", { login_id });
 }
 
 function buildUserSession(input: CityLoginInput & {
@@ -349,7 +398,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function formatOAuthProviderLabel(provider: string): string {
+function formatProviderLabel(provider: string): string {
   const normalized = provider.trim().toLowerCase();
   if (!normalized) return "OAuth";
   if (normalized === "github") return "GitHub";
@@ -373,6 +422,9 @@ export async function performCityUserLogin(
   if (!method) return null;
   if (method.startsWith("oauth:")) {
     return await oauthAuth(input, method.slice("oauth:".length), options);
+  }
+  if (method.startsWith("input:")) {
+    return await inputAuth(input, method.slice("input:".length));
   }
   if (method === "register") {
     return await emailRegister(input, options);

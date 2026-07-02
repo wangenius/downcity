@@ -56,14 +56,21 @@ const guest = new City({
   federation_url: "https://base.example.com",
 });
 
-const session = await guest.service("accounts").action("login").invoke<{
-  user_token: string;
-  user_id?: string;
-  email?: string;
-}>({
-  email: "user@example.com",
-  password: "password123",
+const login = await guest.service("accounts").action("login/start").invoke({
+  provider: "email",
   city_id: "city_xxx",
+});
+
+await guest.service("accounts").action("login/continue").invoke({
+  login_id: login.login_id,
+  input: {
+    email: "user@example.com",
+    password: "password123",
+  },
+});
+
+const session = await guest.service("accounts").get("login/result", {
+  login_id: login.login_id,
 });
 ```
 
@@ -78,9 +85,9 @@ const session = await guest.service("accounts").action("login").invoke<{
 只传 `federation_url`，适合免登录 Action：
 
 - `accounts.register`
-- `accounts.login`
-- `accounts.oauth/start`
-- `accounts.oauth/result`
+- `accounts.login/start`
+- `accounts.login/continue`
+- `accounts.login/result`
 
 ### 用户态阶段
 
@@ -98,12 +105,21 @@ const guest = new City({
   federation_url,
 });
 
-const session = await guest.service("accounts").action("login").invoke<{
-  user_token: string;
-}>({
-  email: "user@example.com",
-  password: "password123",
+const login = await guest.service("accounts").action("login/start").invoke({
+  provider: "email",
   city_id: "city_xxx",
+});
+
+await guest.service("accounts").action("login/continue").invoke({
+  login_id: login.login_id,
+  input: {
+    email: "user@example.com",
+    password: "password123",
+  },
+});
+
+const session = await guest.service("accounts").get("login/result", {
+  login_id: login.login_id,
 });
 
 const user = new City({
@@ -313,10 +329,21 @@ const checkout = await client.payment.method("stripe").invoke({
 ### accounts
 
 ```ts
-const session = await guest.service("accounts").action("login").invoke({
-  email: "user@example.com",
-  password: "password123",
+const login = await guest.service("accounts").action("login/start").invoke({
+  provider: "email",
   city_id: "city_xxx",
+});
+
+await guest.service("accounts").action("login/continue").invoke({
+  login_id: login.login_id,
+  input: {
+    email: "user@example.com",
+    password: "password123",
+  },
+});
+
+const session = await guest.service("accounts").get("login/result", {
+  login_id: login.login_id,
 });
 ```
 
@@ -372,8 +399,8 @@ const result = await client
 对于 `method: "GET"` 的 action，用 `get()` 传 query：
 
 ```ts
-const result = await client.service("accounts").get("oauth/result", {
-  state: "oauth_state_xxx",
+const result = await client.service("accounts").get("login/result", {
+  login_id: "login_xxx",
 });
 ```
 

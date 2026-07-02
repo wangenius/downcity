@@ -9,7 +9,7 @@
  * - 业务侧只需要从一个包完成导入
  */
 
-export { accountsOAuthStates, userProfiles } from "./accounts/schema.js";
+export { accountsLoginStates, userProfiles } from "./accounts/schema.js";
 export {
   AccountsService,
   emailAccountsProvider,
@@ -20,14 +20,28 @@ export {
 } from "./accounts/index.js";
 export type { AccountsServiceOptions } from "./accounts/index.js";
 export type {
+  AccountsAuthFlow,
+  AccountsAuthInputField,
+  AccountsAuthInputType,
   AccountsEmailProvider,
   AccountsEmailSendParams,
+  AccountsLoginContinueRequest,
+  AccountsLoginContinueResult,
+  AccountsLoginDoneResult,
+  AccountsLoginInputRequiredResult,
+  AccountsLoginPendingResult,
+  AccountsLoginRedirectRequiredResult,
+  AccountsLoginResult,
+  AccountsLoginResultRequest,
+  AccountsLoginStartRequest,
+  AccountsLoginStartResult,
+  AccountsLoginStatus,
   AccountsOAuthProvider,
   AccountsProvider,
   AccountsProviderContext,
   AccountsProviderItem,
+  AccountsProviderKind,
   AccountsProviderReason,
-  AccountsProviderType,
   EmailAccountsProviderOptions,
   OAuthAccountsProviderOptions,
 } from "./accounts/types.js";

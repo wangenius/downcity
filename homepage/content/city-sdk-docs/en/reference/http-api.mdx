@@ -31,9 +31,9 @@ Each action declares which identities it allows. The default is `["user"]`; `[]`
 | `/v1/ai/tts` | `POST` | Text-to-speech | SDK |
 | `/v1/ai/asr` | `POST` | Speech recognition | SDK |
 | `/v1/ai/chat/completions` | `POST` | OpenAI-compatible endpoint | OpenAI |
-| `/v1/accounts/login` | `POST` | Accounts login | — |
-| `/v1/accounts/oauth/start` | `POST` | Start OAuth | — |
-| `/v1/accounts/oauth/result` | `GET` | Poll OAuth result | — |
+| `/v1/accounts/login/start` | `POST` | Create a login attempt; returns input, redirect, or done | — |
+| `/v1/accounts/login/continue` | `POST` | Submit an input login step | — |
+| `/v1/accounts/login/result` | `GET` | Read the login result and `user_token` | — |
 | `/v1/accounts/oauth/callback` | `GET` | Third-party OAuth callback entry | — |
 | `/v1/services` | `GET` | Registered service list | — |
 | `/v1/{service}/{action}` | `POST` | Generic action call | — |

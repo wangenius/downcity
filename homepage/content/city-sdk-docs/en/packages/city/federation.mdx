@@ -139,7 +139,7 @@ await admin.listServices();
 
 Local HTTP uses the same product-side model as remote HTTP: `Admin City` uses `admin_secret_key`, public actions can be called as guest, and authenticated user actions require a normal `user_token`.
 
-If `AccountsService` is configured with `local_login: true`, `/v1/accounts/providers` only returns the local login method. Call `accounts/local/login` with `city_id` to receive a normal `user_token`, then recreate or update User City with `city_id + user_token`.
+If `AccountsService` is configured with `local_login: true`, `/v1/accounts/providers` only returns the local login method. Call `accounts.login/start` with `provider: "local"` and `city_id` to receive a `login_id`, then read the normal `user_token` from `accounts.login/result` and recreate or update User City with `city_id + user_token`.
 
 ## Why Federation only takes db
 

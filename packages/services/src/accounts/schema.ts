@@ -3,7 +3,7 @@
  *
  * 负责定义服务自身维护的业务资料表：
  * - user_profile：给产品层直接展示的用户资料
- * - oauth_state：CLI / 轮询式 OAuth 流程的临时 state
+ * - login_state：CLI / 轮询式登录流程的临时 state
  */
 
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
@@ -14,9 +14,9 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 export const USER_PROFILE_TABLE = "auth_profiles";
 
 /**
- * Accounts 服务 OAuth state 表名。
+ * Accounts 服务登录 state 表名。
  */
-export const ACCOUNTS_OAUTH_STATE_TABLE = "service_accounts_oauth_states";
+export const ACCOUNTS_LOGIN_STATE_TABLE = "service_accounts_login_states";
 
 /**
  * better-auth 用户表名。
@@ -81,11 +81,11 @@ export interface UserProfileRow extends Record<string, unknown> {
 }
 
 /**
- * OAuth 轮询 state 记录。
+ * 登录轮询 state 记录。
  */
-export interface AccountsOAuthStateRow extends Record<string, unknown> {
+export interface AccountsLoginStateRow extends Record<string, unknown> {
   /**
-   * OAuth state。
+   * 登录流程 ID；OAuth 流程中也作为 OAuth state。
    */
   state: string;
 
@@ -150,9 +150,9 @@ export const userProfiles = sqliteTable(USER_PROFILE_TABLE, {
   updated_at: text("updated_at").notNull(),
 });
 
-export const accountsOAuthStates = sqliteTable(ACCOUNTS_OAUTH_STATE_TABLE, {
+export const accountsLoginStates = sqliteTable(ACCOUNTS_LOGIN_STATE_TABLE, {
   /**
-   * OAuth state。
+   * 登录流程 ID；OAuth 流程中也作为 OAuth state。
    */
   state: text("state").primaryKey(),
 

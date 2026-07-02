@@ -87,20 +87,20 @@ If the response contains:
 
 then render a WeChat login entry.
 
-To start login:
+Start login through the unified `login/start` entry:
 
 ```ts
-const start = await guest.service("accounts").action("oauth/start").invoke({
+const start = await guest.service("accounts").action("login/start").invoke({
   provider: "wechat",
   city_id: "city_demo",
 });
 ```
 
-Then send the user to `start.url`, and use `oauth/result` to poll or confirm the result:
+When `start.status === "redirect_required"`, send the user to `start.url`. After the OAuth callback completes, use `login/result` to poll or confirm the result:
 
 ```ts
-const result = await guest.service("accounts").get("oauth/result", {
-  state: start.state,
+const result = await guest.service("accounts").get("login/result", {
+  login_id: start.login_id,
 });
 ```
 

@@ -1,21 +1,24 @@
 ---
-title: OAuth and Session
-description: "Where OAuth entry points, sessions, me, and logout sit in the downcity flow of @downcity/services."
+title: Login and Session
+description: "Where the unified login entry, OAuth callback, sessions, me, and logout sit in the downcity flow of @downcity/services."
 ---
 
 The accounts service owns the shared account tables, better-auth runtime, OAuth callback, sessions, profiles, and City `user_token` issuance. Concrete login methods are provider-driven.
 
-## How to think about the OAuth entry points
+## How to think about login entry points
 
-There are usually two phases:
+Product login is a unified state machine:
 
 - `providers`
-- `oauth/start`
-- `oauth/result`
+- `login/start`
+- `login/continue`
+- `login/result`
 
-In a typical downcity flow, `providers` tells the frontend which login methods are actually enabled on the current City, `oauth/start` begins the OAuth flow, and `oauth/result` confirms or polls for the result.
+In a typical downcity flow, `providers` tells the frontend which login methods are actually enabled on the current City and whether each method uses the `oauth` or `input` flow. `login/start` creates a login attempt and returns the next step. `login/continue` submits input for input-based methods. `login/result` is the single place to read the final `user_token`.
 
 `GET /v1/accounts/providers` is a client-facing enabled list. Providers that are mounted in code but missing required env or runtime configuration are not returned. Use the Federation env catalog or admin workspace to discover what still needs to be configured.
+
+The `oauth` flow returns an authorization URL from `login/start`. The `input` flow returns the current step `inputs` from `login/start`; email uses `email/password`. Local Account is also an input flow, but with an empty `inputs` array, and `login/start` immediately returns `status: "done"`. In every case, read the token from `login/result`.
 
 The official accounts service can expose email, GitHub, Google, and WeChat Website App login depending on mounted providers and server-side configuration. The frontend should always trust `providers` instead of hardcoding login buttons.
 

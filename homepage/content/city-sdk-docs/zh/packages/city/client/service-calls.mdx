@@ -54,7 +54,9 @@ service 不是另一套 API，它仍然是 City 里的 service。
 所以调用方式仍然一样：
 
 ```ts
-await client.service("accounts").action("login").invoke(...)
+await client.service("accounts").action("login/start").invoke(...)
+await client.service("accounts").action("login/continue").invoke(...)
+await client.service("accounts").get("login/result", ...)
 await client.service("usage").get("me")
 await client.service("payment").get("methods")
 ```

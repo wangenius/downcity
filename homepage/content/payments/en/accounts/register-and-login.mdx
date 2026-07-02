@@ -11,7 +11,7 @@ Before rendering an email form, ask the server which providers are enabled:
 const providers = await guest.service("accounts").get("providers");
 ```
 
-Render email registration or login only when the response contains an enabled `email` provider.
+Render email registration or login only when the response contains an enabled `email` provider with `type: "input"`. The form fields can come directly from that provider's `inputs`.
 
 ## register
 
@@ -26,10 +26,21 @@ const session = await guest.service("accounts").action("register").invoke({
 ## login
 
 ```ts
-const session = await guest.service("accounts").action("login").invoke({
-  email: "user@example.com",
-  password: "password123",
+const start = await guest.service("accounts").action("login/start").invoke({
+  provider: "email",
   city_id: "city_demo",
+});
+
+await guest.service("accounts").action("login/continue").invoke({
+  login_id: start.login_id,
+  input: {
+    email: "user@example.com",
+    password: "password123",
+  },
+});
+
+const session = await guest.service("accounts").get("login/result", {
+  login_id: start.login_id,
 });
 ```
 

@@ -9,7 +9,7 @@
 /**
  * 登录方式。
  */
-export type CityAuthMethod = "login" | "register" | `oauth:${string}`;
+export type CityAuthMethod = "login" | "register" | `oauth:${string}` | `input:${string}`;
 
 /**
  * City accounts provider 描述。
@@ -24,6 +24,36 @@ export interface AccountsProviderItem {
    * 登录方式类型。
    */
   type?: string;
+
+  /**
+   * 登录方式展示名称。
+   */
+  label?: string;
+
+  /**
+   * 当前登录方式需要提前输入的字段。
+   */
+  inputs?: {
+    /**
+     * 输入字段名称。
+     */
+    name?: string;
+
+    /**
+     * 输入字段类型。
+     */
+    type?: string;
+
+    /**
+     * 输入字段展示名称。
+     */
+    label?: string;
+
+    /**
+     * 是否必填。
+     */
+    required?: boolean;
+  }[];
 
   /**
    * 当前方式是否启用。
@@ -59,31 +89,6 @@ export interface AuthOption {
    * 选项说明。
    */
   description: string;
-}
-
-/**
- * email login 结果。
- */
-export interface LoginResult {
-  /**
-   * City user token。
-   */
-  user_token?: string;
-
-  /**
-   * 用户 ID。
-   */
-  user_id?: string;
-
-  /**
-   * 用户 email。
-   */
-  email?: string;
-
-  /**
-   * 服务端错误信息。
-   */
-  error?: string;
 }
 
 /**
@@ -137,9 +142,24 @@ export interface VerifyResult {
 }
 
 /**
- * OAuth 启动结果。
+ * 统一登录入口结果。
  */
-export interface OAuthStartResult {
+export interface AuthStartResult {
+  /**
+   * 登录状态。
+   */
+  status?: "input_required" | "redirect_required" | "pending" | "done";
+
+  /**
+   * 登录流程 ID。
+   */
+  login_id?: string;
+
+  /**
+   * provider ID。
+   */
+  provider?: string;
+
   /**
    * OAuth 授权 URL。
    */
@@ -151,17 +171,52 @@ export interface OAuthStartResult {
   state?: string;
 
   /**
+   * City user token。
+   */
+  user_token?: string;
+
+  /**
+   * 用户 ID。
+   */
+  user_id?: string;
+
+  /**
+   * 用户 email。
+   */
+  email?: string;
+
+  /**
    * 服务端错误信息。
    */
   error?: string;
 }
 
 /**
- * OAuth 轮询结果。
+ * 登录流程继续结果。
  */
-export interface OAuthPollResult {
+export interface AuthContinueResult {
   /**
-   * OAuth 状态。
+   * 登录状态。
+   */
+  status?: "input_required" | "pending" | "done";
+
+  /**
+   * 登录流程 ID。
+   */
+  login_id?: string;
+
+  /**
+   * 服务端错误信息。
+   */
+  error?: string;
+}
+
+/**
+ * 登录结果轮询结果。
+ */
+export interface LoginPollResult {
+  /**
+   * 登录状态。
    */
   status?: string;
 

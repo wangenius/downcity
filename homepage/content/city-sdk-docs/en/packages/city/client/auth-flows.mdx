@@ -26,8 +26,9 @@ Good fit when:
 
 ```txt
 frontend creates a guest User City
-  -> calls accounts.register / login
-  -> service returns user_token
+  -> calls accounts.providers
+  -> calls accounts.login/start / continue / result or the registration flow by provider type
+  -> login/result returns user_token
   -> frontend creates a normal User City
 ```
 
@@ -50,9 +51,10 @@ const guest = new City({
 At this stage it is usually used only for guest-access Actions such as:
 
 - `accounts.register`
-- `accounts.login`
-- `accounts.oauth/start`
-- `accounts.oauth/result`
+- `accounts.providers`
+- `accounts.login/start`
+- `accounts.login/continue`
+- `accounts.login/result`
 
 ## Switching to a normal User City
 

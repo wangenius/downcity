@@ -56,14 +56,21 @@ const guest = new City({
   federation_url: "https://base.example.com",
 });
 
-const session = await guest.service("accounts").action("login").invoke<{
-  user_token: string;
-  user_id?: string;
-  email?: string;
-}>({
-  email: "user@example.com",
-  password: "password123",
+const login = await guest.service("accounts").action("login/start").invoke({
+  provider: "email",
   city_id: "city_xxx",
+});
+
+await guest.service("accounts").action("login/continue").invoke({
+  login_id: login.login_id,
+  input: {
+    email: "user@example.com",
+    password: "password123",
+  },
+});
+
+const session = await guest.service("accounts").get("login/result", {
+  login_id: login.login_id,
 });
 ```
 
@@ -78,9 +85,9 @@ It helps to think about `User City` in two phases:
 Pass `federation_url` only. This is for guest-access Actions such as:
 
 - `accounts.register`
-- `accounts.login`
-- `accounts.oauth/start`
-- `accounts.oauth/result`
+- `accounts.login/start`
+- `accounts.login/continue`
+- `accounts.login/result`
 
 ### Logged-in user phase
 
@@ -98,12 +105,21 @@ const guest = new City({
   federation_url,
 });
 
-const session = await guest.service("accounts").action("login").invoke<{
-  user_token: string;
-}>({
-  email: "user@example.com",
-  password: "password123",
+const login = await guest.service("accounts").action("login/start").invoke({
+  provider: "email",
   city_id: "city_xxx",
+});
+
+await guest.service("accounts").action("login/continue").invoke({
+  login_id: login.login_id,
+  input: {
+    email: "user@example.com",
+    password: "password123",
+  },
+});
+
+const session = await guest.service("accounts").get("login/result", {
+  login_id: login.login_id,
 });
 
 const user = new City({
@@ -313,10 +329,21 @@ You do not need a second protocol for services. Just remember:
 ### accounts
 
 ```ts
-const session = await guest.service("accounts").action("login").invoke({
-  email: "user@example.com",
-  password: "password123",
+const login = await guest.service("accounts").action("login/start").invoke({
+  provider: "email",
   city_id: "city_xxx",
+});
+
+await guest.service("accounts").action("login/continue").invoke({
+  login_id: login.login_id,
+  input: {
+    email: "user@example.com",
+    password: "password123",
+  },
+});
+
+const session = await guest.service("accounts").get("login/result", {
+  login_id: login.login_id,
 });
 ```
 
@@ -372,8 +399,8 @@ This is useful when:
 For actions registered with `method: "GET"`, use `get()` and pass query fields:
 
 ```ts
-const result = await client.service("accounts").get("oauth/result", {
-  state: "oauth_state_xxx",
+const result = await client.service("accounts").get("login/result", {
+  login_id: "login_xxx",
 });
 ```
 

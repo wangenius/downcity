@@ -58,6 +58,7 @@ export function oauthAccountsProvider(
         type: "oauth",
         enabled,
         label,
+        inputs: [],
         reason: enabled ? undefined : "not_configured",
       };
     },

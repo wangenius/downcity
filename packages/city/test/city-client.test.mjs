@@ -16,6 +16,18 @@ test("AIInvoker.transport() returns OpenAI-compatible HTTP transport", async () 
   assert.equal(transport.fetch, undefined)
 })
 
+test("City rejects Federation rpc URLs", async () => {
+  assert.throws(
+    () => new City({
+      role: "user",
+      federation_url: "rpc://127.0.0.1:15315",
+      city_id: "city_demo",
+      user_token: "ub_test",
+    }),
+    /http:\/\/ or https:\/\//,
+  )
+})
+
 test("AIInvoker.text() posts to /v1/ai/text", async () => {
   const requests = []
   const msg = { id: "msg_1", role: "assistant", parts: [{ type: "text", text: "hello", state: "done" }] }

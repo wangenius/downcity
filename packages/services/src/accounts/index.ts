@@ -54,8 +54,8 @@ export {
 
 const OAUTH_STATE_TTL_MS = 5 * 60 * 1000;
 const AUTH_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const LOCAL_RPC_USER_ID = "local-rpc-user";
-const LOCAL_RPC_PROVIDER: AccountsProviderItem = {
+const LOCAL_USER_ID = "local-user";
+const LOCAL_PROVIDER: AccountsProviderItem = {
   id: "local",
   type: "local",
   enabled: true,
@@ -84,6 +84,15 @@ export interface AccountsServiceOptions {
    * 当前 City 启用的账号 provider。
    */
   providers?: AccountsProvider[];
+
+  /**
+   * 是否启用本机账户登录。
+   *
+   * 关键说明（中文）
+   * - 开启后 `/providers` 只返回 `local` 登录方式。
+   * - 仅建议在监听 `127.0.0.1` / `localhost` 的本机 Federation HTTP 服务中开启。
+   */
+  local_login?: boolean;
 }
 
 /**
@@ -428,8 +437,8 @@ export class AccountsService extends InstallableService {
       path: "/local/login",
       public: true,
       handler: async (c) => {
-        if (c.transport !== "rpc") {
-          return c.jsonResponse({ error: "local login is only available over rpc transport" }, 404);
+        if (!this.options.local_login) {
+          return c.jsonResponse({ error: "local login is not enabled" }, 404);
         }
 
         const body = await c.json<{ city_id?: string }>();
@@ -440,13 +449,13 @@ export class AccountsService extends InstallableService {
 
         const userToken = await ctx.createUserToken({
           city_id,
-          user_id: LOCAL_RPC_USER_ID,
+          user_id: LOCAL_USER_ID,
           ttl: this.options.token_ttl,
         });
 
         return c.jsonResponse({
           user_token: userToken.user_token,
-          user_id: LOCAL_RPC_USER_ID,
+          user_id: LOCAL_USER_ID,
         });
       },
     });
@@ -455,7 +464,7 @@ export class AccountsService extends InstallableService {
       method: "GET",
       path: "/providers",
       public: true,
-      handler: async (c) => c.jsonResponse({ items: this.listVisibleProviders(c.transport) }),
+      handler: async (c) => c.jsonResponse({ items: this.listVisibleProviders() }),
     });
 
     ctx.route({
@@ -612,11 +621,11 @@ export class AccountsService extends InstallableService {
   }
 
   /**
-   * 根据 transport 返回产品侧可见登录方式。
+   * 返回产品侧可见登录方式。
    */
-  private listVisibleProviders(transport: "http" | "rpc" | undefined): AccountsProviderItem[] {
-    if (transport === "rpc") {
-      return [LOCAL_RPC_PROVIDER];
+  private listVisibleProviders(): AccountsProviderItem[] {
+    if (this.options.local_login) {
+      return [LOCAL_PROVIDER];
     }
     return this.listProviders().filter((item) => item.enabled);
   }

@@ -50,7 +50,7 @@ export interface UserServiceSummary {
 
 /** User City 内部访问层构造参数 */
 export interface UserPactAccessOptions {
-  /** City 的访问入口地址，支持 `http(s)://` 与本机 `rpc://`。 */
+  /** City 的访问入口地址，支持 `http(s)://`。 */
   base_url: string;
   /** 当前 user_token 绑定的 City ID。 */
   city_id?: string;

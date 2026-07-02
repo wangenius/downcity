@@ -12,8 +12,6 @@ import {
 } from "../http.js";
 import {
   create_http_requester,
-  create_rpc_requester,
-  is_rpc_url,
   type CityRequester,
 } from "../requester.js";
 
@@ -35,16 +33,11 @@ export class UserPactAccess {
     this.serverUrl = requiredString(options.base_url, "base_url").replace(/\/+$/, "");
     this.token = readOptional(options.user_token);
     this.city_id = readOptional(options.city_id);
-    this.requester = is_rpc_url(this.serverUrl)
-      ? create_rpc_requester({
-          base_url: this.serverUrl,
-          with_auth: (init) => this.withAuth(init),
-        })
-      : create_http_requester({
-          base_url: this.serverUrl,
-          fetch: options.fetch,
-          with_auth: (init) => this.withAuth(init),
-        });
+    this.requester = create_http_requester({
+      base_url: this.serverUrl,
+      fetch: options.fetch,
+      with_auth: (init) => this.withAuth(init),
+    });
 
     this.ai = new AIInvoker({
       baseUrl: this.serverUrl,

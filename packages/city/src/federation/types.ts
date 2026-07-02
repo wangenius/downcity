@@ -32,7 +32,7 @@ export type FederationTrustedIdentity =
 /**
  * Federation 请求进入运行时的 transport 来源。
  */
-export type FederationRequestTransport = "http" | "rpc";
+export type FederationRequestTransport = "http";
 
 /**
  * 单次请求的运行时执行上下文。
@@ -56,17 +56,12 @@ export interface FederationFetchOptions {
    * 进程内可信身份。
    *
    * 关键点（中文）
-   * - 供本机 RPC / 嵌入式 server 调用使用。
+   * - 供同进程嵌入式 server 调用使用。
    * - HTTP 入口不会从请求内容自动生成该身份。
    */
   trusted_identity?: FederationTrustedIdentity;
   /**
-   * 当前请求来源 transport。
-   *
-   * 关键点（中文）
-   * - HTTP server 默认是 `http`。
-   * - FederationRPC 会传入 `rpc`，便于 service 暴露本机专用能力。
-   */
+  /** 当前请求来源 transport，默认是 `http`。 */
   transport?: FederationRequestTransport;
 }
 

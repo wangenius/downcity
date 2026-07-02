@@ -7,21 +7,12 @@
  */
 
 export { AgentRPC } from "./rpc/AgentRPC.js";
-export { FederationRPC } from "./rpc/FederationRPC.js";
 export { AgentHTTP } from "./http/AgentHTTP.js";
 export type { AgentHttpServerHandle } from "./http/AgentHTTP.js";
-export type {
-  FederationRpcTarget,
-  TrustedFederationRpcIdentity,
-} from "./rpc/FederationRPC.js";
 export type {
   AgentRpcBinding,
   AgentRpcListenOptions,
 } from "./types/AgentRpcBinding.js";
-export type {
-  FederationRpcBinding,
-  FederationRpcListenOptions,
-} from "./types/FederationRpcBinding.js";
 export type {
   AgentHttpBinding,
   AgentHttpListenOptions,

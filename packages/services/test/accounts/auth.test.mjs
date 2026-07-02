@@ -114,30 +114,22 @@ test("accountsService reports enabled providers from server state", async () => 
   }
 })
 
-test("accountsService exposes local login only for RPC transport", async () => {
+test("accountsService exposes local login when enabled", async () => {
   const cwd = process.cwd()
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-accounts-rpc-local-"))
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-accounts-http-local-"))
 
   try {
     process.chdir(tempDir)
-    const { base, adminSecret } = await setupBase(tempDir)
+    const { base, adminSecret } = await setupBase(tempDir, {}, { local_login: true })
 
     const city = await (await base.fetch(adminRequest(adminSecret, {
       path: "/v1/cities/create",
-      body: { name: "RPC Demo" },
+      body: { name: "Local Demo" },
     }))).json()
 
-    const httpProvidersResponse = await base.fetch(new Request("http://localhost/v1/accounts/providers"))
-    assert.equal(httpProvidersResponse.status, 200)
-    const httpProviders = await httpProvidersResponse.json()
-    assert.ok(httpProviders.items.some((item) => item.id === "email"))
-    assert.equal(httpProviders.items.some((item) => item.id === "local"), false)
-
-    const rpcProvidersResponse = await base.fetch(new Request("http://localhost/v1/accounts/providers"), {
-      transport: "rpc",
-    })
-    assert.equal(rpcProvidersResponse.status, 200)
-    assert.deepEqual(await rpcProvidersResponse.json(), {
+    const localProvidersResponse = await base.fetch(new Request("http://localhost/v1/accounts/providers"))
+    assert.equal(localProvidersResponse.status, 200)
+    assert.deepEqual(await localProvidersResponse.json(), {
       items: [
         {
           id: "local",
@@ -150,19 +142,12 @@ test("accountsService exposes local login only for RPC transport", async () => {
       ],
     })
 
-    const httpLoginResponse = await base.fetch(jsonRequest("/v1/accounts/local/login", {
+    const localLoginResponse = await base.fetch(jsonRequest("/v1/accounts/local/login", {
       city_id: city.city_id,
     }))
-    assert.equal(httpLoginResponse.status, 404)
-
-    const rpcLoginResponse = await base.fetch(jsonRequest("/v1/accounts/local/login", {
-      city_id: city.city_id,
-    }), {
-      transport: "rpc",
-    })
-    assert.equal(rpcLoginResponse.status, 200)
-    const session = await rpcLoginResponse.json()
-    assert.equal(session.user_id, "local-rpc-user")
+    assert.equal(localLoginResponse.status, 200)
+    const session = await localLoginResponse.json()
+    assert.equal(session.user_id, "local-user")
     assert.equal(session.user_token.startsWith("ub_"), true)
 
     const meResponse = await base.fetch(new Request("http://localhost/v1/accounts/me", {
@@ -172,7 +157,7 @@ test("accountsService exposes local login only for RPC transport", async () => {
       },
     }))
     assert.equal(meResponse.status, 200)
-    assert.equal((await meResponse.json()).user.user_id, "local-rpc-user")
+    assert.equal((await meResponse.json()).user.user_id, "local-user")
   } finally {
     process.chdir(cwd)
     await fs.rm(tempDir, { recursive: true, force: true })
@@ -398,11 +383,12 @@ test("accountsService completes WeChat website OAuth callback and resolves the s
   }
 })
 
-async function setupBase(tempDir, env = {}) {
+async function setupBase(tempDir, env = {}, accountsOptions = {}) {
   const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
   const base = new Federation({ db })
   base.use(new AccountsService({
     token_ttl: "7d",
+    ...accountsOptions,
     providers: [
       emailAccountsProvider({
         send_email: async () => {},

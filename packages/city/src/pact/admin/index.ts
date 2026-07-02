@@ -12,8 +12,6 @@ import {
 } from "../http.js";
 import {
   create_http_requester,
-  create_rpc_requester,
-  is_rpc_url,
   type CityRequester,
 } from "../requester.js";
 import type {
@@ -39,23 +37,15 @@ export class AdminPactAccess {
 
     this.base_url = requiredString(options.base_url, "base_url").replace(/\/+$/, "");
     this.city_id = requiredString(options.city_id, "city_id");
-    this.secret = is_rpc_url(this.base_url)
-      ? undefined
-      : requiredString(
-          options.admin_secret_key ?? process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
-          "admin_secret_key",
-        );
-    this.requester = is_rpc_url(this.base_url)
-      ? create_rpc_requester({
-          base_url: this.base_url,
-          trusted_access: "admin",
-          with_auth: (init) => this.withAuth(init),
-        })
-      : create_http_requester({
-          base_url: this.base_url,
-          fetch: options.fetch,
-          with_auth: (init) => this.withAuth(init),
-        });
+    this.secret = requiredString(
+      options.admin_secret_key ?? process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
+      "admin_secret_key",
+    );
+    this.requester = create_http_requester({
+      base_url: this.base_url,
+      fetch: options.fetch,
+      with_auth: (init) => this.withAuth(init),
+    });
 
     const req = <T>(path: string, init: RequestInitLike) => this.json<T>(path, init);
     this.balance = new BalanceInvoker({ requestJSON: req });

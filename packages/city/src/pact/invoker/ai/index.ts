@@ -86,9 +86,8 @@ export class AIInvoker {
    * 返回给 OpenAI-compatible AI SDK provider 使用的 transport。
    *
    * 关键说明（中文）
-   * - HTTP Federation 返回 `{ baseURL }`，provider 使用默认 fetch。
-   * - RPC Federation 返回 `{ baseURL, fetch }`，fetch 会复用 Federation RPC。
-   * - transport 只负责传输，不替换 user_token，也不注入 trusted identity。
+   * - Federation 统一使用 HTTP(S)；本机服务也应暴露 loopback HTTP URL。
+   * - transport 只负责提供 OpenAI-compatible endpoint，不替换 user_token。
    */
   transport(): OpenAICompatibleTransport {
     return create_openai_compatible_transport(this.baseUrl);
@@ -110,7 +109,6 @@ export class AIInvoker {
     return {
       base_url: transport.baseURL,
       api_key: this.token,
-      fetch: transport.fetch,
       model_id: resolved_model_id,
       request_body: this.input({ model: resolved_model_id } as UserServiceInput),
     };

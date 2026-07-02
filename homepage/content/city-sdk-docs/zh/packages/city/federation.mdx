@@ -123,40 +123,43 @@ export default {
 - 你已经有现成网关或 API server
 - 想把 Federation 当成内部运行时，而不是单独开一个端口
 
-## 场景三：本机 RPC
+## 场景三：本机 HTTP
 
-如果 Federation 只需要被同一台机器上的可信进程访问，可以用 `@downcity/server` 暴露本机 RPC：
+如果 Federation 只需要被同一台机器上的可信进程访问，可以直接把标准 `fetch` handler 挂到你的本机 HTTP server：
 
 ```ts
 import { Federation } from "@downcity/city";
-import { FederationRPC } from "@downcity/server";
+import { serve } from "@hono/node-server";
 
 const base = new Federation({ db });
 
-const rpc = new FederationRPC(base);
-const binding = await rpc.listen({
-  host: "127.0.0.1",
+serve({
+  fetch: (request) => base.fetch(request),
+  hostname: "127.0.0.1",
   port: 15315,
 });
 
-console.log(binding.url); // rpc://127.0.0.1:15315
+const federation_url = "http://127.0.0.1:15315";
 ```
 
-然后 `City` 可以直接连接这个 RPC 地址：
+然后 `City` 可以直接连接这个 HTTP 地址：
 
 ```ts
 import { City } from "@downcity/city";
 
 const admin = new City({
   role: "admin",
-  federation_url: "rpc://127.0.0.1:15315",
+  federation_url,
   city_id: "city_demo",
+  admin_secret_key,
 });
 
 await admin.listServices();
 ```
 
-本机 RPC 是管理侧可信 transport：`Admin City` 不需要 `admin_secret_key`。`User City` 和 HTTP 保持同一套产品侧模型：公开 action 可以作为 guest 调用，需要用户身份的 action 仍然必须携带正常的 `user_token`。
+本机 HTTP 和远程 HTTP 使用同一套产品侧模型：`Admin City` 使用 `admin_secret_key`，公开 action 可以作为 guest 调用，需要用户身份的 action 仍然必须携带正常的 `user_token`。
+
+如果 `AccountsService` 配置了 `local_login: true`，`/v1/accounts/providers` 会只返回本地登录方式，调用 `accounts/local/login` 后得到正常 `user_token`。
 
 如果安装了 `AccountsService`，RPC 请求 `/v1/accounts/providers` 只会返回本地登录方式。调用 `accounts/local/login` 并传入 `city_id` 后会得到正常 `user_token`，之后用 `city_id + user_token` 创建或更新 User City。
 
@@ -202,7 +205,6 @@ base.storage(R2Storage({
 - `base.use(...)`：挂 service、AIService 和官方服务
 - `base.storage(...)`：注册默认文件存储后端
 - `base.fetch(request)`：处理单次请求
-- `new FederationRPC(base)`：把当前 Federation 暴露为本机可信 RPC
 - `base.health()`：触发初始化并返回健康信息
 - `base.table(name)`：拿某张表的受控数据接口
 

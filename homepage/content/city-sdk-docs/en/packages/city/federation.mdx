@@ -103,42 +103,43 @@ export default {
 };
 ```
 
-## Scenario 3: Local RPC
+## Scenario 3: Local HTTP
 
-When Federation only needs to be called by trusted processes on the same machine, expose it with `FederationRPC` from `@downcity/server`:
+When Federation only needs to be called by trusted processes on the same machine, expose its standard `fetch` handler through your local HTTP server:
 
 ```ts
 import { Federation } from "@downcity/city";
-import { FederationRPC } from "@downcity/server";
+import { serve } from "@hono/node-server";
 
 const base = new Federation({ db });
 
-const rpc = new FederationRPC(base);
-const binding = await rpc.listen({
-  host: "127.0.0.1",
+serve({
+  fetch: (request) => base.fetch(request),
+  hostname: "127.0.0.1",
   port: 15315,
 });
 
-console.log(binding.url); // rpc://127.0.0.1:15315
+const federation_url = "http://127.0.0.1:15315";
 ```
 
-Then point `City` at that RPC URL:
+Then point `City` at that HTTP URL:
 
 ```ts
 import { City } from "@downcity/city";
 
 const admin = new City({
   role: "admin",
-  federation_url: "rpc://127.0.0.1:15315",
+  federation_url,
   city_id: "city_demo",
+  admin_secret_key,
 });
 
 await admin.listServices();
 ```
 
-Local RPC is a trusted transport for admin access: `Admin City` does not need `admin_secret_key`. `User City` still follows the same product-side model as HTTP: public actions can be called as guest, and authenticated actions require a normal `user_token`.
+Local HTTP uses the same product-side model as remote HTTP: `Admin City` uses `admin_secret_key`, public actions can be called as guest, and authenticated user actions require a normal `user_token`.
 
-If `AccountsService` is installed, RPC requests to `/v1/accounts/providers` only return the local login method. Call `accounts/local/login` with `city_id` to receive a normal `user_token`, then recreate or update User City with `city_id + user_token`.
+If `AccountsService` is configured with `local_login: true`, `/v1/accounts/providers` only returns the local login method. Call `accounts/local/login` with `city_id` to receive a normal `user_token`, then recreate or update User City with `city_id + user_token`.
 
 ## Why Federation only takes db
 
@@ -178,7 +179,6 @@ Services can then access it through `ctx.storage`. Built-in AI image jobs use th
 - `base.use(...)`
 - `base.storage(...)`
 - `base.fetch(request)`
-- `new FederationRPC(base)`
 - `base.health()`
 - `base.table(name)`
 

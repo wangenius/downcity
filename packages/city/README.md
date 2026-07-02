@@ -227,7 +227,7 @@ await client.ai.text({
 
 如果宿主需要继续使用自己的 AI SDK provider（例如 `createOpenAICompatible()` 或
 `createDeepSeek()`），不要手写 `federation_url + "/v1/ai"`。使用
-`client.ai.transport()`，SDK 会在 HTTP / RPC 之间保持一致：
+`client.ai.transport()`，SDK 会返回 OpenAI-compatible endpoint：
 
 ```ts
 const transport = client.ai.transport();
@@ -243,8 +243,8 @@ const provider = createOpenAICompatible({
 });
 ```
 
-- HTTP Federation：返回 `{ baseURL: "https://.../v1/ai" }`
-- RPC Federation：返回 `{ baseURL: "rpc://.../v1/ai", fetch }`
+- Remote Federation：返回 `{ baseURL: "https://.../v1/ai" }`
+- Local Federation：返回 `{ baseURL: "http://127.0.0.1:15315/v1/ai" }`
 
 ## 文档
 

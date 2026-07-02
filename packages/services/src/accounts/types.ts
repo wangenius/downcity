@@ -68,7 +68,7 @@ export interface AccountsProviderItem {
    *
    * 关键说明（中文）
    * - 仅当 provider 需要非默认登录入口时返回。
-   * - RPC 本地账户会返回 `local/login`，产品侧可按同一 accounts action 流程调用。
+   * - 本机 HTTP 账户会返回 `local/login`，产品侧可按同一 accounts action 流程调用。
    */
   login_action?: string;
 

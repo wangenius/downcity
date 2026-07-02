@@ -2,21 +2,27 @@
  * Hono 与 Node http server 的最小适配层。
  *
  * 关键点（中文）
- * - 该适配层只承担 fetch <-> Node http 的桥接。
- * - AgentHTTP 直接用它把 hono router 跑成独立 Node HTTP server。
+ * - 该适配层只承担 Fetch API <-> Node http 的桥接。
+ * - AgentHTTP 通过它跑成独立 Node HTTP server。
  */
 
 import http from "node:http";
 import { Readable } from "node:stream";
 import { finished } from "node:stream/promises";
-import type { Hono } from "hono";
+/**
+ * 最小 Fetch API 应用接口。
+ */
+export interface NodeFetchApp {
+  /** 处理一次 Fetch API 请求。 */
+  fetch(request: Request): Response | Promise<Response>;
+}
 
 /**
  * 创建一个把 hono fetch 接到 node http 的 server。
  */
 export function createNodeHttpServer(params: {
-  /** 入口 Hono 应用。 */
-  app: Hono;
+  /** 入口 Fetch API 应用。 */
+  app: NodeFetchApp;
   /** 监听主机。 */
   host: string;
   /** 监听端口。 */
@@ -28,10 +34,11 @@ export function createNodeHttpServer(params: {
       const url = new URL(req.url || "/", `http://${host}:${port}`);
       const method = req.method || "GET";
       const body_buffer = await read_request_body(req);
+      const body_allowed = method !== "GET" && method !== "HEAD";
       const request = new Request(url.toString(), {
         method,
         headers: new Headers(req.headers as Record<string, string>),
-        body: body_buffer.length > 0 ? body_buffer : undefined,
+        body: body_allowed && body_buffer.length > 0 ? body_buffer : undefined,
       });
 
       const response = await app.fetch(request);

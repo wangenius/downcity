@@ -8,7 +8,7 @@ import type { UserServiceSummary } from "../user/types.js";
 
 /** Admin City 内部访问层构造参数 */
 export interface AdminPactAccessOptions {
-  /** City 管理端入口地址，支持 `http(s)://` 与本机 `rpc://`。 */
+  /** City 管理端入口地址，支持 `http(s)://`。 */
   base_url: string;
 
   /**
@@ -18,7 +18,7 @@ export interface AdminPactAccessOptions {
    */
   city_id: string;
 
-  /** 管理密钥；使用本机 `rpc://` 时不需要传入。 */
+  /** 管理密钥。 */
   admin_secret_key?: string;
   /** 自定义 fetch 实现 */
   fetch?: FetchLike;

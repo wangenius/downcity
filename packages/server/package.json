@@ -1,8 +1,8 @@
 {
   "name": "@downcity/server",
-  "version": "0.1.37",
+  "version": "0.1.39",
   "type": "module",
-  "description": "Downcity Server — local RPC and HTTP transport layer for Agent and Federation runtimes",
+  "description": "Downcity Server — local transport layer for Agent runtimes",
   "main": "./bin/index.js",
   "types": "./bin/index.d.ts",
   "files": [

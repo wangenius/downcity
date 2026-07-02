@@ -16,14 +16,14 @@ If you want the integration story first, start with [@downcity/city](/en/city-sd
 | Common auth | `user_token` | `admin_secret_key` |
 | Safe in browser | yes | no |
 
-## HTTP and Local RPC
+## HTTP Entries
 
-`federation_url` supports two entry types:
+`federation_url` uses HTTP(S) for both remote and local Federation:
 
 - `http://` / `https://`: remote HTTP entry, authenticated with `user_token` or `admin_secret_key`.
-- `rpc://127.0.0.1:15315`: trusted local RPC entry. Admin City does not need `admin_secret_key`; User City still uses guest / `user_token`.
+- `http://127.0.0.1:15315`: local loopback HTTP entry, authenticated with the same `user_token` or `admin_secret_key` model.
 
-RPC is for trusted processes on the same machine. It changes the transport, not the product login model. If `AccountsService` is installed, RPC requests to `/v1/accounts/providers` expose the local login method, and `accounts/local/login` returns a normal `user_token`.
+When you expose Federation from your own local HTTP server, products still use normal HTTP. If `AccountsService` is configured with `local_login: true`, `/v1/accounts/providers` exposes the local login method, and `accounts/local/login` returns a normal `user_token`.
 
 ## Four common call types
 
@@ -41,7 +41,7 @@ await client.ai.text({ prompt: "hello", model: "deepseek-v4-flash" });
 await client.ai.stream({ prompt: "hello", model: "deepseek-v4-flash" });
 
 // OpenAI-compatible AI SDK provider transport
-const transport = client.ai.transport(); // { baseURL, fetch? }
+const transport = client.ai.transport(); // { baseURL }
 
 // Custom Service
 await client.service("translate").action("zh2en").invoke({ text: "hello" });

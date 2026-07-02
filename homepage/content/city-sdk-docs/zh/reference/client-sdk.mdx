@@ -71,6 +71,19 @@ const admin = new City({
 await admin.service("cities").action("create").invoke({ name: "My App" });
 ```
 
+## AI 模型调用选择
+
+| 场景 | 推荐方式 |
+|---|---|
+| 产品代码直接请求 Fed AIService | `client.ai.text()` / `client.ai.stream()` |
+| Downcity Agent 使用 Fed 模型 | 从 `client.ai.listModels()` 取 `CityModel`，直接传给 Agent |
+| 外部 AI SDK 生态需要 `LanguageModel` | 用 `createOpenAICompatible({ baseURL: client.ai.base_url })` |
+| 非 Fed 模型 API | 产品侧自己创建对应 provider |
+
+OpenAI-compatible provider 请求的仍然是 Federation。Federation 会根据请求体里的
+`model` 找到对应 provider，再由 provider 调用真实上游模型。前端只需要携带
+`user_token`，`city_id` 由服务端从 token 中解析。
+
 ## service、AI service 的关系
 
 - AI service：走 `client.ai.*`

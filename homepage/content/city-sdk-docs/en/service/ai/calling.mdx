@@ -41,10 +41,38 @@ handle.token       // "ub_xxx"
 
 With `user_token`, `client.ai.listModels()` returns only models whose required runtime env is already configured. The same route called with `admin_secret_key` returns the full code-registered model list plus `env_requirements`.
 
+## CityModel And Providers
+
+If you are calling a model from the current Federation, prefer `CityModel`.
+The model catalog returns `CityModel` objects with hidden runtime connection
+metadata, so Downcity Agent and the City SDK can use them directly:
+
+```ts
+import { Agent } from "@downcity/agent";
+
+const catalog = await client.ai.listModels();
+const model = catalog.get("deepseek-v4-flash");
+if (!model) throw new Error("model not found");
+
+await client.ai.text({
+  model,
+  prompt: "hello",
+});
+
+const agent = new Agent({
+  model,
+});
+```
+
+This path does not require product code to create an AI SDK provider. The Agent
+SDK reads the `CityModel` connection metadata and converts it internally.
+
 ## OpenAI-Compatible Pathway
 
-When you use an AI SDK provider, point it at the standard
-OpenAI-compatible endpoint:
+Create a provider only when the caller needs an AI SDK `LanguageModel`, OpenAI
+SDK, `createOpenAICompatible()`, or another external compatible client. The
+provider still calls Federation; it does not call the real upstream model
+directly:
 
 ```ts
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
@@ -62,6 +90,21 @@ The request body stays standard OpenAI-compatible JSON. The `model` field comes
 from `languageModel(model_id)`, and `city_id` is resolved from the bearer
 `user_token` on the server.
 
+The request is routed by Federation AIService:
+
+```txt
+POST /v1/ai/chat/completions
+  -> verify user_token
+  -> resolve city_id / user_id from the token
+  -> read body.model
+  -> find the provider bound to that model
+  -> let the provider call the real upstream model
+  -> return an OpenAI-compatible response
+```
+
+The frontend only chooses a `model_id`; it does not need to know whether the
+real provider is OpenAI, DeepSeek, Gemini, or a custom provider.
+
 ```bash
 # curl
 curl http://127.0.0.1:43127/v1/ai/chat/completions \
@@ -71,36 +114,24 @@ curl http://127.0.0.1:43127/v1/ai/chat/completions \
 
 ```ts
 // OpenAI SDK
-const handle = client.ai.model(catalog.get("deepseek-v4-flash"));
 const openai = new OpenAI({
-  baseURL: handle.url(),
-  apiKey: handle.token,
+  baseURL: client.ai.base_url,
+  apiKey: user_token,
 });
 await openai.chat.completions.create({
-  model: handle.modelName(),
+  model: "deepseek-v4-flash",
   messages: [{ role: "user", content: "hello" }],
   stream: true,
 });
-```
-
-```ts
-// downcity agent
-const handle = client.ai.model(catalog.get("deepseek-v4-flash"));
-const session = await createPiAgentSession({
-  model: handle,
-  tools: "agent",
-  onText: (text) => process.stdout.write(text),
-});
-await session.ask("Write an HTTP server");
 ```
 
 ## Pathway Selection
 
 | Scenario | Pathway |
 |---|---|
-| Your own city code, simple prompt → text | SDK |
-| Streaming output to your own UI | SDK |
-| downcity agent agent conversations | OpenAI-Compatible |
-| OpenAI SDK or compatible clients | OpenAI-Compatible |
-| curl debugging | OpenAI-Compatible |
-| Full multi-turn message history | OpenAI-Compatible |
+| Product code calls Fed text or stream generation | `client.ai.text()` / `client.ai.stream()` |
+| Downcity Agent uses a Fed model | pass `CityModel` directly |
+| External AI SDK ecosystem needs `LanguageModel` | `createOpenAICompatible({ baseURL: client.ai.base_url })` |
+| OpenAI SDK, compatible clients, or curl debugging | `/v1/ai/chat/completions` |
+| Image, TTS, ASR, or video | City SDK methods such as `client.ai.image_create()` / `client.ai.tts()` / `client.ai.asr()` |
+| Non-Fed model APIs | create the provider in product code |

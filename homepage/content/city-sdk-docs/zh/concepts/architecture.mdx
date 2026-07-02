@@ -98,7 +98,8 @@ User City.ai.text({ prompt: "hello", model: "deepseek-v4-flash" })
 
 ### OpenAI 兼容通路
 
-给 downcity agent、OpenAI SDK、curl 等第三方工具调用：
+给 OpenAI SDK、curl 和其他兼容客户端调用。Downcity Agent 使用 Fed 模型时，
+可以直接接收 `client.ai.listModels()` 返回的 `CityModel`：
 
 ```txt
 POST /v1/ai/chat/completions

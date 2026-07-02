@@ -98,7 +98,8 @@ User City.ai.text({ prompt: "hello", model: "deepseek-v4-flash" })
 
 ### OpenAI-compatible pathway
 
-Used by downcity agent, the OpenAI SDK, curl, and other third-party tools:
+Used by the OpenAI SDK, curl, and other compatible clients. Downcity Agent can
+use Fed models directly by receiving `CityModel` from `client.ai.listModels()`:
 
 ```txt
 POST /v1/ai/chat/completions

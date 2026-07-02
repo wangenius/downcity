@@ -71,6 +71,20 @@ const admin = new City({
 await admin.service("cities").action("create").invoke({ name: "My App" });
 ```
 
+## AI Model Path Selection
+
+| Scenario | Recommended path |
+|---|---|
+| Product code calls Fed AIService directly | `client.ai.text()` / `client.ai.stream()` |
+| Downcity Agent uses a Fed model | get a `CityModel` from `client.ai.listModels()` and pass it to Agent |
+| External AI SDK ecosystem needs `LanguageModel` | `createOpenAICompatible({ baseURL: client.ai.base_url })` |
+| Non-Fed model APIs | create the provider in product code |
+
+The OpenAI-compatible provider still calls Federation. Federation reads
+`body.model`, finds the provider bound to that model, and lets that provider
+call the real upstream model. The frontend only carries `user_token`; `city_id`
+is resolved from the token on the server.
+
 ## Relationship between service, service, and AI service
 
 - AI service: called through `client.ai.*`

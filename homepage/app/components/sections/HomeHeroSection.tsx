@@ -3,8 +3,6 @@ import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  IconBrandGithub,
-  IconBrandX,
   IconCheck,
   IconCopy,
   IconPlayerPlayFilled,
@@ -20,14 +18,13 @@ import { cn } from "@/lib/utils";
 /**
  * 首页主视觉模块（极简版）。
  * 说明：
- * 1. 去除复杂导航，页面只保留品牌条、核心文案、安装入口与产品演示。
- * 2. 参考 Vibecape 首页的克制排版：大量留白、细边框、小字号标签、真实界面截图/模拟。
- * 3. 演示面板展示 Downcity 的真实使用路径：CLI / SDK / Console。
+ * 1. 全局 Header 由 root Layout 提供，本组件不再重复渲染导航。
+ * 2. 页面只保留核心文案、安装入口与产品演示。
+ * 3. 参考 Vibecape 首页的克制排版：大量留白、细边框、小字号标签、真实界面模拟。
+ * 4. 演示面板展示 Downcity 的真实使用路径：CLI / SDK / Console。
  */
 
 const INSTALL_COMMAND = "npm i -g downcity";
-const GITHUB_URL = "https://github.com/wangenius/downcity";
-const TWITTER_URL = "https://x.com/downcity_ai";
 
 type DemoTab = "cli" | "sdk" | "console";
 
@@ -297,81 +294,8 @@ function DemoPanel() {
 }
 
 /**
- * 极简顶部品牌条。
- */
-function BrandBar() {
-  const { i18n } = useTranslation();
-  const isZh = i18n.language.toLowerCase().startsWith("zh");
-  const docsPath = isZh ? "/zh/docs" : "/en/docs";
-
-  return (
-    <header className="sticky top-0 z-40 border-b border-transparent bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 md:px-6">
-        <Link to={isZh ? "/zh" : "/"} className="inline-flex items-center gap-2.5 text-foreground">
-          <img src="/icon.svg" alt="" className="brand-logo size-6 object-contain opacity-95" />
-          <span className="text-[0.92rem] font-semibold tracking-tight">Downcity</span>
-        </Link>
-
-        <div className="flex items-center gap-4">
-          <a
-            href={GITHUB_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-text-subtle transition-colors hover:text-foreground"
-            aria-label="GitHub"
-          >
-            <IconBrandGithub className="size-4" />
-          </a>
-          <a
-            href={TWITTER_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-text-subtle transition-colors hover:text-foreground"
-            aria-label="X"
-          >
-            <IconBrandX className="size-4" />
-          </a>
-          <Link
-            to={docsPath}
-            className="ml-1 text-[0.72rem] font-medium uppercase tracking-[0.12em] text-text-subtle transition-colors hover:text-foreground"
-          >
-            {isZh ? "文档" : "Docs"}
-          </Link>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-/**
- * 极简页脚。
- */
-function TinyFooter() {
-  const { i18n } = useTranslation();
-  const isZh = i18n.language.toLowerCase().startsWith("zh");
-  const currentYear = new Date().getFullYear();
-
-  return (
-    <footer className="border-t border-line-soft py-8">
-      <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-4 text-[0.72rem] text-text-subtle md:flex-row md:px-6">
-        <span>
-          © {currentYear} Downcity. {isZh ? "MIT 协议开源" : "Open source under MIT"}.
-        </span>
-        <span className="flex items-center gap-4">
-          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
-            GitHub
-          </a>
-          <a href={TWITTER_URL} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
-            X
-          </a>
-        </span>
-      </div>
-    </footer>
-  );
-}
-
-/**
  * 首页主视觉组件。
+ * 说明：顶部内边距为全局 Navbar 留出空间，避免内容被遮挡。
  */
 export function HomeHeroSection() {
   const { i18n, t } = useTranslation();
@@ -381,9 +305,7 @@ export function HomeHeroSection() {
 
   return (
     <section className="relative">
-      <BrandBar />
-
-      <div className="mx-auto max-w-5xl px-4 pb-20 pt-16 md:px-6 md:pb-28 md:pt-24">
+      <div className="mx-auto max-w-5xl px-4 pb-24 pt-24 md:px-6 md:pb-32 md:pt-32">
         <div className="flex flex-col items-center text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[0.65rem] font-medium uppercase tracking-[0.16em] text-text-subtle">
             <IconBolt className="size-3" />
@@ -400,7 +322,7 @@ export function HomeHeroSection() {
             {t("hero:subtitle")}
           </p>
 
-          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
+          <div className="relative z-10 mt-8 flex flex-col items-center gap-3 sm:flex-row">
             <InstallCommand />
             <Link
               to={startPath}
@@ -418,12 +340,10 @@ export function HomeHeroSection() {
           </div>
         </div>
 
-        <div className="mt-14 md:mt-20">
+        <div className="relative z-10 mt-14 md:mt-20">
           <DemoPanel />
         </div>
       </div>
-
-      <TinyFooter />
     </section>
   );
 }

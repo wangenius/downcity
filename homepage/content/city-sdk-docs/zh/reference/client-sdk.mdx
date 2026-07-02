@@ -43,7 +43,7 @@ await client.ai.stream({ prompt: "hello", model: "deepseek-v4-flash" });
 // OpenAI-compatible AI SDK provider
 const provider = createOpenAICompatible({
   name: "downcity",
-  baseURL: `${federation_url.replace(/\/+$/, "")}/v1/ai`,
+  baseURL: client.ai.base_url,
   apiKey: user_token,
 });
 

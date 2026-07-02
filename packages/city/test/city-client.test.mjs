@@ -15,6 +15,17 @@ test("City rejects Federation rpc URLs", async () => {
   )
 })
 
+test("AIInvoker.base_url returns OpenAI-compatible endpoint", async () => {
+  const client = new City({
+    role: "user",
+    federation_url: "https://api.example.com/base/",
+    city_id: "city_demo",
+    user_token: "ub_test",
+  })
+
+  assert.equal(client.ai.base_url, "https://api.example.com/base/v1/ai")
+})
+
 test("AIInvoker.text() posts to /v1/ai/text", async () => {
   const requests = []
   const msg = { id: "msg_1", role: "assistant", parts: [{ type: "text", text: "hello", state: "done" }] }

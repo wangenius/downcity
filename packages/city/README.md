@@ -226,12 +226,12 @@ await client.ai.text({
 ## OpenAI-compatible endpoint
 
 如果宿主需要继续使用自己的 AI SDK provider（例如 `createOpenAICompatible()` 或
-`createDeepSeek()`），直接把 Federation HTTP 入口拼到 `/v1/ai`：
+`createDeepSeek()`），直接使用 `client.ai.base_url`：
 
 ```ts
 const provider = createOpenAICompatible({
   name: "downcity",
-  baseURL: `${federation_url.replace(/\/+$/, "")}/v1/ai`,
+  baseURL: client.ai.base_url,
   apiKey: user_token,
 });
 

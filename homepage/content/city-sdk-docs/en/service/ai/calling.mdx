@@ -51,7 +51,7 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 const provider = createOpenAICompatible({
   name: "downcity",
-  baseURL: `${federation_url.replace(/\/+$/, "")}/v1/ai`,
+  baseURL: client.ai.base_url,
   apiKey: user_token,
 });
 

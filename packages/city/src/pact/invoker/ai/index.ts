@@ -61,6 +61,17 @@ export class AIInvoker {
     this.input = opts.buildInput;
   }
 
+  /**
+   * OpenAI-compatible endpoint 根地址。
+   *
+   * 关键点（中文）
+   * - SDK 只暴露稳定 HTTP endpoint，不绑定任何第三方 provider。
+   * - 产品侧可以把该地址传给 OpenAI SDK 或 AI SDK provider 的 `baseURL`。
+   */
+  get base_url(): string {
+    return `${this.baseUrl}/v1/ai`;
+  }
+
   /** 文本生成。支持 tools 参数（ai-sdk tool 格式，自动序列化去掉 execute） */
   text(input: UserServiceInput): Promise<UserTextResult> {
     return this.req<UserTextResult>(`${PREFIX}/text`, {
@@ -91,7 +102,7 @@ export class AIInvoker {
       throw new TypeError("modelId is required");
     }
     return {
-      base_url: `${this.baseUrl}/v1/ai`,
+      base_url: this.base_url,
       api_key: this.token,
       model_id: resolved_model_id,
     };
@@ -142,9 +153,9 @@ export class AIInvoker {
    */
   model(ref: UserModelRef | string): ModelHandle {
     if (typeof ref === "string") {
-      return new ModelHandle(this, ref, ref, `${this.baseUrl}/v1/ai`, this.token);
+      return new ModelHandle(this, ref, ref, this.base_url, this.token);
     }
-    return new ModelHandle(this, ref.id, ref.name, `${this.baseUrl}/v1/ai`, this.token, ref.meta);
+    return new ModelHandle(this, ref.id, ref.name, this.base_url, this.token, ref.meta);
   }
 
   private post<T>(path: string, input: UserServiceInput): Promise<T> {

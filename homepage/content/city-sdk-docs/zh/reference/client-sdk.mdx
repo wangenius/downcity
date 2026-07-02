@@ -40,8 +40,14 @@ const client = new City({
 await client.ai.text({ prompt: "hello", model: "deepseek-v4-flash" });
 await client.ai.stream({ prompt: "hello", model: "deepseek-v4-flash" });
 
-// OpenAI-compatible AI SDK provider transport
-const transport = client.ai.transport(); // { baseURL }
+// OpenAI-compatible AI SDK provider
+const provider = createOpenAICompatible({
+  name: "downcity",
+  baseURL: `${federation_url.replace(/\/+$/, "")}/v1/ai`,
+  apiKey: user_token,
+});
+
+const language_model = provider.languageModel("deepseek-v4-flash");
 
 // 自定义 Service
 await client.service("translate").action("zh2en").invoke({ text: "hello" });

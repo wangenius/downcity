@@ -100,13 +100,7 @@ export class UserPactAccess {
     return {
       ...input,
       model: serializeModel(input.model),
-      city_id: this.require_city_id(),
     };
-  }
-
-  private require_city_id(): string {
-    if (!this.city_id) throw new TypeError("city_id is required for AI calls");
-    return this.city_id;
   }
 
   private requireToken(): void {

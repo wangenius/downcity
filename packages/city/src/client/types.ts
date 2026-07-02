@@ -68,7 +68,8 @@ export interface UserCityOptions extends CityBaseOptions {
   /**
    * 当前 user_token 绑定的 City ID。
    *
-   * AI 与普通 service action 调用会自动把该值注入为 `city_id`。
+   * 普通 service action 调用会自动把该值注入为 `city_id`。
+   * AI 调用会优先使用 `user_token` 解析出的 City 身份。
    */
   city_id?: string;
 

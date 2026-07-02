@@ -92,7 +92,7 @@ The same route returns different visibility by identity:
 
 Request:
 ```json
-{ "city_id": "city_xxx", "model": "deepseek-v4-flash", "prompt": "Hello" }
+{ "model": "deepseek-v4-flash", "prompt": "Hello" }
 ```
 
 Response:
@@ -100,7 +100,7 @@ Response:
 { "id": "msg_xxx", "role": "assistant", "parts": [{ "type": "text", "text": "Hi!" }] }
 ```
 
-If the request body includes `city_id`, it must match the city bound to the `user_token`. Otherwise City returns `403`.
+City resolves the user and city from the bearer `user_token`. If the request body includes `city_id`, it must match the city bound to the token; otherwise City returns `403`.
 
 ## `GET /v1/services`
 
@@ -123,7 +123,7 @@ Non-streaming returns OpenAI `chat.completion` JSON. Streaming returns OpenAI SS
 
 Fully compatible with OpenAI SDK:
 ```ts
-  const openai = new OpenAI({
+const openai = new OpenAI({
   baseURL: "http://127.0.0.1:43127/v1/ai",
   apiKey: "ub_xxx",
 });

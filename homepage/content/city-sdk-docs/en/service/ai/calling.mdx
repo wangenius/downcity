@@ -43,28 +43,24 @@ With `user_token`, `client.ai.listModels()` returns only models whose required r
 
 ## OpenAI-Compatible Pathway
 
-When you use an AI SDK provider, prefer `client.ai.transport()` instead of
-manually building `baseURL`. The same code works for remote HTTPS and local
-loopback HTTP Federation URLs.
+When you use an AI SDK provider, point it at the standard
+OpenAI-compatible endpoint:
 
 ```ts
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 const provider = createOpenAICompatible({
   name: "downcity",
+  baseURL: `${federation_url.replace(/\/+$/, "")}/v1/ai`,
   apiKey: user_token,
-  ...client.ai.transport(),
-  transformRequestBody: (body) => ({
-    ...body,
-    city_id,
-  }),
 });
 
 const model = provider.languageModel("deepseek-v4-flash");
 ```
 
-The transport returns `{ baseURL }`. Local Federation should be exposed as
-`http://127.0.0.1:port`, so AI SDK providers can use their normal fetch path.
+The request body stays standard OpenAI-compatible JSON. The `model` field comes
+from `languageModel(model_id)`, and `city_id` is resolved from the bearer
+`user_token` on the server.
 
 ```bash
 # curl

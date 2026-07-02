@@ -37,28 +37,23 @@ while (true) {
 
 ## OpenAI 兼容通路
 
-使用 AI SDK provider 时，优先使用 `client.ai.transport()`，不要自己拼
-`federation_url + "/v1/ai"`。同一段代码可以同时支持远程 HTTPS 和本机
-loopback HTTP Federation URL。
+使用 AI SDK provider 时，直接指向标准 OpenAI-compatible endpoint：
 
 ```ts
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 const provider = createOpenAICompatible({
   name: "downcity",
+  baseURL: `${federation_url.replace(/\/+$/, "")}/v1/ai`,
   apiKey: user_token,
-  ...client.ai.transport(),
-  transformRequestBody: (body) => ({
-    ...body,
-    city_id,
-  }),
 });
 
 const model = provider.languageModel("deepseek-v4-flash");
 ```
 
-transport 返回 `{ baseURL }`。本机 Federation 应暴露为
-`http://127.0.0.1:port`，AI SDK provider 可以继续走普通 fetch。
+请求体保持标准 OpenAI-compatible JSON。`model` 来自
+`languageModel(model_id)`，`city_id` 由服务端从 bearer `user_token` 中解析，
+不需要放进请求体。
 
 ### curl
 

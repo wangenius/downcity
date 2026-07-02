@@ -8,7 +8,7 @@ description: How product clients read the model directory and call AIService or 
 It binds one user inside one city:
 
 - `federation_url`
-- `city_id`, automatically injected into AI service and user action calls
+- `city_id`, automatically injected into user service action calls
 - `user_token`, required for AI service calls and authenticated actions
 
 For guest-access actions such as login, registration, or webhooks, you can pass `federation_url` only.
@@ -67,7 +67,7 @@ const session = await guest.service("accounts").action("login").invoke<{
 });
 ```
 
-After receiving `session.user_token`, create a User City with `city_id + user_token` for AI service calls.
+After receiving `session.user_token`, create a User City with `user_token` for AI service calls. Keep `city_id` when you want User City to inject it into ordinary service actions.
 
 ## Guest calls vs logged-in user calls
 

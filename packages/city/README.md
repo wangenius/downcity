@@ -223,28 +223,23 @@ await client.ai.text({
 });
 ```
 
-## OpenAI-compatible transport
+## OpenAI-compatible endpoint
 
 如果宿主需要继续使用自己的 AI SDK provider（例如 `createOpenAICompatible()` 或
-`createDeepSeek()`），不要手写 `federation_url + "/v1/ai"`。使用
-`client.ai.transport()`，SDK 会返回 OpenAI-compatible endpoint：
+`createDeepSeek()`），直接把 Federation HTTP 入口拼到 `/v1/ai`：
 
 ```ts
-const transport = client.ai.transport();
-
 const provider = createOpenAICompatible({
   name: "downcity",
+  baseURL: `${federation_url.replace(/\/+$/, "")}/v1/ai`,
   apiKey: user_token,
-  ...transport,
-  transformRequestBody: (body) => ({
-    ...body,
-    city_id,
-  }),
 });
+
+const model = provider.languageModel("deepseek-v4-flash");
 ```
 
-- Remote Federation：返回 `{ baseURL: "https://.../v1/ai" }`
-- Local Federation：返回 `{ baseURL: "http://127.0.0.1:15315/v1/ai" }`
+OpenAI-compatible 请求体只需要标准 `model/messages/stream/tools` 字段。
+`city_id` 由 `user_token` 在服务端解析，不需要放进请求体。
 
 ## 文档
 

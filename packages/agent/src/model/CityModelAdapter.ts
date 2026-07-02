@@ -30,13 +30,6 @@ function cityModelToLanguageModel(model: CityModel): LanguageModel {
     name: "downcity",
     baseURL: connection.base_url,
     apiKey: connection.api_key,
-    transformRequestBody: (body) => ({
-      ...body,
-      ...connection.request_body,
-      model: typeof body.model === "string" && body.model.trim()
-        ? body.model
-        : connection.model_id,
-    }),
   });
   return provider.languageModel(connection.model_id) as LanguageModel;
 }

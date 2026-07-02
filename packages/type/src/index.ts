@@ -110,11 +110,6 @@ export interface CityModelConnection {
    * 当前模型的调用 ID，默认写入 OpenAI-compatible 请求体的 `model` 字段。
    */
   model_id: string;
-
-  /**
-   * 每次请求都需要额外合并到请求体的 City 上下文字段，例如 `city_id`。
-   */
-  request_body: Record<string, unknown>;
 }
 
 /**

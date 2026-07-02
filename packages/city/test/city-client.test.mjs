@@ -3,19 +3,6 @@ import test from "node:test"
 
 import { City } from "../bin/index.js"
 
-test("AIInvoker.transport() returns OpenAI-compatible HTTP transport", async () => {
-  const client = new City({
-    role: "user",
-    federation_url: "https://api.example.com/base/",
-    city_id: "city_demo",
-    user_token: "ub_test",
-  })
-
-  const transport = client.ai.transport()
-  assert.equal(transport.baseURL, "https://api.example.com/base/v1/ai")
-  assert.equal(transport.fetch, undefined)
-})
-
 test("City rejects Federation rpc URLs", async () => {
   assert.throws(
     () => new City({
@@ -42,7 +29,7 @@ test("AIInvoker.text() posts to /v1/ai/text", async () => {
   assert.deepEqual(result, msg)
   assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/text")
   assert.equal(requests[0].init.headers.authorization, "Bearer ub_test")
-  assert.deepEqual(JSON.parse(requests[0].init.body), { model: "gpt-5.4", prompt: "hi", city_id: "city_demo" })
+  assert.deepEqual(JSON.parse(requests[0].init.body), { model: "gpt-5.4", prompt: "hi" })
 })
 
 test("AIInvoker.image_create() posts to /v1/ai/image/create", async () => {
@@ -73,7 +60,6 @@ test("AIInvoker.image_create() posts to /v1/ai/image/create", async () => {
     model: "openai-gpt-image-1",
     size: "1024x1024",
     count: 1,
-    city_id: "city_demo",
   })
 })
 
@@ -97,7 +83,6 @@ test("AIInvoker.image_result() posts to /v1/ai/image/result", async () => {
   assert.equal(requests[0].init.headers.authorization, "Bearer ub_test")
   assert.deepEqual(JSON.parse(requests[0].init.body), {
     job_id: "img_1",
-    city_id: "city_demo",
   })
 })
 
@@ -158,7 +143,7 @@ test("User City delegates AI calls", async () => {
   const result = await city.ai.text({ model: "gpt-5.4", prompt: "hi" })
   assert.deepEqual(result, msg)
   assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/text")
-  assert.deepEqual(JSON.parse(requests[0].init.body), { model: "gpt-5.4", prompt: "hi", city_id: "city_demo" })
+  assert.deepEqual(JSON.parse(requests[0].init.body), { model: "gpt-5.4", prompt: "hi" })
 })
 
 test("AIInvoker.listModels() returns ModelCatalog", async () => {

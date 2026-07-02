@@ -123,7 +123,6 @@ Content-Type: application/json
 
 ```json
 {
-  "city_id": "city_xxx",
   "model": "deepseek-v4-flash",
   "prompt": "写一段欢迎语"
 }
@@ -144,6 +143,9 @@ Content-Type: application/json
 ### `POST /v1/ai/stream`
 
 请求体和 `text` 类似。返回值是 AI SDK UIMessage 流式响应（SSE）。
+
+AI 请求的用户和 city 上下文由 bearer `user_token` 解析。请求体里可以不传
+`city_id`；如果传了，必须与 token 绑定的 city 一致。
 
 ### `POST /v1/ai/chat/completions`
 

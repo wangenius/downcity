@@ -184,7 +184,6 @@ export type {
 } from "./client/types.js";
 
 export { AIInvoker, ModelCatalog, ModelHandle } from "./pact/invoker/ai/index.js";
-export type { OpenAICompatibleTransport } from "./pact/invoker/ai/openai-transport.js";
 export { PaymentInvoker, PaymentMethodHandle } from "./pact/invoker/payment/index.js";
 export { ServiceClient, ActionClient } from "./pact/invoker/invoker.js";
 

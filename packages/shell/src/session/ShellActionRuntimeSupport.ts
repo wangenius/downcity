@@ -34,6 +34,8 @@ export {
   createOutputChunk,
 } from "./ShellActionResponse.js";
 
+const DEFAULT_APPROVAL_TIMEOUT_MS = 2 * 60 * 60 * 1000;
+
 const DEFAULT_SHELL_RUNTIME_OPTIONS: ResolvedShellRuntimeOptions = {
   maxActiveShells: 64,
   cleanupDelayMs: 10 * 60 * 1000,
@@ -44,7 +46,7 @@ const DEFAULT_SHELL_RUNTIME_OPTIONS: ResolvedShellRuntimeOptions = {
   defaultInlineWaitMs: 1_200,
   defaultWaitTimeoutMs: 10_000,
   defaultExecTimeoutMs: 120_000,
-  defaultApprovalTimeoutMs: 120_000,
+  defaultApprovalTimeoutMs: DEFAULT_APPROVAL_TIMEOUT_MS,
 };
 
 /**

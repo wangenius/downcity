@@ -156,7 +156,6 @@ export class AgentChatTuiCoordinator {
 
     this.status_line = new StatusLineComponent(this.app_state, this.tui);
     this.editor = new ChatEditorComponent(this.tui);
-    this.editor.connected_above = true;
 
     this.message_list = new MessageListComponent({
       get_viewport_height: () => this.get_message_list_viewport_height(),

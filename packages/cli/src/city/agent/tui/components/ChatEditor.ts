@@ -3,8 +3,9 @@
  * 聊天输入框组件。
  *
  * 关键点（中文）
- * - 直接对齐 Kimi Code 的 CustomEditor：带完整边框、prompt 符号、slash 高亮、
- *   描述换行的 slash 自动完成，以及标准应用级快捷键回调。
+ * - 对齐 Kimi Code 的 Agent prompt 样式：顶部标题分隔线（── input ─────）、
+ *   左侧两列空白 prompt 前缀、描述换行的 slash 自动完成，以及标准应用级快捷键回调。
+ * - slash 命令 token 高亮作为本组件的本地增强保留。
  */
 
 import {
@@ -83,9 +84,6 @@ export class ChatEditorComponent extends Editor {
    */
   on_paste_image?: () => Promise<boolean>;
 
-  connected_above = false;
-  border_highlighted = false;
-
   private consuming_paste = false;
   private consume_buffer = "";
   private submit_handler?: ChatEditorSubmitHandler;
@@ -95,7 +93,8 @@ export class ChatEditorComponent extends Editor {
    */
   constructor(tui: TUI) {
     const theme = createEditorTheme();
-    super(tui, theme, { paddingX: 4 });
+    // Kimi Code 的 Agent prompt 左侧只有两列空白前缀，没有完整边框内的额外 padding。
+    super(tui, theme, { paddingX: 2 });
     this.borderColor = (text: string) => theme.borderColor(text);
 
     // slash 命令使用 WrappingSelectList，@ 文件路径保持 pi-tui 默认 SelectList。
@@ -117,12 +116,6 @@ export class ChatEditorComponent extends Editor {
     this.setAutocompleteProvider(
       new FileMentionProvider(BUILTIN_SLASH_COMMANDS, process.cwd()),
     );
-
-    // 输入变化时同步边框高亮：以 "/" 开头（slash 命令）时高亮为主色。
-    // 对齐 Kimi Code 的 updateEditorBorderHighlight。
-    this.onChange = (text: string) => {
-      this.update_border_highlight(text);
-    };
   }
 
   /**
@@ -147,21 +140,6 @@ export class ChatEditorComponent extends Editor {
    */
   clear(): void {
     this.setText("");
-    this.update_border_highlight("");
-  }
-
-  /**
-   * 根据当前文本同步边框高亮状态。
-   * 以 "/" 开头（slash 命令）时高亮为主色，否则恢复默认边框色。
-   *
-   * @param text 当前文本，省略时读取编辑器内容。
-   */
-  update_border_highlight(text?: string): void {
-    const trimmed = (text ?? this.getText()).trimStart();
-    const highlighted = trimmed.startsWith("/");
-    this.border_highlighted = highlighted;
-    this.borderColor = (s: string) =>
-      current_theme.fg(highlighted ? "primary" : "border", s);
   }
 
   override handleInput(data: string): void {
@@ -274,7 +252,11 @@ export class ChatEditorComponent extends Editor {
   }
 
   /**
-   * 覆写渲染，注入 prompt 符号、高亮 slash 命令，并补全边框。
+   * 覆写渲染，输出 Kimi Code 风格的 Agent prompt：
+   * - 顶部标题分隔线 `── input ─────`。
+   * - 内容区左侧保留两列空白前缀，不再注入 `>` prompt 符号。
+   * - 移除 pi-tui Editor 的底部水平边框与左右侧边框。
+   * - 高亮 slash 命令 token。
    */
   override render(width: number): string[] {
     const lines = super.render(width);
@@ -282,6 +264,11 @@ export class ChatEditorComponent extends Editor {
       return lines;
     }
 
+    // 顶部边框替换为标题线；底部边框移除。
+    lines[0] = render_input_header(width);
+    lines.pop();
+
+    // 高亮第一行里的 slash 命令 token。
     const first_content_index = 1;
     const text = this.getText().trimStart();
     if (text.startsWith("/")) {
@@ -294,17 +281,7 @@ export class ChatEditorComponent extends Editor {
       }
     }
 
-    const first_content = lines[first_content_index];
-    if (first_content !== undefined) {
-      const with_prompt = inject_prompt_symbol(first_content);
-      if (with_prompt !== undefined) {
-        lines[first_content_index] = with_prompt;
-      }
-    }
-
-    return wrap_with_side_borders(lines, (s) => this.borderColor(s), {
-      connected_above: this.connected_above && !this.border_highlighted,
-    });
+    return lines;
   }
 
   /**
@@ -503,63 +480,19 @@ function highlight_visible_ranges(
 }
 
 /**
- * 在第一行内容前注入 >  prompt 符号。
+ * 渲染 Kimi Code 风格的顶部标题分隔线：
+ * `── input ───────`。
+ *
+ * @param width 可用宽度。
+ * @returns 标题行。
  */
-function inject_prompt_symbol(line: string): string | undefined {
-  if (line.length < 4) {
-    return undefined;
+function render_input_header(width: number): string {
+  if (width <= 0) {
+    return "";
   }
-  for (let i = 0; i < 4; i += 1) {
-    if (line[i] !== " ") {
-      return undefined;
-    }
-  }
-  return "  > " + line.slice(4);
-}
-
-interface WrapBorderOptions {
-  connected_above?: boolean;
-}
-
-/**
- * 为 pi-tui Editor 的渲染结果补全四角和侧边框。
- */
-function wrap_with_side_borders(
-  lines: string[],
-  paint: (s: string) => string,
-  options: WrapBorderOptions = {},
-): string[] {
-  let seen_top = false;
-  return lines.map((line) => {
-    const plain = strip_sgr(line);
-    if (plain.length > 0 && plain[0] === "─") {
-      const left_corner = seen_top
-        ? "╰"
-        : options.connected_above === true
-          ? "├"
-          : "╭";
-      const right_corner = seen_top
-        ? "╯"
-        : options.connected_above === true
-          ? "┤"
-          : "╮";
-      seen_top = true;
-      if (plain.length === 1) {
-        return paint(left_corner);
-      }
-      const middle = plain.slice(1, -1);
-      return paint(left_corner + middle + right_corner);
-    }
-    if (line.length === 0) {
-      return line;
-    }
-    const first_ch = line[0];
-    const last_ch = line.at(-1);
-    const head = first_ch === " " ? paint("│") : (first_ch ?? "");
-    const tail = line.length > 1 && last_ch === " " ? paint("│") : (last_ch ?? "");
-    if (line.length === 1) {
-      return head;
-    }
-    return head + line.slice(1, -1) + tail;
-  });
+  const title = " input ";
+  const fill = Math.max(0, width - title.length - 2);
+  const line = `──${title}${"─".repeat(fill)}`;
+  // 标题线在应用颜色前是纯 ASCII，直接按字符截断即可，避免小宽度下出现省略号。
+  return current_theme.fg("border", line.slice(0, width));
 }

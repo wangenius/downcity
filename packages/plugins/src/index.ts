@@ -103,6 +103,8 @@ export type {
 } from "./tts/types/TtsPlugin.js";
 export type {
   ImagePluginContent,
+  ImagePluginDefaultModel,
+  ImagePluginDefaultModelResolverInput,
   ImagePluginFileContent,
   ImagePluginInput,
   ImagePluginJobCreateResult,

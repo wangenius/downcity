@@ -12,6 +12,7 @@ import type {
   JsonObject,
   JsonValue,
 } from "@downcity/agent/internal/types/common/Json.js";
+import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 
 /**
  * 图片生成文本内容片段。
@@ -238,6 +239,25 @@ export interface ImagePluginModelsResult {
 }
 
 /**
+ * 默认图片模型解析函数输入。
+ */
+export interface ImagePluginDefaultModelResolverInput {
+  /** 当前 Agent 运行上下文，可用于读取项目根目录、会话上下文或宿主状态。 */
+  context: AgentContext;
+  /** 已解析后的图片生成输入，可用于根据 prompt、messages、尺寸或质量选择模型。 */
+  input: ImagePluginResolvedInput;
+}
+
+/**
+ * 默认图片模型配置。
+ */
+export type ImagePluginDefaultModel =
+  | string
+  | ((
+    input: ImagePluginDefaultModelResolverInput,
+  ) => string | undefined | null | Promise<string | undefined | null>);
+
+/**
  * ImagePlugin 构造参数。
  */
 export interface ImagePluginOptions {
@@ -247,6 +267,8 @@ export interface ImagePluginOptions {
   title?: string;
   /** Plugin 用途说明。 */
   description?: string;
+  /** 默认图片模型配置。Agent 调用 `image_create` 未传 `model` 时会自动使用字符串值或函数返回值。 */
+  default_model?: ImagePluginDefaultModel;
   /** 创建图片生成任务，通常传入 `(input) => city.ai.image_create(input)`。 */
   image_create?: (
     input: ImagePluginResolvedInput,

@@ -180,6 +180,7 @@ const agent = new Agent({
   model,
   plugins: [
     new ImagePlugin({
+      default_model: "image-model-id",
       list_models: async () => {
         const catalog = await city.ai.listModels();
         return catalog.forModality("image");
@@ -188,6 +189,18 @@ const agent = new Agent({
       image_result: (input) => city.ai.image_result(input),
     }),
   ],
+});
+```
+
+如果默认图片模型需要由业务状态决定，也可以传函数：
+
+```ts
+new ImagePlugin({
+  default_model: async ({ input }) => {
+    return input.aspect_ratio === "16:9" ? "image-wide-model-id" : "image-model-id";
+  },
+  image_create: (input) => city.ai.image_create(input),
+  image_result: (input) => city.ai.image_result(input),
 });
 ```
 
@@ -209,7 +222,6 @@ const job = await plugin_call({
   plugin: "image",
   action: "image_create",
   payload: {
-    model: "image-model-id",
     prompt: "一张雨夜城市街角的电影感插画",
     aspect_ratio: "16:9",
   },
@@ -243,7 +255,7 @@ const job = await plugin_call({
 
 `content[].url` 可以是在线 URL、本地绝对路径，或相对 Agent 项目根目录的路径。本地图片会由 `ImagePlugin` 读取并转成 City 图片任务需要的 data URL，不需要模型自己传 base64。Agent 不应该传 `messages` 或 `data_url`。
 
-当 Agent 需要查看可用图片模型 ID 时，可以先调用 `models`。
+`default_model` 是插件级默认图片模型，可以是字符串，也可以是同步或异步函数。Agent 调用 `image_create` 时如果没有传 `model`，`ImagePlugin` 会自动把 `default_model` 的字符串值或函数返回值补给下游的 `image_create(input)`；如果 payload 里显式传了 `model`，则以 payload 为准。没有配置 `default_model` 时，Agent 需要先确认模型 ID，可以调用 `models` 查看可用图片模型。
 
 `image_result` 默认只读取一次当前任务状态。如果返回 `queued` 或 `running`，保留 `job_id`，稍后继续调用 `image_result`。如果希望短任务在一次 tool 调用里等到终态，可以传 `until_done: true`，并按需设置 `max_wait_ms` / `poll_interval_ms`。如果返回 `succeeded`，`data` 会是包含图片 file parts 的 AI SDK `UIMessage`。
 

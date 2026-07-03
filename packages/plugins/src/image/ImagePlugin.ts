@@ -23,6 +23,7 @@ import type {
   ImagePluginJobResult,
   ImagePluginJobResultInput,
   ImagePluginContent,
+  ImagePluginDefaultModel,
   ImagePluginModel,
   ImagePluginModelsResult,
   ImagePluginOptions,
@@ -168,6 +169,24 @@ function normalize_image_payload(
 }
 
 /**
+ * 归一化默认图片模型配置。
+ */
+function normalize_default_image_model_value(value: string | null | undefined): string | undefined {
+  const model = String(value ?? "").trim();
+  return model ? model : undefined;
+}
+
+/**
+ * 归一化默认图片模型配置入口。
+ */
+function normalize_default_image_model(
+  value: ImagePluginDefaultModel | undefined,
+): ImagePluginDefaultModel | undefined {
+  if (typeof value === "function") return value;
+  return normalize_default_image_model_value(value);
+}
+
+/**
  * 根据文件扩展名推断图片 MIME 类型。
  */
 function infer_image_media_type(file_path: string, fallback?: string): string {
@@ -297,6 +316,38 @@ async function normalize_image_create_input(
         content,
       },
     ],
+  };
+}
+
+/**
+ * 为图片创建输入解析并补齐插件级默认模型。
+ */
+async function apply_default_image_model(
+  context: AgentContext,
+  input: ImagePluginResolvedInput,
+  default_model: ImagePluginDefaultModel | undefined,
+): Promise<ImagePluginResolvedInput> {
+  const model = typeof input.model === "string" ? input.model.trim() : "";
+  if (model) {
+    return {
+      ...input,
+      model,
+    };
+  }
+  if (!default_model) return input;
+  const resolved_model =
+    typeof default_model === "function"
+      ? normalize_default_image_model_value(
+          await default_model({
+            context,
+            input,
+          }),
+        )
+      : normalize_default_image_model_value(default_model);
+  if (!resolved_model) return input;
+  return {
+    ...input,
+    model: resolved_model,
   };
 }
 
@@ -446,6 +497,7 @@ export class ImagePlugin extends BasePlugin {
   private readonly image_create: NonNullable<ImagePluginOptions["image_create"]>;
   private readonly image_result: NonNullable<ImagePluginOptions["image_result"]>;
   private readonly list_models?: ImagePluginOptions["list_models"];
+  private readonly default_model?: ImagePluginDefaultModel;
 
   constructor(options: ImagePluginOptions) {
     super();
@@ -467,6 +519,7 @@ export class ImagePlugin extends BasePlugin {
     this.image_create = options.image_create;
     this.image_result = options.image_result;
     this.list_models = options.list_models;
+    this.default_model = normalize_default_image_model(options.default_model);
   }
 
   /**
@@ -483,7 +536,7 @@ export class ImagePlugin extends BasePlugin {
       "## Actions",
       "",
       "- `models`：列出当前可用的图片模型，返回 `{ models }`。",
-      "  当你不知道应该使用哪个模型时先调用，并让用户或当前任务上下文明确模型 ID。",
+      "  当你不知道应该使用哪个模型，且插件没有默认图片模型时先调用，并让用户或当前任务上下文明确模型 ID。",
       "- `image_create`：在用户明确确认后创建一个异步图片任务，返回 `{ job_id, status }`。",
       "  - 纯文本生成：填 `prompt`（字符串）。",
       "  - 编辑 / 参考图：填 `content`，格式：",
@@ -491,7 +544,7 @@ export class ImagePlugin extends BasePlugin {
       "  - 同时给了 `content` 和 `prompt` 时，`content` 生效，`prompt` 被忽略。",
       "  - `url` 支持三种写法：在线 URL、绝对本地路径、相对 Agent 项目根目录的相对路径。",
       "    不要传 base64 / data URL，也不要再用旧的 `messages` 字段。",
-      "  - 必填参数：`model`。可选参数：`aspect_ratio`（如 `16:9`）、`size`（如 `1024x1024`）、`quality`、`seed`。",
+      "  - `model` 可选；未传时使用插件配置的默认图片模型。可选参数：`aspect_ratio`（如 `16:9`）、`size`（如 `1024x1024`）、`quality`、`seed`。",
       "- `image_result`：用 `job_id` 读取任务状态。",
       "  - 默认读取一次。`queued` / `running` 时保存好 `job_id`，下一轮再查，不要在同一轮里反复轮询。",
       "  - 想直接等到出图，可以传 `until_done: true`，可选 `max_wait_ms`（默认 60000，最长 600000）与 `poll_interval_ms`（默认 1500）。超时仍未完成会返回最后一次的中间状态。",
@@ -501,7 +554,7 @@ export class ImagePlugin extends BasePlugin {
       "",
       "## Flow",
       "",
-      "1. 先确认模型 ID；需要选模型时调用 `models`。",
+      "1. 如果插件没有默认图片模型，先确认模型 ID；需要选模型时调用 `models`。",
       "2. 向用户说明将消耗图片生成额度，并等待用户明确确认。",
       "3. 用户确认后调用 `image_create` 拿到 `job_id`。",
       "4. `image_result` 查询；短任务可加 `until_done: true` 一次拿结果，长任务保存 `job_id` 下一轮再查。",
@@ -661,7 +714,11 @@ export class ImagePlugin extends BasePlugin {
       execute: async ({ context, payload }: { context: AgentContext; payload: JsonValue }) => {
         try {
           const input = normalize_image_payload(payload);
-          const normalized_input = await normalize_image_create_input(context, input);
+          const normalized_input = await apply_default_image_model(
+            context,
+            await normalize_image_create_input(context, input),
+            this.default_model,
+          );
           const created = await this.image_create(normalized_input);
           validate_created_job(created);
           return {

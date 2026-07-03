@@ -10,6 +10,10 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 import fs from "fs-extra";
+import {
+  createPipeProcessHandle,
+  spawnPtyProcessHandle,
+} from "@/sandbox/ShellProcessHandle.js";
 import type {
   SandboxSpawnParams,
   SandboxSpawnResult,
@@ -201,16 +205,25 @@ export async function spawnLinuxBubblewrapSandbox(
     await fs.ensureDir(writablePath);
   }
 
-  const child = spawn("bwrap", buildLinuxBubblewrapArgs({
+  const args = buildLinuxBubblewrapArgs({
     ...params,
-  }), {
-    cwd: params.actualCwd,
-    stdio: "pipe",
-    env: buildLinuxBubblewrapSandboxEnv(params),
   });
-
-  child.stdout.setEncoding("utf8");
-  child.stderr.setEncoding("utf8");
+  const env = buildLinuxBubblewrapSandboxEnv(params);
+  const child = params.terminal
+    ? spawnPtyProcessHandle({
+        command: "bwrap",
+        args,
+        cwd: params.actualCwd,
+        env,
+        terminal: { cols: params.cols, rows: params.rows },
+      })
+    : createPipeProcessHandle(
+        spawn("bwrap", args, {
+          cwd: params.actualCwd,
+          stdio: "pipe",
+          env,
+        }),
+      );
 
   return {
     child,

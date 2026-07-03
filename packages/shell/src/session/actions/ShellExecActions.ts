@@ -11,6 +11,7 @@ import type { ShellRuntimeState } from "@/session/ShellRuntimeTypes.js";
 import type {
   ShellActionResponse,
   ShellExecRequest,
+  ShellSessionSnapshot,
 } from "@/types/ShellAction.js";
 import {
   buildActionResponse,
@@ -28,6 +29,13 @@ async function sleep(ms: number): Promise<void> {
     const timer = setTimeout(resolve, ms);
     if (typeof timer.unref === "function") timer.unref();
   });
+}
+
+function require_shell_snapshot(response: ShellActionResponse): ShellSessionSnapshot {
+  if (!response.shell) {
+    throw new Error("shell exec expected a shell snapshot response");
+  }
+  return response.shell;
 }
 
 /**
@@ -54,6 +62,7 @@ export async function execShellCommand(
     sandbox: request.sandbox,
     reason: request.reason,
     approvalToolName: "shell_exec",
+    terminal: false,
     inlineWaitMs: Math.min(state.options.defaultInlineWaitMs, timeoutMs),
     maxOutputTokens: request.maxOutputTokens,
     autoNotifyOnExit: false,
@@ -61,8 +70,10 @@ export async function execShellCommand(
     ...(request.turnId ? { turnId: request.turnId } : {}),
     ...(request.toolCallId ? { toolCallId: request.toolCallId } : {}),
   });
+  require_shell_snapshot(started);
 
   let current = started;
+  let current_shell = require_shell_snapshot(current);
   let fromCursor = current.chunk?.endCursor ?? 0;
   const outputParts: string[] = [];
   if (current.chunk?.output) {
@@ -70,19 +81,19 @@ export async function execShellCommand(
   }
 
   const deadline = nowMs() + timeoutMs;
-  while (!isTerminalStatus(current.shell.status)) {
+  while (!isTerminalStatus(current_shell.status)) {
     const remaining = deadline - nowMs();
     if (remaining <= 0) {
       await closeShellSession(state, context, {
-        shellId: current.shell.shellId,
+        shellId: current_shell.shellId,
         force: true,
       });
       throw new Error(
-        `shell.exec timed out after ${timeoutMs}ms. Use shell_start for long-running commands.`,
+        `shell.exec timed out after ${timeoutMs}ms. Use shell_session.start for long-running commands.`,
       );
     }
 
-    const inMemory = state.sessions.get(current.shell.shellId);
+    const inMemory = state.sessions.get(current_shell.shellId);
     if (
       inMemory &&
       (inMemory.snapshot.status === "running" ||
@@ -97,14 +108,14 @@ export async function execShellCommand(
     }
 
     const refreshed = await resolveSession(state, context, {
-      shellId: current.shell.shellId,
+      shellId: current_shell.shellId,
       includeCompleted: true,
     });
     if (!refreshed) {
-      throw new Error(`shell session disappeared unexpectedly: ${current.shell.shellId}`);
+      throw new Error(`shell session disappeared unexpectedly: ${current_shell.shellId}`);
     }
     const chunk = createOutputChunk({
-      shellId: current.shell.shellId,
+      shellId: current_shell.shellId,
       outputText: refreshed.outputText,
       fromCursor,
       context,
@@ -114,6 +125,7 @@ export async function execShellCommand(
       shell: refreshed.snapshot,
       chunk,
     });
+    current_shell = require_shell_snapshot(current);
     if (chunk.output) {
       outputParts.push(chunk.output);
     }
@@ -122,27 +134,27 @@ export async function execShellCommand(
     }
   }
 
-  const finalSession = state.sessions.get(current.shell.shellId);
+  const finalSession = state.sessions.get(current_shell.shellId);
   if (finalSession) {
     await finalSession.completionPromise;
     await finalSession.writeChain.catch(() => undefined);
   }
 
   await closeShellSession(state, context, {
-    shellId: current.shell.shellId,
+    shellId: current_shell.shellId,
     force: false,
   }).catch(() => undefined);
 
   const completed = await resolveSession(state, context, {
-    shellId: current.shell.shellId,
+    shellId: current_shell.shellId,
     includeCompleted: true,
   });
   const fullOutput = completed?.outputText ?? outputParts.join("");
   const originalLines = fullOutput ? fullOutput.split("\n").length : 0;
   return buildActionResponse({
-    shell: current.shell,
+    shell: current_shell,
     chunk: {
-      shellId: current.shell.shellId,
+      shellId: current_shell.shellId,
       output: fullOutput,
       startCursor: 0,
       endCursor: fullOutput.length,

@@ -215,7 +215,8 @@ export type ShellToolAction =
   | "read"
   | "write"
   | "wait"
-  | "close";
+  | "close"
+  | "list";
 
 /**
  * Shell tool 执行器协议。

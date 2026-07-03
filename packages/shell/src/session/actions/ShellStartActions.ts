@@ -99,7 +99,7 @@ export async function startShellSession(
       await recordAutoApprovedApproval({
         context,
         shellId,
-        toolName: request.approvalToolName || "shell_start",
+        toolName: request.approvalToolName || "shell_session",
         cmd,
         cwd,
         reason,
@@ -111,7 +111,7 @@ export async function startShellSession(
         state,
         context,
         shellId,
-        toolName: request.approvalToolName || "shell_start",
+        toolName: request.approvalToolName || "shell_session",
         cmd,
         cwd,
         reason,
@@ -146,6 +146,9 @@ export async function startShellSession(
     login,
     baseEnv: buildShellEnv(context, ownerContextId),
     sandboxMode,
+    terminal: request.terminal !== false,
+    cols: request.cols,
+    rows: request.rows,
   });
   const child = spawnResult.child;
   const actualCwd = spawnResult.cwd;
@@ -174,6 +177,9 @@ export async function startShellSession(
       ...(approvalId ? { approvalId } : {}),
       ...(reason ? { approvalReason: reason } : {}),
       stdinWritable: true,
+      terminal: request.terminal !== false,
+      ...(typeof request.cols === "number" ? { cols: request.cols } : {}),
+      ...(typeof request.rows === "number" ? { rows: request.rows } : {}),
       status: "running",
       ...(typeof child.pid === "number" ? { pid: child.pid } : {}),
       startedAt,

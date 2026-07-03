@@ -14,6 +14,7 @@ import type {
 import type {
   ShellActionResponse,
   ShellCloseRequest,
+  ShellListRequest,
   ShellQueryRequest,
   ShellReadRequest,
   ShellWaitRequest,
@@ -25,10 +26,35 @@ import {
   isInMemorySession,
   isTerminalStatus,
   nowMs,
+  resolveOwnerContextId,
   resolveSession,
   scheduleCleanup,
   updateSessionSnapshot,
 } from "../ShellActionRuntimeSupport.js";
+
+/**
+ * 列出当前 runtime 内的 shell sessions。
+ */
+export async function listShellSessions(
+  state: ShellRuntimeState,
+  context: ShellHostContext,
+  request: ShellListRequest,
+): Promise<ShellActionResponse> {
+  const ownerContextId = resolveOwnerContextId(context, request.ownerContextId);
+  const includeCompleted = request.includeCompleted !== false;
+  const sessions = Array.from(state.sessions.values())
+    .map((item) => item.snapshot)
+    .filter((snapshot) => {
+      if (ownerContextId && snapshot.ownerContextId !== ownerContextId) return false;
+      if (includeCompleted) return true;
+      return snapshot.status === "running" || snapshot.status === "starting";
+    })
+    .sort((left, right) => right.updatedAt - left.updatedAt);
+  return {
+    sessions,
+    note: sessions.length === 0 ? "no shell sessions" : "shell sessions listed",
+  };
+}
 
 /**
  * 查询 shell session 状态。

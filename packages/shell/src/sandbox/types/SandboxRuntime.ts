@@ -7,7 +7,6 @@
  * - 目标是让 shell、task script 等本地执行入口都能复用同一个 agent sandbox 边界。
  */
 
-import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import type { SandboxConfig } from "@/sandbox/types/Sandbox.js";
 import type { SandboxNetworkMode } from "@/sandbox/types/Sandbox.js";
 
@@ -21,7 +20,7 @@ export type SandboxBackend = "macos-seatbelt" | "linux-bubblewrap" | "unrestrict
  *
  * 说明（中文）
  * - `shell_exec` 这类 one-shot 命令通常会很快走到终态。
- * - `shell_start` 则会维持一个状态化 sandbox session。
+ * - `shell_session` 则会维持一个状态化 sandbox session。
  */
 export type SandboxSessionStatus =
   | "starting"
@@ -379,9 +378,72 @@ export interface SandboxSpawnParams {
   baseEnv: NodeJS.ProcessEnv;
 
   /**
+   * 是否使用伪终端启动进程。
+   *
+   * 说明（中文）
+   * - 交互式 shell session 需要 PTY，才能让 REPL/TUI/行编辑类程序识别自己运行在终端中。
+   * - 一次性命令默认不使用 PTY，保持 stdout/stderr 管道语义更稳定。
+   */
+  terminal?: boolean;
+
+  /**
+   * PTY 列数；仅 `terminal=true` 时生效。
+   */
+  cols?: number;
+
+  /**
+   * PTY 行数；仅 `terminal=true` 时生效。
+   */
+  rows?: number;
+
+  /**
    * 当前请求最终使用的 sandbox 配置。
    */
   config: ResolvedSandboxConfig;
+}
+
+/**
+ * shell 进程句柄。
+ *
+ * 关键点（中文）
+ * - pipe 子进程与 PTY 子进程的 API 不同，这里收敛成 shell runtime 需要的最小协议。
+ * - PTY 输出天然是 stdout/stderr 合流；pipe 子进程在 wrapper 中同样合并成单一输出流。
+ */
+export interface ShellProcessHandle {
+  /**
+   * 当前进程 pid；某些 backend 无法提供时为空。
+   */
+  pid?: number;
+
+  /**
+   * 当前进程是否仍允许写入输入。
+   */
+  writable: boolean;
+
+  /**
+   * 注册输出监听器。
+   */
+  onData(callback: (chunk: string | Buffer) => void): void;
+
+  /**
+   * 注册退出监听器。
+   */
+  onExit(callback: (exitCode: number) => void): void;
+
+  /**
+   * 注册启动错误监听器。
+   */
+  onError(callback: (error: Error) => void): void;
+
+  /**
+   * 写入 stdin / PTY 输入。
+   */
+  write(chars: string): Promise<void>;
+
+  /**
+   * 关闭进程。
+   */
+  kill(signal?: NodeJS.Signals): void;
 }
 
 /**
@@ -391,7 +453,7 @@ export interface SandboxSpawnResult {
   /**
    * 已启动的子进程句柄。
    */
-  child: ChildProcessWithoutNullStreams;
+  child: ShellProcessHandle;
 
   /**
    * 当前子进程实际使用的工作目录。

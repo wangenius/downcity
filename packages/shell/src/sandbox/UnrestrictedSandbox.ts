@@ -9,6 +9,10 @@
 
 import { spawn } from "node:child_process";
 import fs from "fs-extra";
+import {
+  createPipeProcessHandle,
+  spawnPtyProcessHandle,
+} from "@/sandbox/ShellProcessHandle.js";
 import type {
   SandboxSpawnParams,
   SandboxSpawnResult,
@@ -22,21 +26,25 @@ export async function spawnUnrestrictedSandbox(
 ): Promise<SandboxSpawnResult> {
   await fs.ensureDir(params.executionDir);
 
-  const child = spawn(
-    params.shellPath,
-    [
-      params.login ? "-lc" : "-c",
-      params.cmd,
-    ],
-    {
-      cwd: params.actualCwd,
-      stdio: "pipe",
-      env: params.baseEnv,
-    },
-  );
-
-  child.stdout.setEncoding("utf8");
-  child.stderr.setEncoding("utf8");
+  const args = [
+    params.login ? "-lc" : "-c",
+    params.cmd,
+  ];
+  const child = params.terminal
+    ? spawnPtyProcessHandle({
+        command: params.shellPath,
+        args,
+        cwd: params.actualCwd,
+        env: params.baseEnv,
+        terminal: { cols: params.cols, rows: params.rows },
+      })
+    : createPipeProcessHandle(
+        spawn(params.shellPath, args, {
+          cwd: params.actualCwd,
+          stdio: "pipe",
+          env: params.baseEnv,
+        }),
+      );
 
   return {
     child,

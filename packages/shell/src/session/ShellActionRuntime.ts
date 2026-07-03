@@ -17,6 +17,7 @@ export {
 export {
   closeShellSession,
   getShellSessionStatus,
+  listShellSessions,
   readShellSession,
   waitShellSession,
 } from "./actions/ShellQueryActions.js";

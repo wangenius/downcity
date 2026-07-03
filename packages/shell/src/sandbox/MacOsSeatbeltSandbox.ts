@@ -10,6 +10,10 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 import fs from "fs-extra";
+import {
+  createPipeProcessHandle,
+  spawnPtyProcessHandle,
+} from "@/sandbox/ShellProcessHandle.js";
 import type {
   SandboxSpawnParams,
   SandboxSpawnResult,
@@ -204,24 +208,29 @@ export async function spawnMacOsSeatbeltSandbox(
   });
   await fs.writeFile(profilePath, profile, "utf-8");
 
-  const child = spawn(
-    "sandbox-exec",
-    [
-      "-f",
-      profilePath,
-      params.shellPath,
-      params.login ? "-lc" : "-c",
-      params.cmd,
-    ],
-    {
-      cwd: params.actualCwd,
-      stdio: "pipe",
-      env: buildMacOsSeatbeltSandboxEnv(params),
-    },
-  );
-
-  child.stdout.setEncoding("utf8");
-  child.stderr.setEncoding("utf8");
+  const args = [
+    "-f",
+    profilePath,
+    params.shellPath,
+    params.login ? "-lc" : "-c",
+    params.cmd,
+  ];
+  const env = buildMacOsSeatbeltSandboxEnv(params);
+  const child = params.terminal
+    ? spawnPtyProcessHandle({
+        command: "/usr/bin/sandbox-exec",
+        args,
+        cwd: params.actualCwd,
+        env,
+        terminal: { cols: params.cols, rows: params.rows },
+      })
+    : createPipeProcessHandle(
+        spawn("/usr/bin/sandbox-exec", args, {
+          cwd: params.actualCwd,
+          stdio: "pipe",
+          env,
+        }),
+      );
 
   return {
     child,

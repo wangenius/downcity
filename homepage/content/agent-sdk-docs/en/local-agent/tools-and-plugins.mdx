@@ -36,7 +36,7 @@ const agent = new Agent({
 });
 ```
 
-This mounts `shell_exec`, `shell_start`, `shell_status`, `shell_read`, `shell_write`, `shell_wait`, and `shell_close`.
+This mounts `shell_exec` and `shell_session`. Use `shell_exec` for one-shot non-interactive commands, and `shell_session` for long-running or stdin-driven interactive PTY sessions.
 
 Unrestricted sandbox requests are approved through the Agent:
 

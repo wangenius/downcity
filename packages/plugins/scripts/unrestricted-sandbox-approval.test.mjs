@@ -64,7 +64,7 @@ async function wait_for_approval(state) {
   throw new Error("approval request was not created");
 }
 
-test("shell_start unrestricted requires reason", async () => {
+test("shell_session unrestricted requires reason", async () => {
   const fixture = await create_fixture();
   const state = createShellRuntimeState({ defaultApprovalTimeoutMs: 500 });
   try {
@@ -84,7 +84,7 @@ test("shell_start unrestricted requires reason", async () => {
   }
 });
 
-test("shell_start unrestricted denied returns denied tool result without execution", async () => {
+test("shell_session unrestricted denied returns denied tool result without execution", async () => {
   const fixture = await create_fixture();
   const state = createShellRuntimeState({
     defaultApprovalTimeoutMs: 2000,
@@ -103,7 +103,7 @@ test("shell_start unrestricted denied returns denied tool result without executi
     });
 
     const approval = await wait_for_approval(state);
-    assert.equal(approval.toolName, "shell_start");
+    assert.equal(approval.toolName, "shell_session");
     assert.equal(fixture.events[0]?.type, "tool-approval-request");
     assert.equal(fixture.events[0]?.approvalId, approval.approvalId);
 
@@ -141,6 +141,7 @@ test("shell_exec unrestricted approved executes in unrestricted sandbox", async 
       login: false,
       sandbox: "unrestricted",
       reason: "测试批准后执行 unrestricted sandbox 命令。",
+      ownerContextId: "session_test",
       timeoutMs: 2000,
     });
 
@@ -399,7 +400,7 @@ test("shell_write unrestricted always-allow mode is scoped by session", async ()
       shell: "/bin/sh",
       login: false,
       sandbox: "unrestricted",
-      reason: "测试当前 session 自动允许 unrestricted shell_start。",
+      reason: "测试当前 session 自动允许 unrestricted shell_session。",
       ownerContextId: "session_auto",
       inlineWaitMs: 20,
     });

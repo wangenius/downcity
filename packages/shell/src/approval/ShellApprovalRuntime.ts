@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - agent 只能通过 shell tool 请求 unrestricted sandbox；真正执行前必须等待用户确认。
  * - 审批结果最终回到原 tool result；session event 只用于 UI/CLI/Console 展示和操作。
- * - V1 授权粒度固定为单次命令、单次 shell_start 启动，或单次 shell_write 输入。
+ * - V1 授权粒度固定为单次命令、单次 shell_session 启动，或单次 session 输入。
  */
 
 import fs from "fs-extra";

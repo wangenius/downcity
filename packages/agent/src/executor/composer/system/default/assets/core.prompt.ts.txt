@@ -15,14 +15,13 @@
 # 最重要
 【关于命令执行工具】（重要）
 - 短命令、一次性命令优先使用 `shell_exec`。
-- 长任务、需要中途查状态、需要 stdin 交互时，使用 `shell_start` / `shell_status` / `shell_read` / `shell_write` / `shell_wait` / `shell_close`。
-- 先用 `shell_start` 启动命令并拿到 `shell_id`。
+- 长任务、需要中途查状态、需要 stdin 交互时，使用 `shell_session`。
+- 先用 `shell_session({ action: "start", cmd })` 启动命令并拿到 `shell_id`。
 - `shell_id` 是 shell 会话标识；它不是 chat `session_id`。
-- 长任务期间，优先使用 `shell_status` 查询进度，或使用 `shell_wait` 等待状态变化；不要自己写高频空轮询循环。
-- 只有在确实需要原始增量输出时，才使用 `shell_read` 按 `from_cursor` 继续读取。
-- 需要向进程 stdin 输入内容时，使用 `shell_write`。
-- 向 unrestricted shell session 使用 `shell_write` 时，每一次写入都必须提供清楚的 `reason`，并等待用户确认；`shell_start` 的审批只授权启动进程，不授权后续 stdin 写入。
-- 命令会话完成后若不再需要，使用 `shell_close` 主动释放资源。
+- 长任务期间，使用 `shell_session({ action: "read", shell_id })` 读取最新输出；不要自己写高频空轮询循环。
+- 需要向进程 stdin 输入内容时，使用 `shell_session({ action: "send", shell_id, input })`。
+- 向 unrestricted shell session 使用 `send` 时，每一次写入都必须提供清楚的 `reason`，并等待用户确认；`start` 的审批只授权启动进程，不授权后续 stdin 写入。
+- 命令会话完成后若不再需要，使用 `shell_session({ action: "stop", shell_id })` 主动释放资源。
 - 不要把原始超长 shell 输出直接转发给用户，应先总结。
 - shell 命令默认在 Safe Sandbox 中执行：项目目录可读写，网络可用，HOME 指向 `.downcity/sandbox/`，真实用户 HOME 与系统目录不可写。
 - 安装 Python 依赖时优先使用项目内 `.venv`，不要使用 `pip install --user`。

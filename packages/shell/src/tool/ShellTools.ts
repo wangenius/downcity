@@ -8,23 +8,13 @@
 
 import { tool, type ToolExecutionOptions } from "ai";
 import type {
-  ShellCloseInput,
   ShellExecInput,
-  ShellReadInput,
-  ShellStartInput,
-  ShellStatusInput,
-  ShellWaitInput,
-  ShellWriteInput,
+  ShellSessionInput,
 } from "@/types/Shell.js";
 import type { ShellActionResponse } from "@/types/ShellAction.js";
 import {
-  shellCloseInputSchema,
   shellExecInputSchema,
-  shellReadInputSchema,
-  shellStartInputSchema,
-  shellStatusInputSchema,
-  shellWaitInputSchema,
-  shellWriteInputSchema,
+  shellSessionInputSchema,
 } from "@/tool/ShellToolSchemas.js";
 import { validateChatSendCommand } from "@/tool/ShellToolFormatting.js";
 import type {
@@ -46,6 +36,12 @@ function flattenShellActionResponse(params: {
   started_at: number;
 }): JsonObject {
   const shell_snapshot = params.response.shell;
+  if (!shell_snapshot) {
+    return {
+      success: false,
+      error: "shell action did not return a shell snapshot",
+    };
+  }
   const chunk = params.response.chunk;
   const exit_code = typeof shell_snapshot.exitCode === "number" ? shell_snapshot.exitCode : null;
   const success =
@@ -64,6 +60,9 @@ function flattenShellActionResponse(params: {
     approval_id: shell_snapshot.approvalId || null,
     approval_reason: shell_snapshot.approvalReason || null,
     stdin_writable: shell_snapshot.stdinWritable !== false,
+    terminal: shell_snapshot.terminal === true,
+    cols: shell_snapshot.cols || null,
+    rows: shell_snapshot.rows || null,
     sandbox_backend: shell_snapshot.sandboxBackend || null,
     sandbox_network_mode: shell_snapshot.sandboxNetworkMode || null,
     sandbox_dir: shell_snapshot.sandboxDir || null,
@@ -105,6 +104,12 @@ function flattenShellExecResponse(params: {
   started_at: number;
 }): JsonObject {
   const shell_snapshot = params.response.shell;
+  if (!shell_snapshot) {
+    return {
+      success: false,
+      error: "shell exec did not return a shell snapshot",
+    };
+  }
   const chunk = params.response.chunk;
   const exit_code = typeof shell_snapshot.exitCode === "number" ? shell_snapshot.exitCode : null;
   const success =
@@ -138,6 +143,39 @@ function flattenShellExecResponse(params: {
   };
 }
 
+function flattenShellListResponse(params: {
+  /**
+   * shell action 响应。
+   */
+  response: ShellActionResponse;
+  /**
+   * tool 调用开始时间。
+   */
+  started_at: number;
+}): JsonObject {
+  return {
+    success: true,
+    sessions: (params.response.sessions || []).map((snapshot) => ({
+      shell_id: snapshot.shellId,
+      status: snapshot.status,
+      cmd: snapshot.cmd,
+      cwd: snapshot.cwd,
+      terminal: snapshot.terminal === true,
+      sandbox: snapshot.sandboxMode || (snapshot.sandboxed === false ? "unrestricted" : "safe"),
+      pid: typeof snapshot.pid === "number" ? snapshot.pid : null,
+      version: snapshot.version,
+      started_at: snapshot.startedAt,
+      updated_at: snapshot.updatedAt,
+      ended_at: typeof snapshot.endedAt === "number" ? snapshot.endedAt : null,
+      exit_code: typeof snapshot.exitCode === "number" ? snapshot.exitCode : null,
+      last_output_preview: snapshot.lastOutputPreview || "",
+      output_chars: snapshot.outputChars,
+    })),
+    wall_time_seconds: Math.max(0, (Date.now() - params.started_at) / 1000),
+    ...(params.response.note ? { note: params.response.note } : {}),
+  };
+}
+
 function formatToolError(
   prefix: string,
   error: unknown,
@@ -156,6 +194,14 @@ function formatToolError(
  *   并随 action 请求一起传给 Shell 内部，避免依赖 AsyncLocalStorage。
  */
 export function createShellTools(runner: ShellToolRunner): ShellToolSet {
+  const session_output_cursors = new Map<string, number>();
+
+  function remember_output_cursor(response: ShellActionResponse): void {
+    const shell_id = response.shell?.shellId || response.chunk?.shellId || "";
+    if (!shell_id || typeof response.chunk?.endCursor !== "number") return;
+    session_output_cursors.set(shell_id, response.chunk.endCursor);
+  }
+
   /**
    * 统一包装 run_action，自动注入当前 tool 运行上下文。
    */
@@ -174,63 +220,9 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
     });
   }
 
-  const shell_start = tool({
-    description:
-      "Start a shell session. Returns shell_id plus initial status/output. Long-running commands should usually be checked later with shell_status or shell_wait instead of repeated polling.",
-    inputSchema: shellStartInputSchema,
-    execute: async (
-      {
-        cmd,
-        workdir,
-        shell,
-        login = true,
-        inline_wait_ms = 1200,
-        max_output_tokens,
-        auto_notify_on_exit,
-        sandbox = "safe",
-        reason,
-      }: ShellStartInput,
-      options: ToolExecutionOptions,
-    ) => {
-      const started_at = Date.now();
-      try {
-        const validation_error = validateChatSendCommand(cmd);
-        if (validation_error) {
-          return {
-            success: false,
-            error: `shell_start rejected: ${validation_error}`,
-          };
-        }
-
-        const response = await run_action_with_context(
-          "start",
-          {
-            cmd,
-            ...(workdir ? { cwd: workdir } : {}),
-            ...(shell ? { shell } : {}),
-            login,
-            inlineWaitMs: inline_wait_ms,
-            ...(typeof max_output_tokens === "number"
-              ? { maxOutputTokens: max_output_tokens }
-              : {}),
-            ...(typeof auto_notify_on_exit === "boolean"
-              ? { autoNotifyOnExit: auto_notify_on_exit }
-              : {}),
-            sandbox,
-            ...(reason ? { reason } : {}),
-          },
-          options.toolCallId,
-        );
-        return flattenShellActionResponse({ response, started_at });
-      } catch (error) {
-        return formatToolError("shell_start failed", error);
-      }
-    },
-  });
-
   const shell_exec = tool({
     description:
-      "Execute a short shell command in one-shot mode and wait for completion. Prefer shell_start for long-running or interactive commands.",
+      "Execute a short non-interactive shell command and wait for completion. Prefer shell_session for long-running or interactive commands.",
     inputSchema: shellExecInputSchema,
     execute: async (
       {
@@ -278,155 +270,134 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
     },
   });
 
-  const shell_status = tool({
+  const shell_session = tool({
     description:
-      "Query the current status of a shell session. Prefer this to ask for progress during long-running commands.",
-    inputSchema: shellStatusInputSchema,
+      "Operate an interactive PTY shell session. Use action=start for long-running or interactive commands, send for stdin, read for latest output, list for sessions, and stop to close.",
+    inputSchema: shellSessionInputSchema,
     execute: async (
-      { shell_id, cmd }: ShellStatusInput,
+      input: ShellSessionInput,
       options: ToolExecutionOptions,
     ) => {
       const started_at = Date.now();
       try {
-        const response = await run_action_with_context(
-          "status",
-          {
-            ...(shell_id ? { shellId: shell_id } : {}),
-            ...(cmd ? { cmd } : {}),
-            includeCompleted: true,
-          },
-          options.toolCallId,
-        );
-        return flattenShellActionResponse({ response, started_at });
+        const action = input.action;
+        if (action === "start") {
+          const cmd = String(input.cmd || "").trim();
+          const validation_error = validateChatSendCommand(cmd);
+          if (validation_error) {
+            return {
+              success: false,
+              error: `shell_session.start rejected: ${validation_error}`,
+            };
+          }
+          const response = await run_action_with_context(
+            "start",
+            {
+              cmd,
+              ...(input.workdir ? { cwd: input.workdir } : {}),
+              ...(input.shell ? { shell: input.shell } : {}),
+              login: input.login !== false,
+              inlineWaitMs: input.inline_wait_ms ?? input.wait_ms ?? 1200,
+              ...(typeof input.max_output_tokens === "number"
+                ? { maxOutputTokens: input.max_output_tokens }
+                : {}),
+              ...(typeof input.auto_notify_on_exit === "boolean"
+                ? { autoNotifyOnExit: input.auto_notify_on_exit }
+                : {}),
+              terminal: true,
+              ...(typeof input.cols === "number" ? { cols: input.cols } : {}),
+              ...(typeof input.rows === "number" ? { rows: input.rows } : {}),
+              sandbox: input.sandbox || "safe",
+              ...(input.reason ? { reason: input.reason } : {}),
+            },
+            options.toolCallId,
+          );
+          remember_output_cursor(response);
+          return flattenShellActionResponse({ response, started_at });
+        }
+        if (action === "send") {
+          const shell_id = String(input.shell_id || "").trim();
+          const from_cursor = session_output_cursors.get(shell_id);
+          const response = await run_action_with_context(
+            "write",
+            {
+              shellId: shell_id,
+              chars: input.input ?? "",
+              ...(input.reason ? { reason: input.reason } : {}),
+            },
+            options.toolCallId,
+          );
+          const shell = response.shell;
+          if (!shell) return flattenShellActionResponse({ response, started_at });
+          const waited = await run_action_with_context(
+            "wait",
+            {
+              shellId: shell.shellId,
+              afterVersion: shell.version,
+              fromCursor: typeof from_cursor === "number" ? from_cursor : shell.outputChars,
+              timeoutMs: input.wait_ms ?? input.inline_wait_ms ?? 1000,
+              ...(typeof input.max_output_tokens === "number"
+                ? { maxOutputTokens: input.max_output_tokens }
+                : {}),
+            },
+            options.toolCallId,
+          );
+          remember_output_cursor(waited);
+          return flattenShellActionResponse({ response: waited, started_at });
+        }
+        if (action === "read") {
+          const shell_id = String(input.shell_id || "").trim();
+          const response = await run_action_with_context(
+            "read",
+            {
+              shellId: shell_id,
+              includeCompleted: true,
+              ...(typeof session_output_cursors.get(shell_id) === "number"
+                ? { fromCursor: session_output_cursors.get(shell_id) }
+                : {}),
+              ...(typeof input.max_output_tokens === "number"
+                ? { maxOutputTokens: input.max_output_tokens }
+                : {}),
+            },
+            options.toolCallId,
+          );
+          remember_output_cursor(response);
+          return flattenShellActionResponse({ response, started_at });
+        }
+        if (action === "list") {
+          const response = await run_action_with_context(
+            "list",
+            {
+              includeCompleted: input.include_completed !== false,
+            },
+            options.toolCallId,
+          );
+          return flattenShellListResponse({ response, started_at });
+        }
+        if (action === "stop") {
+          const response = await run_action_with_context(
+            "close",
+            {
+              shellId: String(input.shell_id || "").trim(),
+              force: input.force === true,
+            },
+            options.toolCallId,
+          );
+          if (input.shell_id) session_output_cursors.delete(input.shell_id);
+          return flattenShellActionResponse({ response, started_at });
+        }
+        return {
+          success: false,
+          error: `unsupported shell_session action: ${String(action)}`,
+        };
       } catch (error) {
-        return formatToolError("shell_status failed", error);
-      }
-    },
-  });
-
-  const shell_read = tool({
-    description:
-      "Read output from a shell session starting at a character cursor. Use this only when you truly need the raw incremental output.",
-    inputSchema: shellReadInputSchema,
-    execute: async (
-      { shell_id, from_cursor, max_output_tokens }: ShellReadInput,
-      options: ToolExecutionOptions,
-    ) => {
-      const started_at = Date.now();
-      try {
-        const response = await run_action_with_context(
-          "read",
-          {
-            shellId: shell_id,
-            ...(typeof from_cursor === "number" ? { fromCursor: from_cursor } : {}),
-            ...(typeof max_output_tokens === "number"
-              ? { maxOutputTokens: max_output_tokens }
-              : {}),
-            includeCompleted: true,
-          },
-          options.toolCallId,
-        );
-        return flattenShellActionResponse({ response, started_at });
-      } catch (error) {
-        return formatToolError("shell_read failed", error);
-      }
-    },
-  });
-
-  const shell_write = tool({
-    description:
-      "Write text to the stdin of an existing shell session. When the target session runs in unrestricted sandbox mode, provide reason; every write requires user approval.",
-    inputSchema: shellWriteInputSchema,
-    execute: async (
-      { shell_id, chars, reason }: ShellWriteInput,
-      options: ToolExecutionOptions,
-    ) => {
-      const started_at = Date.now();
-      try {
-        const response = await run_action_with_context(
-          "write",
-          {
-            shellId: shell_id,
-            chars,
-            ...(reason ? { reason } : {}),
-          },
-          options.toolCallId,
-        );
-        return flattenShellActionResponse({ response, started_at });
-      } catch (error) {
-        return formatToolError("shell_write failed", error);
-      }
-    },
-  });
-
-  const shell_wait = tool({
-    description:
-      "Wait for a shell session to change state or produce more output. Prefer this over manual high-frequency polling loops.",
-    inputSchema: shellWaitInputSchema,
-    execute: async (
-      {
-        shell_id,
-        after_version,
-        from_cursor,
-        timeout_ms = 10000,
-        max_output_tokens,
-      }: ShellWaitInput,
-      options: ToolExecutionOptions,
-    ) => {
-      const started_at = Date.now();
-      try {
-        const response = await run_action_with_context(
-          "wait",
-          {
-            shellId: shell_id,
-            ...(typeof after_version === "number" ? { afterVersion: after_version } : {}),
-            ...(typeof from_cursor === "number" ? { fromCursor: from_cursor } : {}),
-            timeoutMs: timeout_ms,
-            ...(typeof max_output_tokens === "number"
-              ? { maxOutputTokens: max_output_tokens }
-              : {}),
-          },
-          options.toolCallId,
-        );
-        return flattenShellActionResponse({ response, started_at });
-      } catch (error) {
-        return formatToolError("shell_wait failed", error);
-      }
-    },
-  });
-
-  const shell_close = tool({
-    description:
-      "Close a shell session and release runtime resources. Use force only when a process will not exit normally.",
-    inputSchema: shellCloseInputSchema,
-    execute: async (
-      { shell_id, force = false }: ShellCloseInput,
-      options: ToolExecutionOptions,
-    ) => {
-      const started_at = Date.now();
-      try {
-        const response = await run_action_with_context(
-          "close",
-          {
-            shellId: shell_id,
-            force,
-          },
-          options.toolCallId,
-        );
-        return flattenShellActionResponse({ response, started_at });
-      } catch (error) {
-        return formatToolError("shell_close failed", error);
+        return formatToolError("shell_session failed", error);
       }
     },
   });
 
   return {
     shell_exec,
-    shell_start,
-    shell_status,
-    shell_read,
-    shell_write,
-    shell_wait,
-    shell_close,
+    shell_session,
   };
 }

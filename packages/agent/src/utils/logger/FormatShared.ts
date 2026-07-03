@@ -221,7 +221,7 @@ export function extractFunctionCallExecCommandCmd(
   if (itemType !== "function_call") return undefined;
 
   const name = getStringField(message, "name");
-  if (name !== "shell_start" && name !== "shell_exec") return undefined;
+  if (name !== "shell_session" && name !== "shell_exec") return undefined;
 
   const argsObj = parsePossibleJsonObject(message.arguments);
   if (!argsObj) return undefined;

@@ -33,6 +33,7 @@ import {
   execShellCommand,
   getShellApprovalModeView,
   getShellSessionStatus,
+  listShellSessions,
   listShellApprovalModeViews,
   listShellApprovals,
   readShellSession,
@@ -226,6 +227,8 @@ export class Shell {
         return await waitShellSession(this.state, context, payload_with_context as never);
       case "close":
         return await closeShellSession(this.state, context, payload_with_context as never);
+      case "list":
+        return await listShellSessions(this.state, context, payload_with_context as never);
       default:
         throw new Error(`Unknown shell action: ${String(action)}`);
     }

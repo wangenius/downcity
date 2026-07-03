@@ -37,7 +37,7 @@ export type ShellApprovalMode = "ask" | "always-allow";
 /**
  * shell unrestricted sandbox 审批来源工具。
  */
-export type ShellApprovalToolName = "shell_exec" | "shell_start" | "shell_write";
+export type ShellApprovalToolName = "shell_exec" | "shell_session" | "shell_write";
 
 /**
  * shell 会话关联的外部引用。
@@ -85,6 +85,12 @@ export type ShellSessionSnapshot = {
   approvalReason?: string;
   /** 当前 shell 是否允许继续写入 stdin。 */
   stdinWritable?: boolean;
+  /** 当前 shell 是否通过 PTY 运行。 */
+  terminal?: boolean;
+  /** PTY 列数；仅 `terminal=true` 时存在。 */
+  cols?: number;
+  /** PTY 行数；仅 `terminal=true` 时存在。 */
+  rows?: number;
   /** 当前 shell 使用的 sandbox backend。 */
   sandboxBackend?: string;
   /** 当前 shell 采用的 sandbox 网络模式。 */
@@ -149,6 +155,12 @@ export type ShellStartRequest = {
   turnId?: string;
   /** 是否在 shell 结束后自动回投主 chat agent。 */
   autoNotifyOnExit?: boolean;
+  /** 是否使用 PTY 运行；交互式 session 默认 true，一次性 exec 默认 false。 */
+  terminal?: boolean;
+  /** PTY 列数；仅 `terminal=true` 时生效。 */
+  cols?: number;
+  /** PTY 行数；仅 `terminal=true` 时生效。 */
+  rows?: number;
   /** 命令执行 sandbox 模式；默认 safe。 */
   sandbox?: ShellSandboxMode;
   /** 请求 unrestricted sandbox 时展示给用户的原因。 */
@@ -283,6 +295,16 @@ export type ShellCloseRequest = {
 };
 
 /**
+ * shell session 列表请求。
+ */
+export type ShellListRequest = {
+  /** 指定 owner sessionId；为空时优先从 SessionRunScope 推断。 */
+  ownerContextId?: string;
+  /** 是否包含已结束会话；默认 true。 */
+  includeCompleted?: boolean;
+};
+
+/**
  * shell 输出块。
  *
  * 说明（中文）
@@ -311,7 +333,9 @@ export type ShellOutputChunk = {
  */
 export type ShellActionResponse = {
   /** shell 当前快照。 */
-  shell: ShellSessionSnapshot;
+  shell?: ShellSessionSnapshot;
+  /** session 列表；仅 `shell_session.list` 返回。 */
+  sessions?: ShellSessionSnapshot[];
   /** 可选输出块；仅在 start/read/wait 中返回。 */
   chunk?: ShellOutputChunk;
   /** 操作说明或附加提示。 */

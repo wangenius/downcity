@@ -43,19 +43,16 @@ export function attachShellProcessEventHandlers(params: {
 }): void {
   const { state, session } = params;
   const { child } = session;
-  child.stdout.on("data", (chunk: string | Buffer) => {
+  child.onData((chunk: string | Buffer) => {
     void appendSessionOutput(state, session, String(chunk ?? "")).catch(() => undefined);
   });
-  child.stderr.on("data", (chunk: string | Buffer) => {
-    void appendSessionOutput(state, session, String(chunk ?? "")).catch(() => undefined);
-  });
-  child.on("error", (error: Error) => {
+  child.onError((error: Error) => {
     void appendSessionOutput(state, session, `\n[process error] ${String(error)}\n`).catch(
       () => undefined,
     );
     void finalizeExitAfterOutputDrain(state, session, -1).catch(() => undefined);
   });
-  child.on("close", (code: number | null) => {
+  child.onExit((code: number) => {
     void finalizeExitAfterOutputDrain(
       state,
       session,

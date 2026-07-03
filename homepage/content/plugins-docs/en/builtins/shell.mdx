@@ -23,12 +23,9 @@ const agent = new Agent({
 Mounting `shell: new Shell()` adds these model tools:
 
 - `shell_exec`
-- `shell_start`
-- `shell_status`
-- `shell_read`
-- `shell_write`
-- `shell_wait`
-- `shell_close`
+- `shell_session`
+
+`shell_exec` is for one-shot non-interactive commands. `shell_session` is for interactive PTY sessions and supports `start`, `send`, `read`, `list`, and `stop` actions.
 
 ## Sandbox Modes
 
@@ -86,7 +83,7 @@ const current = agent.approval_mode({ session_id: "consoleui" });
 - Safe Sandbox commands can read and write the project and use the configured sandbox directory.
 - Unrestricted commands execute outside the Safe Sandbox only after per-request approval.
 - `always-allow` only affects new approval requests in the current session, not other sessions.
-- Every write to an unrestricted `shell_start` session also requires approval through `shell_write`.
+- Every `send` to an unrestricted `shell_session` also requires approval.
 - `agent.dispose()` disposes Shell sessions.
 
 ## Related Docs

@@ -23,12 +23,9 @@ const agent = new Agent({
 传入 `shell: new Shell()` 后，模型会获得这些工具：
 
 - `shell_exec`
-- `shell_start`
-- `shell_status`
-- `shell_read`
-- `shell_write`
-- `shell_wait`
-- `shell_close`
+- `shell_session`
+
+`shell_exec` 用于一次性非交互命令；`shell_session` 用于 PTY 交互式会话，支持 `start`、`send`、`read`、`list`、`stop` action。
 
 ## Sandbox 模式
 
@@ -86,7 +83,7 @@ const current = agent.approval_mode({ session_id: "consoleui" });
 - Safe Sandbox 命令可读写项目，并使用配置的 sandbox 目录。
 - Unrestricted 命令只有在逐次审批通过后才会离开 Safe Sandbox 执行。
 - `always-allow` 只影响当前 session 的新 approval 请求，不影响其它 session。
-- 对 unrestricted `shell_start` 会话执行的每一次 `shell_write` 也需要审批。
+- 对 unrestricted `shell_session` 会话执行的每一次 `send` 也需要审批。
 - `agent.dispose()` 会释放 Shell sessions。
 
 ## 相关文档

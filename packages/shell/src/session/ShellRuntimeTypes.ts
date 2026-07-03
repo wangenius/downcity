@@ -7,8 +7,8 @@
  * - 统一归档到 `src/shell/` 相邻层级，避免继续分散在跨域目录里。
  */
 
-import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import type { ShellHostContext } from "@/types/ShellHostContext.js";
+import type { ShellProcessHandle } from "@/sandbox/types/SandboxRuntime.js";
 import type {
   ShellApprovalMode,
   ShellApprovalStatus,
@@ -111,7 +111,7 @@ export type ShellSessionRuntimeState = {
   /**
    * 当前 shell session 对应的子进程句柄。
    */
-  child: ChildProcessWithoutNullStreams;
+  child: ShellProcessHandle;
   /**
    * 当前已缓存的标准输出与标准错误文本。
    */

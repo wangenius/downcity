@@ -39,7 +39,7 @@ function approvalDeniedMessage(status: ShellApprovalStatus): string {
 }
 
 /**
- * 构造 shell_start / shell_exec 审批未通过时的统一响应。
+ * 构造 shell_session / shell_exec 审批未通过时的统一响应。
  */
 export function buildDeniedApprovalResponse(params: {
   /**

@@ -19,8 +19,15 @@ const shellUnrestrictedReasonSchema = z
   .optional()
   .describe("Required when sandbox is unrestricted. Explain why host-level execution is needed.");
 
-export const shellStartInputSchema = z.object({
-  cmd: z.string().describe("Shell command to execute."),
+const shellSessionActionSchema = z
+  .enum(["start", "send", "read", "list", "stop"])
+  .describe("Session action: start, send input, read latest output, list sessions, or stop.");
+
+export const shellSessionInputSchema = z.object({
+  action: shellSessionActionSchema,
+  cmd: z.string().optional().describe("Shell command to execute when action=start."),
+  shell_id: z.string().optional().describe("Existing shell session identifier."),
+  input: z.string().optional().describe("Text to send to the PTY session."),
   workdir: z
     .string()
     .optional()
@@ -38,15 +45,37 @@ export const shellStartInputSchema = z.object({
     .number()
     .optional()
     .default(1200)
-    .describe("How long to inline-wait for initial output before returning."),
+    .describe("How long to wait after start/send/read before returning output."),
+  wait_ms: z
+    .number()
+    .optional()
+    .describe("Alias for inline_wait_ms when sending or reading session output."),
   max_output_tokens: z
     .number()
     .optional()
     .describe("Maximum output tokens returned in a single read chunk."),
+  include_completed: z
+    .boolean()
+    .optional()
+    .default(true)
+    .describe("Whether list should include completed sessions."),
   auto_notify_on_exit: z
     .boolean()
     .optional()
     .describe("Whether the shell runtime should emit a completion notification when the command exits."),
+  force: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe("Whether stop should force-kill the session."),
+  cols: z
+    .number()
+    .optional()
+    .describe("PTY columns for start. Defaults to 120."),
+  rows: z
+    .number()
+    .optional()
+    .describe("PTY rows for start. Defaults to 40."),
   sandbox: shellSandboxModeSchema,
   reason: shellUnrestrictedReasonSchema,
 });
@@ -70,70 +99,11 @@ export const shellExecInputSchema = z.object({
     .number()
     .optional()
     .default(120000)
-    .describe("Total timeout for one-shot execution. Defaults to 120s; shell_start is preferred for long-running commands."),
+    .describe("Total timeout for one-shot execution. Defaults to 120s; shell_session is preferred for long-running commands."),
   max_output_tokens: z
     .number()
     .optional()
     .describe("Maximum output tokens returned in the final result."),
   sandbox: shellSandboxModeSchema,
   reason: shellUnrestrictedReasonSchema,
-});
-
-export const shellStatusInputSchema = z.object({
-  shell_id: z.string().optional().describe("Existing shell identifier."),
-  cmd: z
-    .string()
-    .optional()
-    .describe("Optional command substring to resolve the latest shell in the current chat."),
-});
-
-export const shellReadInputSchema = z.object({
-  shell_id: z.string().describe("Existing shell identifier."),
-  from_cursor: z
-    .number()
-    .optional()
-    .describe("Character cursor to continue reading from."),
-  max_output_tokens: z
-    .number()
-    .optional()
-    .describe("Maximum output tokens returned in this chunk."),
-});
-
-export const shellWriteInputSchema = z.object({
-  shell_id: z.string().describe("Existing shell identifier."),
-  chars: z.string().describe("Bytes to write to stdin."),
-  reason: z
-    .string()
-    .optional()
-    .describe("Required when writing to an unrestricted shell session. Explain why this stdin input is needed."),
-});
-
-export const shellWaitInputSchema = z.object({
-  shell_id: z.string().describe("Existing shell identifier."),
-  after_version: z
-    .number()
-    .optional()
-    .describe("Only return once the shell version is greater than this value."),
-  from_cursor: z
-    .number()
-    .optional()
-    .describe("Character cursor to continue reading from after the wait."),
-  timeout_ms: z
-    .number()
-    .optional()
-    .default(10000)
-    .describe("Maximum time to wait for state/output changes."),
-  max_output_tokens: z
-    .number()
-    .optional()
-    .describe("Maximum output tokens returned in this chunk."),
-});
-
-export const shellCloseInputSchema = z.object({
-  shell_id: z.string().describe("Existing shell identifier."),
-  force: z
-    .boolean()
-    .optional()
-    .default(false)
-    .describe("Whether to force-kill the shell with SIGKILL."),
 });

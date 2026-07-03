@@ -284,7 +284,7 @@ function extract_key_argument(tool_name: string, args: unknown): string | null {
 
   const key_map: Record<string, string[]> = {
     shell_exec: ["cmd", "command"],
-    shell_start: ["cmd", "command"],
+    shell_session: ["cmd", "command", "action", "shell_id"],
     shell_write: ["cmd", "command", "input"],
     read: ["path", "file_path"],
     write: ["path", "file_path"],

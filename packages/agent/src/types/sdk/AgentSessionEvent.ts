@@ -90,7 +90,7 @@ export interface AgentSessionToolCallEvent {
   /**
    * 当前工具名称。
    */
-  toolName: "shell_exec" | "shell_start" | "shell_write" | string;
+  toolName: "shell_exec" | "shell_session" | "shell_write" | string;
 
   /**
    * 当前工具输入参数。
@@ -120,7 +120,7 @@ export interface AgentSessionToolResultEvent {
   /**
    * 当前工具名称。
    */
-  toolName: "shell_exec" | "shell_start" | "shell_write" | string;
+  toolName: "shell_exec" | "shell_session" | "shell_write" | string;
 
   /**
    * 当前工具输出结果。
@@ -150,7 +150,7 @@ export interface AgentSessionToolApprovalRequestEvent {
   /**
    * 当前工具名称。
    */
-  toolName: "shell_exec" | "shell_start" | "shell_write" | string;
+  toolName: "shell_exec" | "shell_session" | "shell_write" | string;
 
   /**
    * 当前审批请求唯一标识。
@@ -166,8 +166,8 @@ export interface AgentSessionToolApprovalRequestEvent {
    * 请求执行的命令文本。
    *
    * 说明（中文）
-   * - `shell_exec` / `shell_start` 中是命令文本。
-   * - `shell_write` 中是 stdin 写入内容，用于兼容旧 UI 展示。
+   * - `shell_exec` / `shell_session` start 中是命令文本。
+   * - `shell_write` 中是 stdin 写入内容，用于兼容内部审批展示。
    */
   cmd: string;
 
@@ -177,17 +177,17 @@ export interface AgentSessionToolApprovalRequestEvent {
   operation?: "exec" | "start" | "write";
 
   /**
-   * 关联 shell_id；`shell_write` 审批时用于标识目标会话。
+   * 关联 shell_id；session 输入审批时用于标识目标会话。
    */
   shellId?: string;
 
   /**
-   * stdin 写入内容预览；仅 `shell_write` 审批存在。
+   * stdin 写入内容预览；仅 session 输入审批存在。
    */
   inputPreview?: string;
 
   /**
-   * stdin 写入字符数；仅 `shell_write` 审批存在。
+   * stdin 写入字符数；仅 session 输入审批存在。
    */
   inputChars?: number;
 
@@ -229,7 +229,7 @@ export interface AgentSessionToolApprovalResultEvent {
   /**
    * 当前工具名称。
    */
-  toolName: "shell_exec" | "shell_start" | "shell_write" | string;
+  toolName: "shell_exec" | "shell_session" | "shell_write" | string;
 
   /**
    * 当前审批请求唯一标识。

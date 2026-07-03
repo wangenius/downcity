@@ -27,6 +27,9 @@ export async function spawnShellProcess(params: {
   login: boolean;
   baseEnv: NodeJS.ProcessEnv;
   sandboxMode?: "safe" | "unrestricted";
+  terminal?: boolean;
+  cols?: number;
+  rows?: number;
 }): Promise<SandboxSpawnResult> {
   return spawnInSandbox({
     context: params.context,
@@ -38,6 +41,9 @@ export async function spawnShellProcess(params: {
     login: params.login,
     baseEnv: params.baseEnv,
     sandboxMode: params.sandboxMode,
+    terminal: params.terminal,
+    cols: params.cols,
+    rows: params.rows,
   });
 }
 
@@ -54,6 +60,9 @@ export async function spawnInSandbox(params: {
   login: boolean;
   baseEnv: NodeJS.ProcessEnv;
   sandboxMode?: "safe" | "unrestricted";
+  terminal?: boolean;
+  cols?: number;
+  rows?: number;
 }): Promise<SandboxSpawnResult> {
   if (params.sandboxMode === "unrestricted") {
     return spawnUnrestrictedSandbox({
@@ -65,6 +74,9 @@ export async function spawnInSandbox(params: {
       login: params.login,
       baseEnv: params.baseEnv,
       actualCwd: params.cwd,
+      terminal: params.terminal,
+      cols: params.cols,
+      rows: params.rows,
     });
   }
 
@@ -84,6 +96,9 @@ export async function spawnInSandbox(params: {
     baseEnv: params.baseEnv,
     config,
     actualCwd,
+    terminal: params.terminal,
+    cols: params.cols,
+    rows: params.rows,
   };
   if (config.backend === "macos-seatbelt") {
     return spawnMacOsSeatbeltSandbox(spawnParams);
@@ -110,6 +125,9 @@ export async function runSandboxCommand(params: {
   shellPath: string;
   login: boolean;
   baseEnv: NodeJS.ProcessEnv;
+  terminal?: boolean;
+  cols?: number;
+  rows?: number;
 }): Promise<{
   stdout: string;
   stderr: string;
@@ -118,22 +136,18 @@ export async function runSandboxCommand(params: {
 }> {
   const spawn = await spawnInSandbox(params);
   const stdoutChunks: string[] = [];
-  const stderrChunks: string[] = [];
 
-  spawn.child.stdout.on("data", (chunk: string | Buffer) => {
+  spawn.child.onData((chunk: string | Buffer) => {
     stdoutChunks.push(String(chunk ?? ""));
-  });
-  spawn.child.stderr.on("data", (chunk: string | Buffer) => {
-    stderrChunks.push(String(chunk ?? ""));
   });
 
   const exitCode = await new Promise<number>((resolve, reject) => {
-    spawn.child.on("error", (error) => reject(error));
-    spawn.child.on("close", (code) => resolve(typeof code === "number" ? code : -1));
+    spawn.child.onError((error) => reject(error));
+    spawn.child.onExit((code) => resolve(typeof code === "number" ? code : -1));
   });
 
   const stdout = stdoutChunks.join("");
-  const stderr = stderrChunks.join("");
+  const stderr = "";
   if (exitCode !== 0) {
     const message = [stdout.trim(), stderr.trim()]
       .filter(Boolean)

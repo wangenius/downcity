@@ -47,7 +47,7 @@ export async function writeShellSession(
   if (session.snapshot.status !== "running" && session.snapshot.status !== "starting") {
     throw new Error(`shell session ${shellId} is not running`);
   }
-  if (!session.child.stdin.writable) {
+  if (!session.child.writable) {
     throw new Error(`shell session ${shellId} stdin is closed`);
   }
   if (session.snapshot.stdinWritable === false) {
@@ -111,15 +111,7 @@ export async function writeShellSession(
       }
     }
   }
-  await new Promise<void>((resolve, reject) => {
-    session.child.stdin.write(chars, (error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve();
-    });
-  });
+  await session.child.write(chars);
   return buildActionResponse({
     shell: {
       ...session.snapshot,

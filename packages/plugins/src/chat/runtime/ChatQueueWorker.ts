@@ -334,10 +334,11 @@ export class ChatQueueWorker {
     lane: LaneState,
     event: AgentSessionEvent,
   ): Promise<void> {
-    if (!("turnId" in event)) return;
-    const observation = lane.turnObservers.get(event.turnId);
-    if (!observation) return;
     if (event.type !== "assistant-step") return;
+    const turnId = String(event.turnId || "").trim();
+    if (!turnId) return;
+    const observation = lane.turnObservers.get(turnId);
+    if (!observation) return;
     if (event.visibility === "internal") return;
     const stepText = String(event.text || "").trim();
     if (!stepText) return;

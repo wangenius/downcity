@@ -42,6 +42,13 @@ export interface AIBalanceChargeInput extends AIProviderChargeLine {
  * AIService 依赖的最小 Balance bridge。
  */
 export interface AIBalanceBridge {
+  /**
+   * 执行余额前置检查。
+   *
+   * AIService 默认调用时不传 needed_credits，只拦截已经欠费的用户。
+   */
+  precheck?(user_id: string, needed_credits?: number): Promise<{ credits: number }>;
+
   /** 执行扣费并记录账单。 */
   charge(input: AIBalanceChargeInput): Promise<unknown>;
 }

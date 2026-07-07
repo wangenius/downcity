@@ -12,6 +12,8 @@ description: "为什么 @downcity/services 按 user 维护余额，而不是按 
 - 用户侧 `GET /v1/balance/me` 会返回以 credits 为单位的 `balance`，并补充 `usd`、`display`、`conversion`
 - 管理端与内部账务字段也统一使用 credits
 
+钱包余额允许为负数。扣费是账务事实；是否允许一次服务开始执行，应该在 action 前通过 `precheck()` 判断。
+
 也就是说：
 
 - user A 在 downcity X 消费
@@ -48,6 +50,22 @@ await balance.sub(ctx.user!.user_id, 10_000, {
 
 - 余额仍然是全局的
 - 历史记录里仍然知道这笔钱花在哪个 downcity
+
+## 负余额和前置检查
+
+如果某个 action 只需要拦截已经欠费的用户，调用：
+
+```ts
+await balance.precheck(ctx.user!.user_id);
+```
+
+如果某个 action 在开始前要求固定最低余额，调用：
+
+```ts
+await balance.precheck(ctx.user!.user_id, 10_000);
+```
+
+真正扣费仍然走 `sub()` 或 `charge()`，这两个方法都可以把钱包扣成负数。
 
 ## 账户里保存什么
 

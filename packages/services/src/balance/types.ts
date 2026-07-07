@@ -9,6 +9,8 @@
  * - 充值单 `topup` 与 `redeem_code` 是两条不同语义的充值链路
  */
 
+import type { Context, HookFn } from "@downcity/city";
+
 /**
  * Balance 服务配置。
  */
@@ -43,6 +45,46 @@ export interface BalanceExtra {
    */
   meta?: Record<string, unknown>;
 }
+
+/**
+ * 动态计算前置余额检查额度的方法。
+ */
+export type BalancePrecheckCreditsResolver = (
+  ctx: Context,
+) => number | false | undefined | Promise<number | false | undefined>;
+
+/**
+ * 动态计算前置余额检查用户 ID 的方法。
+ */
+export type BalancePrecheckUserResolver = (
+  ctx: Context,
+) => string | undefined | Promise<string | undefined>;
+
+/**
+ * 余额前置检查 hook 配置。
+ */
+export interface BalancePrecheckHookOptions {
+  /**
+   * 本次执行要求用户至少持有的余额，单位为 credits。
+   *
+   * 默认值为 `0`，表示只拦截已经欠费的用户。
+   * 返回 `false` 或 `undefined` 时跳过本次检查。
+   */
+  needed_credits?: number | BalancePrecheckCreditsResolver;
+
+  /**
+   * 被检查余额的用户 ID。
+   *
+   * 默认读取 `ctx.user.user_id`。后台任务、admin 代执行或任务归属用户场景
+   * 可以通过该字段显式指定。
+   */
+  user_id?: string | BalancePrecheckUserResolver;
+}
+
+/**
+ * 余额前置检查 hook。
+ */
+export type BalancePrecheckHook = HookFn;
 
 /**
  * 余额流水类型。

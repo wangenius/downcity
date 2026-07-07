@@ -572,6 +572,83 @@ test("AIService charges explicit provider charge lines", async () => {
   }
 })
 
+test("AIService runs balance precheck before provider actions", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-balance-precheck-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    let providerCalls = 0
+    let precheckCalls = 0
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+
+    const ai = new AIService({
+      balance: {
+        async precheck() {
+          precheckCalls += 1
+          const error = new Error("insufficient balance: current -1 credits")
+          error.statusCode = 402
+          throw error
+        },
+        async charge() {},
+      },
+    })
+    ai.use({
+      id: "priced-text",
+      provider_id: "priced-provider",
+      name: "Priced Text",
+      actions: {
+        text: async () => {
+          providerCalls += 1
+          return {
+            id: "msg_1",
+            role: "assistant",
+            parts: [{ type: "text", text: "ok", state: "done" }],
+          }
+        },
+      },
+    })
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+
+    const city = await (await base.fetch(new Request("http://localhost/v1/cities/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ name: "Demo" }),
+    }))).json()
+    const tokenBody = await (await base.fetch(new Request("http://localhost/v1/cities/tokens/apply", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${adminSecret}`,
+      },
+      body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
+    }))).json()
+
+    const response = await base.fetch(new Request("http://localhost/v1/ai/text", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${tokenBody.user_token}`,
+      },
+      body: JSON.stringify({ model: "priced-text", prompt: "hi" }),
+    }))
+
+    assert.equal(response.status, 402)
+    assert.equal(precheckCalls, 1)
+    assert.equal(providerCalls, 0)
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
 test("AIService uses provider bill when model bill is not set", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-provider-bill-"))

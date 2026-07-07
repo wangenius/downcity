@@ -6,6 +6,7 @@
  */
 
 import { Service, type Context, type EnvRequirement, type ServiceNativeRouteHandler, type ServiceRouteMethod } from "./service.js";
+import type { Action } from "./action.js";
 import { Hook } from "./hook.js";
 import { TableApi } from "../store/table-api.js";
 import type { CityTableApi } from "../store/table-api.js";
@@ -20,7 +21,8 @@ import type { FederationRequestTransport } from "../federation/types.js";
 export interface ServiceInstallContext {
   table<TRow extends Record<string, unknown> = Record<string, unknown>>(name: string): CityTableApi<TRow>;
 
-  route(config: ServiceActionRouteConfig | ServiceNativeRouteConfig): void;
+  route(config: ServiceActionRouteConfig): Action;
+  route(config: ServiceNativeRouteConfig): void;
 
   hook: {
     before(fn: (ctx: Context) => Promise<void> | void): void;
@@ -126,6 +128,36 @@ export abstract class InstallableService extends Service {
     }
 
     const self = this;
+    function route(config: ServiceActionRouteConfig): Action;
+    function route(config: ServiceNativeRouteConfig): void;
+    function route(config: ServiceActionRouteConfig | ServiceNativeRouteConfig): Action | void {
+      if (is_native_route_config(config)) {
+        self._registerNativeRoute({
+          method: config.method,
+          path: config.path,
+          auth: resolve_route_auth(config),
+          handler: config.handler.request,
+        });
+        return;
+      }
+
+      // 去掉前导 /，与 client ServiceClient.action() 的 normalizeName 对齐
+      const actionId = config.path.replace(/^\/+/, "");
+      return self.action(actionId, async (svcCtx: Context) => {
+        return await config.handler({
+          user: svcCtx.user,
+          city: svcCtx.city,
+          request: svcCtx.request ?? new Request("http://local"),
+          transport: svcCtx.transport,
+          json: async <T extends Record<string, unknown> = Record<string, unknown>>() => svcCtx.input as T,
+          text: async () => svcCtx.raw_body ?? JSON.stringify(svcCtx.input),
+          jsonResponse: (body, status) => new Response(JSON.stringify(body), {
+            status, headers: { "content-type": "application/json" },
+          }),
+        });
+      }, { method: config.method as "GET" | "POST", auth: resolve_route_auth(config) });
+    }
+
     const ctx: ServiceInstallContext = {
       table<TRow extends Record<string, unknown> = Record<string, unknown>>(name: string): CityTableApi<TRow> {
         if (!self._db) throw new Error("InstallableService database is not ready");
@@ -134,33 +166,7 @@ export abstract class InstallableService extends Service {
         return new TableApi(self._db, table) as unknown as CityTableApi<TRow>;
       },
 
-      route(config): void {
-        if (is_native_route_config(config)) {
-          self._registerNativeRoute({
-            method: config.method,
-            path: config.path,
-            auth: resolve_route_auth(config),
-            handler: config.handler.request,
-          });
-          return;
-        }
-
-        // 去掉前导 /，与 client ServiceClient.action() 的 normalizeName 对齐
-        const actionId = config.path.replace(/^\/+/, "");
-        self.action(actionId, async (svcCtx: Context) => {
-          return await config.handler({
-            user: svcCtx.user,
-            city: svcCtx.city,
-            request: svcCtx.request ?? new Request("http://local"),
-            transport: svcCtx.transport,
-            json: async <T extends Record<string, unknown> = Record<string, unknown>>() => svcCtx.input as T,
-            text: async () => svcCtx.raw_body ?? JSON.stringify(svcCtx.input),
-            jsonResponse: (body, status) => new Response(JSON.stringify(body), {
-              status, headers: { "content-type": "application/json" },
-            }),
-          });
-        }, { method: config.method as "GET" | "POST", auth: resolve_route_auth(config) });
-      },
+      route,
 
       hook: {
         before(fn) { self.globalHook.before(fn); },

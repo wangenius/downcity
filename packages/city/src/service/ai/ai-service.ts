@@ -357,13 +357,13 @@ export class AIService extends Service {
     for (const modality of MODALITIES) {
       this.action(modality, async (ctx) => this.handleModality(modality, ctx), {
         auth: ["user", "admin"],
-      });
+      }).before((ctx) => this.precheck(ctx));
     }
 
     // 图片生成的任务式端点。SDK 通过 image_create / image_result 显式访问。
     this.action("image/create", async (ctx) => this.createImageJob(ctx), {
       auth: ["user", "admin"],
-    });
+    }).before((ctx) => this.precheck(ctx));
     this.action("image/result", async (ctx) => this.readImageJob(ctx), {
       auth: ["user", "admin"],
     });
@@ -374,7 +374,7 @@ export class AIService extends Service {
     // OpenAI 兼容端点
     this.action("chat/completions", async (ctx) => this.handleChatCompletions(ctx), {
       auth: ["user", "admin"],
-    });
+    }).before((ctx) => this.precheck(ctx));
 
     // 模型列表走同一路径，根据身份决定可见范围。
     this.action("models", (ctx) => ({
@@ -1054,6 +1054,20 @@ export class AIService extends Service {
   }
 
   /**
+   * AI 消费型 Action 的余额前置检查。
+   *
+   * 关键说明（中文）
+   * - 默认只拦截已经欠费的用户，适配 AI 后置 usage 扣费
+   * - admin 或没有用户归属的调用不产生用户扣费，也不做用户余额检查
+   * - image/result、image/fetch、models 等非消费型 Action 不挂载该 hook
+   */
+  private async precheck(ctx: Context): Promise<void> {
+    const user_id = ctx.user?.user_id;
+    if (!user_id || !this.balance?.precheck) return;
+    await this.balance.precheck(user_id);
+  }
+
+  /**
    * 从 action 输出里提取标准计量信息。
    */
   private attachOutputMetering(ctx: Context, output: unknown, mode: string, started_at: number): void {
@@ -1105,15 +1119,31 @@ export class AIService extends Service {
   ): Promise<void> {
     if (!charge || !this.balance) return;
     ctx.locals.ai_charge_handled = true;
+    let charge_line: AIProviderChargeLine | undefined;
+    let charge_user_id: string | undefined;
     const promise = Promise.resolve(charge)
       .then(async (line) => {
+        charge_line = line;
         if (!line || line.credits <= 0) return;
         const user_id = line.user_id ?? ctx.user?.user_id;
+        charge_user_id = user_id;
         if (!user_id) return;
         await this.balance?.charge({
           ...line,
           user_id,
         });
+      })
+      .catch((error) => {
+        console.error("[AIService] balance charge failed", {
+          user_id: charge_user_id,
+          service_id: ctx.service?.id,
+          action_id: ctx.action?.id,
+          model_id: ctx.metering?.model_id,
+          provider_id: ctx.metering?.provider_id,
+          credits: charge_line?.credits,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
       });
     if (!defer) {
       await promise;

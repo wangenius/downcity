@@ -98,6 +98,8 @@ For OpenAI-compatible providers with custom upstream requirements, the `openai` 
 
 Provider actions may return a charge line next to the normal output, but the preferred place for shared pricing logic is `bill(ctx, output)` on the provider or model. This keeps provider-specific usage parsing inside the provider instead of exposing token/cache fields as a global protocol.
 
+When `AIService` receives a balance bridge, it prechecks model-consuming requests before the provider call. The default check only blocks users whose wallet is already negative; the actual debit still happens after success from the returned charge line.
+
 ```ts
 import { Provider, buildAssistantMessage, type Context, type AIProviderChargedOutput } from "@downcity/city";
 import type { UIMessage } from "ai";

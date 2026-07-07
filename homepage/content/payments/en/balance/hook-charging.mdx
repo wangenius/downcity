@@ -1,16 +1,17 @@
 ---
 title: Charge directly from hooks
-description: "The recommended pattern is to call balance service methods from business hooks instead of storing pricing rules in service config."
+description: "Use service-defined before hooks for balance prechecks and post-success hooks or provider charge lines for real wallet debits."
 ---
 
-The recommended pattern is not declarative pricing.
+Balance is a wallet, not a pricing policy engine.
 
-Instead:
+The recommended pattern is:
 
 1. register `BalanceService()`
-2. call it directly from business hooks
-3. `require()` before execution
-4. `charge()` after a successful call
+2. pass it into services that need wallet access
+3. let each service define its own `before` hook
+4. call `precheck()` before execution
+5. call `charge()` after a successful call
 
 ## Why this is more flexible
 
@@ -23,6 +24,24 @@ Pricing usually belongs to business logic:
 
 That logic fits your own hooks better than service config.
 
+## Precheck before execution
+
+`precheck(user_id)` uses `needed_credits = 0` by default. It blocks users whose balance is already negative and lets zero or positive balances continue.
+
+```ts
+await balance.precheck(ctx.user!.user_id);
+```
+
+For fixed-price or estimated-price actions, pass a minimum balance:
+
+```ts
+await balance.precheck(ctx.user!.user_id, 10_000);
+```
+
+## Define it inside the service
+
+Do not attach balance rules next to `fed.use(service)`. The service should own which actions need balance access.
+
 ```ts
 const balance = new BalanceService({
   init_credits: 100_000_000,
@@ -30,32 +49,61 @@ const balance = new BalanceService({
 
 base.use(balance);
 
-const ai = new AIService();
+class ExportService extends Service {
+  constructor(options: { balance: BalanceService }) {
+    super({ id: "export", name: "Export" });
 
-ai.hook.before(async (ctx) => {
-  if (ctx.identity?.kind !== "user") return;
-  if (ctx.action?.id !== "chat/completions") return;
+    this.action("pdf", async (ctx) => {
+      return await export_pdf(ctx.input);
+    }, {
+      auth: ["user"],
+    }).before(options.balance.precheck_hook({
+      needed_credits: 10_000,
+    }));
+  }
+}
 
-  await balance.require(ctx.user!.user_id, 10_000);
-  ctx.locals.balance_amount = 10_000;
-});
+base.use(new ExportService({ balance }));
+```
 
-ai.hook.after(async (ctx) => {
-  if (ctx.identity?.kind !== "user") return;
-  if (ctx.action?.id !== "chat/completions") return;
-  if (ctx.output instanceof Response && ctx.output.status >= 400) return;
+Complex rules can be plain code:
 
-  const credits = Number(ctx.locals.balance_amount ?? 0);
-  if (credits <= 0) return;
+```ts
+this.action("render", render_action, { auth: ["user"] })
+  .before(async (ctx) => {
+    const needed_credits = await estimate_render_credits(ctx.input);
+    await balance.precheck(ctx.user!.user_id, needed_credits);
+  });
+```
+
+## Debit after success
+
+`charge()` records the real debit and can move the wallet below zero. Use it after success, or let AIService call it from provider charge lines.
+
+```ts
+this.action("pdf", async (ctx) => {
+  const output = await export_pdf(ctx.input);
 
   await balance.charge({
     user_id: ctx.user!.user_id,
-    credits,
-    note: "agent chat",
+    credits: 10_000,
+    note: "pdf export",
     metadata: {
-      city_id: ctx.downcity?.city_id,
-      model_id: ctx.variant?.id,
+      city_id: ctx.city?.city_id,
     },
   });
+
+  return output;
 });
 ```
+
+## AIService
+
+When you construct AIService with a balance bridge, AIService defines the precheck internally for model-consuming actions:
+
+```ts
+const ai = new AIService({ balance });
+base.use(ai);
+```
+
+AIService prechecks only whether the user is already negative, then charges the actual provider usage after success.

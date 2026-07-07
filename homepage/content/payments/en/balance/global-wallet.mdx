@@ -12,6 +12,8 @@ By default, credits are USD-linked:
 - user-facing `GET /v1/balance/me` returns ``credits`, plus `usd`, `display`, and `conversion`
 - admin and internal accounting fields also use credits
 
+The wallet can go below zero. A debit is accounting truth; access control should happen before an action starts by calling `precheck()`.
+
 That means:
 
 - user A spends inside downcity X
@@ -43,3 +45,19 @@ await balance.sub(ctx.user!.user_id, 10_000, {
 ```
 
 That keeps the wallet global while still preserving where the spend came from.
+
+## Negative balance and precheck
+
+Use `precheck(user_id)` before actions that should stop already-overdrawn users:
+
+```ts
+await balance.precheck(ctx.user!.user_id);
+```
+
+Use `precheck(user_id, needed_credits)` when an action needs a known minimum balance before it starts:
+
+```ts
+await balance.precheck(ctx.user!.user_id, 10_000);
+```
+
+The debit itself still goes through `sub()` or `charge()`, and either method can move the wallet below zero.

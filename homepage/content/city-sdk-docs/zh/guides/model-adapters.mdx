@@ -88,6 +88,8 @@ const openaiCustom = new OpenAICustomProvider();
 
 Provider action 可以在正常输出旁边返回一条 charge，但更推荐把共享计费逻辑放到 provider 或 model 的 `bill(ctx, output)` 中。这样 provider 自己解析上游 usage 和价格，AIService / BalanceService 不需要理解 token、cache、reasoning 等 provider 私有字段。
 
+当 `AIService` 传入 balance bridge 后，它会在真实消费模型的请求调用 Provider 前做默认余额检查。默认检查只拦截已经负余额的用户；实际扣费仍然在 Provider 成功后由返回的 charge line 完成。
+
 ```ts
 import { Provider, buildAssistantMessage, type Context, type AIProviderChargedOutput } from "@downcity/city";
 import type { UIMessage } from "ai";

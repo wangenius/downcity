@@ -36,6 +36,8 @@ import type {
   BalanceHistoryQuery,
   BalanceLedgerEntry,
   BalanceLedgerKind,
+  BalancePrecheckHook,
+  BalancePrecheckHookOptions,
   BalanceServiceOptions,
   BalanceRedeemCode,
   BalanceRedeemCodeIssueResult,
@@ -106,6 +108,7 @@ export class BalanceService extends InstallableService {
       "提供用户级全局余额、余额流水、充值单与 redeem_code 能力。",
       "内部账务与管理端的 `credits` / `credits_delta` / `credits_after` 字段均使用 credits 整数；用户侧 `/me` 返回 credits 主字段并附带 USD 展示。",
       `首次自动开户发放 ${this.initCredits} credits。`,
+      "余额是钱包快照，允许被真实扣费扣成负数；业务执行前的准入检查应使用 precheck。",
       "推荐在业务侧自行计算扣费金额后调用 charge，把具体计费策略放在业务侧，而不是写死在 BalanceService 内部。",
       "管理端可查询所有账户、流水、充值单、扣费记录与 redeem_code；用户侧可查询自己的余额、历史记录、充值单，并直接兑换 redeem_code。",
     ].join("\n");
@@ -151,6 +154,46 @@ export class BalanceService extends InstallableService {
   }
 
   /**
+   * 执行余额前置检查。
+   *
+   * 关键说明（中文）
+   * - 默认 `needed_credits = 0`，只拦截已经欠费的用户
+   * - 指定 `needed_credits` 时可用于固定价格或预估价格的前置准入
+   * - 本方法只判断是否允许开始业务执行，不做扣费或冻结
+   */
+  async precheck(user_id: string, needed_credits = 0): Promise<BalanceAccount> {
+    const normalizedUserId = normalizeUserId(user_id);
+    const normalizedCredits = readNonNegativeCredits({ credits: needed_credits }, "needed_credits");
+    const account = await this.read(normalizedUserId);
+
+    if (account.credits < normalizedCredits) {
+      throw httpError(402, `insufficient balance: need ${normalizedCredits} credits, current ${account.credits} credits`);
+    }
+
+    return account;
+  }
+
+  /**
+   * 创建可挂载到 Action.before 的余额前置检查 hook。
+   *
+   * 关键说明（中文）
+   * - Service 应在自身定义阶段挂载该 hook，而不是在 federation.use(...) 装配处追加
+   * - 默认读取 `ctx.user.user_id`，默认 `needed_credits = 0`
+   * - resolver 返回 `false` 或 `undefined` 时跳过本次检查
+   */
+  precheck_hook(options: BalancePrecheckHookOptions = {}): BalancePrecheckHook {
+    return async (ctx) => {
+      const user_id = await this.resolvePrecheckUserId(ctx, options);
+      if (!user_id) return;
+
+      const needed_credits = await this.resolvePrecheckCredits(ctx, options);
+      if (needed_credits === false || needed_credits === undefined) return;
+
+      await this.precheck(user_id, needed_credits);
+    };
+  }
+
+  /**
    * 给用户加余额，并写入 `add` 流水。
    */
   async add(user_id: string, credits: number, extra: BalanceExtra = {}): Promise<BalanceAccount> {
@@ -184,7 +227,8 @@ export class BalanceService extends InstallableService {
    * 关键说明（中文）
    * - BalanceService 不理解 AI、订单、插件等业务语义
    * - 业务侧应该先自行计算扣费金额，再把审计字段放入 metadata
-   * - 扣款失败时抛出 402，不会写入 charge 记录
+   * - 扣款是钱包记账，允许余额扣成负数
+   * - 是否允许开始业务执行应由业务 Action 的 before hook 调用 precheck
    */
   async charge(input: BalanceChargeInput): Promise<BalanceCharge> {
     const user_id = normalizeUserId(input.user_id);
@@ -632,16 +676,11 @@ export class BalanceService extends InstallableService {
       ].join(" "), [delta, now, user_id]);
     } else {
       const spend = Math.abs(delta);
-      const changed = await rawRun(this.resolveRaw(), [
+      await rawRun(this.resolveRaw(), [
         `UPDATE ${ACCOUNT_TABLE}`,
         "SET credits = credits - ?, updated_at = ?",
-        "WHERE user_id = ? AND credits >= ?",
-      ].join(" "), [spend, now, user_id, spend]);
-
-      if (changed === 0) {
-        const current = await this.readAccountRequired(user_id);
-        throw httpError(402, `insufficient balance: need ${spend} credits, current ${current.credits} credits`);
-      }
+        "WHERE user_id = ?",
+      ].join(" "), [spend, now, user_id]);
     }
 
     const account = await this.readAccountRequired(user_id);
@@ -767,6 +806,32 @@ export class BalanceService extends InstallableService {
       entry.metadata_json,
       entry.created_at,
     ]);
+  }
+
+  /**
+   * 解析前置检查的用户 ID。
+   */
+  private async resolvePrecheckUserId(
+    ctx: Parameters<BalancePrecheckHook>[0],
+    options: BalancePrecheckHookOptions,
+  ): Promise<string | undefined> {
+    if (typeof options.user_id === "function") {
+      return await options.user_id(ctx);
+    }
+    return options.user_id ?? ctx.user?.user_id;
+  }
+
+  /**
+   * 解析前置检查额度。
+   */
+  private async resolvePrecheckCredits(
+    ctx: Parameters<BalancePrecheckHook>[0],
+    options: BalancePrecheckHookOptions,
+  ): Promise<number | false | undefined> {
+    if (typeof options.needed_credits === "function") {
+      return await options.needed_credits(ctx);
+    }
+    return options.needed_credits ?? 0;
   }
 
   /**

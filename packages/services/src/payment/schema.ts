@@ -21,6 +21,7 @@ export const paymentPayments = sqliteTable("service_payment_payments", {
   provider_payment_id: text("provider_payment_id").notNull(),
   provider_order_id: text("provider_order_id").notNull(),
   credits: integer("credits").notNull(),
+  amount_minor: integer("amount_minor").notNull(),
   currency: text("currency").notNull(),
   status: text("status").notNull(),
   checkout_url: text("checkout_url").notNull(),

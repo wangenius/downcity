@@ -109,7 +109,7 @@ export function buildCreateUserTableSQL(table: AnySQLiteTable | AnyPgTable): str
     const isPrimary = Boolean(col.primary ?? false);
     const isNotNull = Boolean(col.notNull ?? false);
 
-    const sqlType = dataType === "number" ? "INTEGER"
+    const sqlType = dataType === "number" || dataType === "date" ? "INTEGER"
       : dataType === "boolean" ? "INTEGER"
       : dataType === "json" ? "TEXT"
       : "TEXT";

@@ -142,6 +142,7 @@ export function installPaymentRoutes(service: PaymentServiceLike, ctx: ServiceIn
         provider_payment_id: normalizeOptionalText(created.provider_payment_id),
         provider_order_id: normalizeOptionalText(created.provider_order_id),
         credits: topup.credits,
+        amount_minor: readPaymentAmountMinor(topup),
         currency: method.currency,
         status: "pending",
         checkout_url: created.checkout_url,
@@ -423,6 +424,17 @@ function toCheckoutResult(row: PaymentRecord): PaymentCheckoutCreateResult {
     checkout_url: row.checkout_url,
     status: row.status,
   };
+}
+
+/**
+ * 读取真实支付金额。
+ */
+function readPaymentAmountMinor(topup: PaymentTopupRecord): number {
+  const amount_minor = Number(topup.usd_cents);
+  if (!Number.isSafeInteger(amount_minor) || amount_minor <= 0) {
+    throw new TypeError("topup.usd_cents is required for payment revenue tracking");
+  }
+  return amount_minor;
 }
 
 /**

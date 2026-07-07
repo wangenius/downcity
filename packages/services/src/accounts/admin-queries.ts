@@ -56,6 +56,27 @@ export async function listAccountSessions(raw_prepare: RawPrepare): Promise<Reco
   );
   return rows.map((row) => ({
     ...row,
-    status: new Date(String(row.expires_at ?? "")).getTime() > Date.now() ? "active" : "expired",
+    status: read_time(row.expires_at) > Date.now() ? "active" : "expired",
   }));
+}
+
+/**
+ * 兼容 Date、秒级时间戳、毫秒级时间戳和字符串时间。
+ */
+function read_time(value: unknown): number {
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "number" && Number.isFinite(value)) return normalize_epoch_time(value);
+  if (typeof value === "string" && value.trim()) {
+    const numeric_value = Number(value);
+    if (Number.isFinite(numeric_value) && /^-?\d+(?:\.\d+)?$/u.test(value.trim())) return normalize_epoch_time(numeric_value);
+    return Date.parse(value);
+  }
+  return Number.NaN;
+}
+
+/**
+ * 兼容秒级与毫秒级 Unix 时间戳。
+ */
+function normalize_epoch_time(value: number): number {
+  return value > 0 && value < 10_000_000_000 ? value * 1000 : value;
 }

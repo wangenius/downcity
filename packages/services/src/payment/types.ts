@@ -247,6 +247,8 @@ export interface PaymentRecord extends Record<string, unknown> {
   provider_order_id: string;
   /** 本次充值额度，单位为 credits。 */
   credits: number;
+  /** 真实支付金额，单位为最小货币单位，例如 USD cents。 */
+  amount_minor: number;
   /** 结算币种。 */
   currency: string;
   /** 当前支付状态。 */

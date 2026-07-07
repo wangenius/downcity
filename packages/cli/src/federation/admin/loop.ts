@@ -12,6 +12,7 @@ import { adminErrorMessage, isAdminAuthError } from "@/federation/admin/auth-err
 import { create_admin_tui_runtime } from "@/federation/tui/AdminTuiRuntime.js";
 import type { admin_tui_runtime } from "@/federation/types/AdminTui.js";
 import { manageEnv } from "@/federation/admin/commands/service-env.js";
+import { manageDashboard } from "@/federation/admin/commands/dashboard.js";
 import { manageCities } from "@/federation/admin/commands/cities.js";
 import { manageAccounts } from "@/federation/admin/commands/accounts.js";
 import { manageBalance } from "@/federation/admin/commands/balance.js";
@@ -23,6 +24,7 @@ import { manageInstruction } from "@/federation/admin/commands/instruction.js";
 import { t } from "@/shared/CliLocale.js";
 
 const commands: Record<string, (a: City, baseUrl: string, runtime: admin_tui_runtime) => Promise<void>> = {
+  dashboard: manageDashboard,
   env: manageEnv,
   instruction: manageInstruction,
   models: manageModels,
@@ -72,6 +74,17 @@ export async function adminLoop(
           }),
           value: "__section_management__",
           disabled: true,
+        },
+        {
+          label: t({
+            zh: "用户系统 Dashboard",
+            en: "User system dashboard",
+          }),
+          value: "dashboard",
+          hint: t({
+            zh: "汇总注册用户、活跃用户、新注册、付费用户、收入、充值和用量等核心指标。",
+            en: "Summarize registered users, active users, new users, paid users, revenue, topups, and usage metrics.",
+          }),
         },
         {
           label: t({

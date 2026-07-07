@@ -259,6 +259,7 @@ function createBalanceBridge() {
         topup_id: `topup_${Math.random().toString(36).slice(2, 10)}`,
         user_id: userId,
         credits,
+        usd_cents: Math.round(credits / 10_000),
         status: "pending",
         note: extra.note || "",
       }

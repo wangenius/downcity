@@ -44,9 +44,27 @@ move toward `Admin City` or a trusted script.
 
 ```bash
 city
+fed
 city federation status
 city agent list
 ```
+
+## User system dashboard
+
+Open `fed`, choose a saved Federation, then select `User system dashboard` in the Admin menu.
+
+The CLI reads admin data from the installed official services and computes the dashboard locally in the terminal.
+
+The dashboard covers:
+
+- `accounts`: registered users, new users, active sessions
+- `usage`: active users and service-call events
+- `payment`: paying users, first-paid users, paid orders, real revenue by currency
+- `balance`: credited credits and current balance credits
+
+If a service is not installed, the dashboard marks that module as unavailable and still shows data from the other installed services.
+
+Revenue uses successful payment records and their real `amount_minor` values. Credits are shown separately as balance and recharge units.
 
 ## A common debugging chain
 

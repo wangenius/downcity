@@ -90,14 +90,14 @@ export class Agent {
     this.instruction = assembly.instruction;
     this.shell = assembly.shell;
 
-    this.sessionManager = this.create_session_manager(assembly);
-    session_manager_ref = this.sessionManager;
     // 关键点（中文）：构造完成即触发后台能力启动；调用方可 `await agent.ready()` 等待。
     this.backgroundService = new AgentBackgroundService({
       logger: this.logger,
       agent_context: this.agentContext,
       get_shell: () => this.shell,
     });
+    this.sessionManager = this.create_session_manager(assembly);
+    session_manager_ref = this.sessionManager;
   }
 
   /**
@@ -269,6 +269,9 @@ export class Agent {
       get_agent_context: () => this.agentContext ?? assembly.agent_context,
       get_instruction: () => this.instruction,
       plugin_instances: assembly.plugin_instances,
+      ensure_agent_ready: async () => {
+        await this.backgroundService.ready();
+      },
       default_model: this.defaultModel,
       SessionClass: this.SessionClass,
     });

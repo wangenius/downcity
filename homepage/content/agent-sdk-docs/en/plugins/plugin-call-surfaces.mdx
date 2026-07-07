@@ -137,6 +137,8 @@ agent.plugins.runAction({
 });
 ```
 
+`plugin_call` is bound to the plugin registry of the Agent that owns the current session. In multi-Agent hosts that cache or switch Agents in one process, a session's `plugin_call` does not read another Agent's registry.
+
 Use this when you want the model to call registered plugin actions during a conversation.
 
 For example, if the user asks:

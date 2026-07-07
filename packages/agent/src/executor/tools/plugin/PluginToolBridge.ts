@@ -10,7 +10,6 @@
 import path from "node:path";
 import type { FileUIPart } from "ai";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
-import type { AgentPlugins } from "@/plugin/types/Plugin.js";
 import type {
   PluginCallInput,
   PluginCallToolFileResult,
@@ -18,6 +17,10 @@ import type {
   PluginReadInput,
   PluginReadToolResult,
 } from "@/executor/tools/plugin/types/PluginTool.js";
+import type {
+  InvokePluginCallToolOptions,
+  InvokePluginReadToolOptions,
+} from "@/types/plugin/PluginToolRuntime.js";
 import {
   materializeAssistantFileParts,
   resolveAgentFilePath,
@@ -26,25 +29,6 @@ import {
   enqueueAssistantFileParts,
   getSessionRunContext,
 } from "@executor/SessionRunScope.js";
-
-let plugin_tool_runtime: AgentPlugins | null = null;
-
-/**
- * 注入 plugin tool 运行时。
- */
-export function setPluginToolRuntime(next: AgentPlugins): void {
-  plugin_tool_runtime = next;
-}
-
-/**
- * 读取已注入的 plugin tool 运行时。
- */
-function require_plugin_tool_runtime(): AgentPlugins {
-  if (plugin_tool_runtime) return plugin_tool_runtime;
-  throw new Error(
-    "Plugin tool runtime is not initialized. Ensure agent assembly completed before using plugin_call.",
-  );
-}
 
 /**
  * 判断值是否为普通对象。
@@ -126,8 +110,9 @@ function summarize_action_data(data: JsonValue | undefined): JsonObject | undefi
  * 调用 plugin action 并桥接最终 assistant file parts。
  */
 export async function invokePluginCallTool(
-  input: PluginCallInput,
+  params: InvokePluginCallToolOptions,
 ): Promise<PluginCallToolResult> {
+  const input: PluginCallInput = params.input;
   const plugin = String(input.plugin || "").trim();
   const action = String(input.action || "").trim();
   const payload = to_json_object(input.payload ?? {}) ?? {};
@@ -153,8 +138,7 @@ export async function invokePluginCallTool(
   }
 
   try {
-    const runtime = require_plugin_tool_runtime();
-    const result = await runtime.runAction({
+    const result = await params.plugins.runAction({
       plugin,
       action,
       payload,
@@ -203,11 +187,11 @@ export async function invokePluginCallTool(
  * 读取 plugin / action metadata。
  */
 export async function invokePluginReadTool(
-  input: PluginReadInput,
+  params: InvokePluginReadToolOptions,
 ): Promise<PluginReadToolResult> {
+  const input: PluginReadInput = params.input;
   try {
-    const runtime = require_plugin_tool_runtime();
-    const data = runtime.read({
+    const data = params.plugins.read({
       plugin: typeof input.plugin === "string" ? input.plugin : undefined,
       action: typeof input.action === "string" ? input.action : undefined,
     });

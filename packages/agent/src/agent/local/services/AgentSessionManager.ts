@@ -88,6 +88,11 @@ type AgentSessionManagerOptions = {
   plugin_instances: Map<string, Plugin>;
 
   /**
+   * 等待当前 Agent 后台能力启动完成。
+   */
+  ensure_agent_ready: () => Promise<void>;
+
+  /**
    * 当前默认模型实例。
    */
   default_model?: AgentModel;
@@ -109,6 +114,7 @@ export class AgentSessionManager {
   private readonly get_agent_context: AgentSessionManagerOptions["get_agent_context"];
   private readonly get_instruction: AgentSessionManagerOptions["get_instruction"];
   private readonly plugin_instances: Map<string, Plugin>;
+  private readonly ensure_agent_ready: AgentSessionManagerOptions["ensure_agent_ready"];
   private readonly default_model?: AgentModel;
   private readonly SessionClass: AgentSessionConstructor;
   private readonly sessions_by_id = new Map<string, AgentManagedSession>();
@@ -123,6 +129,7 @@ export class AgentSessionManager {
     this.get_agent_context = options.get_agent_context;
     this.get_instruction = options.get_instruction;
     this.plugin_instances = options.plugin_instances;
+    this.ensure_agent_ready = options.ensure_agent_ready;
     this.default_model = options.default_model;
     this.SessionClass = options.SessionClass || Session;
     this.session_collection = {
@@ -350,6 +357,7 @@ export class AgentSessionManager {
       getManagedPluginSystemBlocks: async () => [],
       getPluginSystemBlocks: async () => await this.load_plugin_system_blocks(),
       ensureConfigured: async (session) => {
+        await this.ensure_agent_ready();
         await this.apply_session_defaults(session);
       },
     });

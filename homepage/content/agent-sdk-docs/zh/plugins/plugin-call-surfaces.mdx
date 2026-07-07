@@ -137,6 +137,8 @@ agent.plugins.runAction({
 });
 ```
 
+`plugin_call` 绑定当前 session 所属 Agent 的 plugin registry。多 Agent 宿主在同一进程里缓存或切换 Agent 时，某个 session 的 `plugin_call` 不会读到其他 Agent 的 registry。
+
 这个入口适合让模型在对话中主动使用已注册 plugin。
 
 例如用户问：

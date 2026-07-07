@@ -522,12 +522,8 @@ export class PluginRegistry implements AgentPlugins {
         pluginName: record.plugin.name,
         actionName,
       });
-      if (!result.success) {
-        update_record_state(record, "error", result.error || result.message);
-      }
       return result;
     } catch (error) {
-      update_record_state(record, "error", String(error));
       return {
         success: false,
         error: String(error),

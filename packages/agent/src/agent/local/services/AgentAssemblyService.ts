@@ -28,8 +28,7 @@ import {
   createAgentPluginConfigRuntime,
 } from "@/agent/local/AgentRuntimeAssembly.js";
 import {
-  plugin_tools,
-  setPluginToolRuntime,
+  createPluginTools,
 } from "@executor/tools/plugin/PluginToolDefinition.js";
 import type { AgentManagedSession } from "@/types/agent/AgentTypes.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
@@ -183,6 +182,7 @@ export class AgentAssemblyService {
     });
     const plugins = plugin_registry;
     if (this.should_register_plugin_call_tool(plugin_instances)) {
+      const plugin_tools = createPluginTools({ plugins });
       tools.plugin_read = tools.plugin_read || plugin_tools.plugin_read;
       tools.plugin_call = tools.plugin_call || plugin_tools.plugin_call;
     }
@@ -228,7 +228,6 @@ export class AgentAssemblyService {
       });
       Object.assign(tools, shell.tools);
     }
-    setPluginToolRuntime(plugins);
 
     return {
       id,

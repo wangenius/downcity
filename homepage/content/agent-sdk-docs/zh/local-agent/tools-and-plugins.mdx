@@ -108,6 +108,8 @@ const plugins = agent.plugins.list();
 
 当前本地 SDK 会接通 plugin registry、`AgentContext.plugins`，并在 session prompt 中注入已注册 plugin 的 `system(context)` 文本。
 
+每个 `Agent` 都有独立的 plugin registry 和独立的 `plugin_read` / `plugin_call` tool 实例。即使同一个进程里同时创建多个 Agent，模型通过 `plugin_call` 触发 action 时，也只会访问当前 session 所属 Agent 的 registry。
+
 ## plugin action metadata
 
 带 action 的 plugin 会让 Agent 自动获得两个内置 tool：

@@ -56,7 +56,7 @@ description: 本地 Agent SDK 的核心公开接口
 
 `new Agent(...)` 之后，plugin lifecycle 与 ActionSchedule 会自动启动。
 
-- `await agent.ready()`：等待后台能力启动完成。session 入口已经隐式等待，只有需要在外部确认就绪时才显式调用。
+- `await agent.ready()`：等待后台能力启动完成。session 入口在模型执行前会等待当前 Agent 就绪；需要显式检查点时再直接调用。
 - `await agent.dispose()`：停止 plugin lifecycle、ActionSchedule、shell 等后台资源。
 
 ## RPC / HTTP 暴露

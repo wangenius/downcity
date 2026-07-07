@@ -87,7 +87,7 @@ const turn = await session.prompt({ query: "hello" });
 await turn.finished;
 ```
 
-Session 入口内部已经隐式等待后台启动。如果需要在外部确认后台能力就绪（例如启动后立刻读取 plugin 状态），可以显式 `await agent.ready()`。
+Session 入口内部已经隐式等待当前 Agent 的后台启动；模型开始执行前，plugin lifecycle 已完成。`await agent.ready()` 仍然可以作为显式检查点使用，适合在构造后立刻读取 plugin 状态或暴露 RPC / HTTP 服务前调用。
 
 不再使用时调用 `await agent.dispose()`，会停掉 plugin lifecycle、ActionSchedule、shell 等后台资源。
 

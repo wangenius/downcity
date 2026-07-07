@@ -15,8 +15,8 @@ import fs from "node:fs/promises";
 import {
   invokePluginCallTool,
   invokePluginReadTool,
-  setPluginToolRuntime,
 } from "../bin/executor/tools/plugin/PluginToolBridge.js";
+import { createPluginTools } from "../bin/executor/tools/plugin/PluginToolDefinition.js";
 import { withSessionRunScope } from "../bin/executor/SessionRunScope.js";
 import { createAction, createPlugin } from "../bin/plugin/core/PluginActionFactory.js";
 import { createAgentPluginRegistry } from "../bin/agent/local/AgentPluginFactory.js";
@@ -38,7 +38,7 @@ test("invokePluginCallTool returns absolute paths for materialized file parts", 
   );
   const bytes = Buffer.from("png-bytes-for-plugin-tool", "utf8");
 
-  setPluginToolRuntime({
+  const plugins = {
     list: () => [],
     read: () => ({ plugins: [] }),
     availability: async () => ({ enabled: true, available: true, reasons: [] }),
@@ -64,14 +64,17 @@ test("invokePluginCallTool returns absolute paths for materialized file parts", 
     resolve: async () => {
       throw new Error("not implemented");
     },
-  });
+  };
 
   const run_context = create_run_context(project_root);
   const result = await withSessionRunScope({ runContext: run_context }, () =>
     invokePluginCallTool({
-      plugin: "image",
-      action: "image_result",
-      payload: { job_id: "img_1" },
+      plugins,
+      input: {
+        plugin: "image",
+        action: "image_result",
+        payload: { job_id: "img_1" },
+      },
     }),
   );
 
@@ -93,7 +96,7 @@ test("invokePluginCallTool returns absolute paths for materialized file parts", 
 });
 
 test("invokePluginReadTool returns plugin action metadata", async () => {
-  setPluginToolRuntime({
+  const plugins = {
     list: () => [],
     read: () => ({
       name: "image",
@@ -130,11 +133,14 @@ test("invokePluginReadTool returns plugin action metadata", async () => {
     resolve: async () => {
       throw new Error("not implemented");
     },
-  });
+  };
 
   const result = await invokePluginReadTool({
-    plugin: "image",
-    action: "image_create",
+    plugins,
+    input: {
+      plugin: "image",
+      action: "image_create",
+    },
   });
 
   assert.equal(result.success, true);
@@ -174,6 +180,7 @@ test("PluginRegistry validates action payload with metadata schema", async () =>
   });
   const registry = createAgentPluginRegistry({
     plugins: [plugin],
+    plugin_instances: new Map(),
     get_context: () => ({ rootPath: process.cwd() }),
   });
 
@@ -196,4 +203,101 @@ test("PluginRegistry validates action payload with metadata schema", async () =>
   });
   assert.equal(valid.success, true);
   assert.equal(valid.data.text, "hello");
+});
+
+test("createPluginTools binds plugin_call to the current registry", async () => {
+  function create_owner_registry(owner) {
+    const plugin = createPlugin({
+      name: "skill",
+      title: `Skill ${owner}`,
+      description: "Owner scoped skill plugin",
+      actions: {
+        lookup: createAction({
+          description: "Return registry owner",
+          execute: async () => ({
+            success: true,
+            data: { owner },
+            message: owner,
+          }),
+        }),
+      },
+    });
+    return createAgentPluginRegistry({
+      plugins: [plugin],
+      plugin_instances: new Map(),
+      get_context: () => ({ rootPath: process.cwd() }),
+    });
+  }
+
+  const registry_a = create_owner_registry("agent_a");
+  const registry_b = create_owner_registry("agent_b");
+  const tools_a = createPluginTools({ plugins: registry_a });
+  const tools_b = createPluginTools({ plugins: registry_b });
+
+  const result_a = await tools_a.plugin_call.execute({
+    plugin: "skill",
+    action: "lookup",
+    payload: { name: "anything" },
+  });
+  const result_b = await tools_b.plugin_call.execute({
+    plugin: "skill",
+    action: "lookup",
+    payload: { name: "anything" },
+  });
+
+  assert.equal(result_a.success, true);
+  assert.equal(result_a.data.value.owner, "agent_a");
+  assert.equal(result_b.success, true);
+  assert.equal(result_b.data.value.owner, "agent_b");
+});
+
+test("PluginRegistry keeps plugin ready after action business failure", async () => {
+  let call_count = 0;
+  const plugin = createPlugin({
+    name: "skill",
+    title: "Skill",
+    description: "Retryable skill plugin",
+    actions: {
+      lookup: createAction({
+        description: "Fail once then succeed",
+        execute: async () => {
+          call_count += 1;
+          if (call_count === 1) {
+            return {
+              success: false,
+              error: "Skill not found: missing",
+              message: "Skill not found: missing",
+            };
+          }
+          return {
+            success: true,
+            data: { loaded: true },
+            message: "loaded",
+          };
+        },
+      }),
+    },
+  });
+  const registry = createAgentPluginRegistry({
+    plugins: [plugin],
+    plugin_instances: new Map(),
+    get_context: () => ({ rootPath: process.cwd() }),
+  });
+
+  const failed = await registry.runAction({
+    plugin: "skill",
+    action: "lookup",
+    payload: { name: "missing" },
+  });
+  assert.equal(failed.success, false);
+  assert.equal(registry.status("skill").state, "ready");
+
+  const retry = await registry.runAction({
+    plugin: "skill",
+    action: "lookup",
+    payload: { name: "exists" },
+  });
+  assert.equal(retry.success, true);
+  assert.equal(retry.data.loaded, true);
+  assert.equal(registry.status("skill").state, "ready");
 });

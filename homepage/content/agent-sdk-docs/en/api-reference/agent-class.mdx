@@ -49,7 +49,7 @@ There is currently no `mode` constructor option.
 
 After `new Agent(...)`, plugin lifecycle and ActionSchedule start automatically.
 
-- `await agent.ready()` waits until background services are up. Session entry points already wait internally; call `ready()` only when you need an explicit checkpoint.
+- `await agent.ready()` waits until background services are up. Session entry points already wait for the current Agent before model execution; call `ready()` when you need an explicit checkpoint.
 - `await agent.dispose()` stops plugin lifecycle, ActionSchedule, and shell.
 
 ## RPC and HTTP exposure

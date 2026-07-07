@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这里统一描述 session 消息落盘格式与元信息结构。
- * - session 的唯一事实源是 `UIMessage[]`，不会再维护第二套平行消息结构。
+ * - session 的唯一事实源是消息 JSONL，模型消息继续使用 AI SDK `UIMessage`。
  * - 这些类型会被 history Store、history Composer、compact、control UI、task runtime 共同复用。
  */
 
@@ -16,8 +16,9 @@ import type { AgentSessionOperationRecord } from "@/types/sdk/AgentSessionOperat
  *
  * 关键点（中文）
  * - 持久化存储在 `.downcity/agents/<encodedAgentId>/sessions/<encodedSessionId>/messages/messages.jsonl`
- * - 默认只存 `role=user|assistant`
+ * - 默认只存 `role=user|assistant|operation`
  * - compact 会把更早消息压缩为一条 `assistant` 摘要消息
+ * - operation 只用于 UI timeline，不进入 LLM 输入
  */
 export type SessionMessageKind = "normal" | "summary" | "operation";
 
@@ -92,9 +93,26 @@ export type SessionMetadataV1 = {
 };
 
 /**
- * Session UI 消息结构。
+ * 模型可消费的 Session UI 消息结构。
  */
-export type SessionMessageV1 = UIMessage<SessionMetadataV1>;
+export type SessionModelMessageV1 = UIMessage<SessionMetadataV1>;
+
+/**
+ * operation 角色的 Session 消息结构。
+ *
+ * 关键点（中文）
+ * - `operation` 不是 AI SDK 原生模型 role。
+ * - 它只存在于 JSONL history 与前端 timeline，进入 LLM 前必须过滤。
+ */
+export type SessionOperationMessageV1 = Omit<SessionModelMessageV1, "role"> & {
+  /** 消息角色固定为 `operation`。 */
+  role: "operation";
+};
+
+/**
+ * Session 持久化消息结构。
+ */
+export type SessionMessageV1 = SessionModelMessageV1 | SessionOperationMessageV1;
 
 /**
  * user 角色的 Session 消息结构。
@@ -112,5 +130,19 @@ export function isSessionOperationMessage(
 ): boolean {
   if (!message || typeof message !== "object") return false;
   const metadata = (message.metadata || null) as SessionMetadataV1 | null;
-  return metadata?.kind === "operation" || metadata?.source === "operation";
+  return (
+    message.role === "operation" ||
+    metadata?.kind === "operation" ||
+    metadata?.source === "operation"
+  );
+}
+
+/**
+ * 判断一条消息是否为模型可消费的 UIMessage。
+ */
+export function isSessionModelMessage(
+  message: SessionMessageV1 | null | undefined,
+): message is SessionModelMessageV1 {
+  if (!message || typeof message !== "object") return false;
+  return message.role !== "operation" && !isSessionOperationMessage(message);
 }

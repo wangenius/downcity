@@ -7,7 +7,11 @@
  * - 因此需要一个稳定的、与 Agent 解耦的提取逻辑（属于 chat/egress 语义）
  */
 
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import {
+  isSessionModelMessage,
+  type SessionMessageV1,
+  type SessionModelMessageV1,
+} from "@/executor/types/SessionMessages.js";
 import {
   extractTextFromUiMessage,
   extractToolCallsFromUiMessage,
@@ -22,8 +26,9 @@ import {
  */
 export function resolveAssistantMessageForPersistence(
   message: SessionMessageV1 | null | undefined,
-): SessionMessageV1 | null {
+): SessionModelMessageV1 | null {
   if (!message || typeof message !== "object") return null;
+  if (!isSessionModelMessage(message)) return null;
   return message;
 }
 
@@ -37,6 +42,7 @@ export function resolveAssistantMessageForPersistence(
 export function pickLastSuccessfulChatSendText(
   message: SessionMessageV1 | null | undefined,
 ): string {
+  if (!isSessionModelMessage(message)) return "";
   const toolCalls = extractToolCallsFromUiMessage(message);
   // 关键点（中文）：优先从 chat_send 的 input.text 还原"用户可见回复"。
   for (let i = toolCalls.length - 1; i >= 0; i -= 1) {

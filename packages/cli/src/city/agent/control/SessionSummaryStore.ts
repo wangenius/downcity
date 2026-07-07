@@ -13,7 +13,11 @@ import {
 } from "@/city/config/Paths.js";
 import type { ControlSessionSummary } from "@/city/agent/control/types/ControlViewData.js";
 import { decodeMaybe, truncateText } from "@/city/agent/control/CommonHelpers.js";
-import { loadSessionMessagesFromFile, resolveUiMessagePreview } from "@/city/agent/control/MessageTimeline.js";
+import {
+  loadSessionMessagesFromFile,
+  resolveUiMessagePreview,
+  toUiMessageTimeline,
+} from "@/city/agent/control/MessageTimeline.js";
 
 /**
  * 枚举控制面所需的 session 摘要。
@@ -44,7 +48,9 @@ export async function listControlSessionSummaries(params: {
       sessionId,
     );
     const messages = await loadSessionMessagesFromFile(filePath);
-    const last = messages.at(-1);
+    const last = [...messages]
+      .reverse()
+      .find((message) => toUiMessageTimeline(message).length > 0);
     const lastTs =
       typeof last?.metadata?.ts === "number" ? last.metadata.ts : undefined;
     const stat = await fs

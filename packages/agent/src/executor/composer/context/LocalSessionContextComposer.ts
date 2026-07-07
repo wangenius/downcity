@@ -12,7 +12,10 @@ import type {
   SessionContextComposer,
   SessionContextComposeResult,
 } from "@executor/composer/context/SessionContextComposer.js";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type {
+  SessionMessageV1,
+  SessionModelMessageV1,
+} from "@/executor/types/SessionMessages.js";
 import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
 import type { Tool } from "ai";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
@@ -147,7 +150,7 @@ export class LocalSessionContextComposer implements SessionContextComposer {
   buildFallbackAssistantMessage(
     text: string,
     run_context: SessionRunContext,
-  ): SessionMessageV1 {
+  ): SessionModelMessageV1 {
     const sessionId = String(
       run_context.sessionId || this.sessionId || "",
     ).trim();

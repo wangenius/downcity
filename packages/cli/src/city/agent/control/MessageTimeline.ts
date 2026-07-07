@@ -15,8 +15,10 @@ import {
 } from "ai";
 import type {
   SessionMessageV1,
+  SessionModelMessageV1,
   SessionMetadataV1,
 } from "@downcity/agent/internal/executor/types/SessionMessages.js";
+import { isSessionOperationMessage } from "@downcity/agent/internal/executor/types/SessionMessages.js";
 import { pickLastSuccessfulChatSendText } from "@downcity/agent";
 import { extractToolCallsFromUiMessage } from "@downcity/agent/internal/executor/messages/UIMessageTransformer.js";
 import type { ControlTimelineEvent, ControlTimelineRole } from "@/city/agent/control/types/ControlViewData.js";
@@ -72,7 +74,7 @@ function extractMessageText(parts: unknown): string {
   return texts.join("\n").trim();
 }
 
-function extractAssistantToolSummary(message: SessionMessageV1): string {
+function extractAssistantToolSummary(message: SessionModelMessageV1): string {
   const toolCalls = extractToolCallsFromUiMessage(message);
   if (!Array.isArray(toolCalls) || toolCalls.length === 0) return "";
   const toolNames = Array.from(
@@ -135,10 +137,27 @@ function toUiMessageEvent(params: {
     ...(typeof metadata?.source === "string" ? { source: metadata.source } : {}),
     text,
     ...(toolName ? { toolName } : {}),
+    ...(role === "operation" && metadata?.operation?.operationId
+      ? { operationId: metadata.operation.operationId }
+      : {}),
+    ...(role === "operation" && metadata?.operation?.name
+      ? { operationName: metadata.operation.name }
+      : {}),
+    ...(role === "operation" && metadata?.operation?.status
+      ? { operationStatus: metadata.operation.status }
+      : {}),
   };
 }
 
 function resolveUiMessageText(message: SessionMessageV1): string {
+  if (isSessionOperationMessage(message)) {
+    const metadata = (message.metadata || null) as SessionMetadataV1 | null;
+    return (
+      String(metadata?.operation?.label || "").trim() ||
+      extractMessageText(message.parts)
+    );
+  }
+
   const plainText = extractMessageText(message.parts);
   if (plainText) return plainText;
 
@@ -156,6 +175,19 @@ function resolveUiMessageText(message: SessionMessageV1): string {
 export function toUiMessageTimeline(
   message: SessionMessageV1,
 ): ControlTimelineEvent[] {
+  if (isSessionOperationMessage(message)) {
+    const metadata = (message.metadata || null) as SessionMetadataV1 | null;
+    if (metadata?.operation?.status !== "finished") return [];
+    return [
+      toUiMessageEvent({
+        message,
+        role: "operation",
+        text: resolveUiMessageText(message),
+        sequence: 0,
+      }),
+    ];
+  }
+
   if (message.role !== "assistant") {
     return [
       toUiMessageEvent({
@@ -252,7 +284,13 @@ export async function loadSessionMessagesFromFile(
     try {
       const item = JSON.parse(line) as SessionMessageV1;
       if (!item || typeof item !== "object") continue;
-      if (item.role !== "user" && item.role !== "assistant") continue;
+      if (
+        item.role !== "user" &&
+        item.role !== "assistant" &&
+        item.role !== "operation"
+      ) {
+        continue;
+      }
       out.push(item);
     } catch {
       // 关键点（中文）：单行损坏不应影响整体可读性。

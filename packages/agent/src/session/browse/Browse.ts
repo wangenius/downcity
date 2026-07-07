@@ -261,6 +261,7 @@ export function toSessionTimelineEvents(
 ): AgentSessionTimelineEvent[] {
   if (isSessionOperationMessage(message)) {
     const metadata = (message.metadata || null) as SessionMetadataV1 | null;
+    if (metadata?.operation?.status !== "finished") return [];
     return [
       toTimelineEvent({
         message,
@@ -367,7 +368,13 @@ export async function loadSessionMessagesFromPath(
       try {
         const parsed = JSON.parse(line) as SessionMessageV1;
         if (!parsed || typeof parsed !== "object") continue;
-        if (parsed.role !== "user" && parsed.role !== "assistant") continue;
+        if (
+          parsed.role !== "user" &&
+          parsed.role !== "assistant" &&
+          parsed.role !== "operation"
+        ) {
+          continue;
+        }
         messages.push(parsed);
       } catch {
         // 关键点（中文）：单行损坏不影响整个 session 的可读性。
@@ -412,7 +419,11 @@ export async function loadSessionArchiveMessagesFromPath(
       if (!item || typeof item !== "object") return false;
       const candidate = item as Partial<SessionMessageV1>;
       return (
-        (candidate.role === "user" || candidate.role === "assistant") &&
+        (
+          candidate.role === "user" ||
+          candidate.role === "assistant" ||
+          candidate.role === "operation"
+        ) &&
         Array.isArray(candidate.parts)
       );
     });

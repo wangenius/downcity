@@ -37,6 +37,7 @@ import type {
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type {
   SessionMessageV1,
+  SessionModelMessageV1,
   SessionUserMessageV1,
 } from "@/executor/types/SessionMessages.js";
 import type { SessionLocalState } from "@/types/session/SessionLocalState.js";
@@ -355,7 +356,7 @@ export class SessionStateService {
    * 持久化最终 assistant 结果。
    */
   async persist_assistant_result(
-    assistant_message?: SessionMessageV1 | null,
+    assistant_message?: SessionModelMessageV1 | null,
   ): Promise<void> {
     await persistSdkAssistantResult({
       projectRoot: this.project_root,
@@ -373,6 +374,7 @@ export class SessionStateService {
   async persist_operation_event(
     event: AgentSessionOperationEvent,
   ): Promise<void> {
+    if (event.status !== "finished" || event.visible === false) return;
     const message = this.history_store.operation({
       operation: {
         operationId: event.operationId,
@@ -384,7 +386,6 @@ export class SessionStateService {
         ...(typeof event.progress === "number" ? { progress: event.progress } : {}),
         ...(event.result !== undefined ? { result: event.result } : {}),
         ...(event.error ? { error: event.error } : {}),
-        ...(event.visible === false ? { visible: false } : {}),
       },
       metadata: {
         sessionId: this.session_id,

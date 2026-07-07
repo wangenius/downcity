@@ -218,7 +218,9 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     if (!input || typeof input !== "object") return null;
     const candidate = input as Partial<SessionMessageV1>;
     const role = String(candidate.role || "");
-    if (role !== "user" && role !== "assistant") return null;
+    if (role !== "user" && role !== "assistant" && role !== "operation") {
+      return null;
+    }
     if (!Array.isArray(candidate.parts)) return null;
     return candidate as SessionMessageV1;
   }
@@ -687,7 +689,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     const { ts, ...metadata } = input.metadata;
     return {
       id: input.id || `op:${this.sessionId}:${operation.operationId}:${generateId()}`,
-      role: "assistant",
+      role: "operation",
       metadata: {
         v: 1,
         ts: typeof ts === "number" ? ts : Date.now(),

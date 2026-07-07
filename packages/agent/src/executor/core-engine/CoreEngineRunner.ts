@@ -41,7 +41,10 @@ import type {
   SessionExecuteInput,
   SessionRunResult,
 } from "@/executor/types/SessionRun.js";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type {
+  SessionMessageV1,
+  SessionModelMessageV1,
+} from "@/executor/types/SessionMessages.js";
 
 const TURN_STOPPED_MESSAGE = "Turn stopped";
 
@@ -61,9 +64,9 @@ function build_file_part_key(part: FileUIPart): string {
  * 把 tool/plugin 运行期产生的 file parts 并入最终 assistant UIMessage。
  */
 function mergePendingAssistantFileParts(
-  message: SessionMessageV1,
+  message: SessionModelMessageV1,
   parts: FileUIPart[],
-): SessionMessageV1 {
+): SessionModelMessageV1 {
   if (!Array.isArray(parts) || parts.length === 0) return message;
   const current_parts = Array.isArray(message.parts) ? message.parts : [];
   const seen = new Set<string>();
@@ -151,7 +154,7 @@ export class CoreEngineRunner {
       : [];
     const tools = input.execute_input.tools;
     let last_observed_stream_error: unknown = undefined;
-    let final_assistant_ui_message: SessionMessageV1 | null = null;
+    let final_assistant_ui_message: SessionModelMessageV1 | null = null;
 
     try {
       const message_state = await CoreEngineMessageState.create({

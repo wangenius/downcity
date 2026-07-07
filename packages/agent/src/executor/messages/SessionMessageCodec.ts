@@ -15,7 +15,7 @@ import {
   type ToolSet,
 } from "ai";
 import {
-  isSessionOperationMessage,
+  isSessionModelMessage,
   type SessionMessageV1,
 } from "@/executor/types/SessionMessages.js";
 import {
@@ -81,9 +81,7 @@ export async function toModelMessages(
   if (!Array.isArray(messages) || messages.length === 0) return [];
 
   // operation message 只服务前端时间线，不能传入模型。
-  const model_messages = messages.filter(
-    (message) => !isSessionOperationMessage(message),
-  );
+  const model_messages = messages.filter(isSessionModelMessage);
   if (model_messages.length === 0) return [];
 
   // 第一步（中文）：在 user 消息上注入 file parts（多模态附件）。

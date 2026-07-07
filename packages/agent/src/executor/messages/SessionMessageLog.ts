@@ -9,12 +9,14 @@
 
 import { isTextUIPart } from "ai";
 import type { Logger } from "@/utils/logger/Logger.js";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { SessionModelMessageV1 } from "@/executor/types/SessionMessages.js";
 
 /**
  * 从 UI message 中提取 assistant 文本部分。
  */
-export function extractAssistantTextForLog(message: SessionMessageV1): string {
+export function extractAssistantTextForLog(
+  message: SessionModelMessageV1,
+): string {
   if (!Array.isArray(message.parts)) return "";
   return message.parts
     .filter(isTextUIPart)
@@ -28,7 +30,7 @@ export function extractAssistantTextForLog(message: SessionMessageV1): string {
  */
 export async function logAssistantMessageNow(
   logger: Logger,
-  message: SessionMessageV1,
+  message: SessionModelMessageV1,
 ): Promise<void> {
   const text = extractAssistantTextForLog(message) || "-";
   const normalized = text.replace(/\r\n/g, "\n");

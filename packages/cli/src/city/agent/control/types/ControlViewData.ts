@@ -16,7 +16,8 @@ export type ControlTimelineRole =
   | "assistant"
   | "tool-call"
   | "tool-result"
-  | "system";
+  | "system"
+  | "operation";
 
 /**
  * Control 时间线事件。
@@ -56,6 +57,21 @@ export interface ControlTimelineEvent {
    * 工具名称。
    */
   toolName?: string;
+
+  /**
+   * operation 唯一标识。
+   */
+  operationId?: string;
+
+  /**
+   * operation 名称。
+   */
+  operationName?: string;
+
+  /**
+   * operation 状态。
+   */
+  operationStatus?: string;
 }
 
 /**
@@ -83,7 +99,7 @@ export interface ControlSessionSummary {
   /**
    * 最后一条消息角色。
    */
-  lastRole?: "user" | "assistant" | "system";
+  lastRole?: "user" | "assistant" | "system" | "operation";
 
   /**
    * 最后一条消息摘要。

@@ -2,7 +2,7 @@
  * @file 验证 operation message 的持久化、模型输入过滤与 timeline 投影。
  *
  * 关键点（中文）
- * - operation message 会作为 UIMessage 写入 JSONL。
+ * - operation message 会作为 operation role 消息写入 JSONL。
  * - history composer 组装 LLM 输入时必须过滤 operation message。
  * - timeline view 可以把 operation message 投影成前端可识别的 operation 事件。
  */
@@ -42,8 +42,8 @@ test("operation message is persisted but filtered from LLM history", async () =>
       operation: {
         operationId: "op-1",
         name: "compacting",
-        status: "started",
-        label: "Compacting session history",
+        status: "finished",
+        label: "Session history compacted",
         turnId: "turn-1",
       },
       metadata: { sessionId: session_id },
@@ -60,6 +60,7 @@ test("operation message is persisted but filtered from LLM history", async () =>
 
   const persisted_messages = await store.list();
   assert.equal(persisted_messages.length, 3);
+  assert.equal(persisted_messages[1].role, "operation");
   assert.equal(persisted_messages[1].metadata.kind, "operation");
   assert.equal(persisted_messages[1].metadata.operation.operationId, "op-1");
 
@@ -80,8 +81,22 @@ test("operation message is persisted but filtered from LLM history", async () =>
   assert.equal(timeline_events[0].role, "operation");
   assert.equal(timeline_events[0].operationId, "op-1");
   assert.equal(timeline_events[0].operationName, "compacting");
-  assert.equal(timeline_events[0].operationStatus, "started");
-  assert.equal(timeline_events[0].text, "Compacting session history");
+  assert.equal(timeline_events[0].operationStatus, "finished");
+  assert.equal(timeline_events[0].text, "Session history compacted");
+
+  const hidden_started_events = toSessionTimelineEvents(
+    store.operation({
+      operation: {
+        operationId: "op-started",
+        name: "compacting",
+        status: "started",
+        label: "Compacting session history",
+      },
+      metadata: { sessionId: session_id },
+      id: "op:started",
+    }),
+  );
+  assert.deepEqual(hidden_started_events, []);
 });
 
 test("session.set persists and publishes model-switching operations", async () => {
@@ -120,7 +135,7 @@ test("session.set persists and publishes model-switching operations", async () =
     );
     assert.deepEqual(
       operation_events.map((event) => `${event.operationName}:${event.operationStatus}`),
-      ["model-switching:started", "model-switching:finished"],
+      ["model-switching:finished"],
     );
   } finally {
     await agent.dispose();
@@ -168,14 +183,14 @@ test("session.fork persists and publishes history-forking operations on source s
     );
     assert.deepEqual(
       source_fork_operations.map((event) => event.operationStatus),
-      ["started", "finished"],
+      ["finished"],
     );
 
     const forked_history = await forked.history({ view: "timeline" });
     const forked_model_operations = forked_history.items.filter(
       (item) => item.operationName === "model-switching",
     );
-    assert.equal(forked_model_operations.length, 2);
+    assert.equal(forked_model_operations.length, 1);
   } finally {
     await agent.dispose();
   }

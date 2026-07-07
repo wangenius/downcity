@@ -7,7 +7,10 @@
  */
 
 import type { ModelMessage, Tool } from "ai";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type {
+  SessionMessageV1,
+  SessionModelMessageV1,
+} from "@/executor/types/SessionMessages.js";
 import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 
@@ -76,5 +79,5 @@ export interface SessionContextComposer {
   buildFallbackAssistantMessage(
     text: string,
     run_context: SessionRunContext,
-  ): SessionMessageV1;
+  ): SessionModelMessageV1;
 }

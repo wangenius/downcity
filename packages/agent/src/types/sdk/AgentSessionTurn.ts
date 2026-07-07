@@ -7,7 +7,7 @@
  * - 增量过程继续通过 `session.subscribe()` 观察；turn handle 只负责等待最终完成结果。
  */
 
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { SessionModelMessageV1 } from "@/executor/types/SessionMessages.js";
 
 /**
  * 单个 Session turn 的最终结果。
@@ -35,7 +35,7 @@ export interface AgentSessionTurnResult {
    * - `turn.finished` 返回的结果以这条消息作为最终事实源。
    * - transport / runtime service 若需要读取最终结构化输出，应优先消费这里。
    */
-  assistantMessage?: SessionMessageV1;
+  assistantMessage?: SessionModelMessageV1;
 
   /**
    * 当前 turn 失败时的错误文本。

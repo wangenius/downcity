@@ -9,7 +9,10 @@
 
 import { nanoid } from "nanoid";
 import type { SessionUserMessageV1 } from "@/executor/types/SessionMessages.js";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type {
+  SessionMessageV1,
+  SessionModelMessageV1,
+} from "@/executor/types/SessionMessages.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
@@ -106,7 +109,7 @@ export interface SessionPromptRuntimeOptions {
   }) => Promise<{
     text: string;
     success: boolean;
-    assistantMessage?: SessionMessageV1 | null;
+    assistantMessage?: SessionModelMessageV1 | null;
     error?: string;
   }>;
 
@@ -346,7 +349,7 @@ export class SessionPromptRuntime {
 function buildPromptRuntimeErrorAssistantMessage(input: {
   sessionId: string;
   message: string;
-}): SessionMessageV1 {
+}): SessionModelMessageV1 {
   return {
     id: `a:${input.sessionId}:${Date.now()}:${nanoid(6)}`,
     role: "assistant",

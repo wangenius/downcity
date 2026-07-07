@@ -8,7 +8,10 @@
 
 import { extractTextFromUiMessage } from "@/executor/messages/UIMessageTransformer.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type {
+  SessionMessageV1,
+  SessionModelMessageV1,
+} from "@/executor/types/SessionMessages.js";
 import { persistAssistantResult } from "@/executor/messages/AssistantResultPersistence.js";
 import type { AgentSessionConfigSnapshot } from "@/types/agent/AgentTypes.js";
 import {
@@ -65,7 +68,7 @@ export interface PersistSdkAssistantResultParams
    * - stop/abort 且没有 assistant 内容时允许为空。
    * - 为空时仅刷新 metadata，不写入伪造 assistant 正文。
    */
-  assistantMessage?: SessionMessageV1 | null;
+  assistantMessage?: SessionModelMessageV1 | null;
 }
 
 /**

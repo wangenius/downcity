@@ -7,7 +7,10 @@
  * - 运行中 step/tool 的持久化由 inflight 快照承担；run 结束时只关心最终 assistant 如何收口。
  */
 
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type {
+  SessionMessageV1,
+  SessionModelMessageV1,
+} from "@/executor/types/SessionMessages.js";
 import { resolveAssistantMessageForPersistence } from "@/executor/messages/UserVisibleText.js";
 
 /**
@@ -40,7 +43,7 @@ export interface PersistAssistantResultParams {
   /**
    * 本轮执行得到的 assistant message。
    */
-  assistantMessage: SessionMessageV1 | null | undefined;
+  assistantMessage: SessionModelMessageV1 | null | undefined;
   /**
    * 可选兜底文本。
    *
@@ -65,7 +68,7 @@ export function buildAssistantResultPersistencePayload(
   /**
    * 已构造好的完整 assistant message。
    */
-  message?: SessionMessageV1 | null;
+  message?: SessionModelMessageV1 | null;
   /**
    * 允许写入的兜底文本。
    */

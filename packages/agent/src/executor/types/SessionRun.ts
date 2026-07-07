@@ -8,8 +8,11 @@
  */
 
 import type { Tool, UIMessageChunk } from "ai";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
-import type { SessionUserMessageV1 } from "@/executor/types/SessionMessages.js";
+import type {
+  SessionMessageV1,
+  SessionModelMessageV1,
+  SessionUserMessageV1,
+} from "@/executor/types/SessionMessages.js";
 import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 
@@ -99,7 +102,7 @@ export interface SessionRunResult {
    * - stop/abort 且没有任何 assistant 内容时可以为空。
    * - turn 状态通过 `success` / `error` 表达，不应伪造成 assistant 正文。
    */
-  assistantMessage?: SessionMessageV1 | null;
+  assistantMessage?: SessionModelMessageV1 | null;
 
   /**
    * 本轮执行结束后待写入长期历史的 user 消息。

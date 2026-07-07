@@ -43,7 +43,7 @@ If you want a fuller experience, you will usually also handle:
 
 `operation` represents auxiliary Session work such as context compaction, model switching, and history forking. It is not assistant text.
 
-Operation events are also persisted as operation messages in the Session UIMessage JSONL history. They remain visible to UI history/timeline readers, but the Agent filters them out before building LLM input.
+Successful operation events are also persisted as `role: "operation"` messages in the Session JSONL history. In-progress or failed operations are only delivered through `subscribe()`, so history stays focused on completed state changes. Operation messages remain visible to UI history/timeline readers, but the Agent filters them out before building LLM input.
 
 The built-in operation names currently emitted by Agent are:
 

@@ -162,6 +162,10 @@ export function upsert_federation_profile(state: CityLocalState, input: {
 
 /**
  * 列出 City 可选择的 Federation。
+ *
+ * 说明（中文）
+ * - 这里只返回 City 本地保存或 `downfed` admin 保存过的 Federation。
+ * - 默认 Federation 只作为未选择时的运行期 fallback，不再作为“已配置项”展示。
  */
 export function list_federations(): FederationProfile[] {
   const state = readCityState();
@@ -202,21 +206,8 @@ export function list_federations(): FederationProfile[] {
 
   for (const server of admin_servers) append(server);
 
-  const default_session = state.sessions?.[DEFAULT_FEDERATION_URL];
-  append({
-    name: "Downcity Base",
-    federation_url: DEFAULT_FEDERATION_URL,
-    selected: DEFAULT_FEDERATION_URL === selected_url,
-    source: "default",
-    has_admin_secret_key: Boolean(read_city_admin_secret_for_url(DEFAULT_FEDERATION_URL)),
-    has_user_session: Boolean(default_session?.user_token),
-    city_id: default_session?.city_id,
-    user_id: default_session?.user_id,
-  });
-
   return [...by_url.values()].sort((left, right) =>
     Number(right.selected) - Number(left.selected)
-    || Number(right.source === "default") - Number(left.source === "default")
     || left.name.localeCompare(right.name)
     || left.federation_url.localeCompare(right.federation_url),
   );

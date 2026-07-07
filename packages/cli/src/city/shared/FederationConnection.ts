@@ -357,7 +357,7 @@ export function run_federation_leave_command(options?: { as_json?: boolean }): v
   delete sessions[federation_url];
   writeCityState({
     ...state,
-    selected_federation_url: DEFAULT_FEDERATION_URL,
+    selected_federation_url: undefined,
     profiles,
     sessions,
   });
@@ -367,7 +367,7 @@ export function run_federation_leave_command(options?: { as_json?: boolean }): v
     title: "federation left",
     payload: {
       left: federation_url,
-      selected: DEFAULT_FEDERATION_URL,
+      selected: undefined,
     },
   });
 }

@@ -29,6 +29,7 @@ export async function prompt_city_url(): Promise<string | null> {
 
 export async function prompt_federation(): Promise<FederationProfile | null> {
   const servers = list_federations();
+  if (servers.length === 0) return null;
   const response = (await prompts({
     type: "select",
     name: "federation_url",

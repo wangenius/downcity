@@ -1,10 +1,10 @@
 /**
- * @file 验证 operation message 的持久化、模型输入过滤与 timeline 投影。
+ * @file 验证 action message 的持久化、模型输入过滤与 timeline 投影。
  *
  * 关键点（中文）
- * - operation message 会作为 operation role 消息写入 JSONL。
- * - history composer 组装 LLM 输入时必须过滤 operation message。
- * - timeline view 可以把 operation message 投影成前端可识别的 operation 事件。
+ * - action message 会作为 `type=action` item 写入 JSONL。
+ * - 同一个 action id 会被更新为一条历史记录，不拆成 running/completed 多条。
+ * - history composer 组装 LLM 输入时必须过滤 action message。
  */
 
 import test from "node:test";
@@ -18,14 +18,14 @@ import { JsonlSessionHistoryComposer } from "../bin/executor/composer/history/js
 import { toSessionTimelineEvents } from "../bin/session/browse/Browse.js";
 import { Agent } from "../bin/index.js";
 
-test("operation message is persisted but filtered from LLM history", async () => {
+test("action message is upserted but filtered from LLM history", async () => {
   const root_path = await fs.mkdtemp(
-    path.join(os.tmpdir(), "downcity-agent-operation-message-"),
+    path.join(os.tmpdir(), "downcity-agent-action-message-"),
   );
-  const session_id = "operation_session";
+  const session_id = "action_session";
   const store = new JsonlSessionHistoryStore({
     rootPath: root_path,
-    agentId: "operation_agent",
+    agentId: "action_agent",
     sessionId: session_id,
   });
   const composer = new JsonlSessionHistoryComposer({ store });
@@ -38,16 +38,26 @@ test("operation message is persisted but filtered from LLM history", async () =>
     }),
   );
   await store.append(
-    store.operation({
-      operation: {
-        operationId: "op-1",
-        name: "compacting",
-        status: "finished",
-        label: "Session history compacted",
+    store.action({
+      action: {
+        id: "action:1",
+        title: "Compacting session history",
+        state: "running",
         turnId: "turn-1",
       },
       metadata: { sessionId: session_id },
-      id: "op:1",
+    }),
+  );
+  await store.append(
+    store.action({
+      action: {
+        id: "action:1",
+        title: "Session history compacted",
+        description: "Compacted earlier messages.",
+        state: "completed",
+        turnId: "turn-1",
+      },
+      metadata: { sessionId: session_id },
     }),
   );
   await store.append(
@@ -60,9 +70,10 @@ test("operation message is persisted but filtered from LLM history", async () =>
 
   const persisted_messages = await store.list();
   assert.equal(persisted_messages.length, 3);
-  assert.equal(persisted_messages[1].role, "operation");
-  assert.equal(persisted_messages[1].metadata.kind, "operation");
-  assert.equal(persisted_messages[1].metadata.operation.operationId, "op-1");
+  assert.equal(persisted_messages[1].type, "action");
+  assert.equal(persisted_messages[1].title, "Session history compacted");
+  assert.equal(persisted_messages[1].description, "Compacted earlier messages.");
+  assert.equal(persisted_messages[1].state, "completed");
 
   const model_messages = await composer.prepare({
     query: "",
@@ -78,28 +89,17 @@ test("operation message is persisted but filtered from LLM history", async () =>
 
   const timeline_events = toSessionTimelineEvents(persisted_messages[1]);
   assert.equal(timeline_events.length, 1);
-  assert.equal(timeline_events[0].role, "operation");
-  assert.equal(timeline_events[0].operationId, "op-1");
-  assert.equal(timeline_events[0].operationName, "compacting");
-  assert.equal(timeline_events[0].operationStatus, "finished");
-  assert.equal(timeline_events[0].text, "Session history compacted");
-
-  const hidden_started_events = toSessionTimelineEvents(
-    store.operation({
-      operation: {
-        operationId: "op-started",
-        name: "compacting",
-        status: "started",
-        label: "Compacting session history",
-      },
-      metadata: { sessionId: session_id },
-      id: "op:started",
-    }),
+  assert.equal(timeline_events[0].role, "action");
+  assert.equal(timeline_events[0].actionTitle, "Session history compacted");
+  assert.equal(timeline_events[0].actionDescription, "Compacted earlier messages.");
+  assert.equal(timeline_events[0].actionState, "completed");
+  assert.equal(
+    timeline_events[0].text,
+    "Session history compacted\nCompacted earlier messages.",
   );
-  assert.deepEqual(hidden_started_events, []);
 });
 
-test("session.set persists and publishes model-switching operations", async () => {
+test("session.set persists and publishes model-switching actions", async () => {
   const agent_path = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-agent-model-switching-"),
   );
@@ -113,7 +113,7 @@ test("session.set persists and publishes model-switching operations", async () =
     });
     const events = [];
     const unsubscribe = session.subscribe((event) => {
-      if (event.type === "operation") events.push(event);
+      if (event.type === "action") events.push(event);
     });
 
     await session.set({
@@ -125,24 +125,25 @@ test("session.set persists and publishes model-switching operations", async () =
     unsubscribe();
 
     assert.deepEqual(
-      events.map((event) => `${event.name}:${event.status}`),
-      ["model-switching:started", "model-switching:finished"],
+      events.map((event) => `${event.title}:${event.state}`),
+      ["Switching session model:running", "Session model switched:completed"],
     );
+    assert.equal(new Set(events.map((event) => event.id)).size, 1);
 
     const history = await session.history({ view: "timeline" });
-    const operation_events = history.items.filter(
-      (item) => item.role === "operation",
+    const action_events = history.items.filter(
+      (item) => item.role === "action",
     );
     assert.deepEqual(
-      operation_events.map((event) => `${event.operationName}:${event.operationStatus}`),
-      ["model-switching:finished"],
+      action_events.map((event) => `${event.actionTitle}:${event.actionState}`),
+      ["Session model switched:completed"],
     );
   } finally {
     await agent.dispose();
   }
 });
 
-test("session.fork persists and publishes history-forking operations on source session", async () => {
+test("session.fork persists and publishes history-forking actions on source session", async () => {
   const agent_path = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-agent-history-forking-"),
   );
@@ -164,7 +165,7 @@ test("session.fork persists and publishes history-forking operations on source s
 
     const events = [];
     const unsubscribe = session.subscribe((event) => {
-      if (event.type === "operation" && event.name === "history-forking") {
+      if (event.type === "action") {
         events.push(event);
       }
     });
@@ -172,25 +173,26 @@ test("session.fork persists and publishes history-forking operations on source s
     unsubscribe();
 
     assert.deepEqual(
-      events.map((event) => `${event.name}:${event.status}`),
-      ["history-forking:started", "history-forking:finished"],
+      events.map((event) => `${event.title}:${event.state}`),
+      ["Forking session history:running", "Session history forked:completed"],
     );
+    assert.equal(new Set(events.map((event) => event.id)).size, 1);
     assert.notEqual(forked.id, session.id);
 
     const source_history = await session.history({ view: "timeline" });
-    const source_fork_operations = source_history.items.filter(
-      (item) => item.operationName === "history-forking",
+    const source_fork_actions = source_history.items.filter(
+      (item) => item.role === "action" && item.actionTitle === "Session history forked",
     );
     assert.deepEqual(
-      source_fork_operations.map((event) => event.operationStatus),
-      ["finished"],
+      source_fork_actions.map((event) => event.actionState),
+      ["completed"],
     );
 
     const forked_history = await forked.history({ view: "timeline" });
-    const forked_model_operations = forked_history.items.filter(
-      (item) => item.operationName === "model-switching",
+    const forked_model_actions = forked_history.items.filter(
+      (item) => item.role === "action" && item.actionTitle === "Session model switched",
     );
-    assert.equal(forked_model_operations.length, 1);
+    assert.equal(forked_model_actions.length, 1);
   } finally {
     await agent.dispose();
   }

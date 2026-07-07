@@ -79,7 +79,7 @@ export class JsonlSessionCompactionComposer implements SessionCompactionComposer
       maxInputTokensApprox: policy.maxInputTokensApprox,
       archiveOnCompact: policy.archiveOnCompact,
       compactRatio: policy.compactRatio,
-      ...(input.onOperation ? { onOperation: input.onOperation } : {}),
+      ...(input.onAction ? { onAction: input.onAction } : {}),
     });
   }
 

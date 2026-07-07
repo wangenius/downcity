@@ -187,7 +187,7 @@ export async function hydrateFileUrlPartsForModel(
       continue;
     }
 
-    const nextParts: SessionMessageV1["parts"] = [];
+    const nextParts: SessionModelMessageV1["parts"] = [];
     let changed = false;
     for (const part of parts) {
       if (!isFileUIPart(part as FileUIPart)) {
@@ -196,7 +196,7 @@ export async function hydrateFileUrlPartsForModel(
       }
       const nextPart = await hydrateFileUrlPart(part as FileUIPart, projectRoot);
       if (nextPart !== part) changed = true;
-      nextParts.push(nextPart as SessionMessageV1["parts"][number]);
+      nextParts.push(nextPart as SessionModelMessageV1["parts"][number]);
     }
 
     out.push(changed ? { ...message, parts: nextParts } : message);

@@ -8,7 +8,7 @@
 
 import type { LanguageModel, SystemModelMessage } from "ai";
 import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
-import type { AgentSessionOperationRecord } from "@/types/sdk/AgentSessionOperation.js";
+import type { AgentSessionActionRecord } from "@/types/sdk/AgentSessionAction.js";
 
 /**
  * compaction Composer 执行输入。
@@ -35,13 +35,13 @@ export type SessionCompactionInput = {
   retryCount: number;
 
   /**
-   * 可选 operation 发布回调。
+   * 可选 action 发布回调。
    *
    * 说明（中文）
-   * - 默认 compaction Composer 可在真正开始压缩时发布 `compacting`。
-   * - 回调由上层 Session 负责转成订阅事件与 operation message。
+   * - 默认 compaction Composer 可在真正开始压缩时发布 action。
+   * - 回调由上层 Session 负责转成订阅事件与 action message。
    */
-  onOperation?: (operation: AgentSessionOperationRecord) => Promise<void>;
+  onAction?: (action: AgentSessionActionRecord) => Promise<void>;
 };
 
 /**

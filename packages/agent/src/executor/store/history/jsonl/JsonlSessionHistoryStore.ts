@@ -18,10 +18,16 @@ import { generateId } from "@/utils/Id.js";
 import { getLogger } from "@/utils/logger/Logger.js";
 import { compactSessionMessagesIfNeeded } from "@executor/composer/compaction/jsonl/JsonlSessionCompactionExecutor.js";
 import type {
+  SessionActionMessageV1,
   SessionMessageV1,
   SessionMetadataV1,
 } from "@/executor/types/SessionMessages.js";
-import type { AgentSessionOperationRecord } from "@/types/sdk/AgentSessionOperation.js";
+import {
+  isSessionActionMessage,
+  isSessionModelMessage,
+  toSessionActionMessage,
+} from "@/executor/types/SessionMessages.js";
+import type { AgentSessionActionRecord } from "@/types/sdk/AgentSessionAction.js";
 import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import type { SessionHistoryPathOverrides } from "@/executor/types/SessionHistoryPaths.js";
@@ -216,17 +222,60 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     input: unknown,
   ): SessionMessageV1 | null {
     if (!input || typeof input !== "object") return null;
-    const candidate = input as Partial<SessionMessageV1>;
+    if ((input as { type?: unknown }).type === "action") {
+      return this.normalizeActionMessage(input);
+    }
+    const candidate = input as { role?: unknown; parts?: unknown };
     const role = String(candidate.role || "");
-    if (role !== "user" && role !== "assistant" && role !== "operation") {
+    if (role !== "user" && role !== "assistant") {
       return null;
     }
     if (!Array.isArray(candidate.parts)) return null;
-    return candidate as SessionMessageV1;
+    return input as SessionMessageV1;
+  }
+
+  private normalizeActionMessage(input: unknown): SessionActionMessageV1 | null {
+    if (!input || typeof input !== "object") return null;
+    const candidate = input as Partial<SessionActionMessageV1>;
+    const id = String(candidate.id || "").trim();
+    const title = String(candidate.title || "").trim();
+    const state = String(candidate.state || "").trim();
+    if (!id || !title) return null;
+    if (state !== "running" && state !== "completed" && state !== "failed") {
+      return null;
+    }
+    const metadata_input =
+      candidate.metadata && typeof candidate.metadata === "object"
+        ? candidate.metadata
+        : {};
+    const metadata_candidate = metadata_input as Partial<SessionActionMessageV1["metadata"]>;
+    const session_id =
+      String(metadata_candidate.sessionId || "").trim() || this.sessionId;
+    const description = String(candidate.description || "").trim();
+    return {
+      type: "action",
+      id,
+      title,
+      ...(description ? { description } : {}),
+      state,
+      metadata: {
+        v: 1,
+        ts:
+          typeof metadata_candidate.ts === "number"
+            ? metadata_candidate.ts
+            : Date.now(),
+        sessionId: session_id,
+        ...(metadata_candidate.turnId ? { turnId: metadata_candidate.turnId } : {}),
+      },
+    };
   }
 
   private hasStructuredAssistantParts(message: SessionMessageV1 | null): boolean {
-    if (!message || message.role !== "assistant" || !Array.isArray(message.parts)) {
+    if (
+      !isSessionModelMessage(message) ||
+      message.role !== "assistant" ||
+      !Array.isArray(message.parts)
+    ) {
       return false;
     }
     return message.parts.some((part) => {
@@ -240,6 +289,8 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     inflight: SessionMessageV1,
     finalMessage: SessionMessageV1,
   ): SessionMessageV1 {
+    if (!isSessionModelMessage(finalMessage)) return inflight;
+    if (!isSessionModelMessage(inflight)) return finalMessage;
     const final_parts = Array.isArray(finalMessage.parts)
       ? finalMessage.parts.filter((part) => part && typeof part === "object")
       : [];
@@ -357,7 +408,10 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
 
   private async writeInflightUnsafe(message: SessionMessageV1): Promise<void> {
     const normalized = this.normalizePersistedMessage(message);
-    if (!normalized || normalized.role !== "assistant") {
+    if (
+      !isSessionModelMessage(normalized) ||
+      normalized.role !== "assistant"
+    ) {
       throw new Error("inflight assistant must be an assistant UIMessage");
     }
     const file = this.getInflightFilePath();
@@ -377,6 +431,44 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
       JSON.stringify(message) + "\n",
       "utf8",
     );
+  }
+
+  private async rewriteMessagesUnsafe(messages: SessionMessageV1[]): Promise<void> {
+    const file = this.getMessagesFilePath();
+    const temp = `${file}.${process.pid}.${Date.now()}.tmp`;
+    const payload =
+      messages.length > 0
+        ? messages.map((message) => JSON.stringify(message)).join("\n") + "\n"
+        : "";
+    await fs.writeFile(temp, payload, "utf8");
+    await fs.move(temp, file, { overwrite: true });
+  }
+
+  private async upsertActionMessageUnsafe(
+    message: SessionActionMessageV1,
+  ): Promise<void> {
+    const file = this.getMessagesFilePath();
+    const raw = await fs.readFile(file, "utf8").catch(() => "");
+    const messages: SessionMessageV1[] = [];
+    let replaced = false;
+
+    for (const line of raw.split("\n").filter(Boolean)) {
+      try {
+        const current = this.normalizePersistedMessage(JSON.parse(line));
+        if (!current) continue;
+        if (isSessionActionMessage(current) && current.id === message.id) {
+          messages.push(message);
+          replaced = true;
+          continue;
+        }
+        messages.push(current);
+      } catch {
+        // 关键点（中文）：重写 action 时顺手跳过损坏行，避免坏 JSON 阻断状态更新。
+      }
+    }
+
+    if (!replaced) messages.push(message);
+    await this.rewriteMessagesUnsafe(messages);
   }
 
   private async withWriteLock<T>(fn: () => Promise<T>): Promise<T> {
@@ -438,44 +530,6 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     return system.filter((item) => item && typeof item === "object");
   }
 
-  private normalizeOperation(
-    operation: AgentSessionOperationRecord,
-  ): AgentSessionOperationRecord {
-    const operation_id = String(operation.operationId || "").trim() || generateId();
-    const name = String(operation.name || "").trim() || "operation";
-    const status = String(operation.status || "").trim();
-    const normalized_status: AgentSessionOperationRecord["status"] =
-      status === "started" ||
-      status === "progress" ||
-      status === "finished" ||
-      status === "skipped" ||
-      status === "failed"
-        ? status
-        : "progress";
-    return {
-      operationId: operation_id,
-      name,
-      status: normalized_status,
-      ...(typeof operation.turnId === "string" && operation.turnId.trim()
-        ? { turnId: operation.turnId.trim() }
-        : {}),
-      ...(typeof operation.label === "string" && operation.label.trim()
-        ? { label: operation.label.trim() }
-        : {}),
-      ...(typeof operation.reason === "string" && operation.reason.trim()
-        ? { reason: operation.reason.trim() }
-        : {}),
-      ...(typeof operation.progress === "number" && Number.isFinite(operation.progress)
-        ? { progress: Math.max(0, Math.min(1, operation.progress)) }
-        : {}),
-      ...(operation.result !== undefined ? { result: operation.result } : {}),
-      ...(typeof operation.error === "string" && operation.error.trim()
-        ? { error: operation.error.trim() }
-        : {}),
-      ...(operation.visible === false ? { visible: false } : {}),
-    };
-  }
-
   async compact(input: SessionHistoryCompactInput): Promise<{
     compacted: boolean;
     reason?: string;
@@ -512,7 +566,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
         maxInputTokensApprox: input.maxInputTokensApprox,
         archiveOnCompact: input.archiveOnCompact,
         compactRatio: input.compactRatio,
-        ...(input.onOperation ? { onOperation: input.onOperation } : {}),
+        ...(input.onAction ? { onAction: input.onAction } : {}),
       },
     );
   }
@@ -521,10 +575,14 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     await this.withWriteLock(async () => {
       const normalized = this.normalizePersistedMessage(message);
       if (!normalized) return;
+      if (isSessionActionMessage(normalized)) {
+        await this.upsertActionMessageUnsafe(normalized);
+        return;
+      }
 
       // 关键点（中文）：若上一次 assistant 在运行中中断，新的 user 到来前先把残留快照收口到正式历史，
       // 避免 `list()` 时旧 inflight 跑到新 user 后面，打乱时序。
-      if (normalized.role === "user") {
+      if (isSessionModelMessage(normalized) && normalized.role === "user") {
         const current_inflight = await this.readInflightUnsafe();
         if (current_inflight) {
           await this.appendMessageUnsafe(current_inflight);
@@ -676,29 +734,26 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     };
   }
 
-  operation(input: {
-    operation: AgentSessionOperationRecord;
-    metadata: Omit<SessionMetadataV1, "v" | "ts" | "kind" | "source" | "operation"> &
+  action(input: {
+    action: AgentSessionActionRecord;
+    metadata: Pick<SessionMetadataV1, "sessionId"> &
       Partial<Pick<SessionMetadataV1, "ts">>;
     id?: string;
-  }): SessionMessageV1 {
-    const operation = this.normalizeOperation(input.operation);
-    const label = String(
-      operation.label || `${operation.name}: ${operation.status}`,
-    ).trim();
+  }): SessionActionMessageV1 {
     const { ts, ...metadata } = input.metadata;
-    return {
-      id: input.id || `op:${this.sessionId}:${operation.operationId}:${generateId()}`,
-      role: "operation",
-      metadata: {
-        v: 1,
-        ts: typeof ts === "number" ? ts : Date.now(),
-        ...metadata,
-        source: "operation",
-        kind: "operation",
-        operation,
+    const message = toSessionActionMessage(
+      {
+        ...input.action,
+        ...(input.id ? { id: input.id } : {}),
       },
-      parts: [{ type: "text", text: label }],
+      metadata.sessionId || this.sessionId,
+    );
+    return {
+      ...message,
+      metadata: {
+        ...message.metadata,
+        ts: typeof ts === "number" ? ts : message.metadata.ts,
+      },
     };
   }
 }

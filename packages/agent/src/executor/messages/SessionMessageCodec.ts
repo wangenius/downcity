@@ -28,7 +28,7 @@ import {
  *
  * 关键点（中文）
  * - 用途：从 onStepCallback 返回的消息里挑出可并入推理上下文的 user 文本。
- * - 输入：任意 SessionMessageV1[]（可能混有 assistant/tool/空消息）。
+ * - 输入：任意 SessionMessageV1[]（可能混有 assistant/tool/action/空消息）。
  * - 输出：只包含“非空 user 文本”的消息数组。
  */
 export function pickMergedUserMessages(
@@ -40,7 +40,7 @@ export function pickMergedUserMessages(
   // 逐条过滤消息。
   return messages.filter((message) => {
     // 防御 1：消息必须是对象。
-    if (!message || typeof message !== "object") return false;
+    if (!isSessionModelMessage(message)) return false;
 
     // 防御 2：只接受 user 角色。
     if (message.role !== "user") return false;
@@ -80,7 +80,7 @@ export async function toModelMessages(
   // 空输入快速返回，避免调用转换器的额外开销。
   if (!Array.isArray(messages) || messages.length === 0) return [];
 
-  // operation message 只服务前端时间线，不能传入模型。
+  // action message 只服务前端时间线，不能传入模型。
   const model_messages = messages.filter(isSessionModelMessage);
   if (model_messages.length === 0) return [];
 

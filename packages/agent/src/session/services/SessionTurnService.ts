@@ -199,11 +199,11 @@ export class SessionTurnService {
           this.publish_event(session_event);
         }
       },
-      onOperationCallback: async (event) => {
+      onActionCallback: async (event) => {
         try {
-          await this.state_service.persist_operation_event(event);
+          await this.state_service.persist_action_event(event);
         } catch {
-          // operation 持久化失败不应阻断当前 turn。
+          // action 持久化失败不应阻断当前 turn。
         }
         this.publish_event(event);
       },

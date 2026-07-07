@@ -43,15 +43,18 @@ import {
 
 type AnyUiMessagePart = UIMessagePart<UIDataTypes, UITools>;
 
-function toUiParts(message: { parts?: AnyUiMessagePart[] } | null | undefined): AnyUiMessagePart[] {
-  return Array.isArray(message?.parts) ? message.parts : [];
+function toUiParts(message: unknown): AnyUiMessagePart[] {
+  const candidate = message as { parts?: unknown } | null | undefined;
+  return Array.isArray(candidate?.parts)
+    ? (candidate.parts as AnyUiMessagePart[])
+    : [];
 }
 
-function extractReadableLine(message: {
-  role?: string;
-  parts?: AnyUiMessagePart[];
-}): string {
-  const role = String(message.role || "").toLowerCase() === "user" ? "User" : "Assistant";
+function extractReadableLine(message: unknown): string {
+  const candidate = message as { role?: unknown } | null | undefined;
+  const raw_role = String(candidate?.role || "").toLowerCase();
+  if (raw_role !== "user" && raw_role !== "assistant") return "";
+  const role = raw_role === "user" ? "User" : "Assistant";
   const text = toUiParts(message)
     .filter(isTextUIPart)
     .map((part) => String(part.text || "").trim())

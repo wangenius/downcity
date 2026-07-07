@@ -9,18 +9,21 @@
 
 import type { UIMessage } from "ai";
 import type { JsonObject } from "@/types/common/Json.js";
-import type { AgentSessionOperationRecord } from "@/types/sdk/AgentSessionOperation.js";
+import type {
+  AgentSessionActionRecord,
+  AgentSessionActionState,
+} from "@/types/sdk/AgentSessionAction.js";
 
 /**
  * Session 消息：以 UIMessage[] 作为唯一事实源。
  *
  * 关键点（中文）
  * - 持久化存储在 `.downcity/agents/<encodedAgentId>/sessions/<encodedSessionId>/messages/messages.jsonl`
- * - 默认只存 `role=user|assistant|operation`
+ * - 默认只存模型消息，或 `type=action` 的 UI 状态消息。
  * - compact 会把更早消息压缩为一条 `assistant` 摘要消息
- * - operation 只用于 UI timeline，不进入 LLM 输入
+ * - action 只用于 UI timeline，不进入 LLM 输入
  */
-export type SessionMessageKind = "normal" | "summary" | "operation";
+export type SessionMessageKind = "normal" | "summary";
 
 /**
  * Session 消息来源类型。
@@ -33,8 +36,7 @@ export type SessionMessageKind = "normal" | "summary" | "operation";
 export type SessionMessageSource =
   | "ingress"
   | "egress"
-  | "compact"
-  | "operation";
+  | "compact";
 
 /**
  * 入站消息细分类型。
@@ -75,14 +77,6 @@ export type SessionMetadataV1 = {
   /** compact 摘要所覆盖的原始消息范围。 */
   sourceRange?: SessionMessageSourceRangeV1;
   /**
-   * operation message 对应的结构化操作记录。
-   *
-   * 说明（中文）
-   * - 仅当 `kind=operation` 或 `source=operation` 时存在。
-   * - 该字段供前端恢复时间线状态，不会进入 LLM 输入。
-   */
-  operation?: AgentSessionOperationRecord;
-  /**
    * 扩展元信息。
    *
    * 约定（中文）
@@ -98,43 +92,87 @@ export type SessionMetadataV1 = {
 export type SessionModelMessageV1 = UIMessage<SessionMetadataV1>;
 
 /**
- * operation 角色的 Session 消息结构。
+ * action 消息元信息。
+ */
+export type SessionActionMetadataV1 = {
+  /** 元信息 schema 版本号。 */
+  v: 1;
+  /** 当前 action 写入时的毫秒时间戳。 */
+  ts: number;
+  /** 当前 action 所属的 session ID。 */
+  sessionId: string;
+  /** 当前 action 关联的 turn 标识。 */
+  turnId?: string;
+};
+
+/**
+ * action 类型的 Session 消息结构。
  *
  * 关键点（中文）
- * - `operation` 不是 AI SDK 原生模型 role。
+ * - `action` 不是 AI SDK 原生模型消息。
  * - 它只存在于 JSONL history 与前端 timeline，进入 LLM 前必须过滤。
  */
-export type SessionOperationMessageV1 = Omit<SessionModelMessageV1, "role"> & {
-  /** 消息角色固定为 `operation`。 */
-  role: "operation";
+export type SessionActionMessageV1 = {
+  /** item 类型固定为 `action`。 */
+  type: "action";
+  /** 同一个 action 生命周期内稳定复用的 ID。 */
+  id: string;
+  /** 当前 action 标题。 */
+  title: string;
+  /** 当前 action 描述。 */
+  description?: string;
+  /** 当前 action 状态。 */
+  state: AgentSessionActionState;
+  /** action 元信息。 */
+  metadata: SessionActionMetadataV1;
 };
 
 /**
  * Session 持久化消息结构。
  */
-export type SessionMessageV1 = SessionModelMessageV1 | SessionOperationMessageV1;
+export type SessionMessageV1 = SessionModelMessageV1 | SessionActionMessageV1;
 
 /**
  * user 角色的 Session 消息结构。
  */
-export type SessionUserMessageV1 = SessionMessageV1 & {
+export type SessionUserMessageV1 = SessionModelMessageV1 & {
   /** 消息角色固定为 `user`。 */
   role: "user";
 };
 
 /**
- * 判断一条消息是否为 operation message。
+ * 判断一条消息是否为 action message。
  */
-export function isSessionOperationMessage(
+export function isSessionActionMessage(
   message: SessionMessageV1 | null | undefined,
-): boolean {
+): message is SessionActionMessageV1 {
   if (!message || typeof message !== "object") return false;
-  const metadata = (message.metadata || null) as SessionMetadataV1 | null;
-  return (
-    message.role === "operation" ||
-    metadata?.kind === "operation" ||
-    metadata?.source === "operation"
-  );
+  return (message as { type?: unknown }).type === "action";
+}
+
+/**
+ * 从订阅事件构造 action message。
+ */
+export function toSessionActionMessage(
+  action: AgentSessionActionRecord,
+  session_id: string,
+): SessionActionMessageV1 {
+  const title = String(action.title || "").trim() || "Action";
+  const description = String(action.description || "").trim();
+  const id = String(action.id || "").trim() || `action:${session_id}:${Date.now()}`;
+  return {
+    type: "action",
+    id,
+    title,
+    ...(description ? { description } : {}),
+    state: action.state,
+    metadata: {
+      v: 1,
+      ts: Date.now(),
+      sessionId: session_id,
+      ...(action.turnId ? { turnId: action.turnId } : {}),
+    },
+  };
 }
 
 /**
@@ -144,5 +182,5 @@ export function isSessionModelMessage(
   message: SessionMessageV1 | null | undefined,
 ): message is SessionModelMessageV1 {
   if (!message || typeof message !== "object") return false;
-  return message.role !== "operation" && !isSessionOperationMessage(message);
+  return !isSessionActionMessage(message);
 }

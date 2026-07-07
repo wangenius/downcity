@@ -9,8 +9,10 @@
 
 import type { Tool } from "ai";
 import {
-  isSessionOperationMessage,
+  isSessionActionMessage,
+  isSessionModelMessage,
   type SessionMessageV1,
+  type SessionModelMessageV1,
 } from "@/executor/types/SessionMessages.js";
 import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
 import type {
@@ -49,7 +51,7 @@ export class JsonlSessionHistoryComposer implements SessionHistoryComposer {
     return tools && typeof tools === "object" ? { ...tools } : {};
   }
 
-  private readUserSessionMessageText(message: SessionMessageV1): string {
+  private readUserSessionMessageText(message: SessionModelMessageV1): string {
     if (!message || typeof message !== "object" || message.role !== "user") {
       return "";
     }
@@ -76,7 +78,7 @@ export class JsonlSessionHistoryComposer implements SessionHistoryComposer {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
       const item = messages[index];
       if (!item || typeof item !== "object") continue;
-      if (item.role !== "user") continue;
+      if (!isSessionModelMessage(item) || item.role !== "user") continue;
       return this.readUserSessionMessageText(item) === target;
     }
     return false;
@@ -85,6 +87,8 @@ export class JsonlSessionHistoryComposer implements SessionHistoryComposer {
   private sanitizeMessages(messages: SessionMessageV1[]): SessionMessageV1[] {
     if (!Array.isArray(messages)) return [];
     return messages
+      .filter((message) => !isSessionActionMessage(message))
+      .filter(isSessionModelMessage)
       .map((message) => {
         const parts = Array.isArray(message.parts)
           ? message.parts.filter((part) => part && typeof part === "object")
@@ -94,7 +98,6 @@ export class JsonlSessionHistoryComposer implements SessionHistoryComposer {
           parts,
         };
       })
-      .filter((message) => !isSessionOperationMessage(message))
       .filter((message) => Array.isArray(message.parts) && message.parts.length > 0);
   }
 

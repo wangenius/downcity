@@ -10,6 +10,7 @@
 import { generateText, type LanguageModel } from "ai";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import { isSessionModelMessage } from "@/executor/types/SessionMessages.js";
 import {
   normalizeSessionTitle,
   readSessionMetadata,
@@ -61,6 +62,7 @@ function truncateTitle(input: string, maxChars: number): string {
 }
 
 function extractTextFromMessage(message: SessionMessageV1): string {
+  if (!isSessionModelMessage(message)) return "";
   if (!Array.isArray(message.parts)) return "";
   const texts: string[] = [];
   for (const part of message.parts) {
@@ -76,6 +78,7 @@ function extractTextFromMessage(message: SessionMessageV1): string {
 
 function resolveFirstUserText(messages: SessionMessageV1[]): string {
   for (const message of messages) {
+    if (!isSessionModelMessage(message)) continue;
     if (message.role !== "user") continue;
     const text = extractTextFromMessage(message);
     if (text) return text;

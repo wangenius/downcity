@@ -28,7 +28,7 @@ import type { JsonObject } from "@/types/common/Json.js";
 import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
 import type { SessionExecutor } from "@/executor/types/SessionExecutor.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
-import type { AgentSessionOperationRecord } from "@/types/sdk/AgentSessionOperation.js";
+import type { AgentSessionActionRecord } from "@/types/sdk/AgentSessionAction.js";
 import type {
   SessionExecuteInput,
   SessionRunResult,
@@ -362,7 +362,7 @@ export class Executor implements SessionExecutor {
     const composed_context = await this.contextComposer.compose(run_context);
     const tools = this.bind_run_scope_to_tools(composed_context.tools, run_context);
     const system = await this.systemComposer.resolve(run_context);
-    let compaction_operation_id = "";
+    let compaction_action_id = "";
 
     try {
       if (retry_count > 0) {
@@ -371,13 +371,13 @@ export class Executor implements SessionExecutor {
         });
       }
 
-      const emit_compaction_operation = async (
-        operation: AgentSessionOperationRecord,
+      const emit_compaction_action = async (
+        action: AgentSessionActionRecord,
       ): Promise<void> => {
-        if (operation.status === "started") {
-          compaction_operation_id = operation.operationId;
+        if (action.state === "running") {
+          compaction_action_id = action.id;
         }
-        await this.emitOperation(run_context, operation);
+        await this.emitAction(run_context, action);
       };
 
       await this.compactionComposer.run({
@@ -385,17 +385,16 @@ export class Executor implements SessionExecutor {
         model,
         system,
         retryCount: retry_count,
-        onOperation: emit_compaction_operation,
+        onAction: emit_compaction_action,
       });
     } catch (error) {
-      await this.emitOperation(run_context, {
-        operationId:
-          compaction_operation_id ||
+      await this.emitAction(run_context, {
+        id:
+          compaction_action_id ||
           `compacting:${this.sessionId}:failed:${Date.now()}:${generateId()}`,
-        name: "compacting",
-        status: "failed",
-        label: "Session history compact failed",
-        error: error instanceof Error ? error.message : String(error),
+        title: "Session history compact failed",
+        description: error instanceof Error ? error.message : String(error),
+        state: "failed",
         visible: false,
       });
       // 压缩失败不阻断主流程，继续使用当前历史消息执行。
@@ -492,8 +491,8 @@ export class Executor implements SessionExecutor {
       ...(typeof input?.onUiMessageChunkCallback === "function"
         ? { onUiMessageChunkCallback: input.onUiMessageChunkCallback }
         : {}),
-      ...(typeof input?.onOperationCallback === "function"
-        ? { onOperationCallback: input.onOperationCallback }
+      ...(typeof input?.onActionCallback === "function"
+        ? { onActionCallback: input.onActionCallback }
         : {}),
       ...(input?.abortSignal ? { abortSignal: input.abortSignal } : {}),
       injectedUserMessages: Array.isArray(input?.injectedUserMessages)
@@ -511,22 +510,22 @@ export class Executor implements SessionExecutor {
   }
 
   /**
-   * 发布一次 session operation。
+   * 发布一次 session action。
    */
-  private async emitOperation(
+  private async emitAction(
     run_context: SessionRunContext,
-    operation: AgentSessionOperationRecord,
+    action: AgentSessionActionRecord,
   ): Promise<void> {
-    if (typeof run_context.onOperationCallback !== "function") return;
-    const operation_id =
-      String(operation.operationId || "").trim() ||
-      `operation:${this.sessionId}:${Date.now()}:${generateId()}`;
-    await run_context.onOperationCallback({
-      type: "operation",
+    if (typeof run_context.onActionCallback !== "function") return;
+    const action_id =
+      String(action.id || "").trim() ||
+      `action:${this.sessionId}:${Date.now()}:${generateId()}`;
+    await run_context.onActionCallback({
+      type: "action",
       sessionId: run_context.sessionId || this.sessionId,
-      ...operation,
-      operationId: operation_id,
-      ...(run_context.turnId && !operation.turnId
+      ...action,
+      id: action_id,
+      ...(run_context.turnId && !action.turnId
         ? { turnId: run_context.turnId }
         : {}),
     });

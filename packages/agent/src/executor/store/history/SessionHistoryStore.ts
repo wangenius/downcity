@@ -9,11 +9,12 @@
 
 import type { LanguageModel } from "ai";
 import type {
+  SessionActionMessageV1,
   SessionMessageV1,
   SessionMetadataV1,
 } from "@/executor/types/SessionMessages.js";
 import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
-import type { AgentSessionOperationRecord } from "@/types/sdk/AgentSessionOperation.js";
+import type { AgentSessionActionRecord } from "@/types/sdk/AgentSessionAction.js";
 
 /**
  * compact 输入参数。
@@ -50,9 +51,9 @@ export type SessionHistoryCompactInput = {
   compactRatio: number;
 
   /**
-   * 可选 operation 发布回调。
+   * 可选 action 发布回调。
    */
-  onOperation?: (operation: AgentSessionOperationRecord) => Promise<void>;
+  onAction?: (action: AgentSessionActionRecord) => Promise<void>;
 };
 
 /**
@@ -165,23 +166,23 @@ export interface SessionHistoryStore {
   }): SessionMessageV1;
 
   /**
-   * 构造 operation 消息。
+   * 构造 action 消息。
    */
-  operation(input: {
+  action(input: {
     /**
-     * 当前 operation 结构化记录。
+     * 当前 action 结构化记录。
      */
-    operation: AgentSessionOperationRecord;
+    action: AgentSessionActionRecord;
 
     /**
-     * 消息元信息（除 schema 字段、kind、source 与 operation 字段）。
+     * 消息元信息（除 schema 字段）。
      */
-    metadata: Omit<SessionMetadataV1, "v" | "ts" | "kind" | "source" | "operation"> &
+    metadata: Pick<SessionMetadataV1, "sessionId"> &
       Partial<Pick<SessionMetadataV1, "ts">>;
 
     /**
      * 可选消息 ID（默认自动生成）。
      */
     id?: string;
-  }): SessionMessageV1;
+  }): SessionActionMessageV1;
 }

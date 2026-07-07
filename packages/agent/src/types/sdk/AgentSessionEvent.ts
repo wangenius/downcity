@@ -8,7 +8,7 @@
 
 import type { JsonValue } from "@/types/common/Json.js";
 import type { SessionAssistantStepVisibility } from "@/executor/types/SessionRun.js";
-import type { AgentSessionOperationEvent } from "@/types/sdk/AgentSessionOperation.js";
+import type { AgentSessionActionEvent } from "@/types/sdk/AgentSessionAction.js";
 
 /**
  * 单个 turn 开始事件。
@@ -355,7 +355,7 @@ export type AgentSessionEvent =
   | AgentSessionToolApprovalResultEvent
   | AgentSessionAssistantStepEvent
   | AgentSessionTitleEvent
-  | AgentSessionOperationEvent
+  | AgentSessionActionEvent
   | AgentSessionTurnFinishEvent
   | AgentSessionErrorEvent;
 

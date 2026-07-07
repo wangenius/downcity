@@ -26,10 +26,15 @@ import type {
   AgentSessionTimelineEvent,
 } from "@/types/agent/AgentTypes.js";
 import type {
+  SessionActionMessageV1,
   SessionMessageV1,
   SessionMetadataV1,
+  SessionModelMessageV1,
 } from "@/executor/types/SessionMessages.js";
-import { isSessionOperationMessage } from "@/executor/types/SessionMessages.js";
+import {
+  isSessionActionMessage,
+  isSessionModelMessage,
+} from "@/executor/types/SessionMessages.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import { pickLastSuccessfulChatSendText } from "@/executor/messages/UserVisibleText.js";
 import { getSdkAgentSessionMessagesPath } from "@/session/storage/Paths.js";
@@ -172,7 +177,7 @@ function extractMessageText(parts: unknown): string {
   return texts.join("\n").trim();
 }
 
-function extractAssistantToolSummary(message: SessionMessageV1): string {
+function extractAssistantToolSummary(message: SessionModelMessageV1): string {
   if (!Array.isArray(message.parts)) return "";
   const toolNames = new Set<string>();
   for (const part of message.parts as AnyUiPart[]) {
@@ -189,6 +194,12 @@ function extractAssistantToolSummary(message: SessionMessageV1): string {
  * 解析单条 session 消息的用户可见预览文本。
  */
 export function resolveSessionMessagePreview(message: SessionMessageV1): string {
+  if (isSessionActionMessage(message)) {
+    return message.description
+      ? `${message.title}\n${message.description}`
+      : message.title;
+  }
+  if (!isSessionModelMessage(message)) return "";
   const plainText = extractMessageText(message.parts);
   if (plainText) return plainText;
   if (message.role !== "assistant") return "";
@@ -226,7 +237,7 @@ function extractToolResultOutput(part: ToolPartCompatShape): unknown {
 }
 
 function toTimelineEvent(params: {
-  message: SessionMessageV1;
+  message: SessionModelMessageV1;
   role: AgentSessionTimelineEvent["role"];
   text: string;
   sequence: number;
@@ -241,15 +252,21 @@ function toTimelineEvent(params: {
     ...(typeof metadata?.source === "string" ? { source: metadata.source } : {}),
     text: params.text,
     ...(params.toolName ? { toolName: params.toolName } : {}),
-    ...(params.role === "operation" && metadata?.operation?.operationId
-      ? { operationId: metadata.operation.operationId }
-      : {}),
-    ...(params.role === "operation" && metadata?.operation?.name
-      ? { operationName: metadata.operation.name }
-      : {}),
-    ...(params.role === "operation" && metadata?.operation?.status
-      ? { operationStatus: metadata.operation.status }
-      : {}),
+  };
+}
+
+function toActionTimelineEvent(
+  message: SessionActionMessageV1,
+): AgentSessionTimelineEvent {
+  const metadata = message.metadata || null;
+  return {
+    id: `${String(message.id || "")}:0`,
+    role: "action",
+    ...(typeof metadata?.ts === "number" ? { ts: metadata.ts } : {}),
+    text: resolveSessionMessagePreview(message),
+    actionTitle: message.title,
+    ...(message.description ? { actionDescription: message.description } : {}),
+    actionState: message.state,
   };
 }
 
@@ -259,21 +276,11 @@ function toTimelineEvent(params: {
 export function toSessionTimelineEvents(
   message: SessionMessageV1,
 ): AgentSessionTimelineEvent[] {
-  if (isSessionOperationMessage(message)) {
-    const metadata = (message.metadata || null) as SessionMetadataV1 | null;
-    if (metadata?.operation?.status !== "finished") return [];
-    return [
-      toTimelineEvent({
-        message,
-        role: "operation",
-        text:
-          String(metadata?.operation?.label || "").trim() ||
-          resolveSessionMessagePreview(message),
-        sequence: 0,
-      }),
-    ];
+  if (isSessionActionMessage(message)) {
+    return [toActionTimelineEvent(message)];
   }
 
+  if (!isSessionModelMessage(message)) return [];
   if (message.role !== "assistant") {
     return [
       toTimelineEvent({
@@ -368,10 +375,11 @@ export async function loadSessionMessagesFromPath(
       try {
         const parsed = JSON.parse(line) as SessionMessageV1;
         if (!parsed || typeof parsed !== "object") continue;
+        const candidate = parsed as { type?: unknown; role?: unknown };
         if (
-          parsed.role !== "user" &&
-          parsed.role !== "assistant" &&
-          parsed.role !== "operation"
+          candidate.type !== "action" &&
+          candidate.role !== "user" &&
+          candidate.role !== "assistant"
         ) {
           continue;
         }
@@ -387,8 +395,7 @@ export async function loadSessionMessagesFromPath(
     try {
       const parsed = (await fs.readJson(inflight_path)) as SessionMessageV1;
       if (
-        parsed &&
-        typeof parsed === "object" &&
+        isSessionModelMessage(parsed) &&
         parsed.role === "assistant" &&
         Array.isArray(parsed.parts)
       ) {
@@ -417,14 +424,14 @@ export async function loadSessionArchiveMessagesFromPath(
     const items = Array.isArray(raw?.messages) ? raw.messages : [];
     return items.filter((item): item is SessionMessageV1 => {
       if (!item || typeof item !== "object") return false;
-      const candidate = item as Partial<SessionMessageV1>;
+      const candidate = item as { type?: unknown; role?: unknown; parts?: unknown };
       return (
         (
+          candidate.type === "action" ||
           candidate.role === "user" ||
-          candidate.role === "assistant" ||
-          candidate.role === "operation"
+          candidate.role === "assistant"
         ) &&
-        Array.isArray(candidate.parts)
+        (candidate.type === "action" || Array.isArray(candidate.parts))
       );
     });
   } catch {
@@ -433,6 +440,7 @@ export async function loadSessionArchiveMessagesFromPath(
 }
 
 function isCompactSummaryMessage(message: SessionMessageV1): boolean {
+  if (!isSessionModelMessage(message)) return false;
   const metadata = (message.metadata || null) as SessionMetadataV1 | null;
   return metadata?.source === "compact" || metadata?.kind === "summary";
 }

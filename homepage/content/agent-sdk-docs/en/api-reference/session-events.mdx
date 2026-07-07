@@ -13,7 +13,7 @@ description: Which event types session.subscribe() emits and what each one means
 - `tool-call`
 - `tool-result`
 - `assistant-step`
-- `operation`
+- `action`
 - `turn-finish`
 - `error`
 
@@ -33,19 +33,19 @@ If you want a fuller experience, you will usually also handle:
 - `turn-finish`
 - `error`
 - `assistant-step`
-- `operation`
+- `action`
 - `tool-call`
 - `tool-result`
 
 `assistant-step` is especially useful for transports such as chat bridges that want step-level visible reply chunks without owning Session history persistence themselves.
 
-## `operation`
+## `action`
 
-`operation` represents auxiliary Session work such as context compaction, model switching, and history forking. It is not assistant text.
+`action` represents auxiliary Session work such as context compaction, model switching, and history forking. It is not assistant text.
 
-Successful operation events are also persisted as `role: "operation"` messages in the Session JSONL history. In-progress or failed operations are only delivered through `subscribe()`, so history stays focused on completed state changes. Operation messages remain visible to UI history/timeline readers, but the Agent filters them out before building LLM input.
+Action events are also persisted as `type: "action"` items in the Session JSONL history. The same action keeps one history item and updates its `state` as it moves through `running`, `completed`, or `failed`. Action items remain visible to UI history/timeline readers, but the Agent filters them out before building LLM input.
 
-The built-in operation names currently emitted by Agent are:
+The built-in auxiliary actions currently emitted by Agent are:
 
 - `compacting`
 - `model-switching`
@@ -53,8 +53,8 @@ The built-in operation names currently emitted by Agent are:
 
 ```ts
 session.subscribe((event) => {
-  if (event.type === "operation" && event.name === "compacting") {
-    console.log(event.status, event.label);
+  if (event.type === "action") {
+    console.log(event.state, event.title, event.description);
   }
 });
 ```

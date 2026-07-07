@@ -18,6 +18,17 @@ import {
   resolveUiMessagePreview,
   toUiMessageTimeline,
 } from "@/city/agent/control/MessageTimeline.js";
+import type { ControlTimelineRole } from "@/city/agent/control/types/ControlViewData.js";
+
+type ControlSessionSummaryRole = "user" | "assistant" | "system" | "action";
+
+function to_summary_role(
+  role: ControlTimelineRole | undefined,
+): ControlSessionSummaryRole | undefined {
+  if (!role) return undefined;
+  if (role === "tool-call" || role === "tool-result") return "assistant";
+  return role;
+}
 
 /**
  * 枚举控制面所需的 session 摘要。
@@ -48,9 +59,14 @@ export async function listControlSessionSummaries(params: {
       sessionId,
     );
     const messages = await loadSessionMessagesFromFile(filePath);
-    const last = [...messages]
+    const last_pair = [...messages]
       .reverse()
-      .find((message) => toUiMessageTimeline(message).length > 0);
+      .map((message) => ({
+        message,
+        event: toUiMessageTimeline(message)[0],
+      }))
+      .find((item) => item.event);
+    const last = last_pair?.message;
     const lastTs =
       typeof last?.metadata?.ts === "number" ? last.metadata.ts : undefined;
     const stat = await fs
@@ -63,7 +79,9 @@ export async function listControlSessionSummaries(params: {
       sessionId,
       messageCount: messages.length,
       ...(typeof updatedAt === "number" ? { updatedAt } : {}),
-      ...(last?.role ? { lastRole: last.role } : {}),
+      ...(to_summary_role(last_pair?.event?.role)
+        ? { lastRole: to_summary_role(last_pair?.event?.role) }
+        : {}),
       ...(last
         ? { lastText: truncateText(resolveUiMessagePreview(last), 180) }
         : {}),

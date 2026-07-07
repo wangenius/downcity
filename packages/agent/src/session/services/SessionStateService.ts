@@ -31,9 +31,9 @@ import type {
   AgentSessionEvent,
 } from "@/types/sdk/AgentSessionEvent.js";
 import type {
-  AgentSessionOperationEvent,
-  AgentSessionOperationRecord,
-} from "@/types/sdk/AgentSessionOperation.js";
+  AgentSessionActionEvent,
+  AgentSessionActionRecord,
+} from "@/types/sdk/AgentSessionAction.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type {
   SessionMessageV1,
@@ -87,17 +87,17 @@ type SessionStateServiceOptions = {
 
 type SessionSetOptions = {
   /**
-   * 是否写入并发布 model-switching operation。
+   * 是否写入并发布 model-switching action。
    *
    * 说明（中文）
    * - 公开 `session.set()` 应保持默认开启。
    * - fork 内部复制模型配置时关闭，避免污染 forked session 历史。
    */
-  emit_operation?: boolean;
+  emit_action?: boolean;
 };
 
-type EmitOperationInput = Omit<AgentSessionOperationRecord, "operationId"> &
-  Partial<Pick<AgentSessionOperationRecord, "operationId">>;
+type EmitActionInput = Omit<AgentSessionActionRecord, "id"> &
+  Partial<Pick<AgentSessionActionRecord, "id">>;
 
 /**
  * 本地 Session 状态与持久化服务。
@@ -223,23 +223,21 @@ export class SessionStateService {
    * 写入当前 session 配置。
    */
   async set(input: AgentSessionSetInput, options?: SessionSetOptions): Promise<void> {
-    const should_emit_operation = options?.emit_operation !== false;
+    const should_emit_action = options?.emit_action !== false;
     const previous_model_label = this.state.sessionConfig.modelLabel;
     const next_model_label = input.model
       ? inferAgentModelLabel(input.model)
       : undefined;
-    const operation_id = `model-switching:${this.session_id}:${Date.now()}:${generateId()}`;
+    const action_id = `model-switching:${this.session_id}:${Date.now()}:${generateId()}`;
 
-    if (input.model && should_emit_operation) {
-      await this.emit_operation_event({
-        operationId: operation_id,
-        name: "model-switching",
-        status: "started",
-        label: "Switching session model",
-        result: {
-          ...(previous_model_label ? { previousModelLabel: previous_model_label } : {}),
-          ...(next_model_label ? { modelLabel: next_model_label } : {}),
-        },
+    if (input.model && should_emit_action) {
+      await this.emit_action_event({
+        id: action_id,
+        title: "Switching session model",
+        description: next_model_label
+          ? `Switching to ${next_model_label}.`
+          : undefined,
+        state: "running",
       });
     }
 
@@ -256,30 +254,25 @@ export class SessionStateService {
         model: this.state.sessionConfig.model,
       });
     } catch (error) {
-      if (input.model && should_emit_operation) {
-        await this.emit_operation_event({
-          operationId: operation_id,
-          name: "model-switching",
-          status: "failed",
-          label: "Session model switch failed",
-          error: error instanceof Error ? error.message : String(error),
+      if (input.model && should_emit_action) {
+        await this.emit_action_event({
+          id: action_id,
+          title: "Session model switch failed",
+          description: error instanceof Error ? error.message : String(error),
+          state: "failed",
         });
       }
       throw error;
     }
 
-    if (input.model && should_emit_operation) {
-      await this.emit_operation_event({
-        operationId: operation_id,
-        name: "model-switching",
-        status: "finished",
-        label: "Session model switched",
-        result: {
-          ...(previous_model_label ? { previousModelLabel: previous_model_label } : {}),
-          ...(this.state.sessionConfig.modelLabel
-            ? { modelLabel: this.state.sessionConfig.modelLabel }
-            : {}),
-        },
+    if (input.model && should_emit_action) {
+      await this.emit_action_event({
+        id: action_id,
+        title: "Session model switched",
+        description: this.state.sessionConfig.modelLabel
+          ? `Using ${this.state.sessionConfig.modelLabel}.`
+          : undefined,
+        state: "completed",
       });
     }
   }
@@ -369,23 +362,18 @@ export class SessionStateService {
   }
 
   /**
-   * 持久化一条 operation message。
+   * 持久化一条 action message。
    */
-  async persist_operation_event(
-    event: AgentSessionOperationEvent,
+  async persist_action_event(
+    event: AgentSessionActionEvent,
   ): Promise<void> {
-    if (event.status !== "finished" || event.visible === false) return;
-    const message = this.history_store.operation({
-      operation: {
-        operationId: event.operationId,
-        name: event.name,
-        status: event.status,
+    const message = this.history_store.action({
+      action: {
+        id: event.id,
+        title: event.title,
+        state: event.state,
+        ...(event.description ? { description: event.description } : {}),
         ...(event.turnId ? { turnId: event.turnId } : {}),
-        ...(event.label ? { label: event.label } : {}),
-        ...(event.reason ? { reason: event.reason } : {}),
-        ...(typeof event.progress === "number" ? { progress: event.progress } : {}),
-        ...(event.result !== undefined ? { result: event.result } : {}),
-        ...(event.error ? { error: event.error } : {}),
       },
       metadata: {
         sessionId: this.session_id,
@@ -396,22 +384,24 @@ export class SessionStateService {
   }
 
   /**
-   * 写入并发布一条 operation。
+   * 写入并发布一条 action。
    */
-  async emit_operation_event(input: EmitOperationInput): Promise<void> {
-    const operation_id =
-      String(input.operationId || "").trim() ||
-      `${input.name}:${this.session_id}:${Date.now()}:${generateId()}`;
-    const event: AgentSessionOperationEvent = {
-      type: "operation",
+  async emit_action_event(input: EmitActionInput): Promise<void> {
+    if (input.visible === false) return;
+    const action_id =
+      String(input.id || "").trim() ||
+      `action:${this.session_id}:${Date.now()}:${generateId()}`;
+    const { visible: _visible, ...public_input } = input;
+    const event: AgentSessionActionEvent = {
+      type: "action",
       sessionId: this.session_id,
-      ...input,
-      operationId: operation_id,
+      ...public_input,
+      id: action_id,
     };
     try {
-      await this.persist_operation_event(event);
+      await this.persist_action_event(event);
     } catch {
-      // operation 持久化失败不应阻断宿主操作。
+      // action 持久化失败不应阻断宿主操作。
     }
     this.publish_event(event);
   }

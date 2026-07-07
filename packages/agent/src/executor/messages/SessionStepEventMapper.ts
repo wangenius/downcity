@@ -7,7 +7,7 @@
  * - 每个 step 前插入 `step-start`，便于在 UI 中保留多 step 边界。
  */
 
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { SessionModelMessageV1 } from "@/executor/types/SessionMessages.js";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -112,8 +112,8 @@ export function buildSessionStepParts(params: {
   stepResult?: unknown;
   text: string;
   visibility?: "visible" | "internal";
-}): SessionMessageV1["parts"] {
-  const out: SessionMessageV1["parts"] = [];
+}): SessionModelMessageV1["parts"] {
+  const out: SessionModelMessageV1["parts"] = [];
   const stepRecord = toRecord(params.stepResult) || {};
   const toolCalls = Array.isArray(stepRecord.toolCalls) ? stepRecord.toolCalls : [];
   const toolResults = Array.isArray(stepRecord.toolResults)
@@ -171,7 +171,7 @@ export function buildSessionStepParts(params: {
               state: "output-available",
               output,
             }),
-      } as SessionMessageV1["parts"][number],
+      } as SessionModelMessageV1["parts"][number],
     );
   }
 
@@ -183,7 +183,7 @@ export function buildSessionStepParts(params: {
       {
         type: toDataPartType(type),
         data: resolveAcpEventData(acpEvent),
-      } as SessionMessageV1["parts"][number],
+      } as SessionModelMessageV1["parts"][number],
     );
   }
 

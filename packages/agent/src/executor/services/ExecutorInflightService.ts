@@ -9,7 +9,8 @@
 
 import { generateId } from "@/utils/Id.js";
 import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { SessionModelMessageV1 } from "@/executor/types/SessionMessages.js";
+import { isSessionModelMessage } from "@/executor/types/SessionMessages.js";
 
 interface ExecutorInflightServiceOptions {
   /**
@@ -51,7 +52,7 @@ export class ExecutorInflightService {
    * 把 step/tool 过程增量写入当前运行中的 assistant 快照。
    */
   async append_assistant_step_parts(
-    parts: SessionMessageV1["parts"],
+    parts: SessionModelMessageV1["parts"],
   ): Promise<void> {
     const normalized_parts = Array.isArray(parts)
       ? parts.filter((part) => part && typeof part === "object")
@@ -59,11 +60,14 @@ export class ExecutorInflightService {
     if (normalized_parts.length === 0) return;
 
     const current_inflight = await this.history_store.readInflight();
-    const next_message: SessionMessageV1 = current_inflight
+    const normalized_inflight = isSessionModelMessage(current_inflight)
+      ? current_inflight
+      : null;
+    const next_message: SessionModelMessageV1 = normalized_inflight
       ? {
-          ...current_inflight,
+          ...normalized_inflight,
           metadata: {
-            ...(current_inflight.metadata || {
+            ...(normalized_inflight.metadata || {
               v: 1 as const,
               ts: Date.now(),
               sessionId: this.session_id,
@@ -74,8 +78,8 @@ export class ExecutorInflightService {
             kind: "normal",
           },
           parts: [
-            ...(Array.isArray(current_inflight.parts)
-              ? current_inflight.parts
+            ...(Array.isArray(normalized_inflight.parts)
+              ? normalized_inflight.parts
               : []),
             ...normalized_parts,
           ],

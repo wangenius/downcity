@@ -56,12 +56,11 @@ export type {
   AgentSessionUnsubscribe,
 } from "./types/sdk/AgentSessionEvent.js";
 export type {
-  AgentSessionOperationCallback,
-  AgentSessionOperationEvent,
-  AgentSessionOperationName,
-  AgentSessionOperationRecord,
-  AgentSessionOperationStatus,
-} from "./types/sdk/AgentSessionOperation.js";
+  AgentSessionActionCallback,
+  AgentSessionActionEvent,
+  AgentSessionActionRecord,
+  AgentSessionActionState,
+} from "./types/sdk/AgentSessionAction.js";
 export type { AgentSessionPromptInput, SessionUserMessagePart } from "./types/sdk/AgentSessionPrompt.js";
 export type { AgentSessionStopResult } from "./types/sdk/AgentSessionStop.js";
 export type {

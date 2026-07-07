@@ -14,11 +14,15 @@ import {
   type UIMessagePart,
 } from "ai";
 import type {
+  SessionActionMessageV1,
   SessionMessageV1,
   SessionModelMessageV1,
   SessionMetadataV1,
 } from "@downcity/agent/internal/executor/types/SessionMessages.js";
-import { isSessionOperationMessage } from "@downcity/agent/internal/executor/types/SessionMessages.js";
+import {
+  isSessionActionMessage,
+  isSessionModelMessage,
+} from "@downcity/agent/internal/executor/types/SessionMessages.js";
 import { pickLastSuccessfulChatSendText } from "@downcity/agent";
 import { extractToolCallsFromUiMessage } from "@downcity/agent/internal/executor/messages/UIMessageTransformer.js";
 import type { ControlTimelineEvent, ControlTimelineRole } from "@/city/agent/control/types/ControlViewData.js";
@@ -120,7 +124,7 @@ function extractToolResultOutput(part: ToolPartCompatShape): unknown {
 }
 
 function toUiMessageEvent(params: {
-  message: SessionMessageV1;
+  message: SessionModelMessageV1;
   role: ControlTimelineRole;
   text: string;
   sequence: number;
@@ -137,26 +141,29 @@ function toUiMessageEvent(params: {
     ...(typeof metadata?.source === "string" ? { source: metadata.source } : {}),
     text,
     ...(toolName ? { toolName } : {}),
-    ...(role === "operation" && metadata?.operation?.operationId
-      ? { operationId: metadata.operation.operationId }
-      : {}),
-    ...(role === "operation" && metadata?.operation?.name
-      ? { operationName: metadata.operation.name }
-      : {}),
-    ...(role === "operation" && metadata?.operation?.status
-      ? { operationStatus: metadata.operation.status }
-      : {}),
+  };
+}
+
+function toActionEvent(message: SessionActionMessageV1): ControlTimelineEvent {
+  const metadata = message.metadata || null;
+  return {
+    id: `${String(message.id || "")}:0`,
+    role: "action",
+    ...(typeof metadata?.ts === "number" ? { ts: metadata.ts } : {}),
+    text: resolveUiMessageText(message),
+    actionTitle: message.title,
+    ...(message.description ? { actionDescription: message.description } : {}),
+    actionState: message.state,
   };
 }
 
 function resolveUiMessageText(message: SessionMessageV1): string {
-  if (isSessionOperationMessage(message)) {
-    const metadata = (message.metadata || null) as SessionMetadataV1 | null;
-    return (
-      String(metadata?.operation?.label || "").trim() ||
-      extractMessageText(message.parts)
-    );
+  if (isSessionActionMessage(message)) {
+    return message.description
+      ? `${message.title}\n${message.description}`
+      : message.title;
   }
+  if (!isSessionModelMessage(message)) return "";
 
   const plainText = extractMessageText(message.parts);
   if (plainText) return plainText;
@@ -175,19 +182,11 @@ function resolveUiMessageText(message: SessionMessageV1): string {
 export function toUiMessageTimeline(
   message: SessionMessageV1,
 ): ControlTimelineEvent[] {
-  if (isSessionOperationMessage(message)) {
-    const metadata = (message.metadata || null) as SessionMetadataV1 | null;
-    if (metadata?.operation?.status !== "finished") return [];
-    return [
-      toUiMessageEvent({
-        message,
-        role: "operation",
-        text: resolveUiMessageText(message),
-        sequence: 0,
-      }),
-    ];
+  if (isSessionActionMessage(message)) {
+    return [toActionEvent(message)];
   }
 
+  if (!isSessionModelMessage(message)) return [];
   if (message.role !== "assistant") {
     return [
       toUiMessageEvent({
@@ -284,10 +283,11 @@ export async function loadSessionMessagesFromFile(
     try {
       const item = JSON.parse(line) as SessionMessageV1;
       if (!item || typeof item !== "object") continue;
+      const candidate = item as { type?: unknown; role?: unknown };
       if (
-        item.role !== "user" &&
-        item.role !== "assistant" &&
-        item.role !== "operation"
+        candidate.type !== "action" &&
+        candidate.role !== "user" &&
+        candidate.role !== "assistant"
       ) {
         continue;
       }

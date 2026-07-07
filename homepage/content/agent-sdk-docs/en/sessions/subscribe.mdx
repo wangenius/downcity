@@ -46,14 +46,14 @@ The local Session actor currently emits a minimal turn-oriented event set:
 - `reasoning-delta`
 - `tool-call`
 - `tool-result`
-- `operation`
+- `action`
 - `turn-finish`
 
 `subscribe()` does not replay history.
 
 If you need past messages, use `session.history({ limit })`.
 
-Successful operation events are also written to the Session JSONL history as `role: "operation"` messages. In-progress and failed operations stay in the live event stream only. The Agent filters operation messages out before sending messages to the LLM.
+Action events are also written to the Session JSONL history as `type: "action"` items. Each action keeps one history item and updates its `state` directly. The Agent filters action items out before sending messages to the LLM.
 
 ## Why callback-based
 

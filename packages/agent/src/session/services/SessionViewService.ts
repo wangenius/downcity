@@ -278,17 +278,13 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
       !message_id
         ? messages
         : this.resolve_fork_messages(messages, message_id);
-    const operation_id = `history-forking:${this.session_id}:${Date.now()}:${nanoid(8)}`;
+    const action_id = `history-forking:${this.session_id}:${Date.now()}:${nanoid(8)}`;
 
-    await this.state_service.emit_operation_event({
-      operationId: operation_id,
-      name: "history-forking",
-      status: "started",
-      label: "Forking session history",
-      result: {
-        messageCount: fork_messages.length,
-        ...(message_id ? { messageId: message_id } : {}),
-      },
+    await this.state_service.emit_action_event({
+      id: action_id,
+      title: "Forking session history",
+      description: `Preparing ${String(fork_messages.length)} messages for the new session.`,
+      state: "running",
     });
 
     try {
@@ -302,29 +298,23 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
           {
             model: session_config.model,
           },
-          { emit_operation: false },
+          { emit_action: false },
         );
       }
       await this.append_fork_messages(forked_bundle, fork_messages);
-      await this.state_service.emit_operation_event({
-        operationId: operation_id,
-        name: "history-forking",
-        status: "finished",
-        label: "Session history forked",
-        result: {
-          forkedSessionId: String((forked as { id?: unknown }).id || ""),
-          messageCount: fork_messages.length,
-          ...(message_id ? { messageId: message_id } : {}),
-        },
+      await this.state_service.emit_action_event({
+        id: action_id,
+        title: "Session history forked",
+        description: `Created ${String((forked as { id?: unknown }).id || "")} with ${String(fork_messages.length)} messages.`,
+        state: "completed",
       });
       return forked;
     } catch (error) {
-      await this.state_service.emit_operation_event({
-        operationId: operation_id,
-        name: "history-forking",
-        status: "failed",
-        label: "Session history fork failed",
-        error: error instanceof Error ? error.message : String(error),
+      await this.state_service.emit_action_event({
+        id: action_id,
+        title: "Session history fork failed",
+        description: error instanceof Error ? error.message : String(error),
+        state: "failed",
       });
       throw error;
     }

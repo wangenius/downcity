@@ -99,7 +99,7 @@ export interface AgentSessionTimelineEvent {
    * 说明（中文）
    * - `tool-call` / `tool-result` 用于把 assistant 内部工具过程平铺给 UI。
    */
-  role: "user" | "assistant" | "tool-call" | "tool-result" | "operation";
+  role: "user" | "assistant" | "tool-call" | "tool-result" | "action";
   /** 事件时间戳（毫秒）。 */
   ts?: number;
   /** 事件所属消息种类。 */
@@ -116,26 +116,26 @@ export interface AgentSessionTimelineEvent {
    */
   toolName?: string;
   /**
-   * 当前 operation ID。
+   * 当前 action 标题。
    *
    * 说明（中文）
-   * - 仅 `role=operation` 的事件通常会携带该字段。
+   * - 仅 `role=action` 的事件通常会携带该字段。
    */
-  operationId?: string;
+  actionTitle?: string;
   /**
-   * 当前 operation 名称。
+   * 当前 action 描述。
    *
    * 说明（中文）
-   * - 仅 `role=operation` 的事件通常会携带该字段。
+   * - 仅 `role=action` 的事件通常会携带该字段。
    */
-  operationName?: string;
+  actionDescription?: string;
   /**
-   * 当前 operation 状态。
+   * 当前 action 状态。
    *
    * 说明（中文）
-   * - 仅 `role=operation` 的事件通常会携带该字段。
+   * - 仅 `role=action` 的事件通常会携带该字段。
    */
-  operationStatus?: string;
+  actionState?: string;
 }
 
 /**

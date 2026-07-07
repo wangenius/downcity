@@ -30,6 +30,10 @@ import type {
 import type {
   AgentSessionEvent,
 } from "@/types/sdk/AgentSessionEvent.js";
+import type {
+  AgentSessionOperationEvent,
+  AgentSessionOperationRecord,
+} from "@/types/sdk/AgentSessionOperation.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type {
   SessionMessageV1,
@@ -79,6 +83,20 @@ type SessionStateServiceOptions = {
    */
   publish_event: (event: AgentSessionEvent) => void;
 };
+
+type SessionSetOptions = {
+  /**
+   * 是否写入并发布 model-switching operation。
+   *
+   * 说明（中文）
+   * - 公开 `session.set()` 应保持默认开启。
+   * - fork 内部复制模型配置时关闭，避免污染 forked session 历史。
+   */
+  emit_operation?: boolean;
+};
+
+type EmitOperationInput = Omit<AgentSessionOperationRecord, "operationId"> &
+  Partial<Pick<AgentSessionOperationRecord, "operationId">>;
 
 /**
  * 本地 Session 状态与持久化服务。
@@ -203,18 +221,66 @@ export class SessionStateService {
   /**
    * 写入当前 session 配置。
    */
-  async set(input: AgentSessionSetInput): Promise<void> {
-    if (input.model) {
-      this.state.sessionConfig.model = normalizeAgentModel(input.model);
-      this.state.sessionConfig.modelLabel = inferAgentModelLabel(input.model);
-      this.executor.clearExecutor();
+  async set(input: AgentSessionSetInput, options?: SessionSetOptions): Promise<void> {
+    const should_emit_operation = options?.emit_operation !== false;
+    const previous_model_label = this.state.sessionConfig.modelLabel;
+    const next_model_label = input.model
+      ? inferAgentModelLabel(input.model)
+      : undefined;
+    const operation_id = `model-switching:${this.session_id}:${Date.now()}:${generateId()}`;
+
+    if (input.model && should_emit_operation) {
+      await this.emit_operation_event({
+        operationId: operation_id,
+        name: "model-switching",
+        status: "started",
+        label: "Switching session model",
+        result: {
+          ...(previous_model_label ? { previousModelLabel: previous_model_label } : {}),
+          ...(next_model_label ? { modelLabel: next_model_label } : {}),
+        },
+      });
     }
-    await patchSessionModelLabel({
-      projectRoot: this.project_root,
-      agentId: this.agent_id,
-      sessionId: this.session_id,
-      model: this.state.sessionConfig.model,
-    });
+
+    try {
+      if (input.model) {
+        this.state.sessionConfig.model = normalizeAgentModel(input.model);
+        this.state.sessionConfig.modelLabel = next_model_label;
+        this.executor.clearExecutor();
+      }
+      await patchSessionModelLabel({
+        projectRoot: this.project_root,
+        agentId: this.agent_id,
+        sessionId: this.session_id,
+        model: this.state.sessionConfig.model,
+      });
+    } catch (error) {
+      if (input.model && should_emit_operation) {
+        await this.emit_operation_event({
+          operationId: operation_id,
+          name: "model-switching",
+          status: "failed",
+          label: "Session model switch failed",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      throw error;
+    }
+
+    if (input.model && should_emit_operation) {
+      await this.emit_operation_event({
+        operationId: operation_id,
+        name: "model-switching",
+        status: "finished",
+        label: "Session model switched",
+        result: {
+          ...(previous_model_label ? { previousModelLabel: previous_model_label } : {}),
+          ...(this.state.sessionConfig.modelLabel
+            ? { modelLabel: this.state.sessionConfig.modelLabel }
+            : {}),
+        },
+      });
+    }
   }
 
   /**
@@ -299,6 +365,54 @@ export class SessionStateService {
       executor: this.executor,
       assistantMessage: assistant_message,
     });
+  }
+
+  /**
+   * 持久化一条 operation message。
+   */
+  async persist_operation_event(
+    event: AgentSessionOperationEvent,
+  ): Promise<void> {
+    const message = this.history_store.operation({
+      operation: {
+        operationId: event.operationId,
+        name: event.name,
+        status: event.status,
+        ...(event.turnId ? { turnId: event.turnId } : {}),
+        ...(event.label ? { label: event.label } : {}),
+        ...(event.reason ? { reason: event.reason } : {}),
+        ...(typeof event.progress === "number" ? { progress: event.progress } : {}),
+        ...(event.result !== undefined ? { result: event.result } : {}),
+        ...(event.error ? { error: event.error } : {}),
+        ...(event.visible === false ? { visible: false } : {}),
+      },
+      metadata: {
+        sessionId: this.session_id,
+      },
+    });
+    await this.history_store.append(message);
+    await this.touch_metadata();
+  }
+
+  /**
+   * 写入并发布一条 operation。
+   */
+  async emit_operation_event(input: EmitOperationInput): Promise<void> {
+    const operation_id =
+      String(input.operationId || "").trim() ||
+      `${input.name}:${this.session_id}:${Date.now()}:${generateId()}`;
+    const event: AgentSessionOperationEvent = {
+      type: "operation",
+      sessionId: this.session_id,
+      ...input,
+      operationId: operation_id,
+    };
+    try {
+      await this.persist_operation_event(event);
+    } catch {
+      // operation 持久化失败不应阻断宿主操作。
+    }
+    this.publish_event(event);
   }
 
   /**

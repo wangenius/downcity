@@ -14,7 +14,10 @@ import {
   type Tool,
   type ToolSet,
 } from "ai";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import {
+  isSessionOperationMessage,
+  type SessionMessageV1,
+} from "@/executor/types/SessionMessages.js";
 import {
   hydrateFileUrlPartsForModel,
   injectFilePartsFromAttachments,
@@ -77,9 +80,15 @@ export async function toModelMessages(
   // 空输入快速返回，避免调用转换器的额外开销。
   if (!Array.isArray(messages) || messages.length === 0) return [];
 
+  // operation message 只服务前端时间线，不能传入模型。
+  const model_messages = messages.filter(
+    (message) => !isSessionOperationMessage(message),
+  );
+  if (model_messages.length === 0) return [];
+
   // 第一步（中文）：在 user 消息上注入 file parts（多模态附件）。
   const enrichedMessages = await injectFilePartsFromAttachments(
-    messages,
+    model_messages,
     projectRoot,
   );
 

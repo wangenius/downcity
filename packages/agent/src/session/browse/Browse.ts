@@ -29,6 +29,7 @@ import type {
   SessionMessageV1,
   SessionMetadataV1,
 } from "@/executor/types/SessionMessages.js";
+import { isSessionOperationMessage } from "@/executor/types/SessionMessages.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import { pickLastSuccessfulChatSendText } from "@/executor/messages/UserVisibleText.js";
 import { getSdkAgentSessionMessagesPath } from "@/session/storage/Paths.js";
@@ -240,6 +241,15 @@ function toTimelineEvent(params: {
     ...(typeof metadata?.source === "string" ? { source: metadata.source } : {}),
     text: params.text,
     ...(params.toolName ? { toolName: params.toolName } : {}),
+    ...(params.role === "operation" && metadata?.operation?.operationId
+      ? { operationId: metadata.operation.operationId }
+      : {}),
+    ...(params.role === "operation" && metadata?.operation?.name
+      ? { operationName: metadata.operation.name }
+      : {}),
+    ...(params.role === "operation" && metadata?.operation?.status
+      ? { operationStatus: metadata.operation.status }
+      : {}),
   };
 }
 
@@ -249,6 +259,20 @@ function toTimelineEvent(params: {
 export function toSessionTimelineEvents(
   message: SessionMessageV1,
 ): AgentSessionTimelineEvent[] {
+  if (isSessionOperationMessage(message)) {
+    const metadata = (message.metadata || null) as SessionMetadataV1 | null;
+    return [
+      toTimelineEvent({
+        message,
+        role: "operation",
+        text:
+          String(metadata?.operation?.label || "").trim() ||
+          resolveSessionMessagePreview(message),
+        sequence: 0,
+      }),
+    ];
+  }
+
   if (message.role !== "assistant") {
     return [
       toTimelineEvent({

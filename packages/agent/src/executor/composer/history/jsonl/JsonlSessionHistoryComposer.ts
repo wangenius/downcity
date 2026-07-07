@@ -8,7 +8,10 @@
  */
 
 import type { Tool } from "ai";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import {
+  isSessionOperationMessage,
+  type SessionMessageV1,
+} from "@/executor/types/SessionMessages.js";
 import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
 import type {
   SessionHistoryComposer,
@@ -91,6 +94,7 @@ export class JsonlSessionHistoryComposer implements SessionHistoryComposer {
           parts,
         };
       })
+      .filter((message) => !isSessionOperationMessage(message))
       .filter((message) => Array.isArray(message.parts) && message.parts.length > 0);
   }
 

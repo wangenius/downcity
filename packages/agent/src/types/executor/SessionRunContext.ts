@@ -8,6 +8,11 @@
  */
 
 import type {
+  AgentSessionOperationCallback,
+  AgentSessionOperationEvent,
+  AgentSessionOperationRecord,
+} from "@/types/sdk/AgentSessionOperation.js";
+import type {
   SessionAssistantStepCallback,
   SessionUiMessageChunkCallback,
 } from "@/executor/types/SessionRun.js";
@@ -67,6 +72,15 @@ export interface SessionRunContext {
   onUiMessageChunkCallback?: SessionUiMessageChunkCallback;
 
   /**
+   * operation 发布回调。
+   *
+   * 关键点（中文）
+   * - 用于把 compaction 等辅助操作转成 session event 与 operation message。
+   * - operation 不代表 assistant 正文，也不会进入 LLM 输入。
+   */
+  onOperationCallback?: AgentSessionOperationCallback;
+
+  /**
    * 当前 turn 的取消信号。
    *
    * 关键点（中文）
@@ -101,3 +115,9 @@ export interface SessionRunContext {
    */
   pendingAssistantFileParts: FileUIPart[];
 }
+
+export type {
+  AgentSessionOperationCallback,
+  AgentSessionOperationEvent,
+  AgentSessionOperationRecord,
+};

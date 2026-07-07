@@ -9,6 +9,7 @@
 
 import type { UIMessage } from "ai";
 import type { JsonObject } from "@/types/common/Json.js";
+import type { AgentSessionOperationRecord } from "@/types/sdk/AgentSessionOperation.js";
 
 /**
  * Session 消息：以 UIMessage[] 作为唯一事实源。
@@ -18,7 +19,7 @@ import type { JsonObject } from "@/types/common/Json.js";
  * - 默认只存 `role=user|assistant`
  * - compact 会把更早消息压缩为一条 `assistant` 摘要消息
  */
-export type SessionMessageKind = "normal" | "summary";
+export type SessionMessageKind = "normal" | "summary" | "operation";
 
 /**
  * Session 消息来源类型。
@@ -28,7 +29,11 @@ export type SessionMessageKind = "normal" | "summary";
  * - `egress`：模型或 agent 输出写入的 assistant 消息。
  * - `compact`：由 compact 过程生成的摘要消息。
  */
-export type SessionMessageSource = "ingress" | "egress" | "compact";
+export type SessionMessageSource =
+  | "ingress"
+  | "egress"
+  | "compact"
+  | "operation";
 
 /**
  * 入站消息细分类型。
@@ -69,6 +74,14 @@ export type SessionMetadataV1 = {
   /** compact 摘要所覆盖的原始消息范围。 */
   sourceRange?: SessionMessageSourceRangeV1;
   /**
+   * operation message 对应的结构化操作记录。
+   *
+   * 说明（中文）
+   * - 仅当 `kind=operation` 或 `source=operation` 时存在。
+   * - 该字段供前端恢复时间线状态，不会进入 LLM 输入。
+   */
+  operation?: AgentSessionOperationRecord;
+  /**
    * 扩展元信息。
    *
    * 约定（中文）
@@ -90,3 +103,14 @@ export type SessionUserMessageV1 = SessionMessageV1 & {
   /** 消息角色固定为 `user`。 */
   role: "user";
 };
+
+/**
+ * 判断一条消息是否为 operation message。
+ */
+export function isSessionOperationMessage(
+  message: SessionMessageV1 | null | undefined,
+): boolean {
+  if (!message || typeof message !== "object") return false;
+  const metadata = (message.metadata || null) as SessionMetadataV1 | null;
+  return metadata?.kind === "operation" || metadata?.source === "operation";
+}

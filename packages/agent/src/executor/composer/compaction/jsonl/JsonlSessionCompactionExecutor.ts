@@ -21,7 +21,9 @@ import type {
   SessionMessageV1,
   SessionMetadataV1,
 } from "@/executor/types/SessionMessages.js";
+import { isSessionOperationMessage } from "@/executor/types/SessionMessages.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
+import type { AgentSessionOperationRecord } from "@/types/sdk/AgentSessionOperation.js";
 
 export type SessionCompactParams = {
   model: LanguageModel;
@@ -30,6 +32,7 @@ export type SessionCompactParams = {
   maxInputTokensApprox: number;
   archiveOnCompact: boolean;
   compactRatio: number;
+  onOperation?: (operation: AgentSessionOperationRecord) => Promise<void>;
 };
 
 type SessionCompactDeps = {
@@ -60,6 +63,19 @@ export async function compactSessionMessagesIfNeeded(
   params: SessionCompactParams,
 ): Promise<{ compacted: boolean; reason?: string }> {
   const logger = getLogger(deps.rootPath, "info");
+  const operation_id = `compacting:${deps.sessionId}:${Date.now()}:${generateId()}`;
+  let operation_started = false;
+
+  const publish_operation = async (
+    operation: Omit<AgentSessionOperationRecord, "operationId" | "name">,
+  ): Promise<void> => {
+    if (typeof params.onOperation !== "function") return;
+    await params.onOperation({
+      operationId: operation_id,
+      name: "compacting",
+      ...operation,
+    });
+  };
 
   // 算法阶段（中文）
   // phase 1：snapshot（短锁）
@@ -68,7 +84,9 @@ export async function compactSessionMessagesIfNeeded(
   let snapshot: SessionMessageV1[] = [];
   let snapshotTailId = "";
   await deps.withWriteLock(async () => {
-    snapshot = await deps.loadAll();
+    snapshot = (await deps.loadAll()).filter(
+      (message) => !isSessionOperationMessage(message),
+    );
     snapshotTailId =
       snapshot.length > 0
         ? String(snapshot[snapshot.length - 1].id || "")
@@ -99,6 +117,13 @@ export async function compactSessionMessagesIfNeeded(
   const compactCount = resolveCompactCount(snapshot.length, compactRatio);
   const older = snapshot.slice(0, compactCount);
   if (older.length === 0) return { compacted: false, reason: "nothing_to_compact" };
+
+  operation_started = true;
+  await publish_operation({
+    status: "started",
+    label: "Compacting session history",
+    progress: 0,
+  });
 
   const olderTextAll = extractPlainTextFromMessages(older);
   const maxOlderChars = 24_000;
@@ -138,6 +163,12 @@ export async function compactSessionMessagesIfNeeded(
       },
     );
     summary = "（系统自动压缩：摘要生成失败，已丢弃更早历史，仅保留最近对话。）";
+    await publish_operation({
+      status: "progress",
+      label: "Compacting session history",
+      reason: "summary_fallback",
+      progress: 0.5,
+    });
   }
 
   const fromId = String(older[0]?.id || "");
@@ -159,10 +190,20 @@ export async function compactSessionMessagesIfNeeded(
     // snapshotTailId 用于 debug，不作为强一致性依赖。
     void snapshotTailId;
 
-    const currentCompactCount = resolveCompactCount(current.length, compactRatio);
-    const currentOlder = current.slice(0, currentCompactCount);
-    const currentKept = current.slice(currentCompactCount);
+    const current_model_messages = current.filter(
+      (message) => !isSessionOperationMessage(message),
+    );
+    const currentCompactCount = resolveCompactCount(
+      current_model_messages.length,
+      compactRatio,
+    );
+    const currentOlder = current_model_messages.slice(0, currentCompactCount);
     if (currentOlder.length === 0) return;
+    const compacted_ids = new Set(
+      currentOlder
+        .map((message) => String(message.id || "").trim())
+        .filter(Boolean),
+    );
 
     if (params.archiveOnCompact) {
       const archivePath = path.join(
@@ -181,7 +222,13 @@ export async function compactSessionMessagesIfNeeded(
       );
     }
 
-    const next = [summaryMsg, ...currentKept];
+    const next = [
+      summaryMsg,
+      ...current.filter((message) => {
+        const id = String(message.id || "").trim();
+        return !id || !compacted_ids.has(id);
+      }),
+    ];
 
     const messagesPath = deps.getMessagesFilePath();
     const tmp = messagesPath + ".tmp";
@@ -194,6 +241,18 @@ export async function compactSessionMessagesIfNeeded(
       updatedAt: Date.now(),
     });
   });
+
+  if (operation_started) {
+    await publish_operation({
+      status: "finished",
+      label: "Session history compacted",
+      progress: 1,
+      result: {
+        archiveId,
+        compactedCount: older.length,
+      },
+    });
+  }
 
   return { compacted: true };
 }

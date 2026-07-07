@@ -21,6 +21,7 @@ import type {
   SessionMessageV1,
   SessionMetadataV1,
 } from "@/executor/types/SessionMessages.js";
+import type { AgentSessionOperationRecord } from "@/types/sdk/AgentSessionOperation.js";
 import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import type { SessionHistoryPathOverrides } from "@/executor/types/SessionHistoryPaths.js";
@@ -435,6 +436,44 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     return system.filter((item) => item && typeof item === "object");
   }
 
+  private normalizeOperation(
+    operation: AgentSessionOperationRecord,
+  ): AgentSessionOperationRecord {
+    const operation_id = String(operation.operationId || "").trim() || generateId();
+    const name = String(operation.name || "").trim() || "operation";
+    const status = String(operation.status || "").trim();
+    const normalized_status: AgentSessionOperationRecord["status"] =
+      status === "started" ||
+      status === "progress" ||
+      status === "finished" ||
+      status === "skipped" ||
+      status === "failed"
+        ? status
+        : "progress";
+    return {
+      operationId: operation_id,
+      name,
+      status: normalized_status,
+      ...(typeof operation.turnId === "string" && operation.turnId.trim()
+        ? { turnId: operation.turnId.trim() }
+        : {}),
+      ...(typeof operation.label === "string" && operation.label.trim()
+        ? { label: operation.label.trim() }
+        : {}),
+      ...(typeof operation.reason === "string" && operation.reason.trim()
+        ? { reason: operation.reason.trim() }
+        : {}),
+      ...(typeof operation.progress === "number" && Number.isFinite(operation.progress)
+        ? { progress: Math.max(0, Math.min(1, operation.progress)) }
+        : {}),
+      ...(operation.result !== undefined ? { result: operation.result } : {}),
+      ...(typeof operation.error === "string" && operation.error.trim()
+        ? { error: operation.error.trim() }
+        : {}),
+      ...(operation.visible === false ? { visible: false } : {}),
+    };
+  }
+
   async compact(input: SessionHistoryCompactInput): Promise<{
     compacted: boolean;
     reason?: string;
@@ -471,6 +510,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
         maxInputTokensApprox: input.maxInputTokensApprox,
         archiveOnCompact: input.archiveOnCompact,
         compactRatio: input.compactRatio,
+        ...(input.onOperation ? { onOperation: input.onOperation } : {}),
       },
     );
   }
@@ -631,6 +671,32 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
       role: "assistant",
       metadata: md,
       parts: [{ type: "text", text: String(input.text ?? "") }],
+    };
+  }
+
+  operation(input: {
+    operation: AgentSessionOperationRecord;
+    metadata: Omit<SessionMetadataV1, "v" | "ts" | "kind" | "source" | "operation"> &
+      Partial<Pick<SessionMetadataV1, "ts">>;
+    id?: string;
+  }): SessionMessageV1 {
+    const operation = this.normalizeOperation(input.operation);
+    const label = String(
+      operation.label || `${operation.name}: ${operation.status}`,
+    ).trim();
+    const { ts, ...metadata } = input.metadata;
+    return {
+      id: input.id || `op:${this.sessionId}:${operation.operationId}:${generateId()}`,
+      role: "assistant",
+      metadata: {
+        v: 1,
+        ts: typeof ts === "number" ? ts : Date.now(),
+        ...metadata,
+        source: "operation",
+        kind: "operation",
+        operation,
+      },
+      parts: [{ type: "text", text: label }],
     };
   }
 }

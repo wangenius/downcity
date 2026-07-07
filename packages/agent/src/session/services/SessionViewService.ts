@@ -278,19 +278,56 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
       !message_id
         ? messages
         : this.resolve_fork_messages(messages, message_id);
+    const operation_id = `history-forking:${this.session_id}:${Date.now()}:${nanoid(8)}`;
 
-    const forked_bundle = await this.create_fork_session(
-      `fork-${Date.now()}-${nanoid(8)}`,
-    );
-    const forked = forked_bundle.session;
-    const session_config = this.state_service.get_config();
-    if (session_config.model) {
-      await forked.set({
-        model: session_config.model,
+    await this.state_service.emit_operation_event({
+      operationId: operation_id,
+      name: "history-forking",
+      status: "started",
+      label: "Forking session history",
+      result: {
+        messageCount: fork_messages.length,
+        ...(message_id ? { messageId: message_id } : {}),
+      },
+    });
+
+    try {
+      const forked_bundle = await this.create_fork_session(
+        `fork-${Date.now()}-${nanoid(8)}`,
+      );
+      const forked = forked_bundle.session;
+      const session_config = this.state_service.get_config();
+      if (session_config.model) {
+        await forked_bundle.state_service.set(
+          {
+            model: session_config.model,
+          },
+          { emit_operation: false },
+        );
+      }
+      await this.append_fork_messages(forked_bundle, fork_messages);
+      await this.state_service.emit_operation_event({
+        operationId: operation_id,
+        name: "history-forking",
+        status: "finished",
+        label: "Session history forked",
+        result: {
+          forkedSessionId: String((forked as { id?: unknown }).id || ""),
+          messageCount: fork_messages.length,
+          ...(message_id ? { messageId: message_id } : {}),
+        },
       });
+      return forked;
+    } catch (error) {
+      await this.state_service.emit_operation_event({
+        operationId: operation_id,
+        name: "history-forking",
+        status: "failed",
+        label: "Session history fork failed",
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
     }
-    await this.append_fork_messages(forked_bundle, fork_messages);
-    return forked;
   }
 
   private resolve_fork_messages(

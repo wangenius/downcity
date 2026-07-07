@@ -13,6 +13,7 @@ description: Which event types session.subscribe() emits and what each one means
 - `tool-call`
 - `tool-result`
 - `assistant-step`
+- `operation`
 - `turn-finish`
 - `error`
 
@@ -32,7 +33,28 @@ If you want a fuller experience, you will usually also handle:
 - `turn-finish`
 - `error`
 - `assistant-step`
+- `operation`
 - `tool-call`
 - `tool-result`
 
 `assistant-step` is especially useful for transports such as chat bridges that want step-level visible reply chunks without owning Session history persistence themselves.
+
+## `operation`
+
+`operation` represents auxiliary Session work such as context compaction, model switching, and history forking. It is not assistant text.
+
+Operation events are also persisted as operation messages in the Session UIMessage JSONL history. They remain visible to UI history/timeline readers, but the Agent filters them out before building LLM input.
+
+The built-in operation names currently emitted by Agent are:
+
+- `compacting`
+- `model-switching`
+- `history-forking`
+
+```ts
+session.subscribe((event) => {
+  if (event.type === "operation" && event.name === "compacting") {
+    console.log(event.status, event.label);
+  }
+});
+```

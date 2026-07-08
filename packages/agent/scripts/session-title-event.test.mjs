@@ -16,39 +16,64 @@ import fs from "node:fs/promises";
 import { MockLanguageModelV3 } from "ai/test";
 import { Agent } from "../bin/index.js";
 
+function create_stream_text_result(text) {
+  return {
+    stream: new ReadableStream({
+      start(controller) {
+        controller.enqueue({
+          type: "stream-start",
+          warnings: [],
+        });
+        controller.enqueue({
+          type: "text-start",
+          id: "text_1",
+        });
+        controller.enqueue({
+          type: "text-delta",
+          id: "text_1",
+          delta: text,
+        });
+        controller.enqueue({
+          type: "text-end",
+          id: "text_1",
+        });
+        controller.enqueue({
+          type: "finish",
+          finishReason: {
+            unified: "stop",
+            raw: "stop",
+          },
+          usage: {
+            inputTokens: {
+              total: 0,
+              noCache: 0,
+              cacheRead: 0,
+              cacheWrite: 0,
+            },
+            outputTokens: {
+              total: 0,
+              text: 0,
+              reasoning: 0,
+            },
+          },
+        });
+        controller.close();
+      },
+    }),
+  };
+}
+
 function create_mock_title_model(title_text) {
   return new MockLanguageModelV3({
     modelId: "mock-session-title-model",
-    doGenerate: async () => ({
-      content: [
-        {
-          type: "text",
-          text: title_text,
-        },
-      ],
-      finishReason: "stop",
-      usage: {
-        inputTokens: {
-          total: 0,
-          noCache: 0,
-          cacheRead: 0,
-          cacheWrite: 0,
-        },
-        outputTokens: {
-          total: 0,
-          text: 0,
-          reasoning: 0,
-        },
-      },
-      warnings: [],
-    }),
+    doStream: async () => create_stream_text_result(title_text),
   });
 }
 
 function create_failing_title_model() {
   return new MockLanguageModelV3({
     modelId: "mock-session-title-failing-model",
-    doGenerate: async () => {
+    doStream: async () => {
       throw new Error("mock title generation failed");
     },
   });

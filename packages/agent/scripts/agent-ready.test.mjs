@@ -159,10 +159,9 @@ test("session.prompt waits for agent background ready before model execution", a
     const result = await turn.finished;
 
     assert.equal(result.success, true);
-    assert.equal(model_stream_calls, 1);
+    assert.equal(model_stream_calls, 2);
   } finally {
     lifecycle_ready.resolve();
     await agent.dispose();
   }
 });
-

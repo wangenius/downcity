@@ -7,7 +7,8 @@
  * - 当 title 仍为空时，后续执行链路可以再次尝试生成。
  */
 
-import { generateText, type LanguageModel } from "ai";
+import { streamText, type LanguageModel } from "ai";
+import { buildOpenAIResponsesProviderOptions } from "@executor/messages/SessionMessageCodec.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import type { SessionRecordV1 } from "@/executor/types/SessionRecords.js";
 import { is_session_message_record } from "@/executor/types/SessionRecords.js";
@@ -203,8 +204,9 @@ async function generateSessionTitle(input: {
    */
   logger?: Logger;
 }): Promise<string | undefined> {
+  let observedStreamError: unknown;
   try {
-    const result = await generateText({
+    const result = streamText({
       model: input.model,
       system:
         "You generate minimal conversation titles. Output only the title itself, with no explanation and no quotation marks.",
@@ -214,8 +216,13 @@ async function generateSessionTitle(input: {
         "",
         input.firstUserText,
       ].join("\n"),
+      providerOptions: buildOpenAIResponsesProviderOptions(),
+      onError: ({ error }) => {
+        observedStreamError = error;
+      },
     });
-    const generatedTitle = normalizeGeneratedTitle(result.text);
+    const text = await result.text;
+    const generatedTitle = normalizeGeneratedTitle(text);
     if (!generatedTitle) {
       await logSessionTitleDiagnostic({
         logger: input.logger,
@@ -225,12 +232,13 @@ async function generateSessionTitle(input: {
         details: {
           modelLabel: input.modelLabel || null,
           firstUserTextLength: input.firstUserText.length,
-          rawTitleLength: String(result.text || "").length,
+          rawTitleLength: String(text || "").length,
         },
       });
     }
     return generatedTitle;
   } catch (error) {
+    const effectiveError = observedStreamError || error;
     await logSessionTitleDiagnostic({
       logger: input.logger,
       sessionId: input.sessionId,
@@ -239,7 +247,7 @@ async function generateSessionTitle(input: {
       details: {
         modelLabel: input.modelLabel || null,
         firstUserTextLength: input.firstUserText.length,
-        ...summarizeTitleError(error),
+        ...summarizeTitleError(effectiveError),
       },
     });
     // 关键点（中文）：标题生成失败不能影响 session 主流程。

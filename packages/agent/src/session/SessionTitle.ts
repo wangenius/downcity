@@ -11,6 +11,7 @@ import { generateText, type LanguageModel } from "ai";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import type { SessionRecordV1 } from "@/executor/types/SessionRecords.js";
 import { is_session_message_record } from "@/executor/types/SessionRecords.js";
+import type { Logger } from "@/utils/logger/Logger.js";
 import {
   normalizeSessionTitle,
   readSessionMetadata,
@@ -47,6 +48,16 @@ export interface EnsureSessionTitleParams {
    * 可选模型实例；传入时会尝试生成更短标题。
    */
   model?: LanguageModel;
+
+  /**
+   * 当前模型展示标签；仅用于排障日志，不参与生成逻辑。
+   */
+  modelLabel?: string;
+
+  /**
+   * 当前 session 运行日志器；标题生成失败时仅记录摘要，不影响主流程。
+   */
+  logger?: Logger;
 
   /**
    * 是否允许调用模型生成标题。
@@ -102,6 +113,70 @@ function normalizeGeneratedTitle(input: string): string | undefined {
     : undefined;
 }
 
+function summarizeTitleError(error: unknown): {
+  /**
+   * 错误对象名称。
+   */
+  name: string | null;
+
+  /**
+   * 错误消息摘要。
+   */
+  message: string | null;
+
+  /**
+   * 字符串化后的错误摘要。
+   */
+  error: string;
+} {
+  const record =
+    error && typeof error === "object" && !Array.isArray(error)
+      ? (error as Record<string, unknown>)
+      : {};
+  return {
+    name: typeof record.name === "string" ? record.name : null,
+    message: typeof record.message === "string" ? record.message : null,
+    error: String(error),
+  };
+}
+
+async function logSessionTitleDiagnostic(input: {
+  /**
+   * 当前 session 标识。
+   */
+  sessionId: string;
+
+  /**
+   * 日志级别。
+   */
+  level: "debug" | "warn";
+
+  /**
+   * 日志消息。
+   */
+  message: string;
+
+  /**
+   * 结构化日志字段。
+   */
+  details: Record<string, string | number | boolean | null | undefined>;
+
+  /**
+   * 当前 session 运行日志器。
+   */
+  logger?: Logger;
+}): Promise<void> {
+  if (!input.logger) return;
+  try {
+    await input.logger.log(input.level, input.message, {
+      sessionId: input.sessionId,
+      ...input.details,
+    });
+  } catch {
+    // 关键点（中文）：标题诊断日志失败不能影响 session 主流程。
+  }
+}
+
 async function generateSessionTitle(input: {
   /**
    * 当前模型实例。
@@ -109,9 +184,24 @@ async function generateSessionTitle(input: {
   model: LanguageModel;
 
   /**
+   * 当前 session 标识。
+   */
+  sessionId: string;
+
+  /**
+   * 当前模型展示标签；仅用于排障日志。
+   */
+  modelLabel?: string;
+
+  /**
    * 首条用户消息文本。
    */
   firstUserText: string;
+
+  /**
+   * 当前 session 运行日志器。
+   */
+  logger?: Logger;
 }): Promise<string | undefined> {
   try {
     const result = await generateText({
@@ -125,8 +215,33 @@ async function generateSessionTitle(input: {
         input.firstUserText,
       ].join("\n"),
     });
-    return normalizeGeneratedTitle(result.text);
-  } catch {
+    const generatedTitle = normalizeGeneratedTitle(result.text);
+    if (!generatedTitle) {
+      await logSessionTitleDiagnostic({
+        logger: input.logger,
+        sessionId: input.sessionId,
+        level: "warn",
+        message: "[agent] session_title.empty",
+        details: {
+          modelLabel: input.modelLabel || null,
+          firstUserTextLength: input.firstUserText.length,
+          rawTitleLength: String(result.text || "").length,
+        },
+      });
+    }
+    return generatedTitle;
+  } catch (error) {
+    await logSessionTitleDiagnostic({
+      logger: input.logger,
+      sessionId: input.sessionId,
+      level: "warn",
+      message: "[agent] session_title.generate_failed",
+      details: {
+        modelLabel: input.modelLabel || null,
+        firstUserTextLength: input.firstUserText.length,
+        ...summarizeTitleError(error),
+      },
+    });
     // 关键点（中文）：标题生成失败不能影响 session 主流程。
     return undefined;
   }
@@ -142,13 +257,30 @@ export async function ensureSessionTitle(
   if (current.title) return current;
 
   const firstUserText = resolveFirstUserText(input.messages);
-  if (input.generate !== true || !input.model || !firstUserText) {
+  if (input.generate !== true) {
+    return current;
+  }
+  if (!input.model || !firstUserText) {
+    await logSessionTitleDiagnostic({
+      logger: input.logger,
+      sessionId: input.sessionId,
+      level: "debug",
+      message: "[agent] session_title.skipped",
+      details: {
+        reason: !input.model ? "missing_model" : "missing_first_user_text",
+        modelLabel: input.modelLabel || null,
+        messageCount: input.messages.length,
+      },
+    });
     return current;
   }
 
   const generatedTitle = await generateSessionTitle({
     model: input.model,
+    sessionId: input.sessionId,
+    modelLabel: input.modelLabel,
     firstUserText,
+    logger: input.logger,
   });
   if (!generatedTitle) return current;
 

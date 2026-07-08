@@ -45,6 +45,27 @@ function create_mock_title_model(title_text) {
   });
 }
 
+function create_failing_title_model() {
+  return new MockLanguageModelV3({
+    modelId: "mock-session-title-failing-model",
+    doGenerate: async () => {
+      throw new Error("mock title generation failed");
+    },
+  });
+}
+
+async function read_log_lines(agent_path) {
+  const logs_path = path.join(agent_path, ".downcity", "logs");
+  const entries = await fs.readdir(logs_path);
+  const lines = [];
+  for (const entry of entries) {
+    if (!entry.endsWith(".jsonl")) continue;
+    const content = await fs.readFile(path.join(logs_path, entry), "utf8");
+    lines.push(...content.split("\n").filter(Boolean));
+  }
+  return lines;
+}
+
 test("Session keeps title empty when no model is available", async () => {
   const agent_path = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-agent-session-title-"),
@@ -71,6 +92,51 @@ test("Session keeps title empty when no model is available", async () => {
     assert.equal(records.session.title, undefined);
   } finally {
     unsubscribe();
+    await agent.dispose();
+  }
+});
+
+test("Session logs title generation failure without blocking the session", async () => {
+  const agent_path = await fs.mkdtemp(
+    path.join(os.tmpdir(), "downcity-agent-session-title-log-"),
+  );
+  const agent = new Agent({
+    id: "title_log_agent",
+    path: agent_path,
+    model: create_failing_title_model(),
+  });
+  const session = await agent.sessions.create();
+
+  try {
+    await session.append_user_message({
+      text: "Diagnose why session title generation is flaky",
+    });
+
+    const records = await session.records();
+    assert.equal(records.session.title, undefined);
+
+    await agent.getLogger().saveAllLogs();
+    const log_lines = await read_log_lines(agent_path);
+    const title_failure_log = log_lines
+      .map((line) => JSON.parse(line))
+      .find((entry) => entry.message.includes("session_title.generate_failed"));
+
+    assert.ok(title_failure_log);
+    assert.equal(title_failure_log.type, "warn");
+    assert.equal(title_failure_log.details.sessionId, session.id);
+    assert.equal(
+      title_failure_log.details.modelLabel,
+      "mock-session-title-failing-model",
+    );
+    assert.equal(
+      title_failure_log.details.message,
+      "mock title generation failed",
+    );
+    assert.equal(
+      title_failure_log.details.firstUserTextLength,
+      "Diagnose why session title generation is flaky".length,
+    );
+  } finally {
     await agent.dispose();
   }
 });

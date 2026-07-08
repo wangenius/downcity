@@ -31,6 +31,7 @@ import type {
 import type { SessionRecordV1 } from "@/executor/types/SessionRecords.js";
 import { SessionStateService } from "@/session/services/SessionStateService.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
+import type { Logger } from "@/utils/logger/Logger.js";
 
 type SessionViewServiceOptions<TSession extends Pick<AgentSession, "set">> = {
   /**
@@ -57,6 +58,11 @@ type SessionViewServiceOptions<TSession extends Pick<AgentSession, "set">> = {
    * 当前 session 状态服务。
    */
   state_service: SessionStateService;
+
+  /**
+   * 当前 session 运行日志器。
+   */
+  logger: Logger;
 
   /**
    * 判断当前 session 是否正在执行。
@@ -106,6 +112,7 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
   private readonly session_id: string;
   private readonly history_store: JsonlSessionHistoryStore;
   private readonly state_service: SessionStateService;
+  private readonly logger: Logger;
   private readonly is_executing: SessionViewServiceOptions<TSession>["is_executing"];
   private readonly get_instruction_system_blocks: SessionViewServiceOptions<TSession>["get_instruction_system_blocks"];
   private readonly get_managed_plugin_system_blocks: SessionViewServiceOptions<TSession>["get_managed_plugin_system_blocks"];
@@ -119,6 +126,7 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
     this.session_id = options.session_id;
     this.history_store = options.history_store;
     this.state_service = options.state_service;
+    this.logger = options.logger;
     this.is_executing = options.is_executing;
     this.get_instruction_system_blocks = options.get_instruction_system_blocks;
     this.get_managed_plugin_system_blocks =
@@ -164,6 +172,7 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
           agentId: this.agent_id,
           sessionId: this.session_id,
           messages: input.messages,
+          logger: this.logger,
         });
     return buildSessionInfo({
       projectRoot: this.project_root,

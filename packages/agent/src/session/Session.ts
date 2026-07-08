@@ -120,6 +120,7 @@ export class Session implements AgentSession {
       history_store: this.historyStore,
       executor: this.executor,
       state: this.localState,
+      logger: this.logger,
       ensure_configured_hook: this.ensureConfiguredHook
         ? async () => {
             await this.ensureConfiguredHook?.(this);
@@ -142,6 +143,7 @@ export class Session implements AgentSession {
       session_id: this.id,
       history_store: this.historyStore,
       state_service: this.stateService,
+      logger: this.logger,
       is_executing: () => this.isExecuting(),
       get_instruction_system_blocks: this.getInstructionSystemBlocks,
       get_managed_plugin_system_blocks: this.getManagedPluginSystemBlocks,

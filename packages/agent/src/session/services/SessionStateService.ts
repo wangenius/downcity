@@ -41,6 +41,7 @@ import type {
 import { to_session_action_record } from "@/executor/types/SessionRecords.js";
 import type { SessionLocalState } from "@/types/session/SessionLocalState.js";
 import { generateId } from "@/utils/Id.js";
+import type { Logger } from "@/utils/logger/Logger.js";
 
 type SessionStateServiceOptions = {
   /**
@@ -72,6 +73,11 @@ type SessionStateServiceOptions = {
    * 当前 session 可变运行态。
    */
   state: SessionLocalState;
+
+  /**
+   * 当前 session 运行日志器。
+   */
+  logger: Logger;
 
   /**
    * 在执行前补齐宿主级配置。
@@ -107,6 +113,7 @@ export class SessionStateService {
   private readonly history_store: JsonlSessionHistoryStore;
   private readonly executor: Executor;
   private readonly state: SessionLocalState;
+  private readonly logger: Logger;
   private readonly ensure_configured_hook?: SessionStateServiceOptions["ensure_configured_hook"];
   private readonly publish_event: SessionStateServiceOptions["publish_event"];
 
@@ -117,6 +124,7 @@ export class SessionStateService {
     this.history_store = options.history_store;
     this.executor = options.executor;
     this.state = options.state;
+    this.logger = options.logger;
     this.ensure_configured_hook = options.ensure_configured_hook;
     this.publish_event = options.publish_event;
   }
@@ -340,6 +348,10 @@ export class SessionStateService {
       sessionId: this.session_id,
       messages,
       ...(input?.generate ? { model: this.state.sessionConfig.model } : {}),
+      ...(this.state.sessionConfig.modelLabel
+        ? { modelLabel: this.state.sessionConfig.modelLabel }
+        : {}),
+      logger: this.logger,
       generate: input?.generate === true,
     });
     const next_title = String(next_metadata.title || "").trim();

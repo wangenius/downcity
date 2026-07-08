@@ -8,10 +8,10 @@
  */
 
 import {
-  isSessionModelMessage,
-  type SessionMessageV1,
-  type SessionModelMessageV1,
-} from "@/executor/types/SessionMessages.js";
+  is_session_message_record,
+  type SessionRecordV1,
+  type SessionMessageRecordV1,
+} from "@/executor/types/SessionRecords.js";
 import {
   extractTextFromUiMessage,
   extractToolCallsFromUiMessage,
@@ -25,10 +25,10 @@ import {
  * - 运行中 step/tool 的中断恢复由 inflight 快照承担，不再通过跳过最终 message 收口。
  */
 export function resolveAssistantMessageForPersistence(
-  message: SessionMessageV1 | null | undefined,
-): SessionModelMessageV1 | null {
+  message: SessionRecordV1 | null | undefined,
+): SessionMessageRecordV1 | null {
   if (!message || typeof message !== "object") return null;
-  if (!isSessionModelMessage(message)) return null;
+  if (!is_session_message_record(message)) return null;
   return message;
 }
 
@@ -40,9 +40,9 @@ export function resolveAssistantMessageForPersistence(
  * - 若无 tool call，则回退到 message 文本内容。
  */
 export function pickLastSuccessfulChatSendText(
-  message: SessionMessageV1 | null | undefined,
+  message: SessionRecordV1 | null | undefined,
 ): string {
-  if (!isSessionModelMessage(message)) return "";
+  if (!is_session_message_record(message)) return "";
   const toolCalls = extractToolCallsFromUiMessage(message);
   // 关键点（中文）：优先从 chat_send 的 input.text 还原"用户可见回复"。
   for (let i = toolCalls.length - 1; i >= 0; i -= 1) {

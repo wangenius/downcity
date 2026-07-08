@@ -37,7 +37,7 @@ export async function appendTaskRoundUserMessage(params: {
   const text = String(params.query || "").trim();
   if (!text) return;
   const historyStore = params.taskSessionRuntime.getHistoryStore(params.sessionId);
-  await historyStore.append(
+  await historyStore.write_record(
     historyStore.userText({
       text,
       metadata: {
@@ -182,10 +182,10 @@ export async function appendTaskAssistantMessage(params: {
   const { taskSessionRuntime, sessionId, rawResult } = params;
   const historyStore = taskSessionRuntime.getHistoryStore(sessionId);
   if (rawResult.assistantMessage) {
-    await historyStore.append(rawResult.assistantMessage);
+    await historyStore.write_record(rawResult.assistantMessage);
   }
   const deferredUserMessages = drainDeferredPersistedUserMessages(sessionId);
   for (const deferred of deferredUserMessages) {
-    await historyStore.append(deferred);
+    await historyStore.write_record(deferred);
   }
 }

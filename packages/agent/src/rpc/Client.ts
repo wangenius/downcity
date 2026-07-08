@@ -16,8 +16,8 @@ import type {
   AgentArchiveSessionResult,
   AgentArchiveSessionsResult,
   AgentCleanArchiveResult,
-  AgentSessionHistoryInput,
-  AgentSessionHistoryPage,
+  AgentSessionRecordsInput,
+  AgentSessionRecordsPage,
   AgentSessionInfo,
   AgentSessionStopResult,
   AgentSessionSummaryPage,
@@ -196,20 +196,20 @@ export class RpcClient {
   }
 
   /**
-   * 读取 history。
+   * 读取 session records。
    */
-  async get_session_history(params: {
+  async get_session_records(params: {
     session_id: string;
-    input?: AgentSessionHistoryInput;
-  }): Promise<AgentSessionHistoryPage> {
-    const data = await this.request<{ history: AgentSessionHistoryPage }>({
-      method: "sdk.sessions.history",
+    input?: AgentSessionRecordsInput;
+  }): Promise<AgentSessionRecordsPage> {
+    const data = await this.request<{ records: AgentSessionRecordsPage }>({
+      method: "sdk.sessions.records",
       params: {
         sessionId: params.session_id,
         input: params.input,
       },
     });
-    return data.history;
+    return data.records;
   }
 
   /**

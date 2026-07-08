@@ -8,9 +8,9 @@
 
 import type { ModelMessage, Tool } from "ai";
 import type {
-  SessionMessageV1,
-  SessionModelMessageV1,
-} from "@/executor/types/SessionMessages.js";
+  SessionRecordV1,
+  SessionMessageRecordV1,
+} from "@/executor/types/SessionRecords.js";
 import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 
@@ -51,7 +51,7 @@ export interface SessionContextComposer {
        * 将新增 user 消息转换为可追加的模型消息。
        */
       appendMergedUserMessages: (
-        messages: SessionMessageV1[],
+        messages: SessionRecordV1[],
       ) => Promise<ModelMessage[]>;
       /**
        * 当前显式运行上下文。
@@ -79,5 +79,5 @@ export interface SessionContextComposer {
   buildFallbackAssistantMessage(
     text: string,
     run_context: SessionRunContext,
-  ): SessionModelMessageV1;
+  ): SessionMessageRecordV1;
 }

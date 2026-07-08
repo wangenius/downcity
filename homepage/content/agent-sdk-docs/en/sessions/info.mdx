@@ -1,18 +1,18 @@
 ---
-title: session.getInfo()
+title: session.get_info()
 description: Read the current Session summary and detail snapshot
 ---
 
-# `session.getInfo()`
+# `session.get_info()`
 
-`session.getInfo()` returns the current summary/detail snapshot for one session.
+`session.get_info()` returns the current summary/detail snapshot for one session.
 
 ## Example
 
 ```ts
-const session = await agent.session_collection().get_session("repo-analysis");
+const session = await agent.sessions.get("repo-analysis");
 
-const info = await session.getInfo();
+const info = await session.get_info();
 
 console.log(info.sessionId);
 console.log(info.previewText);

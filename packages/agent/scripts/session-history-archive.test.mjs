@@ -1,5 +1,5 @@
 /**
- * @file 验证 session.history 的 compact archive 分层读取语义。
+ * @file 验证 session.records 的 compact archive 分层读取语义。
  *
  * 关键点（中文）
  * - compact summary 是模型上下文消息，但不应作为用户可见 history item 返回。
@@ -91,7 +91,7 @@ async function write_archive(file_path, session_id, messages) {
   );
 }
 
-test("session.history hides compact summary and reads archive layers by archive_id", async () => {
+test("session.records hides compact summary and reads archive layers by archive_id", async () => {
   const agent_path = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-agent-history-archive-"),
   );
@@ -99,7 +99,7 @@ test("session.history hides compact summary and reads archive layers by archive_
     id: "history_archive_agent",
     path: agent_path,
   });
-  const session = await agent.session_collection().create_session({
+  const session = await agent.sessions.create({
     sessionId: "history_archive_session",
   });
 
@@ -131,7 +131,7 @@ test("session.history hides compact summary and reads archive layers by archive_
       assistant_message(session.id, 2),
     ]);
 
-    const current_page = await session.history({
+    const current_page = await session.records({
       limit: 1,
     });
     assert.equal(current_page.total, 2);
@@ -144,7 +144,7 @@ test("session.history hides compact summary and reads archive layers by archive_
       ["u:31"],
     );
 
-    const next_current_page = await session.history({
+    const next_current_page = await session.records({
       cursor: current_page.next_cursor,
     });
     assert.equal(next_current_page.has_more, false);
@@ -153,7 +153,7 @@ test("session.history hides compact summary and reads archive layers by archive_
       ["a:32"],
     );
 
-    const previous_page = await session.history({
+    const previous_page = await session.records({
       archive_id: current_page.previous_archive_id,
     });
     assert.equal(previous_page.archive_id, "compact-B");
@@ -164,7 +164,7 @@ test("session.history hides compact summary and reads archive layers by archive_
       ["u:16", "a:17"],
     );
 
-    const oldest_page = await session.history({
+    const oldest_page = await session.records({
       archive_id: previous_page.previous_archive_id,
     });
     assert.equal(oldest_page.archive_id, "compact-A");
@@ -174,7 +174,7 @@ test("session.history hides compact summary and reads archive layers by archive_
       ["u:1", "a:2"],
     );
 
-    const timeline_page = await session.history({
+    const timeline_page = await session.records({
       view: "timeline",
       archive_id: "compact-B",
     });

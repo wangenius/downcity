@@ -1,18 +1,18 @@
 ---
-title: session.getInfo()
+title: session.get_info()
 description: 读取当前 Session 的摘要与详情快照
 ---
 
-# `session.getInfo()`
+# `session.get_info()`
 
-`session.getInfo()` 用来读取单个 session 当前的摘要/详情快照。
+`session.get_info()` 用来读取单个 session 当前的摘要/详情快照。
 
 ## 示例
 
 ```ts
-const session = await agent.session_collection().get_session("repo-analysis");
+const session = await agent.sessions.get("repo-analysis");
 
-const info = await session.getInfo();
+const info = await session.get_info();
 
 console.log(info.sessionId);
 console.log(info.previewText);

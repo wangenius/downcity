@@ -7,14 +7,14 @@
  */
 
 import type {
-  AgentSession,
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
-  AgentSessionHistoryInput,
-  AgentSessionHistoryPage,
+  AgentSessionRecordsInput,
+  AgentSessionRecordsPage,
   AgentSessionInfo,
   AgentSessionSetInput,
   AgentSessionSystemSnapshot,
+  RemoteAgentSession,
 } from "@/types/agent/AgentTypes.js";
 import { isAgentSessionPromptInputEmpty } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
@@ -53,7 +53,7 @@ type RemoteTurnLifecycle = {
 /**
  * 远程 Session 客户端。
  */
-export class RemoteSession implements AgentSession {
+export class RemoteSession implements RemoteAgentSession {
   readonly id: string;
   readonly agentId: string;
   readonly config: AgentSessionConfigSnapshot;
@@ -87,7 +87,7 @@ export class RemoteSession implements AgentSession {
   /**
    * 读取当前远程 session 详情。
    */
-  async getInfo(): Promise<AgentSessionInfo> {
+  async get_info(): Promise<AgentSessionInfo> {
     return await this.transport.get_info(this.id);
   }
 
@@ -135,8 +135,8 @@ export class RemoteSession implements AgentSession {
   /**
    * 读取远程消息历史。
    */
-  async history(input?: AgentSessionHistoryInput): Promise<AgentSessionHistoryPage> {
-    return await this.transport.history(this.id, input);
+  async records(input?: AgentSessionRecordsInput): Promise<AgentSessionRecordsPage> {
+    return await this.transport.records(this.id, input);
   }
 
   /**
@@ -149,7 +149,7 @@ export class RemoteSession implements AgentSession {
   /**
    * 分叉远程 session。
    */
-  async fork(input?: AgentSessionForkInput | string): Promise<AgentSession> {
+  async fork(input?: AgentSessionForkInput | string): Promise<RemoteAgentSession> {
     const info = await this.transport.fork(this.id, input);
     return new RemoteSession(this.transport, info);
   }
@@ -296,6 +296,8 @@ function extract_turn_id(event: AgentSessionEvent): string | null {
     case "assistant-step":
     case "turn-finish":
       return event.turnId;
+    case "action":
+      return event.metadata.turnId || null;
     default:
       return null;
   }

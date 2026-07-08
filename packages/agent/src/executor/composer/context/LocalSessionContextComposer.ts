@@ -13,9 +13,9 @@ import type {
   SessionContextComposeResult,
 } from "@executor/composer/context/SessionContextComposer.js";
 import type {
-  SessionMessageV1,
-  SessionModelMessageV1,
-} from "@/executor/types/SessionMessages.js";
+  SessionRecordV1,
+  SessionMessageRecordV1,
+} from "@/executor/types/SessionRecords.js";
 import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
 import type { Tool } from "ai";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
@@ -66,7 +66,7 @@ export class LocalSessionContextComposer implements SessionContextComposer {
     input: {
       system: SessionSystemMessage[];
       appendMergedUserMessages: (
-        messages: SessionMessageV1[],
+        messages: SessionRecordV1[],
       ) => Promise<ModelMessage[]>;
       runContext: SessionRunContext;
     },
@@ -150,7 +150,7 @@ export class LocalSessionContextComposer implements SessionContextComposer {
   buildFallbackAssistantMessage(
     text: string,
     run_context: SessionRunContext,
-  ): SessionModelMessageV1 {
+  ): SessionMessageRecordV1 {
     const sessionId = String(
       run_context.sessionId || this.sessionId || "",
     ).trim();

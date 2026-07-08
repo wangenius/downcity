@@ -1,26 +1,23 @@
 /**
- * SessionMessage 类型定义。
+ * SessionRecord 类型定义。
  *
  * 关键点（中文）
- * - 这里统一描述 session 消息落盘格式与元信息结构。
- * - session 的唯一事实源是消息 JSONL，模型消息继续使用 AI SDK `UIMessage`。
- * - 这些类型会被 history Store、history Composer、compact、control UI、task runtime 共同复用。
+ * - 这里统一描述 session JSONL 中的持久化 record 结构。
+ * - record 是 session 内部事实源；其中 message record 继续使用 AI SDK `UIMessage`。
+ * - action record 是 UI record，不属于 LLM 输入。
+ * - 这些类型会被 Store、Composer、compact、control UI、task runtime 共同复用。
  */
 
 import type { UIMessage } from "ai";
 import type { JsonObject } from "@/types/common/Json.js";
-import type {
-  AgentSessionActionRecord,
-  AgentSessionActionState,
-} from "@/types/sdk/AgentSessionAction.js";
 
 /**
- * Session 消息：以 UIMessage[] 作为唯一事实源。
+ * Session message record 类别。
  *
  * 关键点（中文）
  * - 持久化存储在 `.downcity/agents/<encodedAgentId>/sessions/<encodedSessionId>/messages/messages.jsonl`
- * - 默认只存模型消息，或 `type=action` 的 UI 状态消息。
- * - compact 会把更早消息压缩为一条 `assistant` 摘要消息
+ * - record 文件默认包含 message record，或 `type=action` 的 UI 状态记录。
+ * - compact 会把更早 message record 压缩为一条 `assistant` 摘要 record。
  * - action 只用于 UI timeline，不进入 LLM 输入
  */
 export type SessionMessageKind = "normal" | "summary";
@@ -87,12 +84,17 @@ export type SessionMetadataV1 = {
 };
 
 /**
- * 模型可消费的 Session UI 消息结构。
+ * 大模型可消费的 Session message record。
  */
-export type SessionModelMessageV1 = UIMessage<SessionMetadataV1>;
+export type SessionMessageRecordV1 = UIMessage<SessionMetadataV1>;
 
 /**
- * action 消息元信息。
+ * Session action 当前状态。
+ */
+export type SessionActionStateV1 = "running" | "completed" | "failed";
+
+/**
+ * action record 元信息。
  */
 export type SessionActionMetadataV1 = {
   /** 元信息 schema 版本号。 */
@@ -106,14 +108,14 @@ export type SessionActionMetadataV1 = {
 };
 
 /**
- * action 类型的 Session 消息结构。
+ * action 类型的 Session record 结构。
  *
  * 关键点（中文）
- * - `action` 不是 AI SDK 原生模型消息。
- * - 它只存在于 JSONL history 与前端 timeline，进入 LLM 前必须过滤。
+ * - `action` 不是 AI SDK 原生 message record。
+ * - 它只存在于 session records 与前端 timeline，进入 LLM 前必须过滤。
  */
-export type SessionActionMessageV1 = {
-  /** item 类型固定为 `action`。 */
+export type SessionActionRecordV1 = {
+  /** record 类型固定为 `action`。 */
   type: "action";
   /** 同一个 action 生命周期内稳定复用的 ID。 */
   id: string;
@@ -122,44 +124,73 @@ export type SessionActionMessageV1 = {
   /** 当前 action 描述。 */
   description?: string;
   /** 当前 action 状态。 */
-  state: AgentSessionActionState;
+  state: SessionActionStateV1;
   /** action 元信息。 */
   metadata: SessionActionMetadataV1;
 };
 
 /**
- * Session 持久化消息结构。
+ * 构造 action record 的输入结构。
  */
-export type SessionMessageV1 = SessionModelMessageV1 | SessionActionMessageV1;
+export type SessionActionRecordInputV1 = {
+  /** 同一个 action 生命周期内稳定复用的 ID。 */
+  id?: string;
+  /** 当前 action 标题。 */
+  title: string;
+  /** 当前 action 描述。 */
+  description?: string;
+  /** 当前 action 状态。 */
+  state: SessionActionStateV1;
+  /** 当前 action 关联的 turn 标识。 */
+  turnId?: string;
+  /** 可选 action 元信息覆盖。 */
+  metadata?: Partial<SessionActionMetadataV1>;
+};
 
 /**
- * user 角色的 Session 消息结构。
+ * Session 持久化 record 结构。
+ *
+ * 说明（中文）
+ * - message record 是可进入 LLM 的 record。
+ * - action record 是只给前端展示的 record，组装模型输入前必须过滤。
  */
-export type SessionUserMessageV1 = SessionModelMessageV1 & {
+export type SessionRecordV1 = SessionMessageRecordV1 | SessionActionRecordV1;
+
+/**
+ * user 角色的 Session message record。
+ */
+export type SessionUserMessageV1 = SessionMessageRecordV1 & {
   /** 消息角色固定为 `user`。 */
   role: "user";
 };
 
 /**
- * 判断一条消息是否为 action message。
+ * 判断一条 record 是否为 action record。
  */
-export function isSessionActionMessage(
-  message: SessionMessageV1 | null | undefined,
-): message is SessionActionMessageV1 {
+export function is_session_action_record(
+  message: SessionRecordV1 | null | undefined,
+): message is SessionActionRecordV1 {
   if (!message || typeof message !== "object") return false;
   return (message as { type?: unknown }).type === "action";
 }
 
 /**
- * 从订阅事件构造 action message。
+ * 从订阅事件构造 action record。
  */
-export function toSessionActionMessage(
-  action: AgentSessionActionRecord,
+export function to_session_action_record(
+  action: SessionActionRecordInputV1 | SessionActionRecordV1,
   session_id: string,
-): SessionActionMessageV1 {
+): SessionActionRecordV1 {
   const title = String(action.title || "").trim() || "Action";
   const description = String(action.description || "").trim();
   const id = String(action.id || "").trim() || `action:${session_id}:${Date.now()}`;
+  const metadata =
+    "metadata" in action && action.metadata && typeof action.metadata === "object"
+      ? action.metadata
+      : {};
+  const turn_id =
+    String(metadata.turnId || "").trim() ||
+    ("turnId" in action ? String(action.turnId || "").trim() : "");
   return {
     type: "action",
     id,
@@ -168,19 +199,19 @@ export function toSessionActionMessage(
     state: action.state,
     metadata: {
       v: 1,
-      ts: Date.now(),
-      sessionId: session_id,
-      ...(action.turnId ? { turnId: action.turnId } : {}),
+      ts: typeof metadata.ts === "number" ? metadata.ts : Date.now(),
+      sessionId: String(metadata.sessionId || "").trim() || session_id,
+      ...(turn_id ? { turnId: turn_id } : {}),
     },
   };
 }
 
 /**
- * 判断一条消息是否为模型可消费的 UIMessage。
+ * 判断一条 record 是否为大模型可消费的 message record。
  */
-export function isSessionModelMessage(
-  message: SessionMessageV1 | null | undefined,
-): message is SessionModelMessageV1 {
+export function is_session_message_record(
+  message: SessionRecordV1 | null | undefined,
+): message is SessionMessageRecordV1 {
   if (!message || typeof message !== "object") return false;
-  return !isSessionActionMessage(message);
+  return !is_session_action_record(message);
 }

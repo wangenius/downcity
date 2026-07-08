@@ -12,7 +12,7 @@ const agent = new RemoteAgent({
   url: "http://127.0.0.1:5314/agents/repo-helper",
 });
 
-const session = await agent.session_collection().create_session();
+const session = await agent.sessions.create();
 const turn = await session.prompt({
   query: "总结一下这个项目",
 });

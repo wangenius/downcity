@@ -8,7 +8,7 @@
  */
 
 import type { ModelMessage, Tool } from "ai";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { SessionRecordV1 } from "@/executor/types/SessionRecords.js";
 import {
   pickMergedUserMessages,
   toModelMessages,
@@ -21,7 +21,7 @@ export class CoreEngineMessageState {
   /**
    * 当前运行时 session 语义消息。
    */
-  private sessionMessages: SessionMessageV1[];
+  private sessionMessages: SessionRecordV1[];
 
   /**
    * 当前模型侧消息基线。
@@ -42,7 +42,7 @@ export class CoreEngineMessageState {
     /**
      * 当前运行时 session 语义消息。
      */
-    sessionMessages: SessionMessageV1[];
+    sessionMessages: SessionRecordV1[];
     /**
      * 当前模型侧消息基线。
      */
@@ -69,7 +69,7 @@ export class CoreEngineMessageState {
     /**
      * 初始 session 语义消息。
      */
-    messages: SessionMessageV1[];
+    messages: SessionRecordV1[];
     /**
      * 当前轮可用工具集合。
      */
@@ -105,7 +105,7 @@ export class CoreEngineMessageState {
    * 把 step 间新增的 user 消息并入两份基线。
    */
   async appendMergedUserMessages(
-    messages: SessionMessageV1[],
+    messages: SessionRecordV1[],
   ): Promise<ModelMessage[]> {
     const mergedMessages = pickMergedUserMessages(messages);
     if (mergedMessages.length === 0) return [];
@@ -115,14 +115,14 @@ export class CoreEngineMessageState {
   /**
    * 追加内部生成的 user nudge 消息。
    */
-  async appendUserTextMessage(message: SessionMessageV1): Promise<void> {
+  async appendUserTextMessage(message: SessionRecordV1): Promise<void> {
     await this.appendSessionMessagesAsModelMessages([message]);
   }
 
   /**
    * 追加 assistant UI 消息到 session 语义基线。
    */
-  appendRuntimeSessionMessage(message: SessionMessageV1): void {
+  appendRuntimeSessionMessage(message: SessionRecordV1): void {
     this.sessionMessages = [...this.sessionMessages, message];
   }
 
@@ -135,7 +135,7 @@ export class CoreEngineMessageState {
   }
 
   private async appendSessionMessagesAsModelMessages(
-    messages: SessionMessageV1[],
+    messages: SessionRecordV1[],
   ): Promise<ModelMessage[]> {
     this.sessionMessages = [...this.sessionMessages, ...messages];
     const modelMessages = await toModelMessages(

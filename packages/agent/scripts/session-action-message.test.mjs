@@ -1,10 +1,10 @@
 /**
- * @file 验证 action message 的持久化、模型输入过滤与 timeline 投影。
+ * @file 验证 action record 的持久化、模型输入过滤与 timeline 投影。
  *
  * 关键点（中文）
- * - action message 会作为 `type=action` item 写入 JSONL。
+ * - action record 会作为 `type=action` item 写入 JSONL。
  * - 同一个 action id 会被更新为一条历史记录，不拆成 running/completed 多条。
- * - history composer 组装 LLM 输入时必须过滤 action message。
+ * - history composer 组装 LLM 输入时必须过滤 action record。
  */
 
 import test from "node:test";
@@ -18,7 +18,7 @@ import { JsonlSessionHistoryComposer } from "../bin/executor/composer/history/js
 import { toSessionTimelineEvents } from "../bin/session/browse/Browse.js";
 import { Agent } from "../bin/index.js";
 
-test("action message is upserted but filtered from LLM history", async () => {
+test("action record is upserted but filtered from LLM history", async () => {
   const root_path = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-agent-action-message-"),
   );
@@ -30,29 +30,29 @@ test("action message is upserted but filtered from LLM history", async () => {
   });
   const composer = new JsonlSessionHistoryComposer({ store });
 
-  await store.append(
+  await store.write_record(
     store.userText({
       text: "hello",
       metadata: { sessionId: session_id },
       id: "u:1",
     }),
   );
-  await store.append(
+  await store.write_record(
     store.action({
       action: {
         id: "action:1",
-        title: "Compacting session history",
+        title: "Compacting session records",
         state: "running",
         turnId: "turn-1",
       },
       metadata: { sessionId: session_id },
     }),
   );
-  await store.append(
+  await store.write_record(
     store.action({
       action: {
         id: "action:1",
-        title: "Session history compacted",
+        title: "Session records compacted",
         description: "Compacted earlier messages.",
         state: "completed",
         turnId: "turn-1",
@@ -60,7 +60,7 @@ test("action message is upserted but filtered from LLM history", async () => {
       metadata: { sessionId: session_id },
     }),
   );
-  await store.append(
+  await store.write_record(
     store.assistantText({
       text: "world",
       metadata: { sessionId: session_id },
@@ -68,10 +68,10 @@ test("action message is upserted but filtered from LLM history", async () => {
     }),
   );
 
-  const persisted_messages = await store.list();
+  const persisted_messages = await store.list_records();
   assert.equal(persisted_messages.length, 3);
   assert.equal(persisted_messages[1].type, "action");
-  assert.equal(persisted_messages[1].title, "Session history compacted");
+  assert.equal(persisted_messages[1].title, "Session records compacted");
   assert.equal(persisted_messages[1].description, "Compacted earlier messages.");
   assert.equal(persisted_messages[1].state, "completed");
 
@@ -90,12 +90,12 @@ test("action message is upserted but filtered from LLM history", async () => {
   const timeline_events = toSessionTimelineEvents(persisted_messages[1]);
   assert.equal(timeline_events.length, 1);
   assert.equal(timeline_events[0].role, "action");
-  assert.equal(timeline_events[0].actionTitle, "Session history compacted");
+  assert.equal(timeline_events[0].actionTitle, "Session records compacted");
   assert.equal(timeline_events[0].actionDescription, "Compacted earlier messages.");
   assert.equal(timeline_events[0].actionState, "completed");
   assert.equal(
     timeline_events[0].text,
-    "Session history compacted\nCompacted earlier messages.",
+    "Session records compacted\nCompacted earlier messages.",
   );
 });
 
@@ -108,7 +108,7 @@ test("session.set persists and publishes model-switching actions", async () => {
     path: agent_path,
   });
   try {
-    const session = await agent.session_collection().create_session({
+    const session = await agent.sessions.create({
       sessionId: "model_switching_session",
     });
     const events = [];
@@ -130,8 +130,8 @@ test("session.set persists and publishes model-switching actions", async () => {
     );
     assert.equal(new Set(events.map((event) => event.id)).size, 1);
 
-    const history = await session.history({ view: "timeline" });
-    const action_events = history.items.filter(
+    const records = await session.records({ view: "timeline" });
+    const action_events = records.items.filter(
       (item) => item.role === "action",
     );
     assert.deepEqual(
@@ -152,7 +152,7 @@ test("session.fork persists and publishes history-forking actions on source sess
     path: agent_path,
   });
   try {
-    const session = await agent.session_collection().create_session({
+    const session = await agent.sessions.create({
       sessionId: "history_forking_session",
     });
     await session.set({
@@ -161,7 +161,7 @@ test("session.fork persists and publishes history-forking actions on source sess
         provider: "test",
       },
     });
-    await session.appendUserMessage({ text: "source message" });
+    await session.append_user_message({ text: "source message" });
 
     const events = [];
     const unsubscribe = session.subscribe((event) => {
@@ -174,22 +174,22 @@ test("session.fork persists and publishes history-forking actions on source sess
 
     assert.deepEqual(
       events.map((event) => `${event.title}:${event.state}`),
-      ["Forking session history:running", "Session history forked:completed"],
+      ["Forking session records:running", "Session records forked:completed"],
     );
     assert.equal(new Set(events.map((event) => event.id)).size, 1);
     assert.notEqual(forked.id, session.id);
 
-    const source_history = await session.history({ view: "timeline" });
-    const source_fork_actions = source_history.items.filter(
-      (item) => item.role === "action" && item.actionTitle === "Session history forked",
+    const source_records = await session.records({ view: "timeline" });
+    const source_fork_actions = source_records.items.filter(
+      (item) => item.role === "action" && item.actionTitle === "Session records forked",
     );
     assert.deepEqual(
       source_fork_actions.map((event) => event.actionState),
       ["completed"],
     );
 
-    const forked_history = await forked.history({ view: "timeline" });
-    const forked_model_actions = forked_history.items.filter(
+    const forked_records = await forked.records({ view: "timeline" });
+    const forked_model_actions = forked_records.items.filter(
       (item) => item.role === "action" && item.actionTitle === "Session model switched",
     );
     assert.equal(forked_model_actions.length, 1);

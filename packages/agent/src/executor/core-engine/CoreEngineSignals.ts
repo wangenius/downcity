@@ -12,7 +12,7 @@ import {
   isTextUIPart,
   isToolUIPart,
 } from "ai";
-import type { SessionModelMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { SessionMessageRecordV1 } from "@/executor/types/SessionRecords.js";
 import type { JsonObject } from "@/types/common/Json.js";
 
 /**
@@ -192,7 +192,7 @@ export function summarizeStepForDebug(stepResult: unknown): JsonObject {
  * 汇总最终 assistant UI 消息的调试摘要。
  */
 export function summarizeUiMessageForDebug(
-  message: SessionModelMessageV1 | null | undefined,
+  message: SessionMessageRecordV1 | null | undefined,
 ): JsonObject {
   const parts = Array.isArray(message?.parts) ? message.parts : [];
   const text = parts
@@ -230,9 +230,9 @@ export function summarizeUiMessageForDebug(
  * - 多 step 场景下，最终 assistant message 需要把各 step 的 UI part 串起来。
  */
 export function mergeAssistantUiMessages(
-  base: SessionModelMessageV1 | null,
-  incoming: SessionModelMessageV1,
-): SessionModelMessageV1 {
+  base: SessionMessageRecordV1 | null,
+  incoming: SessionMessageRecordV1,
+): SessionMessageRecordV1 {
   if (!base) return incoming;
   const baseMetadata = base.metadata;
   const incomingMetadata = incoming.metadata;
@@ -254,7 +254,7 @@ export function mergeAssistantUiMessages(
 }
 
 function pickIncompleteToolParts(
-  message: SessionModelMessageV1 | null | undefined,
+  message: SessionMessageRecordV1 | null | undefined,
 ): Array<{
   toolName: string;
   state: string;
@@ -304,7 +304,7 @@ export function buildIncompleteResponseRecoveryNudge(
  */
 export function detectIncompleteResponse(params: {
   stepResult: unknown;
-  assistantMessage: SessionModelMessageV1 | null | undefined;
+  assistantMessage: SessionMessageRecordV1 | null | undefined;
 }): {
   reason: string;
   details: JsonObject;

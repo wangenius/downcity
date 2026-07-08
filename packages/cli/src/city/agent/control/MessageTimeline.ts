@@ -14,15 +14,15 @@ import {
   type UIMessagePart,
 } from "ai";
 import type {
-  SessionActionMessageV1,
-  SessionMessageV1,
-  SessionModelMessageV1,
+  SessionActionRecordV1,
+  SessionRecordV1,
+  SessionMessageRecordV1,
   SessionMetadataV1,
-} from "@downcity/agent/internal/executor/types/SessionMessages.js";
+} from "@downcity/agent/internal/executor/types/SessionRecords.js";
 import {
-  isSessionActionMessage,
-  isSessionModelMessage,
-} from "@downcity/agent/internal/executor/types/SessionMessages.js";
+  is_session_action_record,
+  is_session_message_record,
+} from "@downcity/agent/internal/executor/types/SessionRecords.js";
 import { pickLastSuccessfulChatSendText } from "@downcity/agent";
 import { extractToolCallsFromUiMessage } from "@downcity/agent/internal/executor/messages/UIMessageTransformer.js";
 import type { ControlTimelineEvent, ControlTimelineRole } from "@/city/agent/control/types/ControlViewData.js";
@@ -78,7 +78,7 @@ function extractMessageText(parts: unknown): string {
   return texts.join("\n").trim();
 }
 
-function extractAssistantToolSummary(message: SessionModelMessageV1): string {
+function extractAssistantToolSummary(message: SessionMessageRecordV1): string {
   const toolCalls = extractToolCallsFromUiMessage(message);
   if (!Array.isArray(toolCalls) || toolCalls.length === 0) return "";
   const toolNames = Array.from(
@@ -124,7 +124,7 @@ function extractToolResultOutput(part: ToolPartCompatShape): unknown {
 }
 
 function toUiMessageEvent(params: {
-  message: SessionModelMessageV1;
+  message: SessionMessageRecordV1;
   role: ControlTimelineRole;
   text: string;
   sequence: number;
@@ -144,7 +144,7 @@ function toUiMessageEvent(params: {
   };
 }
 
-function toActionEvent(message: SessionActionMessageV1): ControlTimelineEvent {
+function toActionEvent(message: SessionActionRecordV1): ControlTimelineEvent {
   const metadata = message.metadata || null;
   return {
     id: `${String(message.id || "")}:0`,
@@ -157,13 +157,13 @@ function toActionEvent(message: SessionActionMessageV1): ControlTimelineEvent {
   };
 }
 
-function resolveUiMessageText(message: SessionMessageV1): string {
-  if (isSessionActionMessage(message)) {
+function resolveUiMessageText(message: SessionRecordV1): string {
+  if (is_session_action_record(message)) {
     return message.description
       ? `${message.title}\n${message.description}`
       : message.title;
   }
-  if (!isSessionModelMessage(message)) return "";
+  if (!is_session_message_record(message)) return "";
 
   const plainText = extractMessageText(message.parts);
   if (plainText) return plainText;
@@ -180,13 +180,13 @@ function resolveUiMessageText(message: SessionMessageV1): string {
  * 转成 control 时间线。
  */
 export function toUiMessageTimeline(
-  message: SessionMessageV1,
+  message: SessionRecordV1,
 ): ControlTimelineEvent[] {
-  if (isSessionActionMessage(message)) {
+  if (is_session_action_record(message)) {
     return [toActionEvent(message)];
   }
 
-  if (!isSessionModelMessage(message)) return [];
+  if (!is_session_message_record(message)) return [];
   if (message.role !== "assistant") {
     return [
       toUiMessageEvent({
@@ -274,14 +274,14 @@ export function toUiMessageTimeline(
  */
 export async function loadSessionMessagesFromFile(
   filePath: string,
-): Promise<SessionMessageV1[]> {
+): Promise<SessionRecordV1[]> {
   if (!(await fs.pathExists(filePath))) return [];
   const raw = await fs.readFile(filePath, "utf-8");
   const lines = raw.split("\n").filter(Boolean);
-  const out: SessionMessageV1[] = [];
+  const out: SessionRecordV1[] = [];
   for (const line of lines) {
     try {
-      const item = JSON.parse(line) as SessionMessageV1;
+      const item = JSON.parse(line) as SessionRecordV1;
       if (!item || typeof item !== "object") continue;
       const candidate = item as { type?: unknown; role?: unknown };
       if (
@@ -302,6 +302,6 @@ export async function loadSessionMessagesFromFile(
 /**
  * 读取适合摘要展示的消息预览文本。
  */
-export function resolveUiMessagePreview(message: SessionMessageV1): string {
+export function resolveUiMessagePreview(message: SessionRecordV1): string {
   return resolveUiMessageText(message);
 }

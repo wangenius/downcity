@@ -16,7 +16,7 @@ const unsubscribe = session.subscribe((event) => {
 ## 例子
 
 ```ts
-const session = await agent.session_collection().get_session("repo-analysis");
+const session = await agent.sessions.get("repo-analysis");
 
 const unsubscribe = session.subscribe((event) => {
   if (event.type === "text-delta") {
@@ -50,7 +50,7 @@ unsubscribe();
 
 `subscribe()` 不负责历史回放。
 
-如果你要读过去的消息，请继续使用 `session.history({ limit })`。
+如果你要读过去的消息，请继续使用 `session.records({ limit })`。
 
 ## 为什么选择回调订阅
 

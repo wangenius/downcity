@@ -19,10 +19,10 @@ import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js"
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 import type {
-  SessionMessageV1,
-  SessionModelMessageV1,
+  SessionRecordV1,
+  SessionMessageRecordV1,
   SessionUserMessageV1,
-} from "@/executor/types/SessionMessages.js";
+} from "@/executor/types/SessionRecords.js";
 import { mapAgentEventToSessionEvent, mapUiMessageChunkToAgentEvent } from "@/session/SessionEventMapper.js";
 import { SessionEventHub } from "@/session/runtime/SessionEventHub.js";
 import { SessionPromptRuntime } from "@/session/runtime/SessionPromptRuntime.js";
@@ -145,7 +145,7 @@ export class SessionTurnService {
   }): Promise<{
     text: string;
     success: boolean;
-    assistantMessage?: SessionModelMessageV1 | null;
+    assistantMessage?: SessionMessageRecordV1 | null;
     error?: string;
   }> {
     const tool_name_by_call_id = new Map<string, string>();

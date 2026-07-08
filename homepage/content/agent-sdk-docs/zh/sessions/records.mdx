@@ -1,0 +1,70 @@
+---
+title: session.records()
+description: 分页读取当前 Session 的 records
+---
+
+# `session.records()`
+
+## 示例
+
+```ts
+const records = await session.records({
+  limit: 50,
+});
+
+console.log(records.items);
+```
+
+## 它返回什么
+
+返回的是当前 session 的 records 分页结果。
+
+常见字段包括：
+
+- `records.session`
+- `records.view`
+- `records.items`
+- `records.total`
+- `records.next_cursor`
+- `records.has_more`
+- `records.archive_id`
+- `records.previous_archive_id`
+
+默认视图是 `message`。
+
+`session.records()` 默认读取当前 `messages.jsonl` 这一层。compact summary 是模型上下文的一部分，但不会作为用户可见历史出现在 `items` 中。如果当前层前面还有被 compact 覆盖的历史，返回值会带上 `previous_archive_id`：
+
+```ts
+const current = await session.records({
+  limit: 50,
+});
+
+if (current.previous_archive_id) {
+  const previous = await session.records({
+    archive_id: current.previous_archive_id,
+    limit: 50,
+  });
+
+  console.log(previous.items);
+}
+```
+
+`next_cursor` / `has_more` 只表示当前这一层的分页；`previous_archive_id` 表示可以跳到更早一层 compact archive。
+
+如果你要拿适合 UI 平铺渲染的时间线视图，可以传：
+
+```ts
+const records = await session.records({
+  view: "timeline",
+  limit: 100,
+});
+```
+
+## 适合什么场景
+
+- 在 UI 中重放对话
+- 在 transcript / sidebar 中按页加载最近内容
+- 调试当前上下文
+- 做会话导出
+
+如果你要定位“为什么这轮回答会这样”，session records 通常是最值得优先看的数据之一。

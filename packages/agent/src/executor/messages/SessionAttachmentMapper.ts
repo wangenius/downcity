@@ -18,9 +18,9 @@ import {
 } from "ai";
 import type { SessionUserMessagePart } from "@/types/sdk/AgentSessionPrompt.js";
 import type {
-  SessionMessageV1,
-  SessionModelMessageV1,
-} from "@/executor/types/SessionMessages.js";
+  SessionRecordV1,
+  SessionMessageRecordV1,
+} from "@/executor/types/SessionRecords.js";
 import { parseChatMessageMarkup } from "@/executor/messages/ChatMessageMarkup.js";
 
 /**
@@ -174,12 +174,12 @@ export async function hydrateUserPromptFileParts(
  * - 新历史保留 Agent 根目录相对路径，旧历史的 `file://` 仍继续兼容。
  */
 export async function hydrateFileUrlPartsForModel(
-  messages: SessionModelMessageV1[],
+  messages: SessionMessageRecordV1[],
   projectRoot?: string,
-): Promise<SessionModelMessageV1[]> {
+): Promise<SessionMessageRecordV1[]> {
   if (!Array.isArray(messages) || messages.length === 0) return messages;
 
-  const out: SessionModelMessageV1[] = [];
+  const out: SessionMessageRecordV1[] = [];
   for (const message of messages) {
     const parts = Array.isArray(message?.parts) ? message.parts : [];
     if (!parts.some((part) => isFileUIPart(part as FileUIPart))) {
@@ -187,7 +187,7 @@ export async function hydrateFileUrlPartsForModel(
       continue;
     }
 
-    const nextParts: SessionModelMessageV1["parts"] = [];
+    const nextParts: SessionMessageRecordV1["parts"] = [];
     let changed = false;
     for (const part of parts) {
       if (!isFileUIPart(part as FileUIPart)) {
@@ -196,7 +196,7 @@ export async function hydrateFileUrlPartsForModel(
       }
       const nextPart = await hydrateFileUrlPart(part as FileUIPart, projectRoot);
       if (nextPart !== part) changed = true;
-      nextParts.push(nextPart as SessionModelMessageV1["parts"][number]);
+      nextParts.push(nextPart as SessionMessageRecordV1["parts"][number]);
     }
 
     out.push(changed ? { ...message, parts: nextParts } : message);
@@ -209,13 +209,13 @@ export async function hydrateFileUrlPartsForModel(
  * 在 user 消息上注入 FileUIPart，以便多模态模型直接消费本地附件。
  */
 export async function injectFilePartsFromAttachments(
-  messages: SessionModelMessageV1[],
+  messages: SessionMessageRecordV1[],
   projectRoot?: string,
-): Promise<SessionModelMessageV1[]> {
+): Promise<SessionMessageRecordV1[]> {
   if (!Array.isArray(messages) || messages.length === 0) return messages;
 
   const root = path.resolve(String(projectRoot || "").trim() || process.cwd());
-  const out: SessionModelMessageV1[] = [];
+  const out: SessionMessageRecordV1[] = [];
 
   for (const message of messages) {
     if (!message || typeof message !== "object" || message.role !== "user") {

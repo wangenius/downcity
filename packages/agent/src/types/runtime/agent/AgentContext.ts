@@ -19,8 +19,8 @@ import type { AgentPlugins } from "@/plugin/types/Plugin.js";
 import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import type {
   SessionMetadataV1,
-  SessionMessageV1,
-} from "@/executor/types/SessionMessages.js";
+  SessionRecordV1,
+} from "@/executor/types/SessionRecords.js";
 import type {
   SessionRunInput,
   SessionRunResult,
@@ -133,7 +133,7 @@ export interface SessionPort {
    *
    * 关键点（中文）
    * - 只广播订阅之后产生的事件。
-   * - 历史消息仍通过 `getHistoryStore()` / SDK `history()` 读取。
+   * - session records 仍通过 `getHistoryStore()` / SDK `records()` 读取。
    */
   subscribe(subscriber: AgentSessionSubscriber): AgentSessionUnsubscribe;
   /**
@@ -141,7 +141,7 @@ export interface SessionPort {
    *
    * 关键点（中文）
    * - plugin runtime 用它把审批、外部进度等非模型 chunk 事件推送给订阅方。
-   * - 历史消息持久化仍由 appendUserMessage / appendAssistantMessage 负责。
+   * - 历史消息持久化仍由 append_user_message / append_assistant_message 负责。
    */
   publishEvent(event: AgentSessionEvent): void;
   /**
@@ -155,11 +155,11 @@ export interface SessionPort {
   /**
    * 追加一条 user 消息。
    */
-  appendUserMessage(params: {
+  append_user_message(params: {
     /**
      * 已构造好的完整消息。
      */
-    message?: SessionMessageV1 | null;
+    message?: SessionRecordV1 | null;
     /**
      * 兜底文本内容。
      */
@@ -172,11 +172,11 @@ export interface SessionPort {
   /**
    * 追加一条 assistant 消息。
    */
-  appendAssistantMessage(params: {
+  append_assistant_message(params: {
     /**
      * 已构造好的完整消息。
      */
-    message?: SessionMessageV1 | null;
+    message?: SessionRecordV1 | null;
     /**
      * 兜底文本内容。
      */

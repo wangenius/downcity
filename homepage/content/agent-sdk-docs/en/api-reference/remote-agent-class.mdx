@@ -8,21 +8,21 @@ description: The core public API of the remote Agent client
 `RemoteAgent` exposes the following main public API:
 
 - `new RemoteAgent({ url })`
-   - `agent.session_collection()`
-   - `agent.runPluginAction(input)`
+- `agent.sessions`
+- `agent.runPluginAction(input)`
 
-`agent.session_collection().create_session()` and `agent.session_collection().get_session()` return `RemoteAgentSession`.
+`agent.sessions.create()` and `agent.sessions.get()` return `RemoteAgentSession`.
 
-## Session collection
+## Sessions
 
-`agent.session_collection()` returns an `AgentSessionCollection` with the following methods:
+`agent.sessions` returns an `AgentSessions` with the following methods:
 
-- `session_collection.create_session(input?)`
-- `session_collection.get_session(sessionId)`
-- `session_collection.list_sessions(input?)`
-- `session_collection.archive_session({ id })`
-- `session_collection.archive_sessions(input?)`
-- `session_collection.clean_archive()`
+- `agent.sessions.create(input?)`
+- `agent.sessions.get(sessionId)`
+- `agent.sessions.list(input?)`
+- `agent.sessions.archive({ id })`
+- `agent.sessions.archived(input?)`
+- `agent.sessions.clean_archive()`
 
 ## `runPluginAction`
 

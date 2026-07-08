@@ -9,9 +9,9 @@
 
 import type { JsonObject } from "@/types/common/Json.js";
 import type {
-  SessionMessageV1,
+  SessionRecordV1,
   SessionMetadataV1,
-} from "@/executor/types/SessionMessages.js";
+} from "@/executor/types/SessionRecords.js";
 import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
 
 type SessionHistoryWriterOptions = {
@@ -63,15 +63,15 @@ export class SessionHistoryWriter {
   /**
    * 追加一条 user 消息。
    */
-  async appendUserMessage(params: {
-    message?: SessionMessageV1 | null;
+  async append_user_message(params: {
+    message?: SessionRecordV1 | null;
     text?: string;
     extra?: JsonObject;
   }): Promise<void> {
     try {
       const historyStore = this.getHistoryStore();
       if (params.message && typeof params.message === "object") {
-        await historyStore.append(params.message);
+        await historyStore.write_record(params.message);
         void this.afterSessionUpdatedAsync();
         return;
       }
@@ -86,7 +86,7 @@ export class SessionHistoryWriter {
           extra: params.extra,
         } as Omit<SessionMetadataV1, "v" | "ts">,
       });
-      await historyStore.append(message);
+      await historyStore.write_record(message);
       void this.afterSessionUpdatedAsync();
     } catch {
       // ignore
@@ -96,15 +96,15 @@ export class SessionHistoryWriter {
   /**
    * 追加一条 assistant 消息。
    */
-  async appendAssistantMessage(params: {
-    message?: SessionMessageV1 | null;
+  async append_assistant_message(params: {
+    message?: SessionRecordV1 | null;
     fallbackText?: string;
     extra?: JsonObject;
   }): Promise<void> {
     try {
       const historyStore = this.getHistoryStore();
       if (params.message && typeof params.message === "object") {
-        await historyStore.finalizeInflight(params.message);
+        await historyStore.finalize_inflight(params.message);
         void this.afterSessionUpdatedAsync();
         return;
       }
@@ -112,7 +112,7 @@ export class SessionHistoryWriter {
       const fallbackText = String(params.fallbackText || "").trim();
       if (!fallbackText) return;
 
-      await historyStore.finalizeInflight(
+      await historyStore.finalize_inflight(
         historyStore.assistantText({
           text: fallbackText,
           metadata: {

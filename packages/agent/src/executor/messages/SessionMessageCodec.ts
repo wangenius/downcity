@@ -15,9 +15,9 @@ import {
   type ToolSet,
 } from "ai";
 import {
-  isSessionModelMessage,
-  type SessionMessageV1,
-} from "@/executor/types/SessionMessages.js";
+  is_session_message_record,
+  type SessionRecordV1,
+} from "@/executor/types/SessionRecords.js";
 import {
   hydrateFileUrlPartsForModel,
   injectFilePartsFromAttachments,
@@ -28,19 +28,19 @@ import {
  *
  * 关键点（中文）
  * - 用途：从 onStepCallback 返回的消息里挑出可并入推理上下文的 user 文本。
- * - 输入：任意 SessionMessageV1[]（可能混有 assistant/tool/action/空消息）。
+ * - 输入：任意 SessionRecordV1[]（可能混有 assistant/tool/action/空消息）。
  * - 输出：只包含“非空 user 文本”的消息数组。
  */
 export function pickMergedUserMessages(
-  messages: SessionMessageV1[],
-): SessionMessageV1[] {
+  messages: SessionRecordV1[],
+): SessionRecordV1[] {
   // 如果不是数组，直接返回空数组，避免后续 filter 报错。
   if (!Array.isArray(messages)) return [];
 
   // 逐条过滤消息。
   return messages.filter((message) => {
     // 防御 1：消息必须是对象。
-    if (!isSessionModelMessage(message)) return false;
+    if (!is_session_message_record(message)) return false;
 
     // 防御 2：只接受 user 角色。
     if (message.role !== "user") return false;
@@ -73,15 +73,15 @@ export function pickMergedUserMessages(
  * - 输出：可直接喂给 streamText 的 messages。
  */
 export async function toModelMessages(
-  messages: SessionMessageV1[],
+  messages: SessionRecordV1[],
   tools: Record<string, Tool>,
   projectRoot?: string,
 ): Promise<ModelMessage[]> {
   // 空输入快速返回，避免调用转换器的额外开销。
   if (!Array.isArray(messages) || messages.length === 0) return [];
 
-  // action message 只服务前端时间线，不能传入模型。
-  const model_messages = messages.filter(isSessionModelMessage);
+  // action record 只服务前端时间线，不能传入模型。
+  const model_messages = messages.filter(is_session_message_record);
   if (model_messages.length === 0) return [];
 
   // 第一步（中文）：在 user 消息上注入 file parts（多模态附件）。

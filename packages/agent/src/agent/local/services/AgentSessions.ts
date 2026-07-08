@@ -1,8 +1,8 @@
 /**
- * AgentSessionManager：本地 Agent session 管理服务。
+ * AgentSessions：本地 Agent session 集合入口。
  *
  * 关键点（中文）
- * - 统一管理 session 缓存、创建、恢复、默认配置注入与 session collection。
+ * - 统一管理 session 缓存、创建、恢复、默认配置注入与列表查询。
  * - 该服务只负责 session 生命周期与查询，不负责 plugin / RPC 启停。
  * - Session 对象创建细节集中在这里，避免 facade 和 lifecycle 重复依赖 Session 构造逻辑。
  */
@@ -22,7 +22,7 @@ import type {
   AgentManagedSession,
   AgentModel,
   AgentSession,
-  AgentSessionCollection,
+  AgentSessions as AgentSessionsApi,
   AgentSessionConstructor,
   AgentSessionSummaryPage,
   AgentSessionSystemBlock,
@@ -48,7 +48,7 @@ function decodeMaybe(input: string): string {
   }
 }
 
-type AgentSessionManagerOptions = {
+type AgentSessionsOptions = {
   /**
    * 当前 agent 稳定标识。
    */
@@ -106,22 +106,21 @@ type AgentSessionManagerOptions = {
 /**
  * 本地 Agent session 管理服务。
  */
-export class AgentSessionManager {
+export class AgentSessions implements AgentSessionsApi<AgentSession> {
   private readonly agent_id: string;
   private readonly project_root: string;
   private readonly tools: Record<string, Tool>;
   private readonly logger: Logger;
-  private readonly get_agent_context: AgentSessionManagerOptions["get_agent_context"];
-  private readonly get_instruction: AgentSessionManagerOptions["get_instruction"];
+  private readonly get_agent_context: AgentSessionsOptions["get_agent_context"];
+  private readonly get_instruction: AgentSessionsOptions["get_instruction"];
   private readonly plugin_instances: Map<string, Plugin>;
-  private readonly ensure_agent_ready: AgentSessionManagerOptions["ensure_agent_ready"];
+  private readonly ensure_agent_ready: AgentSessionsOptions["ensure_agent_ready"];
   private readonly default_model?: AgentModel;
   private readonly SessionClass: AgentSessionConstructor;
   private readonly sessions_by_id = new Map<string, AgentManagedSession>();
   private readonly configured_session_ids = new Set<string>();
-  private readonly session_collection: AgentSessionCollection;
 
-  constructor(options: AgentSessionManagerOptions) {
+  constructor(options: AgentSessionsOptions) {
     this.agent_id = options.agent_id;
     this.project_root = options.project_root;
     this.tools = options.tools;
@@ -132,14 +131,6 @@ export class AgentSessionManager {
     this.ensure_agent_ready = options.ensure_agent_ready;
     this.default_model = options.default_model;
     this.SessionClass = options.SessionClass || Session;
-    this.session_collection = {
-      create_session: async (input) => await this.create_session(input),
-      get_session: async (session_id) => await this.get_session(session_id),
-      list_sessions: async (input) => await this.list_sessions(input),
-      archive_session: async (input) => await this.archive_session(input),
-      archive_sessions: async (input) => await this.archive_sessions(input),
-      clean_archive: async () => await this.clean_archive(),
-    };
   }
 
   /**
@@ -147,13 +138,6 @@ export class AgentSessionManager {
    */
   list_cached_sessions(): AgentManagedSession[] {
     return [...this.sessions_by_id.values()];
-  }
-
-  /**
-   * 返回对外暴露的 session collection。
-   */
-  get_session_collection(): AgentSessionCollection {
-    return this.session_collection;
   }
 
   /**
@@ -168,7 +152,7 @@ export class AgentSessionManager {
   /**
    * 新建一个 session。
    */
-  async create_session(
+  async create(
     input?: AgentCreateSessionInput,
   ): Promise<AgentSession> {
     const explicit_session_id =
@@ -197,10 +181,10 @@ export class AgentSessionManager {
   /**
    * 获取一个已存在的 session。
    */
-  async get_session(session_id: string): Promise<AgentSession> {
+  async get(session_id: string): Promise<AgentSession> {
     const resolved_session_id = String(session_id || "").trim();
     if (!resolved_session_id) {
-      throw new Error("get_session requires a non-empty sessionId");
+      throw new Error("sessions.get requires a non-empty sessionId");
     }
     const session_dir_path = getSdkAgentSessionDirPath(
       this.project_root,
@@ -224,7 +208,7 @@ export class AgentSessionManager {
   /**
    * 列出当前 agent 的 session 摘要页。
    */
-  async list_sessions(
+  async list(
     input?: AgentListSessionsInput,
   ): Promise<AgentSessionSummaryPage> {
     return await listAgentSessionSummaryPage({
@@ -238,12 +222,12 @@ export class AgentSessionManager {
   /**
    * 归档单个 session。
    */
-  async archive_session(
+  async archive(
     input: AgentArchiveSessionInput,
   ): Promise<AgentArchiveSessionResult> {
     const session_id = String(input?.id || "").trim();
     if (!session_id) {
-      throw new Error("archive_session requires a non-empty id");
+      throw new Error("sessions.archive requires a non-empty id");
     }
 
     const executing_session_ids = new Set(
@@ -290,7 +274,7 @@ export class AgentSessionManager {
   /**
    * 列出当前 agent 的已归档 session 摘要页。
    */
-  async archive_sessions(
+  async archived(
     input?: AgentArchiveSessionsInput,
   ): Promise<AgentArchiveSessionsResult> {
     return await listArchivedAgentSessionSummaryPage({

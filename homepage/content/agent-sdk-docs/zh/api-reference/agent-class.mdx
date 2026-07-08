@@ -10,27 +10,27 @@ description: 本地 Agent SDK 的核心公开接口
 - `new Agent(options)`
 - `agent.ready()`
 - `agent.dispose()`
-   - `agent.session_collection()`
+- `agent.sessions`
 - `agent.getConfig()`
 - `agent.getLogger()`
 - `agent.plugins`
 
-`agent.session_collection().create_session()` 和 `agent.session_collection().get_session()` 返回 `AgentSession`。
+`agent.sessions.create()` 和 `agent.sessions.get()` 返回 `AgentSession`。
 
-`agent.getConfig()` 和 `agent.getLogger()` 是更窄的高级集成辅助入口。宿主如果需要更底层的装配能力，还可以使用 `agent.getRuntime()`、`agent.getContext()` 与 `agent.session_collection()`。
+`agent.getConfig()` 和 `agent.getLogger()` 是更窄的高级集成辅助入口。宿主如果需要更底层的装配能力，还可以使用 `agent.getRuntime()`、`agent.getContext()` 与 `agent.sessions`。
 
-## Session collection
+## Sessions
 
-`agent.session_collection()` 返回一个 `AgentSessionCollection`，包含以下方法：
+`agent.sessions` 返回一个 `AgentSessions`，包含以下方法：
 
-- `session_collection.create_session(input?)`
-- `session_collection.get_session(sessionId)`
-- `session_collection.list_sessions(input?)`
-- `session_collection.archive_session({ id })`
-- `session_collection.archive_sessions(input?)`
-- `session_collection.clean_archive()`
+- `agent.sessions.create(input?)`
+- `agent.sessions.get(sessionId)`
+- `agent.sessions.list(input?)`
+- `agent.sessions.archive({ id })`
+- `agent.sessions.archived(input?)`
+- `agent.sessions.clean_archive()`
 
-`archive_session({ id })` 把当前 agent 下一个已存在且未在执行中的 session 移动到归档目录。`archive_sessions(input?)` 列出已归档 session 的分页摘要。`clean_archive()` 永久删除所有已归档 session，并返回被删除的 session id 列表。
+`archive({ id })` 把当前 agent 下一个已存在且未在执行中的 session 移动到归档目录。`archived(input?)` 列出已归档 session 的分页摘要。`clean_archive()` 永久删除所有已归档 session，并返回被删除的 session id 列表。
 
 ## 构造参数
 

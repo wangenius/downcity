@@ -15,8 +15,8 @@ import type {
   AgentArchiveSessionsResult,
   AgentCleanArchiveResult,
   AgentSessionForkInput,
-  AgentSessionHistoryInput,
-  AgentSessionHistoryPage,
+  AgentSessionRecordsInput,
+  AgentSessionRecordsPage,
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
@@ -184,10 +184,10 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
     };
   }
 
-  async history(
+  async records(
     session_id: string,
-    input?: AgentSessionHistoryInput,
-  ): Promise<AgentSessionHistoryPage> {
+    input?: AgentSessionRecordsInput,
+  ): Promise<AgentSessionRecordsPage> {
     const query = new URLSearchParams();
     if (input?.limit !== undefined) query.set("limit", String(input.limit));
     if (input?.cursor) query.set("cursor", input.cursor);
@@ -197,19 +197,19 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
     const payload = await read_http_json<{
       success?: boolean;
       error?: string;
-      history?: AgentSessionHistoryPage;
+      records?: AgentSessionRecordsPage;
     }>(
-      `${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/history${
+      `${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/records${
         query.size > 0 ? `?${query.toString()}` : ""
       }`,
       {
         headers: this.headers(),
       },
     );
-    if (!payload.success || !payload.history || !Array.isArray(payload.history.items)) {
-      throw new Error(String(payload.error || "Remote session history failed"));
+    if (!payload.success || !payload.records || !Array.isArray(payload.records.items)) {
+      throw new Error(String(payload.error || "Remote session records failed"));
     }
-    return payload.history;
+    return payload.records;
   }
 
   async system(session_id: string): Promise<AgentSessionSystemSnapshot> {

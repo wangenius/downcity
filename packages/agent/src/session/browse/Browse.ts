@@ -17,24 +17,24 @@ import {
 } from "ai";
 import type {
   AgentListSessionsInput,
-  AgentSessionHistoryInput,
-  AgentSessionHistoryPage,
-  AgentSessionHistoryView,
+  AgentSessionRecordsInput,
+  AgentSessionRecordsPage,
+  AgentSessionRecordsView,
   AgentSessionInfo,
   AgentSessionSummary,
   AgentSessionSummaryPage,
   AgentSessionTimelineEvent,
 } from "@/types/agent/AgentTypes.js";
 import type {
-  SessionActionMessageV1,
-  SessionMessageV1,
+  SessionActionRecordV1,
+  SessionRecordV1,
   SessionMetadataV1,
-  SessionModelMessageV1,
-} from "@/executor/types/SessionMessages.js";
+  SessionMessageRecordV1,
+} from "@/executor/types/SessionRecords.js";
 import {
-  isSessionActionMessage,
-  isSessionModelMessage,
-} from "@/executor/types/SessionMessages.js";
+  is_session_action_record,
+  is_session_message_record,
+} from "@/executor/types/SessionRecords.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import { pickLastSuccessfulChatSendText } from "@/executor/messages/UserVisibleText.js";
 import { getSdkAgentSessionMessagesPath } from "@/session/storage/Paths.js";
@@ -81,7 +81,7 @@ type SessionBrowseBaseInput = {
   /**
    * 当前 session 已读取到的完整消息。
    */
-  messages: SessionMessageV1[];
+  messages: SessionRecordV1[];
 
   /**
    * 当前 session 是否正在执行。
@@ -177,7 +177,7 @@ function extractMessageText(parts: unknown): string {
   return texts.join("\n").trim();
 }
 
-function extractAssistantToolSummary(message: SessionModelMessageV1): string {
+function extractAssistantToolSummary(message: SessionMessageRecordV1): string {
   if (!Array.isArray(message.parts)) return "";
   const toolNames = new Set<string>();
   for (const part of message.parts as AnyUiPart[]) {
@@ -193,13 +193,13 @@ function extractAssistantToolSummary(message: SessionModelMessageV1): string {
 /**
  * 解析单条 session 消息的用户可见预览文本。
  */
-export function resolveSessionMessagePreview(message: SessionMessageV1): string {
-  if (isSessionActionMessage(message)) {
+export function resolveSessionMessagePreview(message: SessionRecordV1): string {
+  if (is_session_action_record(message)) {
     return message.description
       ? `${message.title}\n${message.description}`
       : message.title;
   }
-  if (!isSessionModelMessage(message)) return "";
+  if (!is_session_message_record(message)) return "";
   const plainText = extractMessageText(message.parts);
   if (plainText) return plainText;
   if (message.role !== "assistant") return "";
@@ -237,7 +237,7 @@ function extractToolResultOutput(part: ToolPartCompatShape): unknown {
 }
 
 function toTimelineEvent(params: {
-  message: SessionModelMessageV1;
+  message: SessionMessageRecordV1;
   role: AgentSessionTimelineEvent["role"];
   text: string;
   sequence: number;
@@ -256,7 +256,7 @@ function toTimelineEvent(params: {
 }
 
 function toActionTimelineEvent(
-  message: SessionActionMessageV1,
+  message: SessionActionRecordV1,
 ): AgentSessionTimelineEvent {
   const metadata = message.metadata || null;
   return {
@@ -274,13 +274,13 @@ function toActionTimelineEvent(
  * 把单条 session message 展平成时间线事件。
  */
 export function toSessionTimelineEvents(
-  message: SessionMessageV1,
+  message: SessionRecordV1,
 ): AgentSessionTimelineEvent[] {
-  if (isSessionActionMessage(message)) {
+  if (is_session_action_record(message)) {
     return [toActionTimelineEvent(message)];
   }
 
-  if (!isSessionModelMessage(message)) return [];
+  if (!is_session_message_record(message)) return [];
   if (message.role !== "assistant") {
     return [
       toTimelineEvent({
@@ -366,14 +366,14 @@ export function toSessionTimelineEvents(
  */
 export async function loadSessionMessagesFromPath(
   filePath: string,
-): Promise<SessionMessageV1[]> {
-  const messages: SessionMessageV1[] = [];
+): Promise<SessionRecordV1[]> {
+  const messages: SessionRecordV1[] = [];
   if (await fs.pathExists(filePath)) {
     const raw = await fs.readFile(filePath, "utf-8");
     const lines = raw.split("\n").filter(Boolean);
     for (const line of lines) {
       try {
-        const parsed = JSON.parse(line) as SessionMessageV1;
+        const parsed = JSON.parse(line) as SessionRecordV1;
         if (!parsed || typeof parsed !== "object") continue;
         const candidate = parsed as { type?: unknown; role?: unknown };
         if (
@@ -393,9 +393,9 @@ export async function loadSessionMessagesFromPath(
   const inflight_path = filePath.replace(/messages\.jsonl$/, "inflight.json");
   if (await fs.pathExists(inflight_path)) {
     try {
-      const parsed = (await fs.readJson(inflight_path)) as SessionMessageV1;
+      const parsed = (await fs.readJson(inflight_path)) as SessionRecordV1;
       if (
-        isSessionModelMessage(parsed) &&
+        is_session_message_record(parsed) &&
         parsed.role === "assistant" &&
         Array.isArray(parsed.parts)
       ) {
@@ -418,11 +418,11 @@ export async function loadSessionMessagesFromPath(
  */
 export async function loadSessionArchiveMessagesFromPath(
   filePath: string,
-): Promise<SessionMessageV1[]> {
+): Promise<SessionRecordV1[]> {
   try {
     const raw = (await fs.readJson(filePath)) as SessionArchiveFileV1 | null;
     const items = Array.isArray(raw?.messages) ? raw.messages : [];
-    return items.filter((item): item is SessionMessageV1 => {
+    return items.filter((item): item is SessionRecordV1 => {
       if (!item || typeof item !== "object") return false;
       const candidate = item as { type?: unknown; role?: unknown; parts?: unknown };
       return (
@@ -439,13 +439,13 @@ export async function loadSessionArchiveMessagesFromPath(
   }
 }
 
-function isCompactSummaryMessage(message: SessionMessageV1): boolean {
-  if (!isSessionModelMessage(message)) return false;
+function isCompactSummaryMessage(message: SessionRecordV1): boolean {
+  if (!is_session_message_record(message)) return false;
   const metadata = (message.metadata || null) as SessionMetadataV1 | null;
   return metadata?.source === "compact" || metadata?.kind === "summary";
 }
 
-function resolvePreviousArchiveId(messages: SessionMessageV1[]): string | undefined {
+function resolvePreviousArchiveId(messages: SessionRecordV1[]): string | undefined {
   for (const message of messages) {
     if (!isCompactSummaryMessage(message)) continue;
     const metadata = (message.metadata || null) as SessionMetadataV1 | null;
@@ -456,8 +456,8 @@ function resolvePreviousArchiveId(messages: SessionMessageV1[]): string | undefi
 }
 
 function filterUserVisibleHistoryMessages(
-  messages: SessionMessageV1[],
-): SessionMessageV1[] {
+  messages: SessionRecordV1[],
+): SessionRecordV1[] {
   return messages.filter((message) => !isCompactSummaryMessage(message));
 }
 
@@ -500,14 +500,14 @@ export function buildSessionInfo(
 }
 
 /**
- * 基于完整消息列表构建 session history 分页结果。
+ * 基于完整消息列表构建 session records 分页结果。
  */
-export function buildSessionHistoryPage(params: {
+export function buildSessionRecordsPage(params: {
   session: AgentSessionInfo;
-  messages: SessionMessageV1[];
-  input?: AgentSessionHistoryInput;
-}): AgentSessionHistoryPage {
-  const view: AgentSessionHistoryView = params.input?.view || "message";
+  messages: SessionRecordV1[];
+  input?: AgentSessionRecordsInput;
+}): AgentSessionRecordsPage {
+  const view: AgentSessionRecordsView = params.input?.view || "message";
   const order = params.input?.order || "asc";
   const limit = normalizeLimit(params.input?.limit, 50, 500);
   const cursor = normalizeCursor(params.input?.cursor);

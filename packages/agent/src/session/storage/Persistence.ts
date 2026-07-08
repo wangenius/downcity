@@ -9,9 +9,9 @@
 import { extractTextFromUiMessage } from "@/executor/messages/UIMessageTransformer.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import type {
-  SessionMessageV1,
-  SessionModelMessageV1,
-} from "@/executor/types/SessionMessages.js";
+  SessionRecordV1,
+  SessionMessageRecordV1,
+} from "@/executor/types/SessionRecords.js";
 import { persistAssistantResult } from "@/executor/messages/AssistantResultPersistence.js";
 import type { AgentSessionConfigSnapshot } from "@/types/agent/AgentTypes.js";
 import {
@@ -50,11 +50,11 @@ export interface PersistSdkAssistantResultParams
    * 追加 assistant 消息的底层执行编排器。
    */
   executor: {
-    appendAssistantMessage(params: {
+    append_assistant_message(params: {
       /**
        * 已构造好的完整消息。
        */
-      message?: SessionMessageV1 | null;
+      message?: SessionRecordV1 | null;
       /**
        * 兜底文本内容。
        */
@@ -68,7 +68,7 @@ export interface PersistSdkAssistantResultParams
    * - stop/abort 且没有 assistant 内容时允许为空。
    * - 为空时仅刷新 metadata，不写入伪造 assistant 正文。
    */
-  assistantMessage?: SessionModelMessageV1 | null;
+  assistantMessage?: SessionMessageRecordV1 | null;
 }
 
 /**

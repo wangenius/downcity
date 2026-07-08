@@ -36,9 +36,9 @@ export type {
   AgentListSessionsInput,
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
-  AgentSessionHistoryInput,
-  AgentSessionHistoryPage,
-  AgentSessionHistoryView,
+  AgentSessionRecordsInput,
+  AgentSessionRecordsPage,
+  AgentSessionRecordsView,
   AgentSessionInfo,
   AgentSessionSetInput,
   AgentSessionSummary,
@@ -53,6 +53,6 @@ export type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 export type {
   AgentSession,
   AgentSessionActor,
-  AgentSessionCollection,
+  AgentSessions,
   RemoteAgentSession,
 } from "@/types/agent/SessionActor.js";

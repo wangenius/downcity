@@ -8,7 +8,7 @@
  */
 
 import type { LanguageModel, Tool } from "ai";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { SessionRecordV1 } from "@/executor/types/SessionRecords.js";
 import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
 
 /**
@@ -58,5 +58,5 @@ export interface SessionHistoryComposer {
   /**
    * 为本轮 Session 执行准备模型输入消息。
    */
-  prepare(input: SessionHistoryPrepareInput): Promise<SessionMessageV1[]>;
+  prepare(input: SessionHistoryPrepareInput): Promise<SessionRecordV1[]>;
 }

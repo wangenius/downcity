@@ -16,7 +16,7 @@ const unsubscribe = session.subscribe((event) => {
 ## Example
 
 ```ts
-const session = await agent.session_collection().get_session("repo-analysis");
+const session = await agent.sessions.get("repo-analysis");
 
 const unsubscribe = session.subscribe((event) => {
   if (event.type === "text-delta") {
@@ -51,9 +51,9 @@ The local Session actor currently emits a minimal turn-oriented event set:
 
 `subscribe()` does not replay history.
 
-If you need past messages, use `session.history({ limit })`.
+If you need past messages, use `session.records({ limit })`.
 
-Action events are also written to the Session JSONL history as `type: "action"` items. Each action keeps one history item and updates its `state` directly. The Agent filters action items out before sending messages to the LLM.
+Action events are also written to the Session JSONL file as `type: "action"` records. Each action keeps one record and updates its `state` directly. The Agent filters action records out before sending messages to the LLM.
 
 ## Why callback-based
 

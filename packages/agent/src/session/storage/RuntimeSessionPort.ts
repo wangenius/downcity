@@ -58,11 +58,11 @@ export interface CreateRuntimeSessionPortParams {
   /**
    * 追加 user 消息到底层历史。
    */
-  appendUserMessage: SessionPort["appendUserMessage"];
+  append_user_message: SessionPort["append_user_message"];
   /**
    * 追加 assistant 消息到底层历史。
    */
-  appendAssistantMessage: SessionPort["appendAssistantMessage"];
+  append_assistant_message: SessionPort["append_assistant_message"];
   /**
    * 返回当前 session 是否正在执行。
    */
@@ -111,12 +111,12 @@ export function createRuntimeSessionPort(
     afterSessionUpdatedAsync: async () => {
       await params.afterSessionUpdatedAsync();
     },
-    appendUserMessage: async (messageParams) => {
-      await params.appendUserMessage(messageParams);
+    append_user_message: async (messageParams) => {
+      await params.append_user_message(messageParams);
       await params.touchMetadata();
     },
-    appendAssistantMessage: async (messageParams) => {
-      await params.appendAssistantMessage(messageParams);
+    append_assistant_message: async (messageParams) => {
+      await params.append_assistant_message(messageParams);
       await params.touchMetadata();
     },
     isExecuting: () => params.isExecuting(),

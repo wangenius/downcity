@@ -268,9 +268,9 @@ export async function digestMemoryAction(
       ? Math.max(1, Math.floor(payload.maxMessages as number))
       : 30;
     const historyStore = context.session.get(sessionId).getHistoryStore();
-    const total = await historyStore.size();
+    const total = await historyStore.record_count();
     const start = Math.max(0, total - maxMessages);
-    const messages = await historyStore.slice(start, total);
+    const messages = await historyStore.slice_records(start, total);
     const lines = messages
       .map((msg) => extractReadableLine(msg))
       .filter((line) => line.length > 0);

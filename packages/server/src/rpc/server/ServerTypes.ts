@@ -6,7 +6,7 @@
  * - `RpcServer.ts` 负责网络层，handler 把协议方法转成 Agent 操作。
  */
 
-import type { AgentSessionCollection } from "@downcity/agent";
+import type { AgentSessions } from "@downcity/agent";
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { Shell } from "@downcity/shell";
 import type { RpcEventFrame } from "@/types/RpcProtocol.js";
@@ -20,7 +20,7 @@ export interface RpcServerStartOptions {
   /** RPC 服务监听主机。 */
   host: string;
   /** Session 集合访问口。 */
-  sessionCollection: AgentSessionCollection;
+  sessions: AgentSessions;
   /** Agent 上下文访问口。 */
   getAgentContext?: () => AgentContext;
   /** Shell 访问口。 */
@@ -32,7 +32,7 @@ export interface RpcServerStartOptions {
  */
 export interface RpcRequestHandlerOptions {
   /** Session 集合访问口。 */
-  sessionCollection: AgentSessionCollection;
+  sessions: AgentSessions;
   /** Agent 上下文访问口。 */
   getAgentContext?: () => AgentContext;
   /** Shell 访问口。 */

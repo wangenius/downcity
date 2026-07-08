@@ -46,7 +46,7 @@ export {
   createRuntimeSessionPort,
 } from "./storage/RuntimeSessionPort.js";
 export {
-  buildSessionHistoryPage,
+  buildSessionRecordsPage,
   buildSessionInfo,
   listArchivedAgentSessionSummaryPage,
   listAgentSessionSummaryPage,

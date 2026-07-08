@@ -2,14 +2,14 @@
  * SessionViewService：本地 Session 查询与派生视图服务。
  *
  * 关键点（中文）
- * - 统一管理 info/history/system/fork 这类读取型能力。
+ * - 统一管理 info/records/system/fork 这类读取型能力。
  * - 该服务只负责拼装查询结果，不负责编排 prompt turn。
  * - 需要写入持久化状态的地方仍委托给 SessionStateService。
  */
 
 import { nanoid } from "nanoid";
 import {
-  buildSessionHistoryPage,
+  buildSessionRecordsPage,
   buildSessionInfo,
   getSdkAgentSessionArchiveFilePath,
   ensureSessionTitle,
@@ -21,14 +21,14 @@ import type { JsonlSessionHistoryStore } from "@/executor/store/history/jsonl/Js
 import type { SessionSystemComposer } from "@/executor/composer/system/SessionSystemComposer.js";
 import type {
   AgentSessionForkInput,
-  AgentSessionHistoryInput,
-  AgentSessionHistoryPage,
+  AgentSessionRecordsInput,
+  AgentSessionRecordsPage,
   AgentSessionInfo,
   AgentSession,
   AgentSessionSystemBlock,
   AgentSessionSystemSnapshot,
 } from "@/types/agent/AgentTypes.js";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { SessionRecordV1 } from "@/executor/types/SessionRecords.js";
 import { SessionStateService } from "@/session/services/SessionStateService.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 
@@ -138,7 +138,7 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
         agentId: this.agent_id,
         sessionId: this.session_id,
       }),
-      this.history_store.list(),
+      this.history_store.list_records(),
     ]);
     return await this.build_info({
       metadata,
@@ -155,7 +155,7 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
     /**
      * 当前 session 消息列表。
      */
-    messages: SessionMessageV1[];
+    messages: SessionRecordV1[];
   }): Promise<AgentSessionInfo> {
     const metadata_with_title = input.metadata.title
       ? input.metadata
@@ -176,11 +176,11 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
   }
 
   /**
-   * 读取当前 session 历史分页。
+   * 读取当前 session records 分页。
    */
-  async history(
-    input?: AgentSessionHistoryInput,
-  ): Promise<AgentSessionHistoryPage> {
+  async records(
+    input?: AgentSessionRecordsInput,
+  ): Promise<AgentSessionRecordsPage> {
     const archive_id = String(input?.archive_id || "").trim();
     const [metadata, current_messages] = await Promise.all([
       readSessionMetadata({
@@ -188,7 +188,7 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
         agentId: this.agent_id,
         sessionId: this.session_id,
       }),
-      this.history_store.list(),
+      this.history_store.list_records(),
     ]);
     const page_messages = archive_id
       ? await loadSessionArchiveMessagesFromPath(
@@ -204,7 +204,7 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
       metadata,
       messages: current_messages,
     });
-    return buildSessionHistoryPage({
+    return buildSessionRecordsPage({
       session,
       messages: page_messages,
       input,
@@ -273,7 +273,7 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
       typeof input === "string"
         ? String(input || "").trim() || undefined
         : String(input?.messageId || "").trim() || undefined;
-    const messages = await this.history_store.list();
+    const messages = await this.history_store.list_records();
     const fork_messages =
       !message_id
         ? messages
@@ -282,7 +282,7 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
 
     await this.state_service.emit_action_event({
       id: action_id,
-      title: "Forking session history",
+      title: "Forking session records",
       description: `Preparing ${String(fork_messages.length)} messages for the new session.`,
       state: "running",
     });
@@ -304,7 +304,7 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
       await this.append_fork_messages(forked_bundle, fork_messages);
       await this.state_service.emit_action_event({
         id: action_id,
-        title: "Session history forked",
+        title: "Session records forked",
         description: `Created ${String((forked as { id?: unknown }).id || "")} with ${String(fork_messages.length)} messages.`,
         state: "completed",
       });
@@ -312,7 +312,7 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
     } catch (error) {
       await this.state_service.emit_action_event({
         id: action_id,
-        title: "Session history fork failed",
+        title: "Session records fork failed",
         description: error instanceof Error ? error.message : String(error),
         state: "failed",
       });
@@ -321,9 +321,9 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
   }
 
   private resolve_fork_messages(
-    messages: SessionMessageV1[],
+    messages: SessionRecordV1[],
     message_id: string,
-  ): SessionMessageV1[] {
+  ): SessionRecordV1[] {
     const target_index = messages.findIndex(
       (message) => String(message.id || "").trim() === message_id,
     );
@@ -340,9 +340,9 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
       history_store: JsonlSessionHistoryStore;
       state_service: SessionStateService;
     },
-    messages: SessionMessageV1[],
+    messages: SessionRecordV1[],
   ): Promise<void> {
-    await forked_bundle.history_store.appendMany(messages);
+    await forked_bundle.history_store.write_records(messages);
   }
 
   private stringify_system_content(content: unknown): string {

@@ -22,5 +22,5 @@ const agent = new Agent({
   model,
 });
 
-const session = await agent.session_collection().create_session();
+const session = await agent.sessions.create();
 ```

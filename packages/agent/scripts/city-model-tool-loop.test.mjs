@@ -257,7 +257,7 @@ test("CityModel uses direct LanguageModel path and sends tool result back", asyn
       },
     });
 
-    const session = await agent.createSession();
+    const session = await agent.sessions.create();
     await session.set({ model });
     const turn = await session.prompt({ query: "please use the ping tool" });
     const result = await turn.finished;

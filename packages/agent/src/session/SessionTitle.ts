@@ -9,8 +9,8 @@
 
 import { generateText, type LanguageModel } from "ai";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
-import { isSessionModelMessage } from "@/executor/types/SessionMessages.js";
+import type { SessionRecordV1 } from "@/executor/types/SessionRecords.js";
+import { is_session_message_record } from "@/executor/types/SessionRecords.js";
 import {
   normalizeSessionTitle,
   readSessionMetadata,
@@ -41,7 +41,7 @@ export interface EnsureSessionTitleParams {
   /**
    * 当前 session 已落盘消息。
    */
-  messages: SessionMessageV1[];
+  messages: SessionRecordV1[];
 
   /**
    * 可选模型实例；传入时会尝试生成更短标题。
@@ -61,8 +61,8 @@ function truncateTitle(input: string, maxChars: number): string {
   return title.slice(0, maxChars).trimEnd();
 }
 
-function extractTextFromMessage(message: SessionMessageV1): string {
-  if (!isSessionModelMessage(message)) return "";
+function extractTextFromMessage(message: SessionRecordV1): string {
+  if (!is_session_message_record(message)) return "";
   if (!Array.isArray(message.parts)) return "";
   const texts: string[] = [];
   for (const part of message.parts) {
@@ -76,9 +76,9 @@ function extractTextFromMessage(message: SessionMessageV1): string {
   return texts.join("\n").trim();
 }
 
-function resolveFirstUserText(messages: SessionMessageV1[]): string {
+function resolveFirstUserText(messages: SessionRecordV1[]): string {
   for (const message of messages) {
-    if (!isSessionModelMessage(message)) continue;
+    if (!is_session_message_record(message)) continue;
     if (message.role !== "user") continue;
     const text = extractTextFromMessage(message);
     if (text) return text;

@@ -16,8 +16,8 @@ import type {
   AgentListSessionsInput,
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
-  AgentSessionHistoryInput,
-  AgentSessionHistoryPage,
+  AgentSessionRecordsInput,
+  AgentSessionRecordsPage,
   AgentSessionInfo,
   AgentSessionSetInput,
   AgentSessionSummaryPage,
@@ -32,23 +32,23 @@ import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 
 /**
- * SDK Session 集合绑定。
+ * SDK Session 集合入口。
  */
-export interface AgentSessionCollection {
+export interface AgentSessions<TSession extends AgentSessionActor = AgentSession> {
   /** 新建一个 session。 */
-  create_session(input?: AgentCreateSessionInput): Promise<AgentSession>;
+  create(input?: AgentCreateSessionInput): Promise<TSession>;
 
   /** 获取一个已存在的 session。 */
-  get_session(sessionId: string): Promise<AgentSession>;
+  get(session_id: string): Promise<TSession>;
 
   /** 列出当前 agent 的 session 摘要页。 */
-  list_sessions(input?: AgentListSessionsInput): Promise<AgentSessionSummaryPage>;
+  list(input?: AgentListSessionsInput): Promise<AgentSessionSummaryPage>;
 
   /** 归档单个 session。 */
-  archive_session(input: AgentArchiveSessionInput): Promise<AgentArchiveSessionResult>;
+  archive(input: AgentArchiveSessionInput): Promise<AgentArchiveSessionResult>;
 
   /** 列出已归档的 session 摘要页。 */
-  archive_sessions(input?: AgentArchiveSessionsInput): Promise<AgentArchiveSessionsResult>;
+  archived(input?: AgentArchiveSessionsInput): Promise<AgentArchiveSessionsResult>;
 
   /** 永久清空已归档 session。 */
   clean_archive(): Promise<AgentCleanArchiveResult>;
@@ -62,7 +62,7 @@ export interface AgentSessionActor {
   readonly id: string;
 
   /** 读取当前 session 详情。 */
-  getInfo(): Promise<AgentSessionInfo>;
+  get_info(): Promise<AgentSessionInfo>;
 
   /** 追加一条新的 prompt。 */
   prompt(input: AgentSessionPromptInput): Promise<AgentSessionTurnHandle>;
@@ -73,8 +73,8 @@ export interface AgentSessionActor {
   /** 订阅当前 session 的未来事件。 */
   subscribe(subscriber: AgentSessionSubscriber): AgentSessionUnsubscribe;
 
-  /** 读取当前 session 历史分页。 */
-  history(input?: AgentSessionHistoryInput): Promise<AgentSessionHistoryPage>;
+  /** 读取当前 session records 分页。 */
+  records(input?: AgentSessionRecordsInput): Promise<AgentSessionRecordsPage>;
 
   /** 读取当前 session 生效的 system 快照。 */
   system(): Promise<AgentSessionSystemSnapshot>;

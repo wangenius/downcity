@@ -8,9 +8,9 @@
  */
 
 import type {
-  SessionMessageV1,
-  SessionModelMessageV1,
-} from "@/executor/types/SessionMessages.js";
+  SessionRecordV1,
+  SessionMessageRecordV1,
+} from "@/executor/types/SessionRecords.js";
 import { resolveAssistantMessageForPersistence } from "@/executor/messages/UserVisibleText.js";
 
 /**
@@ -20,11 +20,11 @@ export interface AssistantResultPersistenceWriter {
   /**
    * 追加 assistant 消息。
    */
-  appendAssistantMessage(params: {
+  append_assistant_message(params: {
     /**
      * 已构造好的完整 assistant 消息。
      */
-    message?: SessionMessageV1 | null;
+    message?: SessionRecordV1 | null;
     /**
      * 在没有完整 message 可写时的兜底文本。
      */
@@ -43,7 +43,7 @@ export interface PersistAssistantResultParams {
   /**
    * 本轮执行得到的 assistant message。
    */
-  assistantMessage: SessionModelMessageV1 | null | undefined;
+  assistantMessage: SessionMessageRecordV1 | null | undefined;
   /**
    * 可选兜底文本。
    *
@@ -68,7 +68,7 @@ export function buildAssistantResultPersistencePayload(
   /**
    * 已构造好的完整 assistant message。
    */
-  message?: SessionModelMessageV1 | null;
+  message?: SessionMessageRecordV1 | null;
   /**
    * 允许写入的兜底文本。
    */
@@ -101,6 +101,6 @@ export async function persistAssistantResult(
     fallbackText: params.fallbackText,
   });
   if (!payload) return false;
-  await params.writer.appendAssistantMessage(payload);
+  await params.writer.append_assistant_message(payload);
   return true;
 }

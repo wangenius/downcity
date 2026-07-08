@@ -14,7 +14,7 @@ import type { AgentPlugins } from "@/plugin/types/Plugin.js";
 import type {
   AgentModel,
   AgentOptions,
-  AgentSessionCollection,
+  AgentSessions as AgentSessionsApi,
 } from "@/types/agent/AgentTypes.js";
 import type {
   ShellApprovalMode,
@@ -32,7 +32,7 @@ import {
   AgentAssemblyService,
   type AgentAssemblyResult,
 } from "@/agent/local/services/AgentAssemblyService.js";
-import { AgentSessionManager } from "@/agent/local/services/AgentSessionManager.js";
+import { AgentSessions as LocalAgentSessions } from "@/agent/local/services/AgentSessions.js";
 import { AgentBackgroundService } from "@/agent/local/services/AgentBackgroundService.js";
 
 /**
@@ -43,6 +43,7 @@ export class Agent {
   readonly path: string;
   readonly tools: Record<string, Tool>;
   readonly plugins: AgentPlugins;
+  readonly sessions: AgentSessionsApi;
 
   private readonly logger: Logger;
   private readonly agentContext: AgentContext;
@@ -51,7 +52,6 @@ export class Agent {
   private readonly env: Record<string, string>;
   private readonly defaultModel?: AgentModel;
   private readonly SessionClass: AgentOptions["Session"];
-  private readonly sessionManager: AgentSessionManager;
   private readonly backgroundService: AgentBackgroundService;
   private readonly shell?: AgentOptions["shell"];
 
@@ -60,19 +60,19 @@ export class Agent {
   constructor(options: AgentOptions) {
     this.defaultModel = options.model;
     this.SessionClass = options.Session;
-    let session_manager_ref: AgentSessionManager | null = null;
+    let sessions_ref: LocalAgentSessions | null = null;
     const assembly_service = new AgentAssemblyService({
       options,
-      list_cached_sessions: () => session_manager_ref?.list_cached_sessions() || [],
+      list_cached_sessions: () => sessions_ref?.list_cached_sessions() || [],
       get_session_port: (session_id) => {
-        if (!session_manager_ref) {
-          throw new Error("Agent session manager is not initialized");
+        if (!sessions_ref) {
+          throw new Error("Agent sessions are not initialized");
         }
-        return session_manager_ref.get_session_port(session_id);
+        return sessions_ref.get_session_port(session_id);
       },
       resolve_session_model: async (session_id) => {
-        if (!session_manager_ref) return undefined;
-        const session = await session_manager_ref.get_session(session_id);
+        if (!sessions_ref) return undefined;
+        const session = await sessions_ref.get(session_id);
         return session.config.model;
       },
     });
@@ -96,8 +96,9 @@ export class Agent {
       agent_context: this.agentContext,
       get_shell: () => this.shell,
     });
-    this.sessionManager = this.create_session_manager(assembly);
-    session_manager_ref = this.sessionManager;
+    const sessions = this.create_sessions(assembly);
+    this.sessions = sessions;
+    sessions_ref = sessions;
   }
 
   /**
@@ -245,23 +246,16 @@ export class Agent {
   }
 
   /**
-   * 返回当前 session collection 入口。
-   */
-  session_collection(): AgentSessionCollection {
-    return this.sessionManager.get_session_collection();
-  }
-
-  /**
    * 返回当前 agent 挂载的 Shell。
    */
   getShell(): Shell | undefined {
     return this.shell;
   }
 
-  private create_session_manager(
+  private create_sessions(
     assembly: AgentAssemblyResult,
-  ): AgentSessionManager {
-    return new AgentSessionManager({
+  ): LocalAgentSessions {
+    return new LocalAgentSessions({
       agent_id: this.id || assembly.id,
       project_root: this.path || assembly.path,
       tools: this.tools || assembly.tools,

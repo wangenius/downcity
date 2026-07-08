@@ -15,8 +15,8 @@ import type {
   AgentArchiveSessionsResult,
   AgentCleanArchiveResult,
   AgentSessionForkInput,
-  AgentSessionHistoryInput,
-  AgentSessionHistoryPage,
+  AgentSessionRecordsInput,
+  AgentSessionRecordsPage,
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
@@ -63,10 +63,10 @@ export type RemoteSessionTransport = {
     on_event: (event: AgentSessionEvent) => void;
   }): Promise<TransportSubscription>;
   /** 读取 history。 */
-  history(
+  records(
     session_id: string,
-    input?: AgentSessionHistoryInput,
-  ): Promise<AgentSessionHistoryPage>;
+    input?: AgentSessionRecordsInput,
+  ): Promise<AgentSessionRecordsPage>;
   /** 读取 system snapshot。 */
   system(session_id: string): Promise<AgentSessionSystemSnapshot>;
   /** 分叉 session。 */

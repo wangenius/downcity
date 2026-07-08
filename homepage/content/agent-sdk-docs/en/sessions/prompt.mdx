@@ -61,7 +61,7 @@ const turn = await session.prompt({
 ## Example
 
 ```ts
-const session = await agent.session_collection().get_session("repo-analysis");
+const session = await agent.sessions.get("repo-analysis");
 
 const turn = await session.prompt({
   query: "Analyze this repository",

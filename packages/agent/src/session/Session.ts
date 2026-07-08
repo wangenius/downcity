@@ -15,8 +15,8 @@ import type {
   AgentSession,
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
-  AgentSessionHistoryInput,
-  AgentSessionHistoryPage,
+  AgentSessionRecordsInput,
+  AgentSessionRecordsPage,
   AgentSessionInfo,
   AgentSessionSetInput,
   AgentSessionSystemBlock,
@@ -207,7 +207,7 @@ export class Session implements AgentSession {
   /**
    * 追加一条 user 文本消息。
    */
-  async appendUserMessage(input: {
+  async append_user_message(input: {
     text: string;
   }): Promise<void> {
     await this.stateService.append_user_message({
@@ -218,7 +218,7 @@ export class Session implements AgentSession {
   /**
    * 追加一条 assistant 文本消息。
    */
-  async appendAssistantMessage(input: {
+  async append_assistant_message(input: {
     text: string;
   }): Promise<void> {
     await this.stateService.append_assistant_message({
@@ -229,15 +229,15 @@ export class Session implements AgentSession {
   /**
    * 读取当前 session 详情。
    */
-  async getInfo(): Promise<AgentSessionInfo> {
+  async get_info(): Promise<AgentSessionInfo> {
     return await this.viewService.get_info();
   }
 
   /**
-   * 读取当前 session 历史分页。
+   * 读取当前 session records 分页。
    */
-  async history(input?: AgentSessionHistoryInput): Promise<AgentSessionHistoryPage> {
-    return await this.viewService.history(input);
+  async records(input?: AgentSessionRecordsInput): Promise<AgentSessionRecordsPage> {
+    return await this.viewService.records(input);
   }
 
   /**
@@ -288,10 +288,10 @@ export class Session implements AgentSession {
       afterSessionUpdatedAsync: async () => {
         await this.executor.afterSessionUpdatedAsync();
       },
-      appendUserMessage: async (message_params) => {
+      append_user_message: async (message_params) => {
         await this.stateService.append_user_message(message_params);
       },
-      appendAssistantMessage: async (message_params) => {
+      append_assistant_message: async (message_params) => {
         await this.stateService.append_assistant_message(message_params);
       },
       isExecuting: () => this.isExecuting(),

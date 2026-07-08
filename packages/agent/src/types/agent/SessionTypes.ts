@@ -8,7 +8,7 @@
 
 import type { LanguageModel } from "ai";
 import type { AgentModel } from "@/model/CityModelAdapter.js";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { SessionRecordV1 } from "@/executor/types/SessionRecords.js";
 
 /**
  * 新建 session 的输入参数。
@@ -83,9 +83,9 @@ export interface AgentSessionConfigSnapshot {
 }
 
 /**
- * Session 历史视图类型。
+ * Session records视图类型。
  */
-export type AgentSessionHistoryView = "message" | "timeline";
+export type AgentSessionRecordsView = "message" | "timeline";
 
 /**
  * Session 时间线事件。
@@ -286,9 +286,9 @@ export interface AgentSessionSummaryPage {
 }
 
 /**
- * Session 历史读取输入。
+ * Session records 读取输入。
  */
-export interface AgentSessionHistoryInput {
+export interface AgentSessionRecordsInput {
   /** 当前页返回上限。 */
   limit?: number;
   /** 分页游标。 */
@@ -316,25 +316,25 @@ export interface AgentSessionHistoryInput {
    * - `message`：原始 session 消息
    * - `timeline`：适合直接渲染 UI 的平铺事件
    */
-  view?: AgentSessionHistoryView;
+  view?: AgentSessionRecordsView;
 }
 
 /**
- * Session 历史分页结果。
+ * Session records 分页结果。
  */
-export interface AgentSessionHistoryPage {
+export interface AgentSessionRecordsPage {
   /** 当前读取所对应的 session 信息。 */
   session: AgentSessionInfo;
   /** 当前页实际返回视图。 */
-  view: AgentSessionHistoryView;
+  view: AgentSessionRecordsView;
   /**
    * 当前页数据列表。
    *
    * 说明（中文）
-   * - `view=message` 时返回 `SessionMessageV1[]`
+   * - `view=message` 时返回 `SessionRecordV1[]`
    * - `view=timeline` 时返回 `AgentSessionTimelineEvent[]`
    */
-  items: SessionMessageV1[] | AgentSessionTimelineEvent[];
+  items: SessionRecordV1[] | AgentSessionTimelineEvent[];
   /**
    * 过滤前后的总条数。
    *
@@ -360,7 +360,7 @@ export interface AgentSessionHistoryPage {
    *
    * 关键点（中文）
    * - compact summary 不会出现在 `items` 中。
-   * - 若当前层包含 compact summary，则这里暴露其 archive ID，供调用方继续 `session.history({ archive_id })`。
+   * - 若当前层包含 compact summary，则这里暴露其 archive ID，供调用方继续 `session.records({ archive_id })`。
    */
   previous_archive_id?: string;
 }

@@ -1,5 +1,5 @@
 /**
- * JsonlSessionHistoryStore：基于 JSONL 的 session history 事实源。
+ * JsonlSessionHistoryStore：基于 JSONL 的 session records 事实源。
  *
  * 关键点（中文）
  * - 负责 `.downcity/.../messages/messages.jsonl`、`meta.json`、archive 与文件锁。
@@ -18,16 +18,15 @@ import { generateId } from "@/utils/Id.js";
 import { getLogger } from "@/utils/logger/Logger.js";
 import { compactSessionMessagesIfNeeded } from "@executor/composer/compaction/jsonl/JsonlSessionCompactionExecutor.js";
 import type {
-  SessionActionMessageV1,
-  SessionMessageV1,
+  SessionActionRecordV1,
+  SessionRecordV1,
   SessionMetadataV1,
-} from "@/executor/types/SessionMessages.js";
+} from "@/executor/types/SessionRecords.js";
 import {
-  isSessionActionMessage,
-  isSessionModelMessage,
-  toSessionActionMessage,
-} from "@/executor/types/SessionMessages.js";
-import type { AgentSessionActionRecord } from "@/types/sdk/AgentSessionAction.js";
+  is_session_action_record,
+  is_session_message_record,
+  to_session_action_record,
+} from "@/executor/types/SessionRecords.js";
 import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import type { SessionHistoryPathOverrides } from "@/executor/types/SessionHistoryPaths.js";
@@ -220,10 +219,10 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
 
   private normalizePersistedMessage(
     input: unknown,
-  ): SessionMessageV1 | null {
+  ): SessionRecordV1 | null {
     if (!input || typeof input !== "object") return null;
     if ((input as { type?: unknown }).type === "action") {
-      return this.normalizeActionMessage(input);
+      return this.normalize_action_record(input);
     }
     const candidate = input as { role?: unknown; parts?: unknown };
     const role = String(candidate.role || "");
@@ -231,12 +230,12 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
       return null;
     }
     if (!Array.isArray(candidate.parts)) return null;
-    return input as SessionMessageV1;
+    return input as SessionRecordV1;
   }
 
-  private normalizeActionMessage(input: unknown): SessionActionMessageV1 | null {
+  private normalize_action_record(input: unknown): SessionActionRecordV1 | null {
     if (!input || typeof input !== "object") return null;
-    const candidate = input as Partial<SessionActionMessageV1>;
+    const candidate = input as Partial<SessionActionRecordV1>;
     const id = String(candidate.id || "").trim();
     const title = String(candidate.title || "").trim();
     const state = String(candidate.state || "").trim();
@@ -248,7 +247,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
       candidate.metadata && typeof candidate.metadata === "object"
         ? candidate.metadata
         : {};
-    const metadata_candidate = metadata_input as Partial<SessionActionMessageV1["metadata"]>;
+    const metadata_candidate = metadata_input as Partial<SessionActionRecordV1["metadata"]>;
     const session_id =
       String(metadata_candidate.sessionId || "").trim() || this.sessionId;
     const description = String(candidate.description || "").trim();
@@ -270,9 +269,9 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     };
   }
 
-  private hasStructuredAssistantParts(message: SessionMessageV1 | null): boolean {
+  private hasStructuredAssistantParts(message: SessionRecordV1 | null): boolean {
     if (
-      !isSessionModelMessage(message) ||
+      !is_session_message_record(message) ||
       message.role !== "assistant" ||
       !Array.isArray(message.parts)
     ) {
@@ -286,11 +285,11 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
   }
 
   private mergeInflightWithFinal(
-    inflight: SessionMessageV1,
-    finalMessage: SessionMessageV1,
-  ): SessionMessageV1 {
-    if (!isSessionModelMessage(finalMessage)) return inflight;
-    if (!isSessionModelMessage(inflight)) return finalMessage;
+    inflight: SessionRecordV1,
+    finalMessage: SessionRecordV1,
+  ): SessionRecordV1 {
+    if (!is_session_message_record(finalMessage)) return inflight;
+    if (!is_session_message_record(inflight)) return finalMessage;
     const final_parts = Array.isArray(finalMessage.parts)
       ? finalMessage.parts.filter((part) => part && typeof part === "object")
       : [];
@@ -396,7 +395,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     await fs.writeJson(this.getMetaFilePath(), normalized, { spaces: 2 });
   }
 
-  private async readInflightUnsafe(): Promise<SessionMessageV1 | null> {
+  private async read_inflight_unsafe(): Promise<SessionRecordV1 | null> {
     const file = this.getInflightFilePath();
     try {
       const raw = await fs.readJson(file);
@@ -406,10 +405,10 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     }
   }
 
-  private async writeInflightUnsafe(message: SessionMessageV1): Promise<void> {
+  private async write_inflight_unsafe(message: SessionRecordV1): Promise<void> {
     const normalized = this.normalizePersistedMessage(message);
     if (
-      !isSessionModelMessage(normalized) ||
+      !is_session_message_record(normalized) ||
       normalized.role !== "assistant"
     ) {
       throw new Error("inflight assistant must be an assistant UIMessage");
@@ -425,7 +424,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     await fs.remove(this.getInflightFilePath());
   }
 
-  private async appendMessageUnsafe(message: SessionMessageV1): Promise<void> {
+  private async appendMessageUnsafe(message: SessionRecordV1): Promise<void> {
     await fs.appendFile(
       this.getMessagesFilePath(),
       JSON.stringify(message) + "\n",
@@ -433,7 +432,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     );
   }
 
-  private async rewriteMessagesUnsafe(messages: SessionMessageV1[]): Promise<void> {
+  private async rewriteMessagesUnsafe(messages: SessionRecordV1[]): Promise<void> {
     const file = this.getMessagesFilePath();
     const temp = `${file}.${process.pid}.${Date.now()}.tmp`;
     const payload =
@@ -444,19 +443,19 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     await fs.move(temp, file, { overwrite: true });
   }
 
-  private async upsertActionMessageUnsafe(
-    message: SessionActionMessageV1,
+  private async upsert_action_record_unsafe(
+    message: SessionActionRecordV1,
   ): Promise<void> {
     const file = this.getMessagesFilePath();
     const raw = await fs.readFile(file, "utf8").catch(() => "");
-    const messages: SessionMessageV1[] = [];
+    const messages: SessionRecordV1[] = [];
     let replaced = false;
 
     for (const line of raw.split("\n").filter(Boolean)) {
       try {
         const current = this.normalizePersistedMessage(JSON.parse(line));
         if (!current) continue;
-        if (isSessionActionMessage(current) && current.id === message.id) {
+        if (is_session_action_record(current) && current.id === message.id) {
           messages.push(message);
           replaced = true;
           continue;
@@ -539,7 +538,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
         rootPath: this.rootPath,
         sessionId: this.sessionId,
         withWriteLock: (fn) => this.withWriteLock(fn),
-        loadAll: () => this.list(),
+        loadAll: () => this.list_records(),
         createSummaryMessage: ({ text, archiveId, sourceRange }) => ({
           id: `a:${this.sessionId}:${generateId()}`,
           role: "assistant",
@@ -571,19 +570,19 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     );
   }
 
-  async append(message: SessionMessageV1): Promise<void> {
+  async write_record(message: SessionRecordV1): Promise<void> {
     await this.withWriteLock(async () => {
       const normalized = this.normalizePersistedMessage(message);
       if (!normalized) return;
-      if (isSessionActionMessage(normalized)) {
-        await this.upsertActionMessageUnsafe(normalized);
+      if (is_session_action_record(normalized)) {
+        await this.upsert_action_record_unsafe(normalized);
         return;
       }
 
       // 关键点（中文）：若上一次 assistant 在运行中中断，新的 user 到来前先把残留快照收口到正式历史，
-      // 避免 `list()` 时旧 inflight 跑到新 user 后面，打乱时序。
-      if (isSessionModelMessage(normalized) && normalized.role === "user") {
-        const current_inflight = await this.readInflightUnsafe();
+      // 避免 `list_records()` 时旧 inflight 跑到新 user 后面，打乱时序。
+      if (is_session_message_record(normalized) && normalized.role === "user") {
+        const current_inflight = await this.read_inflight_unsafe();
         if (current_inflight) {
           await this.appendMessageUnsafe(current_inflight);
           await this.removeInflightUnsafe();
@@ -601,11 +600,11 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
    * - 一次锁、一次 IO，适合 fork 等需要拷贝整段历史的场景。
    * - 不处理 inflight，调用方需自行确保历史已经收口。
    */
-  async appendMany(messages: SessionMessageV1[]): Promise<void> {
+  async write_records(messages: SessionRecordV1[]): Promise<void> {
     if (!Array.isArray(messages) || messages.length === 0) return;
     const normalized_list = messages
       .map((message) => this.normalizePersistedMessage(message))
-      .filter((message): message is SessionMessageV1 => message !== null);
+      .filter((message): message is SessionRecordV1 => message !== null);
     if (normalized_list.length === 0) return;
 
     const payload = normalized_list
@@ -616,20 +615,20 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     });
   }
 
-  async readInflight(): Promise<SessionMessageV1 | null> {
+  async read_inflight(): Promise<SessionRecordV1 | null> {
     await this.ensureLayout();
-    return this.readInflightUnsafe();
+    return this.read_inflight_unsafe();
   }
 
-  async writeInflight(message: SessionMessageV1): Promise<void> {
+  async write_inflight(message: SessionRecordV1): Promise<void> {
     await this.withWriteLock(async () => {
-      await this.writeInflightUnsafe(message);
+      await this.write_inflight_unsafe(message);
     });
   }
 
-  async finalizeInflight(message?: SessionMessageV1 | null): Promise<void> {
+  async finalize_inflight(message?: SessionRecordV1 | null): Promise<void> {
     await this.withWriteLock(async () => {
-      const current_inflight = await this.readInflightUnsafe();
+      const current_inflight = await this.read_inflight_unsafe();
       const normalized_message = this.normalizePersistedMessage(message);
       const final_message =
         current_inflight && normalized_message
@@ -644,12 +643,12 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     });
   }
 
-  async list(): Promise<SessionMessageV1[]> {
+  async list_records(): Promise<SessionRecordV1[]> {
     await this.ensureLayout();
     const file = this.getMessagesFilePath();
     const raw = await fs.readFile(file, "utf8");
     const lines = raw.split("\n").filter(Boolean);
-    const out: SessionMessageV1[] = [];
+    const out: SessionRecordV1[] = [];
     for (const line of lines) {
       try {
         const obj = this.normalizePersistedMessage(JSON.parse(line));
@@ -659,22 +658,22 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
         // ignore invalid lines
       }
     }
-    const current_inflight = await this.readInflightUnsafe();
+    const current_inflight = await this.read_inflight_unsafe();
     if (current_inflight) {
       out.push(current_inflight);
     }
     return out;
   }
 
-  async slice(start: number, end: number): Promise<SessionMessageV1[]> {
-    const msgs = await this.list();
+  async slice_records(start: number, end: number): Promise<SessionRecordV1[]> {
+    const msgs = await this.list_records();
     const startIndex = Math.max(0, Math.floor(start));
     const endIndex = Math.max(startIndex, Math.floor(end));
     return msgs.slice(startIndex, endIndex);
   }
 
-  async size(): Promise<number> {
-    const msgs = await this.list();
+  async record_count(): Promise<number> {
+    const msgs = await this.list_records();
     return msgs.length;
   }
 
@@ -691,7 +690,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     metadata: Omit<SessionMetadataV1, "v" | "ts"> &
       Partial<Pick<SessionMetadataV1, "ts">>;
     id?: string;
-  }): SessionMessageV1 {
+  }): SessionRecordV1 {
     const { ts, ...metadata } = input.metadata;
     const md: SessionMetadataV1 = {
       v: 1,
@@ -716,7 +715,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     id?: string;
     kind?: "normal" | "summary";
     source?: "egress" | "compact";
-  }): SessionMessageV1 {
+  }): SessionRecordV1 {
     const { ts, ...metadata } = input.metadata;
     const md: SessionMetadataV1 = {
       v: 1,
@@ -735,17 +734,14 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
   }
 
   action(input: {
-    action: AgentSessionActionRecord;
+    action: SessionActionRecordV1;
     metadata: Pick<SessionMetadataV1, "sessionId"> &
       Partial<Pick<SessionMetadataV1, "ts">>;
     id?: string;
-  }): SessionActionMessageV1 {
+  }): SessionActionRecordV1 {
     const { ts, ...metadata } = input.metadata;
-    const message = toSessionActionMessage(
-      {
-        ...input.action,
-        ...(input.id ? { id: input.id } : {}),
-      },
+    const message = to_session_action_record(
+      input.id ? { ...input.action, id: input.id } : input.action,
       metadata.sessionId || this.sessionId,
     );
     return {

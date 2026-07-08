@@ -1,5 +1,5 @@
 /**
- * @file 验证 session history 会把运行中的 assistant 收敛到 inflight 快照，并在完成后写回正式历史。
+ * @file 验证 session records 会把运行中的 assistant 收敛到 inflight 快照，并在完成后写回正式历史。
  *
  * 关键点（中文）
  * - 直接覆盖 JSONL history store 的落盘语义，确保运行中不中断丢失过程。
@@ -41,7 +41,7 @@ test("JsonlSessionHistoryStore exposes inflight assistant during execution and f
     sessionId: "session_test",
   });
 
-  await store.append(
+  await store.write_record(
     store.userText({
       text: "write to document",
       metadata: {
@@ -50,7 +50,7 @@ test("JsonlSessionHistoryStore exposes inflight assistant during execution and f
     }),
   );
 
-  await store.writeInflight(
+  await store.write_inflight(
     create_assistant_message([
       { type: "step-start" },
       { type: "text", text: "Let me inspect the document.", state: "done" },
@@ -64,7 +64,7 @@ test("JsonlSessionHistoryStore exposes inflight assistant during execution and f
     ]),
   );
 
-  const during_run = await store.list();
+  const during_run = await store.list_records();
   assert.equal(during_run.length, 2);
   assert.equal(during_run[1]?.role, "assistant");
   assert.deepEqual(
@@ -72,13 +72,13 @@ test("JsonlSessionHistoryStore exposes inflight assistant during execution and f
     ["step-start", "text", "tool-exec_command"],
   );
 
-  await store.finalizeInflight(
+  await store.finalize_inflight(
     create_assistant_message([
       { type: "text", text: "Done writing.", state: "done" },
     ]),
   );
 
-  const after_finish = await store.list();
+  const after_finish = await store.list_records();
   assert.equal(after_finish.length, 2);
   assert.deepEqual(
     after_finish[1]?.parts.map((part) => part.type),
@@ -113,7 +113,7 @@ test("Appending a new user message flushes stale inflight assistant before the n
     sessionId: "session_flush_test",
   });
 
-  await store.append(
+  await store.write_record(
     store.userText({
       text: "first",
       metadata: {
@@ -122,14 +122,14 @@ test("Appending a new user message flushes stale inflight assistant before the n
     }),
   );
 
-  await store.writeInflight(
+  await store.write_inflight(
     create_assistant_message([
       { type: "step-start" },
       { type: "text", text: "partial assistant", state: "done" },
     ]),
   );
 
-  await store.append(
+  await store.write_record(
     store.userText({
       text: "second",
       metadata: {
@@ -138,7 +138,7 @@ test("Appending a new user message flushes stale inflight assistant before the n
     }),
   );
 
-  const messages = await store.list();
+  const messages = await store.list_records();
   assert.equal(messages.length, 3);
   assert.equal(messages[0]?.role, "user");
   assert.equal(messages[1]?.role, "assistant");

@@ -28,7 +28,7 @@ const agent = new Agent({
   model: openai.responses("gpt-5"),
 });
 
-const session = await agent.session_collection().create_session();
+const session = await agent.sessions.create();
 const turn = await session.prompt({
   query: "Summarize the current repository structure",
 });
@@ -40,7 +40,7 @@ console.log(result.text);
 ## The three most important steps
 
 1. `new Agent(...)`
-2. `await agent.session_collection().create_session()`
+2. `await agent.sessions.create()`
 3. make sure the session has a model
 
 Step 3 is the easiest one to forget, and it is also the most common local SDK mistake.
@@ -59,7 +59,7 @@ When you are using the SDK for the first time, avoid stacking complex tools, man
 After `new Agent(...)`, plugin lifecycle and ActionSchedule start automatically. Most callers use sessions directly:
 
 ```ts
-const session = await agent.session_collection().create_session();
+const session = await agent.sessions.create();
 const turn = await session.prompt({ query: "hello" });
 await turn.finished;
 ```

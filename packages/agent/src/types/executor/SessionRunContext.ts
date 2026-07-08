@@ -16,7 +16,7 @@ import type {
   SessionAssistantStepCallback,
   SessionUiMessageChunkCallback,
 } from "@/executor/types/SessionRun.js";
-import type { SessionUserMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { SessionUserMessageV1 } from "@/executor/types/SessionRecords.js";
 import type { FileUIPart } from "ai";
 
 /**
@@ -75,7 +75,7 @@ export interface SessionRunContext {
    * action 发布回调。
    *
    * 关键点（中文）
-   * - 用于把 compaction 等辅助动作转成 session event 与 action message。
+   * - 用于把 compaction 等辅助动作转成 session event 与 action record。
    * - action 不代表 assistant 正文，也不会进入 LLM 输入。
    */
   onActionCallback?: AgentSessionActionCallback;

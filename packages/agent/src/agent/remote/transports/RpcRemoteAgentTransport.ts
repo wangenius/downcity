@@ -15,8 +15,8 @@ import type {
   AgentArchiveSessionsResult,
   AgentCleanArchiveResult,
   AgentSessionForkInput,
-  AgentSessionHistoryInput,
-  AgentSessionHistoryPage,
+  AgentSessionRecordsInput,
+  AgentSessionRecordsPage,
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
@@ -89,11 +89,11 @@ export class RpcRemoteAgentTransport implements RemoteAgentTransport {
     };
   }
 
-  async history(
+  async records(
     session_id: string,
-    input?: AgentSessionHistoryInput,
-  ): Promise<AgentSessionHistoryPage> {
-    return await this.client.get_session_history({
+    input?: AgentSessionRecordsInput,
+  ): Promise<AgentSessionRecordsPage> {
+    return await this.client.get_session_records({
       session_id,
       input,
     });

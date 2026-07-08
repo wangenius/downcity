@@ -28,7 +28,7 @@ const agent = new Agent({
   model,
 });
 
-const session = await agent.session_collection().create_session();
+const session = await agent.sessions.create();
 ```
 
 这种模式下，模型实例由你的 Node 宿主直接持有。

@@ -8,21 +8,21 @@ description: 远程 Agent 客户端的核心公开接口
 `RemoteAgent` 的核心公开使用面包括：
 
 - `new RemoteAgent({ url })`
-   - `agent.session_collection()`
-   - `agent.runPluginAction(input)`
+- `agent.sessions`
+- `agent.runPluginAction(input)`
 
-`agent.session_collection().create_session()` 和 `agent.session_collection().get_session()` 返回 `RemoteAgentSession`。
+`agent.sessions.create()` 和 `agent.sessions.get()` 返回 `RemoteAgentSession`。
 
-## Session collection
+## Sessions
 
-`agent.session_collection()` 返回一个 `AgentSessionCollection`，包含以下方法：
+`agent.sessions` 返回一个 `AgentSessions`，包含以下方法：
 
-- `session_collection.create_session(input?)`
-- `session_collection.get_session(sessionId)`
-- `session_collection.list_sessions(input?)`
-- `session_collection.archive_session({ id })`
-- `session_collection.archive_sessions(input?)`
-- `session_collection.clean_archive()`
+- `agent.sessions.create(input?)`
+- `agent.sessions.get(sessionId)`
+- `agent.sessions.list(input?)`
+- `agent.sessions.archive({ id })`
+- `agent.sessions.archived(input?)`
+- `agent.sessions.clean_archive()`
 
 ## `runPluginAction`
 

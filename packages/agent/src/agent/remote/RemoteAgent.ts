@@ -8,7 +8,15 @@
  */
 
 import type {
-  AgentSessionCollection,
+  AgentArchiveSessionInput,
+  AgentArchiveSessionsInput,
+  AgentArchiveSessionResult,
+  AgentArchiveSessionsResult,
+  AgentCleanArchiveResult,
+  AgentCreateSessionInput,
+  AgentListSessionsInput,
+  AgentSessionSummaryPage,
+  AgentSessions,
   RemoteAgentPluginActionInput,
   RemoteAgentPluginActionResult,
   RemoteAgentOptions,
@@ -30,6 +38,8 @@ import { create_remote_agent_transport } from "@/agent/remote/TransportFactory.j
  * RemoteAgent：远程 Agent 客户端。
  */
 export class RemoteAgent {
+  readonly sessions: AgentSessions<RemoteAgentSession>;
+
   private readonly transport: RemoteAgentTransport;
 
   constructor(options: RemoteAgentOptions) {
@@ -38,6 +48,7 @@ export class RemoteAgent {
       throw new Error("RemoteAgent requires a non-empty url");
     }
     this.transport = create_remote_agent_transport(url, options.token);
+    this.sessions = new RemoteAgentSessions(this.transport);
   }
 
   /**
@@ -121,27 +132,51 @@ export class RemoteAgent {
     await this.transport.close?.();
   }
 
-  /**
-   * 返回当前远程 session collection 入口。
-   *
-   * 关键点（中文）
-   * - `RemoteAgentTransport` 只负责协议传输，不直接等价于 `AgentSessionCollection`。
-   * - 这里把 transport 包装为 `AgentSessionCollection`，`create_session` / `get_session` 返回 `RemoteSession` 实例。
-   */
-  session_collection(): AgentSessionCollection {
-    return {
-     create_session: async (input) => {
-       const info = await this.transport.create_session(input);
-        return new RemoteSession(this.transport, info);
-      },
-      get_session: async (session_id) => {
-        const info = await this.transport.get_info(session_id);
-        return new RemoteSession(this.transport, info);
-      },
-      list_sessions: async (input) => await this.transport.list_sessions(input),
-      archive_session: async (input) => await this.transport.archive_session(input),
-      archive_sessions: async (input) => await this.transport.archive_sessions(input),
-      clean_archive: async () => await this.transport.clean_archive(),
-    };
+}
+
+/**
+ * 远程 Agent session 集合入口。
+ *
+ * 关键点（中文）
+ * - `RemoteAgentTransport` 只负责协议传输，不直接暴露为用户 SDK API。
+ * - 这里把远程传输包装成和本地 `agent.sessions` 一致的方法命名。
+ */
+class RemoteAgentSessions implements AgentSessions<RemoteAgentSession> {
+  private readonly transport: RemoteAgentTransport;
+
+  constructor(transport: RemoteAgentTransport) {
+    this.transport = transport;
+  }
+
+  /** 新建一个远程 session。 */
+  async create(input?: AgentCreateSessionInput): Promise<RemoteAgentSession> {
+    const info = await this.transport.create_session(input);
+    return new RemoteSession(this.transport, info);
+  }
+
+  /** 获取一个远程 session。 */
+  async get(session_id: string): Promise<RemoteAgentSession> {
+    const info = await this.transport.get_info(session_id);
+    return new RemoteSession(this.transport, info);
+  }
+
+  /** 列出远程 session 摘要页。 */
+  async list(input?: AgentListSessionsInput): Promise<AgentSessionSummaryPage> {
+    return await this.transport.list_sessions(input);
+  }
+
+  /** 归档一个远程 session。 */
+  async archive(input: AgentArchiveSessionInput): Promise<AgentArchiveSessionResult> {
+    return await this.transport.archive_session(input);
+  }
+
+  /** 列出远程已归档 session。 */
+  async archived(input?: AgentArchiveSessionsInput): Promise<AgentArchiveSessionsResult> {
+    return await this.transport.archive_sessions(input);
+  }
+
+  /** 永久清空远程已归档 session。 */
+  async clean_archive(): Promise<AgentCleanArchiveResult> {
+    return await this.transport.clean_archive();
   }
 }

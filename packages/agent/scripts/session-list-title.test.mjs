@@ -54,12 +54,12 @@ async function create_agent_with_titled_session(input) {
     path: agent_path,
     model: create_mock_title_model(input.title),
   });
-  const collection = agent.session_collection();
-  const session = await collection.create_session({
+  const collection = agent.sessions;
+  const session = await collection.create({
     sessionId: input.session_id,
   });
 
-  await session.appendUserMessage({
+  await session.append_user_message({
     text: input.first_user_text,
   });
 
@@ -80,7 +80,7 @@ test("list_sessions returns persisted title from active session metadata", async
   });
 
   try {
-    const page = await collection.list_sessions();
+    const page = await collection.list();
 
     assert.equal(page.total, 1);
     assert.deepEqual(
@@ -93,7 +93,7 @@ test("list_sessions returns persisted title from active session metadata", async
         {
           sessionId: session.id,
           title: "列表标题",
-          messageCount: 1,
+          messageCount: 2,
         },
       ],
     );
@@ -112,12 +112,12 @@ test("archive_sessions returns title from archived session metadata", async () =
   });
 
   try {
-    await collection.archive_session({
+    await collection.archive({
       id: session.id,
     });
 
-    const active_page = await collection.list_sessions();
-    const archived_page = await collection.archive_sessions();
+    const active_page = await collection.list();
+    const archived_page = await collection.archived();
 
     assert.equal(active_page.total, 0);
     assert.equal(archived_page.total, 1);
@@ -131,7 +131,7 @@ test("archive_sessions returns title from archived session metadata", async () =
         {
           sessionId: session.id,
           title: "归档标题",
-          messageCount: 1,
+          messageCount: 2,
         },
       ],
     );

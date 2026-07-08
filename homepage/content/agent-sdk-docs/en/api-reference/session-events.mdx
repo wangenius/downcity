@@ -43,7 +43,7 @@ If you want a fuller experience, you will usually also handle:
 
 `action` represents auxiliary Session work such as context compaction, model switching, and history forking. It is not assistant text.
 
-Action events are also persisted as `type: "action"` items in the Session JSONL history. The same action keeps one history item and updates its `state` as it moves through `running`, `completed`, or `failed`. Action items remain visible to UI history/timeline readers, but the Agent filters them out before building LLM input.
+Action events are also persisted as `type: "action"` records in the Session JSONL file. The same action keeps one record and updates its `state` as it moves through `running`, `completed`, or `failed`. Action records remain visible to UI history/timeline readers, but the Agent filters them out before building LLM input.
 
 The built-in auxiliary actions currently emitted by Agent are:
 

@@ -1,46 +1,46 @@
 ---
-title: session.history()
-description: Read paged history for the current Session
+title: session.records()
+description: Read paged records for the current Session
 ---
 
-# `session.history()`
+# `session.records()`
 
 ## Example
 
 ```ts
-const history = await session.history({
+const records = await session.records({
   limit: 50,
 });
 
-console.log(history.items);
+console.log(records.items);
 ```
 
 ## What it returns
 
-It returns a paged history object for the current session.
+It returns a paged records object for the current session.
 
 Common fields include:
 
-- `history.session`
-- `history.view`
-- `history.items`
-- `history.total`
-- `history.next_cursor`
-- `history.has_more`
-- `history.archive_id`
-- `history.previous_archive_id`
+- `records.session`
+- `records.view`
+- `records.items`
+- `records.total`
+- `records.next_cursor`
+- `records.has_more`
+- `records.archive_id`
+- `records.previous_archive_id`
 
 The default view is `message`.
 
-`session.history()` reads the current `messages.jsonl` layer by default. Compact summaries remain part of the model context, but they are not returned as user-visible `items`. If the current layer has an older compacted layer, the page includes `previous_archive_id`:
+`session.records()` reads the current `messages.jsonl` layer by default. Compact summaries remain part of the model context, but they are not returned as user-visible `items`. If the current layer has an older compacted layer, the page includes `previous_archive_id`:
 
 ```ts
-const current = await session.history({
+const current = await session.records({
   limit: 50,
 });
 
 if (current.previous_archive_id) {
-  const previous = await session.history({
+  const previous = await session.records({
     archive_id: current.previous_archive_id,
     limit: 50,
   });
@@ -54,7 +54,7 @@ if (current.previous_archive_id) {
 If you want a flattened UI-oriented event stream, pass:
 
 ```ts
-const history = await session.history({
+const records = await session.records({
   view: "timeline",
   limit: 100,
 });
@@ -65,6 +65,6 @@ const history = await session.history({
 - replaying a conversation in UI
 - loading only the latest page in a transcript or sidebar
 - debugging the current context
-- exporting session history
+- exporting session records
 
 If you need to understand why a particular answer came out the way it did, message history is usually one of the first places worth inspecting.

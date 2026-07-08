@@ -25,10 +25,13 @@ import { ExecutorRecoveryPolicy } from "@executor/services/ExecutorRecoveryPolic
 import { generateId } from "@/utils/Id.js";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { JsonObject } from "@/types/common/Json.js";
-import type { SessionMessageV1 } from "@/executor/types/SessionMessages.js";
+import type {
+  SessionActionRecordV1,
+  SessionRecordV1,
+} from "@/executor/types/SessionRecords.js";
+import { to_session_action_record } from "@/executor/types/SessionRecords.js";
 import type { SessionExecutor } from "@/executor/types/SessionExecutor.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
-import type { AgentSessionActionRecord } from "@/types/sdk/AgentSessionAction.js";
 import type {
   SessionExecuteInput,
   SessionRunResult,
@@ -212,23 +215,23 @@ export class Executor implements SessionExecutor {
   /**
    * 追加一条 user 消息。
    */
-  async appendUserMessage(params: {
-    message?: SessionMessageV1 | null;
+  async append_user_message(params: {
+    message?: SessionRecordV1 | null;
     text?: string;
     extra?: JsonObject;
   }): Promise<void> {
-    await this.historyWriter.appendUserMessage(params);
+    await this.historyWriter.append_user_message(params);
   }
 
   /**
    * 追加一条 assistant 消息。
    */
-  async appendAssistantMessage(params: {
-    message?: SessionMessageV1 | null;
+  async append_assistant_message(params: {
+    message?: SessionRecordV1 | null;
     fallbackText?: string;
     extra?: JsonObject;
   }): Promise<void> {
-    await this.historyWriter.appendAssistantMessage(params);
+    await this.historyWriter.append_assistant_message(params);
   }
 
   /**
@@ -372,7 +375,7 @@ export class Executor implements SessionExecutor {
       }
 
       const emit_compaction_action = async (
-        action: AgentSessionActionRecord,
+        action: SessionActionRecordV1,
       ): Promise<void> => {
         if (action.state === "running") {
           compaction_action_id = action.id;
@@ -389,13 +392,18 @@ export class Executor implements SessionExecutor {
       });
     } catch (error) {
       await this.emitAction(run_context, {
+        type: "action",
         id:
           compaction_action_id ||
           `compacting:${this.sessionId}:failed:${Date.now()}:${generateId()}`,
-        title: "Session history compact failed",
+        title: "Session records compact failed",
         description: error instanceof Error ? error.message : String(error),
         state: "failed",
-        visible: false,
+        metadata: {
+          v: 1,
+          ts: Date.now(),
+          sessionId: this.sessionId,
+        },
       });
       // 压缩失败不阻断主流程，继续使用当前历史消息执行。
     }
@@ -514,21 +522,24 @@ export class Executor implements SessionExecutor {
    */
   private async emitAction(
     run_context: SessionRunContext,
-    action: AgentSessionActionRecord,
+    action: SessionActionRecordV1,
   ): Promise<void> {
     if (typeof run_context.onActionCallback !== "function") return;
     const action_id =
       String(action.id || "").trim() ||
       `action:${this.sessionId}:${Date.now()}:${generateId()}`;
-    await run_context.onActionCallback({
-      type: "action",
-      sessionId: run_context.sessionId || this.sessionId,
+    const event = to_session_action_record({
       ...action,
       id: action_id,
-      ...(run_context.turnId && !action.turnId
-        ? { turnId: run_context.turnId }
-        : {}),
-    });
+      metadata: {
+        ...action.metadata,
+        sessionId: run_context.sessionId || this.sessionId,
+        ...(run_context.turnId && !action.metadata.turnId
+          ? { turnId: run_context.turnId }
+          : {}),
+      },
+    }, run_context.sessionId || this.sessionId);
+    await run_context.onActionCallback(event);
   }
 
   /**

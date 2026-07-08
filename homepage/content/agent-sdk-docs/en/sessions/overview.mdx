@@ -12,7 +12,7 @@ In the SDK, the thing that actually executes work is the session.
 ### Local Agent
 
 ```ts
-const session = await agent.session_collection().create_session();
+const session = await agent.sessions.create();
 await session.set({ model });
 
 const turn = await session.prompt({ query: "Continue" });
@@ -29,7 +29,7 @@ If you already provided a default model through `new Agent({ model })`, you do n
 ### RemoteAgent
 
 ```ts
-const session = await remoteAgent.session_collection().create_session();
+const session = await remoteAgent.sessions.create();
 const turn = await session.prompt({ query: "Continue" });
 await turn.finished;
 ```
@@ -37,7 +37,7 @@ await turn.finished;
 ## Methods you will use most often
 
 - `set`
-- `getInfo`
+- `get_info`
 - `prompt`
 - `stop`
 - `subscribe`

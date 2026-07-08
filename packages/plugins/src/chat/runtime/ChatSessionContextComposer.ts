@@ -10,7 +10,7 @@
 import type { ModelMessage, Tool } from "ai";
 import { drainInjectedUserMessages } from "@downcity/agent/internal/executor/SessionRunScope.js";
 import { LocalSessionContextComposer } from "@downcity/agent/internal/executor/composer/context/LocalSessionContextComposer.js";
-import type { SessionMessageV1 } from "@downcity/agent/internal/executor/types/SessionMessages.js";
+import type { SessionRecordV1 } from "@downcity/agent/internal/executor/types/SessionRecords.js";
 import type { SessionSystemMessage } from "@downcity/agent/internal/executor/types/SessionPrompts.js";
 import type { ChatSessionTurnState } from "@/chat/runtime/ChatSessionTypes.js";
 
@@ -49,7 +49,7 @@ export class ChatSessionContextComposer extends LocalSessionContextComposer {
     input: {
       system: SessionSystemMessage[];
       appendMergedUserMessages: (
-        messages: SessionMessageV1[],
+        messages: SessionRecordV1[],
       ) => Promise<ModelMessage[]>;
     },
   ): (input: { messages?: ModelMessage[] }) => Promise<{

@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { FileUIPart } from "ai";
-import type { SessionUserMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { SessionUserMessageV1 } from "@/executor/types/SessionRecords.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 
 /**

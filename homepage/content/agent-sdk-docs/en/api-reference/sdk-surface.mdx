@@ -18,10 +18,10 @@ The SDK is session-first.
 
 In most apps, the real object you work with is not `Agent` itself, but the session returned by:
 
-- `agent.session_collection().create_session()`
-- `agent.session_collection().get_session(sessionId)`
-- `remoteAgent.session_collection().create_session()`
-- `remoteAgent.session_collection().get_session(sessionId)`
+- `agent.sessions.create()`
+- `agent.sessions.get(sessionId)`
+- `remoteAgent.sessions.create()`
+- `remoteAgent.sessions.get(sessionId)`
 
 ## Typical local flow
 
@@ -33,7 +33,7 @@ const agent = new Agent({
   path: process.cwd(),
 });
 
-const session = await agent.session_collection().create_session();
+const session = await agent.sessions.create();
 await session.set({ model });
 
 const turn = await session.prompt({
@@ -54,7 +54,7 @@ const agent = new RemoteAgent({
   url: "http://127.0.0.1:5314/agents/repo-helper",
 });
 
-const session = await agent.session_collection().get_session("repo-analysis");
+const session = await agent.sessions.get("repo-analysis");
 const turn = await session.prompt({
   query: "Continue",
 });
@@ -71,7 +71,7 @@ Core methods:
 - `new Agent(options)`
 - `agent.ready()`
 - `agent.dispose()`
-- `agent.session_collection()`
+- `agent.sessions`
 - `agent.runPluginAction(input)`
 - `agent.setInstruction(input)`
 - `agent.getConfig()`
@@ -94,7 +94,7 @@ Use `RemoteAgent` when another process has already exposed an agent.
 Core methods:
 
 - `new RemoteAgent({ url })`
-- `agent.session_collection()`
+- `agent.sessions`
 
 It currently supports:
 
@@ -119,20 +119,20 @@ Core methods:
 - `session.agentId`
 - `session.config`
 - `session.set(input)`
-- `session.getInfo()`
+- `session.get_info()`
 - `session.prompt(input)`
 - `session.subscribe(subscriber)`
-- `session.history(input?)`
+- `session.records(input?)`
 - `session.system()`
 - `session.fork(input?)`
 
 Typical usage order:
 
-1. `await agent.session_collection().create_session()`
+1. `await agent.sessions.create()`
 2. `await session.set({ model })` or provide a default model on `Agent`
 3. `const turn = await session.prompt({ query })`
 4. `await turn.finished`
-5. optional: `session.history()` / `session.getInfo()` / `session.fork()`
+5. optional: `session.records()` / `session.get_info()` / `session.fork()`
 
 ## `RemoteAgentSession`
 
@@ -141,10 +141,10 @@ Typical usage order:
 Core methods:
 
 - `session.id`
-- `session.getInfo()`
+- `session.get_info()`
 - `session.prompt(input)`
 - `session.subscribe(subscriber)`
-- `session.history(input?)`
+- `session.records(input?)`
 - `session.system()`
 - `session.fork(input?)`
 

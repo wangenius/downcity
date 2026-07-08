@@ -10,7 +10,7 @@
 import type { streamText } from "ai";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { JsonObject } from "@/types/common/Json.js";
-import type { SessionModelMessageV1 } from "@/executor/types/SessionMessages.js";
+import type { SessionMessageRecordV1 } from "@/executor/types/SessionRecords.js";
 import type { SessionUiMessageChunkCallback } from "@/executor/types/SessionRun.js";
 import { generateId } from "@/utils/Id.js";
 import {
@@ -37,7 +37,7 @@ export async function collectFinalAssistantMessageFromUiStream(params: {
   /**
    * 构造 fallback assistant 消息的工厂函数。
    */
-  buildFallbackAssistantMessage: (text: string) => SessionModelMessageV1;
+  buildFallbackAssistantMessage: (text: string) => SessionMessageRecordV1;
   /**
    * UI stream chunk 回调。
    */
@@ -50,12 +50,12 @@ export async function collectFinalAssistantMessageFromUiStream(params: {
    * - 此时仍应尽量用已经收到的 text delta 构造可持久化 assistant 消息。
    */
   abortSignal?: AbortSignal;
-}): Promise<SessionModelMessageV1> {
-  let streamedAssistantMessage: SessionModelMessageV1 | null = null;
+}): Promise<SessionMessageRecordV1> {
+  let streamedAssistantMessage: SessionMessageRecordV1 | null = null;
   let uiFinishSummary: JsonObject | null = null;
   let streamed_text = "";
 
-  const uiStream = params.result.toUIMessageStream<SessionModelMessageV1>({
+  const uiStream = params.result.toUIMessageStream<SessionMessageRecordV1>({
     // 关键点（中文）：SDK stream 需要 reasoning 旁路事件时可直接消费；最终落盘仍由 responseMessage 收敛。
     originalMessages: [],
     generateMessageId: () => `a:${params.sessionId}:${generateId()}`,

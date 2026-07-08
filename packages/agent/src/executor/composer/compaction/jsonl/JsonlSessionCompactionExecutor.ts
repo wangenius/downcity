@@ -18,16 +18,22 @@ import {
 import { generateId } from "@/utils/Id.js";
 import { getLogger } from "@/utils/logger/Logger.js";
 import type {
-  SessionMessageV1,
+  SessionActionRecordV1,
+  SessionRecordV1,
   SessionMetadataV1,
-  SessionModelMessageV1,
-} from "@/executor/types/SessionMessages.js";
+  SessionMessageRecordV1,
+} from "@/executor/types/SessionRecords.js";
 import {
-  isSessionActionMessage,
-  isSessionModelMessage,
-} from "@/executor/types/SessionMessages.js";
+  is_session_message_record,
+} from "@/executor/types/SessionRecords.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
-import type { AgentSessionActionRecord } from "@/types/sdk/AgentSessionAction.js";
+import {
+  append_session_compaction_file_operations,
+  build_initial_session_compaction_prompt,
+  build_update_session_compaction_prompt,
+  SESSION_COMPACTION_SYSTEM_PROMPT,
+} from "@executor/composer/compaction/jsonl/JsonlSessionCompactionPrompts.js";
+import { format_session_compaction_file_operations } from "@executor/composer/compaction/jsonl/JsonlSessionCompactionFileOperations.js";
 
 export type SessionCompactParams = {
   model: LanguageModel;
@@ -36,19 +42,19 @@ export type SessionCompactParams = {
   maxInputTokensApprox: number;
   archiveOnCompact: boolean;
   compactRatio: number;
-  onAction?: (action: AgentSessionActionRecord) => Promise<void>;
+  onAction?: (action: SessionActionRecordV1) => Promise<void>;
 };
 
 type SessionCompactDeps = {
   rootPath: string;
   sessionId: string;
   withWriteLock: <T>(fn: () => Promise<T>) => Promise<T>;
-  loadAll: () => Promise<SessionMessageV1[]>;
+  loadAll: () => Promise<SessionRecordV1[]>;
   createSummaryMessage: (params: {
     text: string;
     archiveId?: string;
     sourceRange?: SessionMetadataV1["sourceRange"];
-  }) => SessionMessageV1;
+  }) => SessionRecordV1;
   getArchiveDirPath: () => string;
   getMessagesFilePath: () => string;
   readMetaUnsafe: () => Promise<SessionHistoryMetaV1>;
@@ -71,12 +77,18 @@ export async function compactSessionMessagesIfNeeded(
   let action_started = false;
 
   const publish_action = async (
-    action: Omit<AgentSessionActionRecord, "id">,
+    action: Omit<SessionActionRecordV1, "type" | "id" | "metadata">,
   ): Promise<void> => {
     if (typeof params.onAction !== "function") return;
     await params.onAction({
+      type: "action",
       id: action_id,
       ...action,
+      metadata: {
+        v: 1,
+        ts: Date.now(),
+        sessionId: deps.sessionId,
+      },
     });
   };
 
@@ -84,10 +96,10 @@ export async function compactSessionMessagesIfNeeded(
   // phase 1：snapshot（短锁）
   // - 仅负责拿一致性快照，不做耗时的模型调用。
   // - 目的是把锁持有时间降到最低。
-  let snapshot: SessionModelMessageV1[] = [];
+  let snapshot: SessionMessageRecordV1[] = [];
   let snapshotTailId = "";
   await deps.withWriteLock(async () => {
-    snapshot = (await deps.loadAll()).filter(isSessionModelMessage);
+    snapshot = (await deps.loadAll()).filter(is_session_message_record);
     snapshotTailId =
       snapshot.length > 0
         ? String(snapshot[snapshot.length - 1].id || "")
@@ -121,16 +133,27 @@ export async function compactSessionMessagesIfNeeded(
 
   action_started = true;
   await publish_action({
-    title: "Compacting session history",
+    title: "Compacting session records",
     state: "running",
   });
 
-  const olderTextAll = extractPlainTextFromMessages(older);
+  const previous_summary = extract_existing_compaction_summary(older[0]);
+  const conversation_messages = previous_summary ? older.slice(1) : older;
+  const olderTextAll = extractPlainTextFromMessages(conversation_messages);
   const maxOlderChars = 24_000;
   const olderText =
     olderTextAll.length > maxOlderChars
       ? "（注意：更早历史过长，已截断保留末尾）\n" + olderTextAll.slice(-maxOlderChars)
       : olderTextAll;
+  const prompt = previous_summary
+    ? build_update_session_compaction_prompt({
+        previous_summary,
+        new_conversation_text: olderText || "(none)",
+      })
+    : build_initial_session_compaction_prompt({
+        conversation_text: olderText || "(none)",
+      });
+  const file_operations_xml = format_session_compaction_file_operations(older);
 
   // phase 1.5：生成摘要（不持锁）
   // - 这一步最耗时，必须在锁外执行，避免阻塞 append。
@@ -141,18 +164,15 @@ export async function compactSessionMessagesIfNeeded(
       system: [
         {
           role: "system",
-          content:
-            "你是对话压缩助手。请把更早的对话历史压缩成“可持续复用”的工作摘要。\n" +
-            "要求：\n" +
-            "- 输出中文\n" +
-            "- 不要复述无关细节，不要输出工具原始日志\n" +
-            "- 必须包含：已确认事实/用户偏好约束/已做决策/未完成事项\n" +
-            "- 使用 Markdown 列表，控制在 300~800 字",
+          content: SESSION_COMPACTION_SYSTEM_PROMPT,
         },
       ],
-      prompt: `请压缩以下更早历史（按 user/assistant 交替记录）：\n\n${olderText}`,
+      prompt,
     });
-    summary = String(r.text || "").trim();
+    summary = append_session_compaction_file_operations({
+      summary: String(r.text || "").trim(),
+      file_operations_xml,
+    });
   } catch (e) {
     await logger.log(
       "warn",
@@ -162,9 +182,12 @@ export async function compactSessionMessagesIfNeeded(
         error: String(e),
       },
     );
-    summary = "（系统自动压缩：摘要生成失败，已丢弃更早历史，仅保留最近对话。）";
+    summary = append_session_compaction_file_operations({
+      summary: "（系统自动压缩：摘要生成失败，已丢弃更早历史，仅保留最近对话。）",
+      file_operations_xml,
+    });
     await publish_action({
-      title: "Compacting session history",
+      title: "Compacting session records",
       description: "Summary generation failed; using a fallback summary.",
       state: "running",
     });
@@ -190,7 +213,7 @@ export async function compactSessionMessagesIfNeeded(
     void snapshotTailId;
 
     const current_model_messages = current.filter(
-      isSessionModelMessage,
+      is_session_message_record,
     );
     const currentCompactCount = resolveCompactCount(
       current_model_messages.length,
@@ -243,7 +266,7 @@ export async function compactSessionMessagesIfNeeded(
 
   if (action_started) {
     await publish_action({
-      title: "Session history compacted",
+      title: "Session records compacted",
       description: `Compacted ${String(older.length)} earlier messages into ${archiveId}.`,
       state: "completed",
     });
@@ -297,7 +320,7 @@ function estimateTokensApproxFromText(text: string): number {
  * - 统一把 user / assistant 内容线性化，作为 compact 摘要输入。
  * - tool 原始结构不会原样输出，避免把噪声日志喂给摘要模型。
  */
-function extractPlainTextFromMessages(messages: SessionModelMessageV1[]): string {
+function extractPlainTextFromMessages(messages: SessionMessageRecordV1[]): string {
   const lines: string[] = [];
   for (const m of messages) {
     if (!m || typeof m !== "object") continue;
@@ -309,4 +332,25 @@ function extractPlainTextFromMessages(messages: SessionModelMessageV1[]): string
     lines.push(`${role}: ${text}`);
   }
   return lines.join("\n");
+}
+
+/**
+ * 从已有 compact summary 消息中提取旧摘要。
+ *
+ * 关键点（中文）
+ * - 旧摘要通常位于 messages.jsonl 第一条，后续 compact 应基于它迭代更新。
+ * - 只识别 compact 生成的 summary，避免误把普通 assistant 文本当作旧摘要。
+ */
+function extract_existing_compaction_summary(
+  message: SessionMessageRecordV1 | undefined,
+): string {
+  if (!message || typeof message !== "object") return "";
+  const metadata = message.metadata;
+  if (metadata?.source !== "compact" || metadata.kind !== "summary") return "";
+  const parts = Array.isArray(message.parts) ? message.parts : [];
+  return parts
+    .filter(isTextUIPart)
+    .map((part) => String(part.text ?? ""))
+    .join("\n")
+    .trim();
 }

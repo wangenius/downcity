@@ -144,7 +144,7 @@ test("session.prompt waits for agent background ready before model execution", a
   });
 
   try {
-    const session = await agent.session_collection().create_session({
+    const session = await agent.sessions.create({
       sessionId: "ready_session",
     });
     const prompt_promise = session.prompt({

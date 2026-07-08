@@ -30,16 +30,15 @@ import type {
 import type {
   AgentSessionEvent,
 } from "@/types/sdk/AgentSessionEvent.js";
-import type {
-  AgentSessionActionEvent,
-  AgentSessionActionRecord,
-} from "@/types/sdk/AgentSessionAction.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type {
-  SessionMessageV1,
-  SessionModelMessageV1,
+  SessionActionRecordInputV1,
+  SessionActionRecordV1,
+  SessionRecordV1,
+  SessionMessageRecordV1,
   SessionUserMessageV1,
-} from "@/executor/types/SessionMessages.js";
+} from "@/executor/types/SessionRecords.js";
+import { to_session_action_record } from "@/executor/types/SessionRecords.js";
 import type { SessionLocalState } from "@/types/session/SessionLocalState.js";
 import { generateId } from "@/utils/Id.js";
 
@@ -96,8 +95,7 @@ type SessionSetOptions = {
   emit_action?: boolean;
 };
 
-type EmitActionInput = Omit<AgentSessionActionRecord, "id"> &
-  Partial<Pick<AgentSessionActionRecord, "id">>;
+type EmitActionInput = SessionActionRecordInputV1 | SessionActionRecordV1;
 
 /**
  * 本地 Session 状态与持久化服务。
@@ -281,10 +279,10 @@ export class SessionStateService {
    * 追加一条 user 消息并刷新标题与 metadata。
    */
   async append_user_message(params: {
-    message?: SessionMessageV1 | null;
+    message?: SessionRecordV1 | null;
     text?: string;
   }): Promise<void> {
-    await this.executor.appendUserMessage(params);
+    await this.executor.append_user_message(params);
     await this.ensure_title_from_history({ generate: true });
     await this.touch_metadata();
   }
@@ -293,10 +291,10 @@ export class SessionStateService {
    * 追加一条 assistant 消息并刷新 metadata。
    */
   async append_assistant_message(params: {
-    message?: SessionMessageV1 | null;
+    message?: SessionRecordV1 | null;
     fallbackText?: string;
   }): Promise<void> {
-    await this.executor.appendAssistantMessage(params);
+    await this.executor.append_assistant_message(params);
     await this.touch_metadata();
   }
 
@@ -321,7 +319,7 @@ export class SessionStateService {
      */
     generate?: boolean;
   }): Promise<void> {
-    const messages = await this.history_store.list();
+    const messages = await this.history_store.list_records();
     const before_metadata = await readSessionMetadata({
       projectRoot: this.project_root,
       agentId: this.agent_id,
@@ -349,7 +347,7 @@ export class SessionStateService {
    * 持久化最终 assistant 结果。
    */
   async persist_assistant_result(
-    assistant_message?: SessionModelMessageV1 | null,
+    assistant_message?: SessionMessageRecordV1 | null,
   ): Promise<void> {
     await persistSdkAssistantResult({
       projectRoot: this.project_root,
@@ -362,24 +360,13 @@ export class SessionStateService {
   }
 
   /**
-   * 持久化一条 action message。
+   * 持久化一条 action record。
    */
   async persist_action_event(
-    event: AgentSessionActionEvent,
+    event: SessionActionRecordV1,
   ): Promise<void> {
-    const message = this.history_store.action({
-      action: {
-        id: event.id,
-        title: event.title,
-        state: event.state,
-        ...(event.description ? { description: event.description } : {}),
-        ...(event.turnId ? { turnId: event.turnId } : {}),
-      },
-      metadata: {
-        sessionId: this.session_id,
-      },
-    });
-    await this.history_store.append(message);
+    const message = to_session_action_record(event, this.session_id);
+    await this.history_store.write_record(message);
     await this.touch_metadata();
   }
 
@@ -387,17 +374,15 @@ export class SessionStateService {
    * 写入并发布一条 action。
    */
   async emit_action_event(input: EmitActionInput): Promise<void> {
-    if (input.visible === false) return;
-    const action_id =
-      String(input.id || "").trim() ||
-      `action:${this.session_id}:${Date.now()}:${generateId()}`;
-    const { visible: _visible, ...public_input } = input;
-    const event: AgentSessionActionEvent = {
-      type: "action",
-      sessionId: this.session_id,
-      ...public_input,
-      id: action_id,
-    };
+    const event = to_session_action_record(
+      {
+        ...input,
+        id:
+          String(input.id || "").trim() ||
+          `action:${this.session_id}:${Date.now()}:${generateId()}`,
+      },
+      this.session_id,
+    );
     try {
       await this.persist_action_event(event);
     } catch {
@@ -420,7 +405,7 @@ export class SessionStateService {
           sessionId: this.session_id,
         },
       }) as SessionUserMessageV1;
-      await this.executor.appendUserMessage({
+      await this.executor.append_user_message({
         message,
       });
       await this.ensure_title_from_history({ generate: true });
@@ -445,7 +430,7 @@ export class SessionStateService {
         kind: "normal",
       },
     };
-    await this.executor.appendUserMessage({
+    await this.executor.append_user_message({
       message,
     });
     await this.ensure_title_from_history({ generate: true });
@@ -464,7 +449,7 @@ export class SessionStateService {
       : [];
     if (normalized_messages.length <= 0) return;
     for (const message of normalized_messages) {
-      await this.executor.appendUserMessage({
+      await this.executor.append_user_message({
         message,
       });
     }

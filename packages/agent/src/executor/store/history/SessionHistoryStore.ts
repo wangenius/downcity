@@ -1,20 +1,19 @@
 /**
- * SessionHistoryStore：会话历史事实源接口。
+ * SessionHistoryStore：会话 record 事实源接口。
  *
  * 关键点（中文）
- * - Store 负责消息、meta、archive、lock 等持久化能力。
- * - Composer 只负责把 Store 中的历史组装成本轮模型输入。
+ * - Store 负责 records、meta、archive、lock 等持久化能力。
+ * - Composer 只负责把 Store 中的模型消息 record 组装成本轮模型输入。
  * - 这个接口刻意独立于 Composer，避免把“落盘事实源”误当成“组装策略”。
  */
 
 import type { LanguageModel } from "ai";
 import type {
-  SessionActionMessageV1,
-  SessionMessageV1,
+  SessionActionRecordV1,
+  SessionRecordV1,
   SessionMetadataV1,
-} from "@/executor/types/SessionMessages.js";
+} from "@/executor/types/SessionRecords.js";
 import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
-import type { AgentSessionActionRecord } from "@/types/sdk/AgentSessionAction.js";
 
 /**
  * compact 输入参数。
@@ -53,7 +52,7 @@ export type SessionHistoryCompactInput = {
   /**
    * 可选 action 发布回调。
    */
-  onAction?: (action: AgentSessionActionRecord) => Promise<void>;
+  onAction?: (action: SessionActionRecordV1) => Promise<void>;
 };
 
 /**
@@ -66,39 +65,43 @@ export interface SessionHistoryStore {
   readonly sessionId: string;
 
   /**
-   * 追加一条消息到历史。
+   * 写入一条 session record。
+   *
+   * 说明（中文）
+   * - 模型消息会追加到 JSONL。
+   * - action record 会按稳定 ID upsert 为同一条 record。
    */
-  append(message: SessionMessageV1): Promise<void>;
+  write_record(message: SessionRecordV1): Promise<void>;
 
   /**
    * 读取当前运行中的 assistant 快照。
    */
-  readInflight(): Promise<SessionMessageV1 | null>;
+  read_inflight(): Promise<SessionRecordV1 | null>;
 
   /**
    * 写入当前运行中的 assistant 快照。
    */
-  writeInflight(message: SessionMessageV1): Promise<void>;
+  write_inflight(message: SessionRecordV1): Promise<void>;
 
   /**
    * 用最终 assistant 收口 inflight 快照。
    */
-  finalizeInflight(message?: SessionMessageV1 | null): Promise<void>;
+  finalize_inflight(message?: SessionRecordV1 | null): Promise<void>;
 
   /**
-   * 读取完整消息历史。
+   * 读取完整 session records。
    */
-  list(): Promise<SessionMessageV1[]>;
+  list_records(): Promise<SessionRecordV1[]>;
 
   /**
-   * 读取消息区间 [start, end)。
+   * 读取 session record 区间 [start, end)。
    */
-  slice(start: number, end: number): Promise<SessionMessageV1[]>;
+  slice_records(start: number, end: number): Promise<SessionRecordV1[]>;
 
   /**
-   * 读取消息总条数。
+   * 读取 session record 总条数。
    */
-  size(): Promise<number>;
+  record_count(): Promise<number>;
 
   /**
    * 读取元信息。
@@ -132,7 +135,7 @@ export interface SessionHistoryStore {
      * 可选消息 ID（默认自动生成）。
      */
     id?: string;
-  }): SessionMessageV1;
+  }): SessionRecordV1;
 
   /**
    * 构造 assistant 文本消息。
@@ -163,7 +166,7 @@ export interface SessionHistoryStore {
      * 消息来源（egress/compact）。
      */
     source?: "egress" | "compact";
-  }): SessionMessageV1;
+  }): SessionRecordV1;
 
   /**
    * 构造 action 消息。
@@ -172,7 +175,7 @@ export interface SessionHistoryStore {
     /**
      * 当前 action 结构化记录。
      */
-    action: AgentSessionActionRecord;
+    action: SessionActionRecordV1;
 
     /**
      * 消息元信息（除 schema 字段）。
@@ -184,5 +187,5 @@ export interface SessionHistoryStore {
      * 可选消息 ID（默认自动生成）。
      */
     id?: string;
-  }): SessionActionMessageV1;
+  }): SessionActionRecordV1;
 }

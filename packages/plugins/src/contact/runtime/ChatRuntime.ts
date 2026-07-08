@@ -8,13 +8,13 @@
 
 import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
 import type { ContactChatResponse } from "@/contact/types/ContactChat.js";
-import type { SessionMessageV1 } from "@downcity/agent/internal/executor/types/SessionMessages.js";
+import type { SessionRecordV1 } from "@downcity/agent/internal/executor/types/SessionRecords.js";
 import {
   appendContactMessage,
   findContactByInboundToken,
 } from "./ContactStore.js";
 
-function extractMessageText(message: SessionMessageV1 | null | undefined): string {
+function extractMessageText(message: SessionRecordV1 | null | undefined): string {
   const parts = Array.isArray((message as { parts?: unknown } | null)?.parts)
     ? ((message as { parts: unknown[] }).parts)
     : [];

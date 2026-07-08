@@ -15,7 +15,7 @@ import type {
   AgentArchiveSessionResult,
   AgentArchiveSessionsResult,
   AgentCleanArchiveResult,
-  AgentSessionHistoryInput,
+  AgentSessionRecordsInput,
   AgentSessionStopResult,
   AgentSessionSystemSnapshot,
 } from "@/types/agent/AgentTypes.js";
@@ -112,14 +112,14 @@ export type RpcRequest =
   | {
       /** 请求 id，用于匹配响应。 */
       id: string;
-      /** 读取 session history。 */
-      method: "sdk.sessions.history";
-      /** history 查询参数。 */
+      /** 读取 session records。 */
+      method: "sdk.sessions.records";
+      /** records 查询参数。 */
       params: {
         /** 目标 session id。 */
         sessionId: string;
-        /** history 分页与视图参数。 */
-        input?: AgentSessionHistoryInput;
+        /** records 分页与视图参数。 */
+        input?: AgentSessionRecordsInput;
       };
     }
   | {

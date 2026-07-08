@@ -10,7 +10,7 @@ import { generateId } from "@/city/utils/Id.js";
 import {
   RemoteAgent,
   type AgentSessionSummary,
-  type AgentSession,
+  type RemoteAgentSession,
 } from "@downcity/agent";
 import { resolveDaemonRpcEndpoint } from "@/city/process/daemon/Client.js";
 import {
@@ -76,7 +76,7 @@ export async function createRemoteAgent(params: {
 export async function listRemoteChatSessions(params: {
   remote_agent: RemoteAgent;
 }): Promise<AgentChatSessionSummaryView[]> {
-  const page = await params.remote_agent.session_collection().list_sessions({ limit: 30 });
+  const page = await params.remote_agent.sessions.list({ limit: 30 });
   const sessions = page.items.map(toSessionSummaryView);
   if (!sessions.some((item) => item.sessionId === AGENT_CHAT_DEFAULT_SESSION_ID)) {
     sessions.unshift({
@@ -95,7 +95,7 @@ export async function createRemoteChatSession(params: {
   session_id?: string;
 }): Promise<{ session_id: string }> {
   const session_id = String(params.session_id || "").trim() || createAgentChatSessionId();
-  const session = await params.remote_agent.session_collection().create_session({
+  const session = await params.remote_agent.sessions.create({
     sessionId: session_id,
   });
   return {
@@ -110,17 +110,17 @@ export async function getOrCreateRemoteSession(params: {
   remote_agent: RemoteAgent;
   session_id: string;
   create_new_session?: boolean;
-}): Promise<AgentSession> {
-  const collection = params.remote_agent.session_collection();
+}): Promise<RemoteAgentSession> {
+  const collection = params.remote_agent.sessions;
   if (params.create_new_session === true) {
-    return await collection.create_session({
+    return await collection.create({
       sessionId: params.session_id,
     });
   }
   try {
-    return await collection.get_session(params.session_id);
+    return await collection.get(params.session_id);
   } catch {
-    return await collection.create_session({
+    return await collection.create({
       sessionId: params.session_id,
     });
   }

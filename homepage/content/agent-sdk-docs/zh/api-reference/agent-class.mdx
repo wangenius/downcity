@@ -11,6 +11,9 @@ description: 本地 Agent SDK 的核心公开接口
 - `agent.ready()`
 - `agent.dispose()`
 - `agent.sessions`
+- `agent.getEnv()`
+- `agent.setEnv(next)`
+- `agent.patchEnv(patch)`
 - `agent.getConfig()`
 - `agent.getLogger()`
 - `agent.plugins`
@@ -51,6 +54,23 @@ description: 本地 Agent SDK 的核心公开接口
 - 真正的执行对象是它创建出来的 session
 
 从 API 设计上看，它更像一个“session 工厂 + 后台能力管理入口”。Transport（RPC、HTTP）由 [`@downcity/server`](/zh/agent-sdk-docs/local-agent/http-and-rpc) 单独提供。
+
+## Env
+
+`Agent` 的 env 是当前实例生命周期内的动态运行时状态。构造参数 `env` 和项目根目录 `.env` 会组成初始值，之后宿主可以在不重建 Agent 的情况下更新它。
+
+- `agent.getEnv()`：返回当前 env 的浅拷贝快照
+- `agent.setEnv(next)`：整体替换当前 env
+- `agent.patchEnv(patch)`：增量更新当前 env，字段值为 `null` 或 `undefined` 时删除该 key
+
+后续 plugin、session runtime 和 `shell_exec` / `shell_session` 都会读取最新 env。默认 safe sandbox 会允许 Agent env 中显式存在的 key 进入 shell 子进程，但不会继承完整宿主 `process.env`。
+
+```ts
+agent.patchEnv({
+  OPENAI_API_KEY: token,
+  OLD_TOKEN: null,
+});
+```
 
 ## `ready()` 和 `dispose()`
 

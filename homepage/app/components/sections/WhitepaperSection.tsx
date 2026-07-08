@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { IconCheck, IconCopy, IconDownload } from "@tabler/icons-react";
-import { marketingTheme } from "@/lib/marketing-theme";
+import { cn } from "@/lib/utils";
 
 const INSTALL_COMMAND = "npm i -g downcity";
 const WHITEPAPER_DOWNLOAD_PATH = "/agent-strategy-whitepaper-2026-03-09.md";
 const WHITEPAPER_DOWNLOAD_FILENAME = "agent-strategy-whitepaper-2026-03-09.md";
 
 /**
- * 白皮书正文模块。
+ * 白皮书正文模块（Vibecape 风格）。
  * 说明：
- * 1. 使用更克制的编辑式版面承载长文内容，避免营销页面的卡片感。
- * 2. 只保留必要动作：复制安装命令、下载 Markdown、复制全文。
+ * 1. 长文正文使用 max-w-3xl 居中，标题层级清晰。
+ * 2. 保留复制安装命令、下载 Markdown、复制全文功能。
+ * 3. 引用/代码块使用细线边框与柔和背景。
  */
 const WHITEPAPER = {
   zh: {
@@ -191,37 +192,53 @@ export function WhitepaperSection() {
       : content.copyPaperLabel;
 
   return (
-    <section className={marketingTheme.editorialPage}>
+    <section className="mx-auto max-w-3xl px-5 py-16 md:px-8 md:py-24 lg:px-20">
       <article className="space-y-12 md:space-y-16">
         <header className="grid gap-6 lg:grid-cols-[1fr_0.9fr] lg:items-end">
           <div className="space-y-4">
-            <span className={marketingTheme.badge}>{content.badge}</span>
-            <h1 className={marketingTheme.pageTitle}>{content.title}</h1>
-            <p className="font-serif text-base leading-8 text-foreground/64 md:text-lg">{content.epigraph}</p>
+            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[0.65rem] font-medium uppercase tracking-[0.12em] text-text-soft">
+              {content.badge}
+            </span>
+            <h1 className="font-serif text-[clamp(1.875rem,4vw,2.25rem)] font-bold leading-[1.12] tracking-[-0.02em] text-foreground">
+              {content.title}
+            </h1>
+            <p className="font-serif text-base leading-8 text-text-soft md:text-lg">{content.epigraph}</p>
           </div>
-          <div className={`${marketingTheme.panel} space-y-4 p-5 md:p-6`}>
+          <div className="space-y-4 rounded-[14px] border border-line bg-card p-5 shadow-sm md:p-6">
             <div>
-              <p className={marketingTheme.eyebrow}>{content.railTitle}</p>
-              <p className="mt-2 text-sm leading-7 text-muted-foreground">{content.railBody}</p>
+              <p className="text-[0.78rem] font-medium uppercase tracking-[0.04em] text-text-soft">{content.railTitle}</p>
+              <p className="mt-2 text-sm leading-relaxed text-text-soft">{content.railBody}</p>
             </div>
-            <div className={`${marketingTheme.panelSoft} grid gap-3 p-4`}>
+            <div className="grid gap-3 rounded-xl border border-line bg-surface-soft p-4">
               <div>
-                <p className={marketingTheme.eyebrow}>{content.commandLabel}</p>
+                <p className="text-[0.78rem] font-medium uppercase tracking-[0.04em] text-text-soft">{content.commandLabel}</p>
                 <code className="mt-2 block overflow-x-auto font-mono text-[0.82rem] leading-6 text-foreground">
                   {INSTALL_COMMAND}
                 </code>
               </div>
-              <button type="button" onClick={onCopyInstall} className={marketingTheme.secondaryButton}>
+              <button
+                type="button"
+                onClick={onCopyInstall}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-foreground/[0.05] px-5 text-sm font-semibold text-foreground transition-colors hover:bg-foreground/[0.08]"
+              >
                 {copied ? <IconCheck className="size-4" /> : <IconCopy className="size-4" />}
                 {copied ? (isZh ? "已复制" : "Copied") : (isZh ? "复制命令" : "Copy Command")}
               </button>
             </div>
             <div className="flex flex-wrap gap-3">
-              <a href={WHITEPAPER_DOWNLOAD_PATH} download={WHITEPAPER_DOWNLOAD_FILENAME} className={marketingTheme.primaryButton}>
+              <a
+                href={WHITEPAPER_DOWNLOAD_PATH}
+                download={WHITEPAPER_DOWNLOAD_FILENAME}
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-76"
+              >
                 <IconDownload className="size-4" />
                 {content.downloadLabel}
               </a>
-              <button type="button" onClick={onCopyWhitepaper} className={marketingTheme.secondaryButton}>
+              <button
+                type="button"
+                onClick={onCopyWhitepaper}
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-foreground/[0.05] px-5 text-sm font-semibold text-foreground transition-colors hover:bg-foreground/[0.08]"
+              >
                 <IconCopy className="size-4" />
                 {copyPaperText}
               </button>
@@ -233,13 +250,17 @@ export function WhitepaperSection() {
           {content.sections.map((section, index) => (
             <section
               key={section.title}
-              className={index === 0 ? "grid gap-4" : "grid gap-4 border-t border-border/68 pt-10 md:pt-12"}
+              className={cn("grid gap-4", index !== 0 && "border-t border-line pt-10 md:pt-12")}
             >
               <div className="space-y-3">
-                <p className={marketingTheme.eyebrow}>{String(index + 1).padStart(2, "0")}</p>
-                <h2 className={marketingTheme.sectionTitle}>{section.title}</h2>
+                <p className="font-mono text-[0.7rem] font-medium uppercase tracking-[0.06em] text-text-subtle">
+                  {String(index + 1).padStart(2, "0")}
+                </p>
+                <h2 className="font-serif text-[clamp(1.5rem,3vw,1.875rem)] font-bold leading-[1.16] tracking-[-0.02em] text-foreground">
+                  {section.title}
+                </h2>
               </div>
-              <div className="space-y-5 text-[1rem] leading-8 text-muted-foreground md:text-[1.04rem]">
+              <div className="space-y-5 text-base leading-[1.75] text-text-soft">
                 {section.paragraphs.map((paragraph) => (
                   <p key={paragraph}>{renderParagraph(paragraph)}</p>
                 ))}
@@ -251,3 +272,5 @@ export function WhitepaperSection() {
     </section>
   );
 }
+
+export default WhitepaperSection;

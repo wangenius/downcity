@@ -12,6 +12,9 @@ import path from "node:path";
 
 import { buildMacOsSeatbeltSandboxEnv } from "@downcity/shell/sandbox/MacOsSeatbeltSandbox.js";
 import { buildLinuxBubblewrapSandboxEnv } from "@downcity/shell/sandbox/LinuxBubblewrapSandbox.js";
+import {
+  resolveSandboxEnvAllowlist,
+} from "@downcity/shell/sandbox/SandboxConfigResolver.js";
 
 function createParams() {
   const rootPath = "/tmp/downcity-shell-env/project";
@@ -72,4 +75,19 @@ test("Linux bubblewrap sandbox env points zsh TMPPREFIX at sandbox tmp", () => {
   });
 
   assertSandboxTmpEnv(env, params.config.tmpDir);
+});
+
+test("safe sandbox env allowlist includes explicit agent env keys only", () => {
+  const allowlist = resolveSandboxEnvAllowlist({
+    rootPath: "/tmp/downcity-shell-env/project",
+    env: {
+      DYNAMIC_ENV_REPRO: "dynamic_value",
+      DC_DYNAMIC_REPRO: "dc_value",
+    },
+  });
+
+  assert.equal(allowlist.includes("PATH"), true);
+  assert.equal(allowlist.includes("DYNAMIC_ENV_REPRO"), true);
+  assert.equal(allowlist.includes("DC_DYNAMIC_REPRO"), true);
+  assert.equal(allowlist.includes("HOST_ONLY_ENV_REPRO"), false);
 });

@@ -1,8 +1,7 @@
-import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import { marketingTheme } from "@/lib/marketing-theme";
+import { ProductDetailSection, type ProductDetailContent } from "@/components/sections/ProductDetailSection";
 
-const PAGE = {
+const PAGE: Record<"zh" | "en", ProductDetailContent> = {
   zh: {
     title: "Product · City SDK",
     subtitle: "用 City SDK 把模型目录、Service 路由、身份、环境变量、用量、余额和支付接入你的产品体系。",
@@ -68,59 +67,13 @@ const PAGE = {
       "Management entry: city manage",
     ],
   },
-} as const;
+};
 
-/**
- * Product City SDK 页面。
- * 说明：
- * 1. 对外统一叫 City SDK，不再另造产品名。
- * 2. Agent SDK 独立到 `/product/agent-sdk`，避免两种 SDK 语义混在一起。
- */
 export default function ProductSdkPage() {
   const { i18n } = useTranslation();
   const isZh = i18n.language.toLowerCase().startsWith("zh");
   const content = isZh ? PAGE.zh : PAGE.en;
   const docsPath = isZh ? "/zh/city-sdk-docs" : "/en/city-sdk-docs";
 
-  return (
-    <div className={marketingTheme.pageNarrow}>
-      <h1 className={marketingTheme.pageTitle}>{content.title}</h1>
-      <p className={`mt-4 ${marketingTheme.lead}`}>{content.subtitle}</p>
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <Link to={docsPath} className={marketingTheme.primaryButton}>
-          {content.docsCtaLabel}
-        </Link>
-        <p className="text-sm leading-7 text-muted-foreground">{content.docsCtaHint}</p>
-      </div>
-
-      <div className="mt-8 grid gap-4 md:grid-cols-3">
-        {content.highlights.map((item) => (
-          <article key={item.title} className={`${marketingTheme.panel} p-5 md:p-6`}>
-            <h2 className="font-serif text-[1.35rem] font-semibold tracking-[-0.03em] text-foreground">
-              {item.title}
-            </h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">{item.description}</p>
-          </article>
-        ))}
-      </div>
-
-      <section className={`${marketingTheme.panel} mt-8 p-5 md:p-6`}>
-        <h3 className={marketingTheme.eyebrow}>{content.scenesTitle}</h3>
-        <ul className="mt-4 space-y-2 text-sm leading-7 text-foreground/90">
-          {content.scenes.map((scene) => (
-            <li key={scene}>• {scene}</li>
-          ))}
-        </ul>
-      </section>
-
-      <section className={`${marketingTheme.panel} mt-6 p-5 md:p-6`}>
-        <h3 className={marketingTheme.eyebrow}>{content.factsTitle}</h3>
-        <ul className="mt-4 space-y-2 text-sm leading-7 text-foreground/90">
-          {content.facts.map((fact) => (
-            <li key={fact}>• {fact}</li>
-          ))}
-        </ul>
-      </section>
-    </div>
-  );
+  return <ProductDetailSection content={content} docsPath={docsPath} isZh={isZh} />;
 }

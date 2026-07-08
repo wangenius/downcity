@@ -1,15 +1,16 @@
 import type { FC } from "react";
 import { Link } from "react-router";
-import { IconBrandGithub, IconBrandX } from "@tabler/icons-react";
+import { IconBrandGithub, IconBrandX, IconArrowUpRight } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { product } from "@/lib/product";
-import { marketingTheme } from "@/lib/marketing-theme";
+import { COMMUNITY_LINKS } from "@/lib/community-links";
 
 /**
- * 全站页脚模块。
+ * 全站页脚模块（Vibecape 风格）。
  * 说明：
- * 1. Footer 继续去信息，只保留品牌、文档入口、社交出口和版权信息。
- * 2. 让页面收尾像一条安静的系统边界，而不是第二个导航区。
+ * 1. 两栏布局：左侧品牌与版权，右侧联系与导航链接。
+ * 2. 链接卡片使用 1px 细线分隔，hover 箭头微移。
+ * 3. 保持简洁低信息密度，作为页面收尾。
  */
 export const Footer: FC = () => {
   const currentYear = new Date().getFullYear();
@@ -21,61 +22,61 @@ export const Footer: FC = () => {
   const privacyPath = "/privacy";
   const twitterUrl = "https://x.com/downcity_ai";
   const githubUrl = "https://github.com/wangenius/downcity";
+  const telegramUrl = COMMUNITY_LINKS.telegram;
+
+  const contactLinks = [
+    { label: "X", value: "x.com/downcity_ai", href: twitterUrl },
+    { label: "GitHub", value: "github.com/wangenius/downcity", href: githubUrl },
+    { label: "Telegram", value: "t.me/downcity", href: telegramUrl },
+    { label: t("footer.documentation"), value: isZh ? "downcity.ai/zh/docs" : "downcity.ai/en/docs", href: docsPath },
+  ] as const;
 
   return (
-    <footer className="px-3 pb-6 pt-8 md:px-5 md:pb-10 md:pt-10">
-      <div className="mx-auto flex max-w-7xl flex-col gap-5 border-t border-line-soft pt-5 md:flex-row md:items-end md:justify-between">
-        <div className="space-y-3">
-          <Link to={homePath} className="inline-flex items-center gap-3">
-            <img src="/icon.svg" alt="Downcity" className="brand-logo block h-10 w-10 object-contain opacity-95" />
-            <span>
-              <span className="block text-[0.92rem] font-medium tracking-[-0.05em] text-foreground">
-                {product.productName}
-              </span>
-              <span className="block font-mono text-[0.56rem] uppercase tracking-[0.2em] text-foreground/40">
-                Business Above / Agents Below
-              </span>
-            </span>
+    <footer className="border-t border-line bg-background">
+      <div className="mx-auto grid max-w-[1600px] gap-12 px-5 py-16 md:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:px-20 lg:py-24">
+        <div className="space-y-5">
+          <Link to={homePath} className="inline-flex items-center gap-2.5">
+            <img src="/icon.svg" alt="Downcity" className="brand-logo block h-6 w-6 object-contain" />
+            <span className="text-[0.9375rem] font-semibold text-foreground">{product.productName}</span>
           </Link>
-          <p className="max-w-xl text-sm leading-7 text-foreground/56">{t("hero:subtitle")}</p>
+          <p className="max-w-sm text-sm leading-relaxed text-text-soft">{t("hero:subtitle")}</p>
+          <p className="text-xs text-text-subtle">
+            © {currentYear} {product.productName}. {t("footer.madeWithIntent")}
+          </p>
         </div>
 
-        <div className="flex flex-col items-start gap-4 md:items-end">
-          <div className="flex items-center gap-3">
-            <Link to={docsPath} className={marketingTheme.navItem}>
-              {t("footer.documentation")}
-            </Link>
-            <Link to={termsPath} className={marketingTheme.navItem}>
-              {t("footer.terms")}
-            </Link>
-            <Link to={privacyPath} className={marketingTheme.navItem}>
-              {t("footer.privacy")}
-            </Link>
-            <a
-              href={twitterUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={marketingTheme.iconButton}
-              aria-label="Twitter"
-            >
-              <IconBrandX className="size-4" />
-            </a>
-            <a
-              href={githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={marketingTheme.iconButton}
-              aria-label={t("footer.github")}
-            >
-              <IconBrandGithub className="size-4" />
-            </a>
+        <div className="space-y-5">
+          <div className="flex items-center justify-between gap-4 border-b border-line pb-3">
+            <span className="font-mono text-[0.7rem] font-medium uppercase tracking-[0.08em] text-text-subtle">
+              {t("common:contact")}
+            </span>
+            <div className="flex items-center gap-4">
+              <Link to={termsPath} className="font-mono text-[0.7rem] font-medium uppercase tracking-[0.08em] text-text-subtle transition-colors hover:text-foreground">
+                {t("footer.terms")}
+              </Link>
+              <Link to={privacyPath} className="font-mono text-[0.7rem] font-medium uppercase tracking-[0.08em] text-text-subtle transition-colors hover:text-foreground">
+                {t("footer.privacy")}
+              </Link>
+            </div>
           </div>
-          <p className="text-[0.64rem] uppercase tracking-[0.16em] text-foreground/40">
-            {t("footer.copyright", {
-              year: currentYear,
-              productName: product.productName,
-            })}
-          </p>
+
+          <div className="grid grid-cols-1 gap-px overflow-hidden rounded-[14px] bg-line sm:grid-cols-2">
+            {contactLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                target={link.href.startsWith("/") ? undefined : "_blank"}
+                rel={link.href.startsWith("/") ? undefined : "noopener noreferrer"}
+                className="group flex items-center justify-between gap-4 bg-background p-5 transition-colors hover:bg-card"
+              >
+                <div className="grid gap-1">
+                  <span className="text-sm font-semibold text-foreground">{link.label}</span>
+                  <span className="font-mono text-[0.72rem] text-text-subtle">{link.value}</span>
+                </div>
+                <IconArrowUpRight className="size-4 text-text-subtle transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground" />
+              </a>
+            ))}
+          </div>
         </div>
       </div>
     </footer>

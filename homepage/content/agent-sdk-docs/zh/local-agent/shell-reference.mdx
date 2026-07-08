@@ -56,6 +56,31 @@ const agent = new Agent({
 
 SDK 内部的沙箱运行器负责 shell 子进程创建、平台后端调用和一次性命令执行。通常不需要直接使用。
 
+### Env
+
+`shell_exec` 和 `shell_session` 使用当前 Agent env 构造子进程环境。宿主可以通过 `agent.setEnv(next)` 或 `agent.patchEnv(patch)` 在 Agent 创建后动态更新 env，后续 shell 调用会读取最新值。
+
+safe sandbox 只会导出两类环境变量：
+
+- shell 运行所需的最小基础变量，例如 `PATH`、`LANG`、`SHELL`
+- 当前 Agent env 中显式存在的 key
+
+这意味着 `.env`、构造参数 `env` 和运行时 `agent.patchEnv()` 写入的 key 可以被 sandbox 内命令读取，但 SDK 不会把完整宿主 `process.env` 暴露给 sandbox。
+
+```ts
+agent.patchEnv({
+  GITHUB_TOKEN: token,
+});
+
+await agent.tools.shell_exec.execute(
+  {
+    cmd: 'printf "%s\\n" "$GITHUB_TOKEN"',
+    sandbox: "safe",
+  },
+  { toolCallId: "example" },
+);
+```
+
 ### ConfigResolver
 
 `SandboxConfigResolver` 从项目环境加载沙箱配置。

@@ -169,11 +169,11 @@ async function create_agent_session(config: ClientConfig, model: CityModel) {
       "回答要简洁、直接，优先帮助开发者验证本地 Federation 与 Agent SDK 调用链路。",
     ],
   });
-  const sessions = agent.session_collection();
+  const sessions = agent.sessions;
   try {
-    return await sessions.get_session("local_cli");
+    return await sessions.get("local_cli");
   } catch {
-    return await sessions.create_session({ sessionId: "local_cli" });
+    return await sessions.create({ sessionId: "local_cli" });
   }
 }
 

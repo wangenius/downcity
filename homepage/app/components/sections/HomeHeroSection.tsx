@@ -12,16 +12,16 @@ import {
   IconBolt,
   IconPoint,
   IconPointFilled,
+  IconBook,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
 /**
- * 首页主视觉模块（极简版）。
+ * 首页主视觉模块（Vibecape 风格）。
  * 说明：
- * 1. 全局 Header 由 root Layout 提供，本组件不再重复渲染导航。
- * 2. 页面只保留核心文案、安装入口与产品演示。
- * 3. 参考 Vibecape 首页的克制排版：大量留白、细边框、小字号标签、真实界面模拟。
- * 4. 演示面板展示 Downcity 的真实使用路径：CLI / SDK / Console。
+ * 1. 左侧为标题、副标题与行动按钮，下方为大型 App Mockup。
+ * 2. Mockup 模拟 Downcity 的真实使用路径：CLI / SDK / Console。
+ * 3. 配色、字体、圆角与阴影统一使用新的温暖极简 token。
  */
 
 const INSTALL_COMMAND = "npm i -g downcity";
@@ -73,9 +73,6 @@ const CONSOLE_ROWS = [
   { label: "City", value: "connected", state: "online" },
 ] as const;
 
-/**
- * 安装命令复制按钮。
- */
 function InstallCommand() {
   const [copied, setCopied] = useState(false);
 
@@ -90,8 +87,8 @@ function InstallCommand() {
       type="button"
       onClick={copy}
       className={cn(
-        "group inline-flex w-full items-center justify-between gap-4 rounded-xl border border-line bg-surface px-4 py-3.5",
-        "font-mono text-[0.84rem] text-foreground transition-colors hover:border-line-strong hover:bg-surface-hover sm:w-auto"
+        "group inline-flex w-full items-center justify-between gap-4 rounded-lg border border-line bg-surface px-4 py-3",
+        "font-mono text-[0.82rem] text-foreground transition-colors hover:border-line-strong hover:bg-surface-hover sm:w-auto"
       )}
     >
       <span className="flex items-center gap-3">
@@ -100,7 +97,7 @@ function InstallCommand() {
       </span>
       <span
         className={cn(
-          "inline-flex size-8 items-center justify-center rounded-lg border border-line bg-background transition-colors",
+          "inline-flex size-7 items-center justify-center rounded-md border border-line bg-card transition-colors",
           copied ? "text-success" : "text-text-subtle group-hover:text-foreground"
         )}
       >
@@ -110,9 +107,6 @@ function InstallCommand() {
   );
 }
 
-/**
- * CLI 单步骤打字机效果。
- */
 function CliStep({ line, index, activeIndex }: { line: CliLine; index: number; activeIndex: number }) {
   const isVisible = index <= activeIndex;
   const isTyping = index === activeIndex;
@@ -153,21 +147,13 @@ function CliStep({ line, index, activeIndex }: { line: CliLine; index: number; a
           )}
         </span>
       </div>
-      <div
-        className={cn(
-          "pl-4 font-mono text-[0.74rem] leading-5",
-          line.status === "ok" ? "text-success" : "text-text-soft"
-        )}
-      >
+      <div className={cn("pl-4 font-mono text-[0.74rem] leading-5", line.status === "ok" ? "text-success" : "text-text-soft")}>
         {line.output}
       </div>
     </motion.div>
   );
 }
 
-/**
- * CLI 演示面板。
- */
 function CliDemo() {
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -186,9 +172,6 @@ function CliDemo() {
   );
 }
 
-/**
- * SDK 代码展示面板。
- */
 function SdkDemo() {
   return (
     <pre className="overflow-x-auto font-mono text-[0.74rem] leading-[1.75] text-foreground">
@@ -197,9 +180,6 @@ function SdkDemo() {
   );
 }
 
-/**
- * Console 状态面板。
- */
 function ConsoleDemo() {
   return (
     <div className="grid grid-cols-2 gap-3">
@@ -208,7 +188,7 @@ function ConsoleDemo() {
           key={row.label}
           className="rounded-xl border border-line bg-surface-muted p-3 transition-colors hover:border-line-strong"
         >
-          <div className="flex items-center gap-1.5 text-[0.65rem] uppercase tracking-[0.12em] text-text-subtle">
+          <div className="flex items-center gap-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-text-subtle">
             {row.state === "online" ? (
               <IconPointFilled className="size-3 text-success" />
             ) : (
@@ -223,9 +203,6 @@ function ConsoleDemo() {
   );
 }
 
-/**
- * 右侧演示面板。
- */
 function DemoPanel() {
   const [tab, setTab] = useState<DemoTab>("cli");
   const { i18n } = useTranslation();
@@ -238,17 +215,17 @@ function DemoPanel() {
   ];
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-line bg-surface shadow-[var(--shadow-panel)]">
+    <div
+      className="relative overflow-hidden rounded-[20px] border border-line bg-card shadow-[0_1px_2px_rgb(27_27_24_/_0.03),_0_4px_8px_rgb(27_27_24_/_0.03),_0_12px_24px_rgb(27_27_24_/_0.04),_0_32px_64px_rgb(27_27_24_/_0.05)]"
+    >
       <div className="flex items-center justify-between border-b border-line px-4 py-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <div className="flex gap-1.5">
-            <span className="size-2.5 rounded-full bg-danger/80" />
-            <span className="size-2.5 rounded-full bg-[#d4a017]/80" />
-            <span className="size-2.5 rounded-full bg-success/80" />
+            <span className="size-2.5 rounded-full bg-[#ff5f57]" />
+            <span className="size-2.5 rounded-full bg-[#febc2e]" />
+            <span className="size-2.5 rounded-full bg-[#28c840]" />
           </div>
-          <span className="ml-2 font-mono text-[0.65rem] uppercase tracking-[0.12em] text-text-subtle">
-            {isZh ? "downcity" : "downcity"}
-          </span>
+          <span className="font-mono text-[0.65rem] uppercase tracking-[0.1em] text-text-subtle">downcity</span>
         </div>
         <div className="flex items-center gap-1">
           {tabs.map((t) => {
@@ -260,10 +237,8 @@ function DemoPanel() {
                 type="button"
                 onClick={() => setTab(t.key)}
                 className={cn(
-                  "inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-[0.7rem] font-medium transition-colors",
-                  active
-                    ? "bg-foreground text-background"
-                    : "text-text-subtle hover:bg-surface-hover hover:text-foreground"
+                  "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[0.75rem] font-medium transition-colors",
+                  active ? "bg-foreground text-background" : "text-text-subtle hover:bg-surface-hover hover:text-foreground"
                 )}
               >
                 <Icon className="size-3" />
@@ -274,7 +249,7 @@ function DemoPanel() {
         </div>
       </div>
 
-      <div className="min-h-[280px] bg-surface-soft/40 p-4 md:min-h-[300px] md:p-5">
+      <div className="min-h-[280px] bg-surface-soft/40 p-4 md:min-h-[320px] md:p-5">
         <AnimatePresence mode="wait">
           <motion.div
             key={tab}
@@ -293,10 +268,6 @@ function DemoPanel() {
   );
 }
 
-/**
- * 首页主视觉组件。
- * 说明：顶部内边距为全局 Navbar 留出空间，避免内容被遮挡。
- */
 export function HomeHeroSection() {
   const { i18n, t } = useTranslation();
   const isZh = i18n.language.toLowerCase().startsWith("zh");
@@ -304,43 +275,42 @@ export function HomeHeroSection() {
   const docsPath = isZh ? "/zh/docs" : "/en/docs";
 
   return (
-    <section className="relative">
-      <div className="mx-auto max-w-5xl px-4 pb-24 pt-24 md:px-6 md:pb-32 md:pt-32">
-        <div className="flex flex-col items-center text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[0.65rem] font-medium uppercase tracking-[0.16em] text-text-subtle">
+    <section className="relative overflow-hidden">
+      <div className="mx-auto max-w-[1600px] px-5 pb-16 pt-16 md:px-8 md:pb-24 md:pt-24 lg:px-20">
+        <div className="mx-auto max-w-3xl text-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[0.65rem] font-medium uppercase tracking-[0.12em] text-text-soft">
             <IconBolt className="size-3" />
             {t("hero:topBadge")}
           </span>
 
-          <h1 className="mt-7 max-w-3xl text-balance text-[clamp(2.5rem,7vw,5rem)] font-semibold leading-[0.98] tracking-tight">
-            {t("hero:title")}{" "}
-            <span className="text-foreground/70">{t("hero:titleItalic")}</span>
-            {t("hero:titleEnd") ? <> {t("hero:titleEnd")}</> : null}
+          <h1 className="mt-6 font-serif text-[clamp(2rem,5vw,3.375rem)] font-bold leading-[1.04] tracking-[-0.02em] text-foreground">
+            {t("hero:title")}
           </h1>
 
-          <p className="mt-5 max-w-2xl text-pretty text-base leading-7 text-text-soft md:text-lg">
+          <p className="mx-auto mt-5 max-w-2xl text-base leading-[1.65] text-text-soft">
             {t("hero:subtitle")}
           </p>
 
-          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <InstallCommand />
             <Link
               to={startPath}
-              className="inline-flex h-[3.25rem] items-center gap-2 rounded-xl border border-foreground bg-foreground px-5 text-[0.9rem] font-medium text-background transition-colors hover:bg-foreground/90"
+              className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-76"
             >
               <IconPlayerPlayFilled className="size-3.5" />
               {t("hero:start")}
             </Link>
             <Link
               to={docsPath}
-              className="inline-flex h-[3.25rem] items-center rounded-xl border border-line bg-surface px-5 text-[0.9rem] font-medium text-foreground transition-colors hover:bg-surface-hover"
+              className="inline-flex h-11 items-center gap-2 rounded-lg bg-foreground/[0.05] px-5 text-sm font-semibold text-foreground transition-colors hover:bg-foreground/[0.08]"
             >
+              <IconBook className="size-3.5" />
               {isZh ? "查看文档" : "Read docs"}
             </Link>
           </div>
         </div>
 
-        <div className="mt-14 md:mt-20">
+        <div className="mx-auto mt-14 max-w-5xl md:mt-20">
           <DemoPanel />
         </div>
       </div>

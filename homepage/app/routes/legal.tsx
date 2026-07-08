@@ -1,7 +1,5 @@
 import { Footer } from "@/components/sections/Footer";
-import { marketingTheme } from "@/lib/marketing-theme";
 import { product } from "@/lib/product";
-import { cn } from "@/lib/utils";
 
 /**
  * Legal 页面内容模型。
@@ -139,7 +137,7 @@ const legal_pages = {
       {
         title: "12. Disclaimers and limitation of liability",
         paragraphs: [
-          "THE SERVICE IS PROVIDED \"AS IS\" AND \"AS AVAILABLE\" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, AVAILABILITY, SECURITY, OR ACCURACY OF AI OUTPUTS.",
+          'THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, AVAILABILITY, SECURITY, OR ACCURACY OF AI OUTPUTS.',
           "AI outputs may be inaccurate, incomplete, or outdated. Do not rely on them for legal, medical, financial, safety-critical, or other professional advice. Always verify AI-generated content with a qualified professional before acting on it.",
           "TO THE MAXIMUM EXTENT PERMITTED BY LAW, GENESIS COSMOS, DOWNCITY, AND THEIR CONTRIBUTORS WILL NOT BE LIABLE FOR INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, OR FOR LOST PROFITS, REVENUES, DATA, GOODWILL, OR BUSINESS OPPORTUNITIES. OUR TOTAL LIABILITY WILL NOT EXCEED THE AMOUNT YOU PAID TO DOWNCITY IN THE 12 MONTHS PRECEDING THE EVENT GIVING RISE TO THE CLAIM.",
         ],
@@ -301,20 +299,27 @@ export function create_legal_meta(page_key: keyof typeof legal_pages) {
 }
 
 /**
- * 通用 Legal 页面组件。
+ * 通用 Legal 页面组件（Vibecape 风格）。
+ * 说明：
+ * 1. 统一法律页容器，最大宽度约 768px。
+ * 2. 使用细边框卡片包裹正文，标题层级清晰。
  */
 export function LegalPage({ page_key }: { page_key: keyof typeof legal_pages }) {
   const page = legal_pages[page_key];
 
   return (
-    <div className="min-h-screen">
-      <main>
-        <article className={cn(marketingTheme.editorialPage, "pt-24 md:pt-28")}>
-          <header className="space-y-5 border-b border-line pb-8">
-            <p className={marketingTheme.eyebrow}>{page.eyebrow}</p>
-            <div className="space-y-4">
-              <h1 className={marketingTheme.pageTitle}>{page.title}</h1>
-              <p className={marketingTheme.lead}>{page.description}</p>
+    <div className="min-h-screen bg-background">
+      <main className="mx-auto max-w-3xl px-5 py-16 md:px-8 md:py-24">
+        <article className="rounded-[14px] border border-line bg-card p-6 shadow-sm md:p-10">
+          <header className="space-y-4 border-b border-line pb-8">
+            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[0.65rem] font-medium uppercase tracking-[0.12em] text-text-soft">
+              {page.eyebrow}
+            </span>
+            <div className="space-y-3">
+              <h1 className="font-serif text-[clamp(1.875rem,4vw,2.25rem)] font-bold leading-[1.12] tracking-[-0.02em] text-foreground">
+                {page.title}
+              </h1>
+              <p className="text-base leading-[1.65] text-text-soft">{page.description}</p>
             </div>
             <p className="font-mono text-[0.72rem] uppercase tracking-[0.16em] text-text-soft">
               Effective date: {page.effective_date}
@@ -329,7 +334,7 @@ export function LegalPage({ page_key }: { page_key: keyof typeof legal_pages }) 
                 </h2>
                 <div className="space-y-4">
                   {section.paragraphs.map((paragraph) => (
-                    <p key={paragraph} className={marketingTheme.body}>
+                    <p key={paragraph} className="text-sm leading-relaxed text-text-soft">
                       {paragraph.includes(contact_email) ? (
                         <>
                           {paragraph.split(contact_email)[0]}

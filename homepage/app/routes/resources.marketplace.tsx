@@ -1,8 +1,9 @@
 /**
- * Agent Marketplace 公开页面。
+ * Agent Marketplace 公开页面（Vibecape 风格）。
  * 说明：
  * 1. 展示所有已经审核通过的社区 Agent。
  * 2. 提供公开提交流程，提交后先进入 Supabase 审核队列。
+ * 3. 保留原有 loader/action 逻辑，仅更新卡片、表单、筛选器样式。
  */
 import { AlertCircle, ArrowUpRight, CheckCircle2, ShieldCheck } from "lucide-react";
 import {
@@ -14,7 +15,6 @@ import {
   useNavigation,
 } from "react-router";
 import type { Route } from "./+types/resources.marketplace";
-import { marketingTheme } from "@/lib/marketing-theme";
 import {
   findAgentMarketplaceSubmissionByNormalizedRepositoryUrl,
   listApprovedAgentMarketplaceSubmissions,
@@ -173,7 +173,7 @@ const MARKETPLACE_PAGE = {
 type MarketplaceLang = keyof typeof MARKETPLACE_PAGE;
 
 const FIELD_CLASS_NAME =
-  "mt-2 min-h-11 w-full rounded-[16px] border border-line bg-surface px-4 py-3 text-sm text-foreground outline-none transition-colors placeholder:text-text-subtle focus:border-primary";
+  "mt-2 min-h-11 w-full rounded-lg border border-line bg-surface px-4 py-3 text-sm text-foreground outline-none transition-colors placeholder:text-text-subtle focus:border-primary";
 
 function createEmptyFormValues(): AgentMarketplaceSubmissionFormValues {
   return {
@@ -348,20 +348,24 @@ export default function Marketplace({
   const submitted = new URLSearchParams(location.search).get("submitted") === "1";
 
   return (
-    <div className={marketingTheme.pageNarrow}>
-      <header className="space-y-3">
-        <span className={marketingTheme.badge}>{content.badge}</span>
-        <h1 className={marketingTheme.pageTitle}>{content.title}</h1>
-        <p className={marketingTheme.lead}>{content.subtitle}</p>
+    <div className="mx-auto max-w-[1320px] px-5 py-16 md:px-8 md:py-24 lg:px-20">
+      <header className="space-y-4">
+        <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[0.65rem] font-medium uppercase tracking-[0.12em] text-text-soft">
+          {content.badge}
+        </span>
+        <h1 className="font-serif text-[clamp(1.875rem,4vw,2.25rem)] font-bold leading-[1.12] tracking-[-0.02em] text-foreground">
+          {content.title}
+        </h1>
+        <p className="max-w-2xl text-base leading-[1.65] text-text-soft">{content.subtitle}</p>
       </header>
 
       {submitted ? (
-        <section className="mt-8 rounded-[24px] border border-success-border bg-success-soft p-5 text-success-foreground">
+        <section className="mt-8 rounded-[14px] border border-success-border bg-success-soft p-5 text-success-foreground">
           <div className="flex items-start gap-3">
             <CheckCircle2 className="mt-0.5 size-5 shrink-0" />
             <div>
               <h2 className="text-base font-semibold">{content.successTitle}</h2>
-              <p className="mt-1 text-sm leading-7 text-success-foreground/80">
+              <p className="mt-1 text-sm leading-relaxed text-success-foreground/80">
                 {content.successDescription}
               </p>
             </div>
@@ -371,55 +375,53 @@ export default function Marketplace({
 
       <section className="mt-8 grid gap-4 md:grid-cols-3">
         {content.workflow.map((item, index) => (
-          <article key={item.title} className={`${marketingTheme.panel} p-5`}>
-            <p className={marketingTheme.eyebrow}>
+          <article key={item.title} className="rounded-[14px] border border-line bg-card p-5 shadow-sm">
+            <p className="font-mono text-[0.7rem] font-medium uppercase tracking-[0.06em] text-text-subtle">
               {String(index + 1).padStart(2, "0")}
             </p>
-            <h2 className="mt-3 text-lg font-semibold text-foreground">
-              {item.title}
-            </h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">
-              {item.description}
-            </p>
+            <h2 className="mt-3 text-lg font-semibold text-foreground">{item.title}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-text-soft">{item.description}</p>
           </article>
         ))}
       </section>
 
       <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className={`${marketingTheme.panel} p-6`}>
+        <div className="rounded-[14px] border border-line bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className={marketingTheme.sectionTitle}>{content.liveTitle}</h2>
-              <p className="mt-2 text-sm leading-7 text-muted-foreground">
+              <h2 className="font-serif text-[clamp(1.5rem,3vw,1.875rem)] font-bold leading-[1.16] tracking-[-0.02em] text-foreground">
+                {content.liveTitle}
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-text-soft">
                 {content.workflow[2].description}
               </p>
             </div>
-            <span className={marketingTheme.badge}>
+            <span className="inline-flex items-center rounded-full border border-line bg-surface px-3 py-1 text-[0.65rem] font-medium uppercase tracking-[0.1em] text-text-soft">
               {loaderData.approvedAgents.length}
             </span>
           </div>
 
           {loaderData.approvedAgents.length === 0 ? (
-            <div className={`${marketingTheme.panelSoft} mt-6 p-5`}>
-              <h3 className="text-base font-semibold">{content.liveEmptyTitle}</h3>
-              <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            <div className="mt-6 rounded-xl border border-line bg-surface-soft p-5">
+              <h3 className="text-base font-semibold text-foreground">{content.liveEmptyTitle}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-text-soft">
                 {content.liveEmptyDescription}
               </p>
             </div>
           ) : (
             <div className="mt-6 grid gap-4">
               {loaderData.approvedAgents.map((agent) => (
-                <article key={agent.id} className={`${marketingTheme.panelSoft} p-5`}>
+                <article key={agent.id} className="rounded-xl border border-line bg-surface-soft p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-lg font-semibold text-foreground">
                           {agent.agentName}
                         </h3>
-                        <span className={marketingTheme.badge}>
+                        <span className="inline-flex items-center rounded-full border border-line bg-surface px-2.5 py-1 text-[0.65rem] font-medium uppercase tracking-[0.1em] text-text-soft">
                           {content.reviewBadge}
                         </span>
-                        <span className={marketingTheme.tagSoft}>
+                        <span className="inline-flex items-center rounded-full border border-line bg-surface-soft px-2.5 py-1 text-[0.65rem] text-text-soft">
                           {
                             content.categoryLabels[
                               agent.category as keyof typeof content.categoryLabels
@@ -427,11 +429,11 @@ export default function Marketplace({
                           }
                         </span>
                       </div>
-                      <p className="mt-2 max-w-2xl text-sm leading-7 text-muted-foreground">
+                      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-soft">
                         {agent.description}
                       </p>
                     </div>
-                    <ShieldCheck className="size-5 shrink-0 text-foreground/72" />
+                    <ShieldCheck className="size-5 shrink-0 text-text-subtle" />
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">
@@ -439,7 +441,7 @@ export default function Marketplace({
                       href={agent.repositoryUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={marketingTheme.primaryButton}
+                      className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-76"
                     >
                       {content.buttons.repo}
                       <ArrowUpRight className="size-4" />
@@ -449,7 +451,7 @@ export default function Marketplace({
                         href={agent.homepageUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={marketingTheme.secondaryButton}
+                        className="inline-flex h-11 items-center gap-2 rounded-lg bg-foreground/[0.05] px-5 text-sm font-semibold text-foreground transition-colors hover:bg-foreground/[0.08]"
                       >
                         {content.buttons.homepage}
                       </a>
@@ -459,14 +461,14 @@ export default function Marketplace({
                         href={agent.demoUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={marketingTheme.secondaryButton}
+                        className="inline-flex h-11 items-center gap-2 rounded-lg bg-foreground/[0.05] px-5 text-sm font-semibold text-foreground transition-colors hover:bg-foreground/[0.08]"
                       >
                         {content.buttons.demo}
                       </a>
                     ) : null}
                   </div>
 
-                  <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+                  <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-text-soft">
                     <span>
                       {content.maintainerLabel}: {agent.submitterName}
                     </span>
@@ -483,16 +485,16 @@ export default function Marketplace({
         </div>
 
         <div>
-          <section className={`${marketingTheme.panel} p-6`}>
-            <h2 className="text-xl font-semibold text-foreground">
+          <section className="rounded-[14px] border border-line bg-card p-6 shadow-sm">
+            <h2 className="font-serif text-[clamp(1.375rem,2.5vw,1.75rem)] font-bold leading-[1.16] tracking-[-0.02em] text-foreground">
               {content.formTitle}
             </h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            <p className="mt-2 text-sm leading-relaxed text-text-soft">
               {content.formDescription}
             </p>
 
             {formErrors?.form ? (
-              <div className="mt-5 rounded-[18px] border border-danger-border bg-danger-soft p-4 text-danger-foreground">
+              <div className="mt-5 rounded-[14px] border border-danger-border bg-danger-soft p-4 text-danger-foreground">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="mt-0.5 size-4 shrink-0" />
                   <p className="text-sm leading-6">{formErrors.form}</p>
@@ -504,7 +506,7 @@ export default function Marketplace({
               <input type="hidden" name="intent" value="submit" />
 
               <label className="block">
-                <span className="text-sm font-medium text-foreground">
+                <span className="text-sm font-semibold text-foreground">
                   {content.formFields.repositoryUrl}
                 </span>
                 <input
@@ -513,7 +515,7 @@ export default function Marketplace({
                   className={FIELD_CLASS_NAME}
                   placeholder={content.placeholders.repositoryUrl}
                 />
-                <p className="mt-2 text-xs text-muted-foreground">
+                <p className="mt-2 text-xs text-text-soft">
                   {content.helper.repositoryUrl}
                 </p>
                 {formErrors?.repositoryUrl ? (
@@ -522,7 +524,7 @@ export default function Marketplace({
               </label>
 
               <label className="block">
-                <span className="text-sm font-medium text-foreground">
+                <span className="text-sm font-semibold text-foreground">
                   {content.formFields.submitterEmail}
                 </span>
                 <input
@@ -537,7 +539,11 @@ export default function Marketplace({
                 ) : null}
               </label>
 
-              <button type="submit" className={marketingTheme.primaryButton} disabled={isSubmitting}>
+              <button
+                type="submit"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-76 disabled:opacity-50"
+                disabled={isSubmitting}
+              >
                 {isSubmitting ? content.buttons.submitting : content.buttons.submit}
               </button>
             </Form>

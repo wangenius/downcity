@@ -66,7 +66,7 @@ export const links: Route.LinksFunction = () => [
   },
   {
     rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Silkscreen:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap",
+    href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap",
   },
 ];
 
@@ -249,18 +249,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <I18nextProvider i18n={i18next}>
           <RootProvider i18n={provider(lang)}>
             <div className="relative flex min-h-screen flex-col">
-              {showGlobalChrome ? (
-                <>
-                  <div
-                    aria-hidden
-                    className="marketing-backdrop-glow pointer-events-none absolute inset-0 -z-20"
-                  />
-                  <div
-                    aria-hidden
-                    className="marketing-backdrop-grid pointer-events-none absolute inset-0 -z-10"
-                  />
-                </>
-              ) : null}
               <Toaster theme="system" richColors position="top-center" />
               {showGlobalChrome ? <Navbar /> : null}
               <div className="relative flex-1">{children}</div>

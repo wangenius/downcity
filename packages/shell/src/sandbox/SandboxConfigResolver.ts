@@ -40,6 +40,21 @@ function normalizeEnvAllowlist(values?: string[]): string[] {
 }
 
 /**
+ * 解析 safe sandbox 允许导出的环境变量名。
+ *
+ * 关键点（中文）
+ * - 默认只保留 shell 运行所需的最小宿主变量。
+ * - Agent env 是 SDK 显式运行时状态，因此它的 key 需要动态进入 allowlist。
+ * - 这里不读取完整 `process.env`，避免把宿主环境隐式暴露给 sandbox。
+ */
+export function resolveSandboxEnvAllowlist(context: ShellHostContext): string[] {
+  return normalizeEnvAllowlist([
+    ...DEFAULT_ENV_ALLOWLIST,
+    ...Object.keys(context.env || {}),
+  ]);
+}
+
+/**
  * 判断目标路径是否位于根目录内，或与根目录本身相同。
  */
 export function isPathInsideRoot(rootPath: string, targetPath: string): boolean {
@@ -112,7 +127,7 @@ export function resolveSandboxConfig(context: ShellHostContext): ResolvedSandbox
     homeDir: sandboxDir,
     tmpDir,
     cacheDir,
-    envAllowlist: normalizeEnvAllowlist(),
+    envAllowlist: resolveSandboxEnvAllowlist(context),
     writablePaths: normalizeWritablePaths({
       rootPath,
       sandboxDir,

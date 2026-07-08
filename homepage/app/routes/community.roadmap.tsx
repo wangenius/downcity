@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
-import { product } from "@/lib/product";
 import { IconBuildingFactory, IconRocket, IconSparkles } from "@tabler/icons-react";
-import { marketingTheme } from "@/lib/marketing-theme";
+import { product } from "@/lib/product";
+import { cn } from "@/lib/utils";
 
 export function meta() {
   const title = `${product.productName} — Roadmap`;
@@ -53,10 +53,10 @@ const roadmap = [
   },
 ] as const;
 
-const STATUS_CLASS: Record<string, string> = {
-  completed: "text-success",
-  "in-progress": "text-info",
-  pending: "text-muted-foreground",
+const STATUS_DOT: Record<string, string> = {
+  completed: "bg-success",
+  "in-progress": "bg-info",
+  pending: "bg-text-subtle",
 };
 
 export default function Roadmap() {
@@ -68,76 +68,77 @@ export default function Roadmap() {
   const issuesUrl = `${repoUrl}/issues`;
 
   return (
-    <div className={marketingTheme.pageNarrow}>
-      <header className="space-y-3">
-        <span className={marketingTheme.badge}>
+    <div className="mx-auto max-w-[1320px] px-5 py-16 md:px-8 md:py-24 lg:px-20">
+      <header className="space-y-4">
+        <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[0.65rem] font-medium uppercase tracking-[0.12em] text-text-soft">
           Roadmap
         </span>
-        <h1 className={marketingTheme.pageTitle}>{t("nav.roadmap")}</h1>
-        <p className={marketingTheme.lead}>
-          {t("community:roadmap.description")}
-        </p>
+        <h1 className="font-serif text-[clamp(1.875rem,4vw,2.25rem)] font-bold leading-[1.12] tracking-[-0.02em] text-foreground">
+          {t("nav.roadmap")}
+        </h1>
+        <p className="max-w-2xl text-base leading-[1.65] text-text-soft">{t("community:roadmap.description")}</p>
       </header>
 
-      <section className="mt-8 space-y-4">
+      <section className="mt-8 grid gap-4 md:grid-cols-3">
         {roadmap.map((version, index) => (
           <article
             key={version.version}
-            className={`${marketingTheme.panel} p-5 md:p-6`}
+            className="rounded-[14px] border border-line bg-card p-5 shadow-sm md:p-6"
           >
             <div className="flex flex-wrap items-center gap-2">
-              <version.icon className="size-4 text-muted-foreground" stroke={1.8} />
-              <span className="font-mono text-[0.66rem] uppercase tracking-[0.1em] text-muted-foreground">
+              <version.icon className="size-4 text-text-subtle" stroke={1.8} />
+              <span className="font-mono text-[0.7rem] font-medium uppercase tracking-[0.06em] text-text-subtle">
                 {version.version}
               </span>
-              <span className={`${marketingTheme.badge} px-2.5 py-0.5`}>
+              <span className="inline-flex items-center rounded-full border border-line bg-surface px-2.5 py-1 text-[0.65rem] font-medium uppercase tracking-[0.1em] text-text-soft">
                 {t(`community:roadmapPage.phases.${version.status}`)}
               </span>
             </div>
 
-            <h2 className="mt-3 font-serif text-[1.55rem] font-semibold tracking-[-0.03em] text-foreground">
+            <h2 className="mt-4 font-serif text-[1.55rem] font-semibold tracking-[-0.03em] text-foreground">
               {t(`community:roadmapPage.versions.${version.version}.title`)}
             </h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            <p className="mt-2 text-sm leading-relaxed text-text-soft">
               {t(`community:roadmapPage.versions.${version.version}.description`)}
             </p>
 
-            <ul className="mt-4 grid gap-2">
+            <ul className="mt-5 space-y-2">
               {version.features.map((feature) => (
                 <li
                   key={feature.id}
-                  className={`${marketingTheme.panelSoft} px-3 py-2`}
+                  className="rounded-xl border border-line bg-surface-soft px-3 py-2"
                 >
                   <div className="flex items-center gap-2">
-                    <span className={`font-mono text-[0.66rem] uppercase tracking-[0.1em] ${STATUS_CLASS[feature.status]}`}>
+                    <span className={cn("size-1.5 rounded-full", STATUS_DOT[feature.status])} />
+                    <span className="font-mono text-[0.65rem] font-medium uppercase tracking-[0.08em] text-text-subtle">
                       {feature.status}
                     </span>
-                    <span className="text-sm font-medium">
+                    <span className="text-sm font-semibold text-foreground">
                       {t(`community:roadmapPage.versions.${version.version}.features.${feature.id}.name`)}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs leading-6 text-muted-foreground">
+                  <p className="mt-1 text-xs leading-relaxed text-text-soft">
                     {t(`community:roadmapPage.versions.${version.version}.features.${feature.id}.desc`)}
                   </p>
                 </li>
               ))}
             </ul>
 
-            {index !== roadmap.length - 1 ? <div className="mt-4 border-b border-border/70" /> : null}
+            {index !== roadmap.length - 1 ? null : null}
           </article>
         ))}
       </section>
 
-      <section className={`${marketingTheme.panel} mt-8 p-6`}>
-        <h3 className="text-lg font-semibold">{t("community:roadmapPage.cta.title")}</h3>
-        <p className="mt-2 text-sm leading-7 text-muted-foreground">
+      <section className="mt-8 rounded-[14px] border border-line bg-card p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-foreground">{t("community:roadmapPage.cta.title")}</h3>
+        <p className="mt-2 text-sm leading-relaxed text-text-soft">
           {t("community:roadmapPage.cta.description")}
         </p>
         <a
           href={issuesUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className={`mt-4 ${marketingTheme.primaryButton}`}
+          className="mt-4 inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-76"
         >
           {t("community:roadmapPage.cta.button")}
         </a>

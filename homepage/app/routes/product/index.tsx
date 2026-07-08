@@ -6,13 +6,13 @@ import {
   IconBuildingSkyscraper,
   IconRobot,
 } from "@tabler/icons-react";
-import { marketingTheme } from "@/lib/marketing-theme";
 
 const page_content = {
   zh: {
     badge: "Product",
     title: "给 AI builders 的 Agent 基础设施产品矩阵",
-    subtitle: "Downcity 不是单点工具，而是一套可复用运行层：本地 Agent 宿主、Agent SDK、City SDK 与 UI SDK 共同支撑多个 Agent 产品和工作流。",
+    subtitle:
+      "Downcity 不是单点工具，而是一套可复用运行层：本地 Agent 宿主、Agent SDK、City SDK 与 UI SDK 共同支撑多个 Agent 产品和工作流。",
     logicBadge: "Product Logic",
     logicTitle: "Products、Agents 与 City Runtime",
     logicSubtitle:
@@ -119,11 +119,11 @@ const page_content = {
 } as const;
 
 /**
- * Product 概览页。
+ * Product 概览页（Vibecape 风格）。
  * 说明：
- * 1. Product 仅展示真实产品线，不再使用抽象分组。
- * 2. 文案基于仓库目录与文档事实，避免空泛描述。
- * 3. 产品逻辑图只表达 Products、Agents、City Runtime 三个核心概念。
+ * 1. 顶部标题与产品逻辑图。
+ * 2. 产品卡片使用 1px 细线分隔 grid。
+ * 3. 事实列表使用简洁面板。
  */
 export default function ProductOverviewPage() {
   const { i18n } = useTranslation();
@@ -132,80 +132,84 @@ export default function ProductOverviewPage() {
   const base_path = is_zh ? "/zh/product" : "/product";
 
   return (
-    <div className={marketingTheme.pageNarrow}>
-      <section>
-        <span className={marketingTheme.badge}>{content.badge}</span>
-        <h1 className={`mt-5 ${marketingTheme.pageTitle}`}>{content.title}</h1>
-        <p className={`mt-4 ${marketingTheme.lead}`}>{content.subtitle}</p>
-      </section>
+    <div className="mx-auto max-w-[1320px] px-5 py-16 md:px-8 md:py-24 lg:px-20">
+      <div className="space-y-16 md:space-y-20">
+        <section className="max-w-3xl space-y-5">
+          <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[0.65rem] font-medium uppercase tracking-[0.12em] text-text-soft">
+            {content.badge}
+          </span>
+          <h1 className="font-serif text-[clamp(1.875rem,4vw,2.25rem)] font-bold leading-[1.12] tracking-[-0.02em] text-foreground">
+            {content.title}
+          </h1>
+          <p className="text-base leading-[1.65] text-text-soft">{content.subtitle}</p>
+        </section>
 
-      <ProductLogicSection content={content} />
+        <ProductLogicSection content={content} />
 
-      <section className="mt-10 grid gap-4 md:grid-cols-2">
-        {content.cards.map((card) => (
-          <Link
-            key={card.id}
-            to={`${base_path}/${card.id}`}
-            className={`${marketingTheme.panel} p-5 transition-colors hover:bg-card/92 md:p-6`}
-          >
-            <p className={marketingTheme.eyebrow}>{card.source}</p>
-            <h2 className="mt-3 font-serif text-[1.5rem] font-semibold tracking-[-0.03em] text-foreground">
-              {card.title}
-            </h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">{card.desc}</p>
-          </Link>
-        ))}
-      </section>
-
-      <section className={`${marketingTheme.panel} mt-10 p-5 md:p-6`}>
-        <h3 className={marketingTheme.eyebrow}>{content.factsTitle}</h3>
-        <ul className="mt-4 space-y-2 text-sm leading-7 text-foreground/90">
-          {content.facts.map((fact) => (
-            <li key={fact}>• {fact}</li>
+        <section className="grid grid-cols-1 gap-px overflow-hidden rounded-[14px] bg-line sm:grid-cols-2">
+          {content.cards.map((card) => (
+            <Link
+              key={card.id}
+              to={`${base_path}/${card.id}`}
+              className="group bg-card p-6 transition-colors hover:bg-background md:p-8"
+            >
+              <p className="font-mono text-[0.7rem] uppercase tracking-[0.06em] text-text-subtle">{card.source}</p>
+              <h2 className="mt-4 text-lg font-semibold text-foreground">{card.title}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-text-soft">{card.desc}</p>
+              <div className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-foreground">
+                <span>{is_zh ? "了解更多" : "Learn more"}</span>
+                <IconArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+              </div>
+            </Link>
           ))}
-        </ul>
-      </section>
+        </section>
+
+        <section className="rounded-[14px] border border-line bg-card p-6 shadow-sm md:p-8">
+          <h3 className="text-[0.78rem] font-medium uppercase tracking-[0.04em] text-text-soft">{content.factsTitle}</h3>
+          <ul className="mt-5 space-y-3 text-sm leading-relaxed text-text-soft">
+            {content.facts.map((fact) => (
+              <li key={fact} className="flex gap-3">
+                <span className="mt-2 inline-flex size-1.5 shrink-0 rounded-full bg-text-subtle" />
+                {fact}
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
     </div>
   );
 }
 
 type ProductOverviewContent = (typeof page_content)[keyof typeof page_content];
 
-/**
- * 产品逻辑图示区域。
- * 说明：
- * 1. 只保留一条主线：Products -> Agents -> City Runtime。
- * 2. 避免把 City 作为对外总定位，只保留City runtime的产品事实。
- * 3. 下方三条说明解释产品、Agent 与City runtime的边界。
- */
 function ProductLogicSection({ content }: { content: ProductOverviewContent }) {
   return (
-    <section className={`${marketingTheme.panel} mt-10 p-5 md:p-6`}>
-      <span className={marketingTheme.badge}>{content.logicBadge}</span>
-      <div className="mt-4 grid gap-4 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+    <section className="rounded-[14px] border border-line bg-card p-6 shadow-sm md:p-8">
+      <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[0.65rem] font-medium uppercase tracking-[0.12em] text-text-soft">
+        {content.logicBadge}
+      </span>
+      <div className="mt-6 grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
         <div>
-          <h2 className={marketingTheme.sectionTitle}>{content.logicTitle}</h2>
-          <p className={`mt-3 ${marketingTheme.body}`}>{content.logicSubtitle}</p>
+          <h2 className="font-serif text-[clamp(1.5rem,3vw,2rem)] font-bold leading-[1.12] tracking-[-0.02em] text-foreground">
+            {content.logicTitle}
+          </h2>
+          <p className="mt-4 text-sm leading-relaxed text-text-soft">{content.logicSubtitle}</p>
         </div>
 
-        <div className="rounded-[18px] border border-line-soft bg-surface-muted p-4">
+        <div className="rounded-xl border border-line-soft bg-surface-muted p-4">
           <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-stretch">
             {content.flow.map((item, index) => (
-              <FlowNode
-                key={item.title}
-                item={item}
-                show_arrow={index < content.flow.length - 1}
-              />
+              <FlowNode key={item.title} item={item} show_arrow={index < content.flow.length - 1} />
             ))}
           </div>
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-3">
+      <div className="mt-6 grid gap-px overflow-hidden rounded-[14px] bg-line sm:grid-cols-3">
         {content.notes.map((note) => (
-          <div key={note.title} className="rounded-[14px] border border-line-soft bg-surface-muted p-4">
+          <div key={note.title} className="bg-surface-muted p-5">
             <p className="text-sm font-semibold text-foreground">{note.title}</p>
-            <p className="mt-2 text-sm leading-6 text-text-soft">{note.desc}</p>
+            <p className="mt-2 text-sm leading-relaxed text-text-soft">{note.desc}</p>
           </div>
         ))}
       </div>
@@ -215,25 +219,14 @@ function ProductLogicSection({ content }: { content: ProductOverviewContent }) {
 
 type FlowItem = ProductOverviewContent["flow"][number];
 
-/**
- * 主流程节点。
- */
-function FlowNode({
-  item,
-  show_arrow,
-}: {
-  /** 当前流程节点。 */
-  item: FlowItem;
-  /** 是否展示到下一个节点的连接箭头。 */
-  show_arrow: boolean;
-}) {
+function FlowNode({ item, show_arrow }: { item: FlowItem; show_arrow: boolean }) {
   const Icon = item.icon;
 
   return (
     <>
-      <div className="rounded-[14px] border border-line bg-surface p-3">
+      <div className="rounded-xl border border-line bg-surface p-4">
         <div className="flex items-center gap-2">
-          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-foreground text-background">
+          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background">
             <Icon className="size-4" />
           </span>
           <span className="text-sm font-semibold text-foreground">{item.title}</span>
@@ -241,7 +234,7 @@ function FlowNode({
         <p className="mt-2 text-xs leading-5 text-text-soft">{item.desc}</p>
       </div>
       {show_arrow ? (
-        <div className="flex items-center justify-center text-text-soft">
+        <div className="flex items-center justify-center text-text-subtle">
           <IconArrowRight className="hidden size-5 md:block" />
           <span className="h-5 w-px bg-line-soft md:hidden" />
         </div>

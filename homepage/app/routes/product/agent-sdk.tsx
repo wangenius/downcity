@@ -1,8 +1,7 @@
-import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import { marketingTheme } from "@/lib/marketing-theme";
+import { ProductDetailSection, type ProductDetailContent } from "@/components/sections/ProductDetailSection";
 
-const PAGE = {
+const PAGE: Record<"zh" | "en", ProductDetailContent> = {
   zh: {
     title: "Product · Agent SDK",
     subtitle:
@@ -69,59 +68,13 @@ const PAGE = {
       "Core entry points: Agent / RemoteAgent / Session",
     ],
   },
-} as const;
+};
 
-/**
- * Product Agent SDK 页面。
- * 说明：
- * 1. 这里聚焦 `@downcity/agent` 的嵌入式执行壳能力。
- * 2. 与City SDK 分开后，用户能明确区分“平台运行层”和“应用嵌入层”。
- */
 export default function ProductAgentSdkPage() {
   const { i18n } = useTranslation();
   const isZh = i18n.language.toLowerCase().startsWith("zh");
   const content = isZh ? PAGE.zh : PAGE.en;
-  const agentSdkDocsPath = isZh ? "/zh/agent-sdk-docs" : "/en/agent-sdk-docs";
+  const docsPath = isZh ? "/zh/agent-sdk-docs" : "/en/agent-sdk-docs";
 
-  return (
-    <div className={marketingTheme.pageNarrow}>
-      <h1 className={marketingTheme.pageTitle}>{content.title}</h1>
-      <p className={`mt-4 ${marketingTheme.lead}`}>{content.subtitle}</p>
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <Link to={agentSdkDocsPath} className={marketingTheme.primaryButton}>
-          {content.docsCtaLabel}
-        </Link>
-        <p className="text-sm leading-7 text-muted-foreground">{content.docsCtaHint}</p>
-      </div>
-
-      <div className="mt-8 grid gap-4 md:grid-cols-3">
-        {content.highlights.map((item) => (
-          <article key={item.title} className={`${marketingTheme.panel} p-5 md:p-6`}>
-            <h2 className="font-serif text-[1.35rem] font-semibold tracking-[-0.03em] text-foreground">
-              {item.title}
-            </h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">{item.description}</p>
-          </article>
-        ))}
-      </div>
-
-      <section className={`${marketingTheme.panel} mt-8 p-5 md:p-6`}>
-        <h3 className={marketingTheme.eyebrow}>{content.scenesTitle}</h3>
-        <ul className="mt-4 space-y-2 text-sm leading-7 text-foreground/90">
-          {content.scenes.map((scene) => (
-            <li key={scene}>• {scene}</li>
-          ))}
-        </ul>
-      </section>
-
-      <section className={`${marketingTheme.panel} mt-6 p-5 md:p-6`}>
-        <h3 className={marketingTheme.eyebrow}>{content.factsTitle}</h3>
-        <ul className="mt-4 space-y-2 text-sm leading-7 text-foreground/90">
-          {content.facts.map((fact) => (
-            <li key={fact}>• {fact}</li>
-          ))}
-        </ul>
-      </section>
-    </div>
-  );
+  return <ProductDetailSection content={content} docsPath={docsPath} isZh={isZh} />;
 }

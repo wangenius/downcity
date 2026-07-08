@@ -1,15 +1,7 @@
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { IconArrowRight, IconPlayerPlayFilled } from "@tabler/icons-react";
-import { marketingTheme } from "@/lib/marketing-theme";
-import { MarketingPanel } from "@/components/shared/marketing-elements";
 
-/**
- * 快速开始文章页。
- * 说明：
- * 1. 把启动流程压缩成一条线性的四步路径，减少首次接入的认知负担。
- * 2. 用编辑式排版承接首页视觉，而不是回到旧式文档卡片。
- */
 type StartStep = {
   title: string;
   description: string;
@@ -99,28 +91,36 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
   },
 };
 
+/**
+ * 快速开始文章页（Vibecape 风格）。
+ * 说明：
+ * 1. 四步线性路径，使用细边框卡片分隔。
+ * 2. 统一的暖色主题与按钮样式。
+ */
 export function StartGuideSection() {
   const { i18n } = useTranslation();
   const isZh = i18n.language.toLowerCase().startsWith("zh");
   const content = isZh ? START_GUIDE.zh : START_GUIDE.en;
-  const docsQuickstartPath = isZh
-    ? "/zh/docs/quickstart/getting-started"
-    : "/en/docs/quickstart/getting-started";
+  const docsQuickstartPath = isZh ? "/zh/docs/quickstart/getting-started" : "/en/docs/quickstart/getting-started";
   const homePath = isZh ? "/zh" : "/";
 
   return (
-    <section className={marketingTheme.pageNarrow}>
-      <div className={marketingTheme.sectionGap}>
+    <section className="mx-auto max-w-[1320px] px-5 py-16 md:px-8 md:py-24 lg:px-20">
+      <div className="space-y-12 md:space-y-16">
         <header className="grid gap-6 lg:grid-cols-[1fr_0.9fr] lg:items-end">
           <div className="space-y-4">
-            <span className={marketingTheme.badge}>{content.badge}</span>
-            <h1 className={marketingTheme.pageTitle}>{content.title}</h1>
+            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[0.65rem] font-medium uppercase tracking-[0.12em] text-text-soft">
+              {content.badge}
+            </span>
+            <h1 className="font-serif text-[clamp(1.875rem,4vw,2.25rem)] font-bold leading-[1.12] tracking-[-0.02em] text-foreground">
+              {content.title}
+            </h1>
           </div>
-          <div className={`${marketingTheme.rail} space-y-4`}>
-            <p className={marketingTheme.lead}>{content.intro}</p>
+          <div className="space-y-4 border-l border-line pl-5">
+            <p className="text-base leading-[1.65] text-text-soft">{content.intro}</p>
             <div className="flex flex-wrap gap-2">
               {content.notes.map((note) => (
-                <span key={note} className={marketingTheme.chip}>
+                <span key={note} className="inline-flex items-center rounded-full border border-line bg-surface px-2.5 py-1 text-[0.7rem] text-text-soft">
                   {note}
                 </span>
               ))}
@@ -128,51 +128,62 @@ export function StartGuideSection() {
           </div>
         </header>
 
-        <MarketingPanel className="overflow-hidden">
+        <div className="overflow-hidden rounded-[14px] border border-line bg-card shadow-sm">
           {content.steps.map((step, index) => (
             <article
               key={step.title}
-              className={index !== content.steps.length - 1 ? "border-b border-border/68 px-5 py-5 md:px-7" : "px-5 py-5 md:px-7"}
+              className={cn(
+                "px-5 py-6 md:px-8 md:py-8",
+                index !== content.steps.length - 1 && "border-b border-line"
+              )}
             >
-              <div className="grid gap-4 md:grid-cols-[5rem_minmax(0,1fr)] md:gap-6">
-                <div>
-                  <p className={marketingTheme.eyebrow}>{String(index + 1).padStart(2, "0")}</p>
-                </div>
+              <div className="grid gap-5 md:grid-cols-[4rem_minmax(0,1fr)] md:gap-8">
+                <p className="font-mono text-[0.7rem] font-medium uppercase tracking-[0.06em] text-text-subtle">
+                  {String(index + 1).padStart(2, "0")}
+                </p>
                 <div className="space-y-4">
                   <div>
-                    <h2 className="font-serif text-[1.6rem] font-semibold tracking-[-0.04em] text-foreground">
-                      {step.title}
-                    </h2>
-                    <p className="mt-2 text-sm leading-7 text-muted-foreground">{step.description}</p>
+                    <h2 className="text-lg font-semibold text-foreground">{step.title}</h2>
+                    <p className="mt-2 text-sm leading-relaxed text-text-soft">{step.description}</p>
                   </div>
-                  <pre className={marketingTheme.code}>
+                  <pre className="block overflow-x-auto rounded-xl border border-line bg-surface-soft px-4 py-3 font-mono text-[0.78rem] leading-6 text-foreground">
                     <code>{step.command}</code>
                   </pre>
                 </div>
               </div>
             </article>
           ))}
-        </MarketingPanel>
+        </div>
 
-        <MarketingPanel className="grid gap-5 p-6 md:grid-cols-[1fr_auto] md:items-end md:p-7">
+        <div className="grid gap-6 rounded-[14px] border border-line bg-card p-6 shadow-sm md:grid-cols-[1fr_auto] md:items-end md:p-8">
           <div>
-            <p className={marketingTheme.eyebrow}>{content.nextTitle}</p>
-            <p className="mt-2 max-w-2xl text-sm leading-7 text-muted-foreground">{content.nextDescription}</p>
+            <p className="text-[0.78rem] font-medium uppercase tracking-[0.04em] text-text-soft">{content.nextTitle}</p>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-soft">{content.nextDescription}</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link to={docsQuickstartPath} className={marketingTheme.primaryButton}>
+            <Link
+              to={docsQuickstartPath}
+              className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-76"
+            >
               <IconPlayerPlayFilled className="size-3.5" />
               {isZh ? "查看完整快速开始" : "Read Full Quick Start"}
             </Link>
-            <Link to={homePath} className={marketingTheme.secondaryButton}>
+            <Link
+              to={homePath}
+              className="inline-flex h-11 items-center gap-2 rounded-lg bg-foreground/[0.05] px-5 text-sm font-semibold text-foreground transition-colors hover:bg-foreground/[0.08]"
+            >
               {isZh ? "返回首页" : "Back Home"}
               <IconArrowRight className="size-4" />
             </Link>
           </div>
-        </MarketingPanel>
+        </div>
       </div>
     </section>
   );
+}
+
+function cn(...classes: (string | false | undefined)[]) {
+  return classes.filter(Boolean).join(" ");
 }
 
 export default StartGuideSection;

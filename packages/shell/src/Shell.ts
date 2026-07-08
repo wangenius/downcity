@@ -86,13 +86,12 @@ export class Shell {
    * 关键点（中文）：这是 Agent 内部装配入口，用户只需要 `new Agent({ shell: new Shell() })`。
    */
   configure(options: ShellConfigureOptions): void {
+    const next_env = this.resolve_configure_env(options);
     this.host_options = {
       ...this.host_options,
       ...options,
-      env: {
-        ...(this.host_options.env || {}),
-        ...(options.env || {}),
-      },
+      // 关键点（中文）：env 是宿主提供的动态对象引用，不能 clone 成快照。
+      env: next_env,
       logger: options.logger || this.host_options.logger,
       emit_event: options.emit_event || this.host_options.emit_event,
       get_run_context: options.get_run_context || this.host_options.get_run_context,
@@ -291,5 +290,25 @@ export class Shell {
         }),
       },
     };
+  }
+
+  private resolve_configure_env(
+    options: ShellConfigureOptions,
+  ): ShellConfigureOptions["env"] {
+    if (options.env === undefined) return this.host_options.env;
+    if (!this.host_options.env || options.agent_id) return options.env;
+    if (this.host_options.env === options.env) return options.env;
+
+    // 关键点（中文）：后续 configure env 视为动态 patch，写回当前共享引用。
+    for (const [raw_key, raw_value] of Object.entries(options.env)) {
+      const key = String(raw_key || "").trim();
+      if (!key) continue;
+      if (raw_value === undefined) {
+        delete this.host_options.env[key];
+        continue;
+      }
+      this.host_options.env[key] = String(raw_value);
+    }
+    return this.host_options.env;
   }
 }

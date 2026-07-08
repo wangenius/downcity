@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { COMMUNITY_LINKS } from "@/lib/community-links";
 import { product } from "@/lib/product";
-import { marketingTheme } from "@/lib/marketing-theme";
 
 export function meta() {
   const title = `${product.productName} — Hosting`;
@@ -21,51 +20,61 @@ const hostingFeatures = [
   { id: "security" },
 ] as const;
 
+/**
+ * Hosting 资源页（Vibecape 风格）。
+ * 说明：
+ * 1. 简洁预告页，四列特性卡片。
+ * 2. 使用统一页面容器、细线卡片与柔和 hover。
+ */
 export default function Hosting() {
   const { t } = useTranslation();
   const discussionsUrl = COMMUNITY_LINKS.telegram;
 
   return (
-    <div className={marketingTheme.pageNarrow}>
-      <header className="space-y-3">
-        <span className={marketingTheme.badge}>
+    <div className="mx-auto max-w-[1320px] px-5 py-16 md:px-8 md:py-24 lg:px-20">
+      <header className="space-y-4">
+        <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[0.65rem] font-medium uppercase tracking-[0.12em] text-text-soft">
           {t("resources:hostingPage.badge")}
         </span>
-        <h1 className={marketingTheme.pageTitle}>{t("nav.hosting")}</h1>
-        <p className={marketingTheme.lead}>
+        <h1 className="font-serif text-[clamp(1.875rem,4vw,2.25rem)] font-bold leading-[1.12] tracking-[-0.02em] text-foreground">
+          {t("nav.hosting")}
+        </h1>
+        <p className="max-w-2xl text-base leading-[1.65] text-text-soft">
           {t("resources:hostingPage.subtitle")}
         </p>
       </header>
 
-      <section className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <section className="mt-8 grid gap-px overflow-hidden rounded-[14px] bg-line sm:grid-cols-2 lg:grid-cols-4">
         {hostingFeatures.map((feature, index) => (
           <article
             key={feature.id}
-            className={`${marketingTheme.panel} p-5`}
+            className="min-h-[180px] bg-card p-5 transition-colors hover:bg-background md:p-6"
           >
-            <p className={marketingTheme.eyebrow}>
+            <p className="font-mono text-[0.7rem] font-medium uppercase tracking-[0.06em] text-text-subtle">
               {String(index + 1).padStart(2, "0")}
             </p>
-            <h2 className="mt-3 font-serif text-[1.28rem] font-semibold tracking-[-0.03em] text-foreground">
+            <h2 className="mt-3 font-serif text-[1.25rem] font-semibold tracking-[-0.03em] text-foreground">
               {t(`resources:hostingPage.features.${feature.id}.title`)}
             </h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            <p className="mt-2 text-sm leading-relaxed text-text-soft">
               {t(`resources:hostingPage.features.${feature.id}.description`)}
             </p>
           </article>
         ))}
       </section>
 
-      <section className={`${marketingTheme.panel} mt-8 p-6`}>
-        <h3 className="text-lg font-semibold">{t("resources:hostingPage.cta.title")}</h3>
-        <p className="mt-2 text-sm leading-7 text-muted-foreground">
+      <section className="mt-8 rounded-[14px] border border-line bg-card p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-foreground">
+          {t("resources:hostingPage.cta.title")}
+        </h3>
+        <p className="mt-2 text-sm leading-relaxed text-text-soft">
           {t("resources:hostingPage.cta.description")}
         </p>
         <a
           href={discussionsUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className={`mt-4 ${marketingTheme.primaryButton}`}
+          className="mt-4 inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-76"
         >
           {t("resources:hostingPage.cta.button")}
         </a>

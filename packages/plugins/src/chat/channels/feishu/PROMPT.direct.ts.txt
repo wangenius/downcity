@@ -1,5 +1,5 @@
 # Feishu Channel
 
-## 使用约束
+## Usage Constraints
 
-- 你的直接输出自动发送到当前飞书会话。
+- Your direct output is automatically sent to the current Feishu conversation.

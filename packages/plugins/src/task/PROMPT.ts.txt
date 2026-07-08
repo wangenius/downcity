@@ -1,45 +1,45 @@
 # Task Plugin
 
-你可以通过 `task` plugin 管理任务定义、执行、调度与状态控制。
+You can use the `task` plugin to manage task definitions, execution, scheduling, and status control.
 
-## 任务模型
+## Task Model
 
-每个任务定义在 `./.downcity/task/<title>/task.md`，包含：
-- frontmatter（结构化字段）
-- body（任务正文）
+Each task is defined in `./.downcity/task/<title>/task.md` and contains:
+- frontmatter for structured fields
+- body for the task instructions
 
-frontmatter 核心字段：
-- `title`：任务唯一标识（唯一）
-- `description`：任务描述
-- `when`：触发条件，支持：`@manual` / cron / `time:<ISO8601-with-timezone>`
-- `sessionId`：任务执行会话
-- `status`：`enabled|paused|disabled`
-- `kind`：`agent|script`（默认 `agent`）
+Core frontmatter fields:
+- `title`: unique task identifier
+- `description`: task description
+- `when`: trigger condition, supporting `@manual`, cron, or `time:<ISO8601-with-timezone>`
+- `sessionId`: task execution session
+- `status`: `enabled|paused|disabled`
+- `kind`: `agent|script`, defaulting to `agent`
 
-执行时会产生 run 目录：
+Each execution creates a run directory:
 - `./.downcity/task/<title>/<timestamp>/`
 
-常见产物：
+Common artifacts:
 - `input.md`
-- `output.md`（本次任务的最终输出正文）
-- `result.md`（执行摘要）
+- `output.md`: final output body for this run
+- `result.md`: execution summary
 - `run.json`
 - `run-progress.json`
-- `dialogue.md` / `dialogue.json`（agent 多轮）
-- `error.md`（失败时）
+- `dialogue.md` / `dialogue.json`: multi-turn agent dialogue
+- `error.md`: failure details
 
-## 执行类型（kind）
+## Execution Kinds
 
 1. `kind=agent`
-- 将正文交给 agent 执行
-- 默认单轮完成；仅当 frontmatter 显式设置 `review: true` 时启用模拟用户多轮复核
-- 适合研究、分析、报告生成
+- Sends the task body to an agent for execution.
+- Completes in a single turn by default. Simulated multi-turn review is enabled only when frontmatter explicitly sets `review: true`.
+- Suitable for research, analysis, and report generation.
 
 2. `kind=script`
-- 将正文当作 shell 脚本执行
-- 正文不能为空，必须是可执行脚本
+- Treats the body as a shell script.
+- The body must be non-empty and executable as a script.
 
-## 可用 action
+## Available Actions
 
 - `list`
 - `create`
@@ -50,7 +50,7 @@ frontmatter 核心字段：
 - `enable`
 - `disable`
 
-## Action 调用示例
+## Action Examples
 
 - `plugin_call({ plugin: "task", action: "list", payload: { status } })`
 - `plugin_call({ plugin: "task", action: "create", payload: { title, description, sessionId, when, kind, status } })`
@@ -58,180 +58,180 @@ frontmatter 核心字段：
 - `plugin_call({ plugin: "task", action: "update", payload: { title, description, when, status, sessionId } })`
 - `plugin_call({ plugin: "task", action: "delete", payload: { title } })`
 
-## 关键约束
+## Key Constraints
 
-- `title` 唯一；create 去重仅按 `title` 精确匹配。
-- `when=time:...` 触发后会自动置为 `paused`，并回退为 `when=@manual`。
-- `run` 为异步受理：立即返回 `accepted=true`、`message`、`executionId`；调用方应把它视为“任务已进入后台执行，结果会自动通过 chat plugin runtime 发送，当前流程无需阻塞等待”。
-- 如果 `run` 返回 `accepted=true`：
-  - 不要手动把 task 产出再转发给用户。
-  - 不要主动读取 run 目录、`run-progress.json`、`output.md` 做轮询。
-  - 只有当用户明确要求排查、查看产物或确认执行细节时，才进入 run 目录检查。
-- agent 任务默认只要求产生有效输出；仅当任务正文明确要求外发时，才应发送到外部 channel。
+- `title` is unique. `create` deduplicates only by exact `title`.
+- After `when=time:...` triggers, the task is automatically set to `paused` and falls back to `when=@manual`.
+- `run` is accepted asynchronously. It returns `accepted=true`, `message`, and `executionId` immediately. Treat this as "the task has entered background execution; the result will be sent automatically through the chat plugin runtime, and the current flow does not need to block."
+- If `run` returns `accepted=true`:
+  - Do not manually forward task output to the user again.
+  - Do not actively poll the run directory, `run-progress.json`, or `output.md`.
+  - Inspect the run directory only when the user explicitly asks to debug, view artifacts, or confirm execution details.
+- Agent tasks only need to produce valid output by default. They should send to an external channel only when the task body explicitly requires it.
 
-## 如何设计 task 正文
+## Designing The Task Body
 
-### agent task 推荐结构
+### Recommended Agent Task Structure
 
-建议正文至少包含这些标题：
-
-```md
-# 任务目标
-
-- 这次任务要交付什么最终结果
-
-# 背景与输入
-
-- 数据来源、范围、约束、参考材料
-
-# 执行步骤
-
-1. 先做什么
-2. 再做什么
-3. 关键中间产物落在哪里
-
-# 输出要求
-
-- 最终结果用什么格式返回
-- 是否需要表格 / JSON / Markdown
-- 不要包含什么内容
-
-# 触发与状态建议
-
-- 这个任务为什么适合 `@manual` / cron / `time:...`
-- 当前应该是 `paused` 还是 `enabled`
-
-# 注意事项
-
-- 风险、边界、不要做什么
-```
-
-### agent task 正文编写约束
-
-- task 正文必须像一份“交付合同”，让另一个执行器拿到后可以直接执行，不依赖当前聊天语境补全含义。
-- `# 任务目标` 必须写清楚最终要交付什么，不要只写“看一下”“研究一下”“处理一下”这类模糊目标。
-- `# 背景与输入` 必须写清来源、范围、对象、时间、限制条件；不要假设执行器还能看到原始聊天上下文。
-- `# 执行步骤` 应描述任务流程，不应描述 task 管理动作；不要写“先检查有没有同名任务”“再创建任务”“然后触发任务”。
-- `# 输出要求` 必须清楚声明最终成品的格式、结构、语气、长度，以及“不要输出什么”。
-- 要明确写出：**最后一条 assistant 返回会被直接写入 `output.md` 并发送给用户**；因此最终回答必须直接等于成品内容。
-- 内容生成类任务（如日报、提醒、晨读、摘要、报告）必须明确要求“最终输出直接是成品正文”，不要让执行器输出过程说明。
-- 如果任务要把结果发给用户，正文应要求“输出可直接发送的正文内容”，而不是要求执行器解释自己已经发送了什么。
-- 除非确有需要，不要在正文中要求执行器复述 task title、sessionId、执行时间、状态等元信息。
-- 正文中的约束要可执行、可判断，尽量避免“适当”“尽量”“看情况”这类弱约束词。
-- 不要把创建 task、更新 task、查看 task 状态、确认 task 是否存在等管理动作写进正文；这些属于 task plugin 的职责，不属于 task 正文交付物。
-
-### agent task 正文禁止写法
-
-- 不要把正文写成聊天回复口吻，例如：
-  - “我来为你……”
-  - “首先让我……”
-  - “我先检查一下……”
-  - “我看到已经有一个同名任务……”
-- 不要把正文写成任务管理说明，例如：
-  - “如果任务已存在则更新，否则创建”
-  - “先 list 再 run”
-  - “完成后告诉用户任务已启动”
-- 不要把正文写成状态汇报模板，例如：
-  - “任务状态总结”
-  - “已发送 / 已完成 / 已更新”
-  - “当前任务配置如下”
-- 不要只描述动作，不描述成品，例如：
-  - “去搜集一些资料”
-  - “生成一个内容看看”
-  - “做完后反馈结果”
-- 不要把正文写成依赖当前上下文的指代，例如：
-  - “按上面说的做”
-  - “继续刚才那个”
-  - “把这个发出去”
-
-### 如何判断正文写得对不对
-
-- 如果把 task 正文单独复制出来给另一个 agent，它仍然能理解任务目标、输入、步骤和交付物，说明正文合格。
-- 如果最终输出章节删掉后，正文只剩“去做一下”式描述，说明正文不合格。
-- 如果正文更像“创建/更新任务的操作说明”，而不是“任务执行说明”，说明分层错了，必须重写。
-- 如果正文天然会诱导执行器输出过程汇报，而不是最终成品，说明 `# 输出要求` 写得不够强，必须补充禁止项。
-
-### script task 推荐结构
-
-- 正文必须是纯 shell 脚本，不要混入解释性自然语言。
-- 开头尽量写注释说明脚本目的、输入依赖、失败条件。
-- 输出保持稳定，便于直接作为最终结果发送给用户。
-- 如需生成文件，写到 run 目录或明确的项目路径。
-
-### 输出设计原则
-
-- task 完成后，系统会自动把**最终结果正文**通过 chat plugin runtime 的 `send` 发回 `sessionId` 绑定的 chat。
-- 当前实现采用最简规则：**最后一条 assistant 返回**会被直接视为最终结果正文，并写入 `output.md`。
-- 因此正文里的“输出要求”要面向最终用户阅读，不要只写给开发者看。
-- 对于面向用户的 agent task，正文应要求“最后一条 assistant 返回直接输出最终交付物本身”，不要让执行器在最后回答里输出自己如何创建、检查、更新、触发或发送任务。
-- 如果任务是内容生成类（例如日报、提醒、晨读、摘要），最后输出应直接是那段内容本身，不要附带“我来为你处理”“任务已发送”“任务状态总结”等过程汇报。
-- 默认不要在正文里再次要求执行器发送 chat 消息；系统会处理最终结果回传。
-- 只有在“跨会话发送”“额外抄送”“多渠道通知”这类场景下，才显式要求执行器调用 chat plugin action。
-
-### `when` / `status` 怎么选
-
-- task 创建默认就是 `status=enabled`；如果还在试任务、容易失败、需要人工确认，再显式切到 `paused`。
-- 已经验证稳定、需要自动运行：直接使用 cron + `status=enabled`。
-- 明确只执行一次：使用 `time:<带时区 ISO 时间>`；执行后系统会自动回退到 `@manual` + `paused`。
-- 如果用户只是“先存起来以后再跑”，不要直接启用调度。
-
-## 正文模板
-
-### agent 模板
+The body should include at least these headings:
 
 ```md
-# 任务目标
+# Task Goal
 
-- 产出一份可直接发给用户的最终结果。
+- What final result this task must deliver.
 
-# 背景与输入
+# Background And Input
 
-- 在这里补充上下文、文件、链接、范围和假设。
+- Data sources, scope, constraints, and reference materials.
 
-# 执行步骤
+# Execution Steps
 
-1. 理解任务目标与完成标准。
-2. 收集必要信息并执行任务。
-3. 把关键中间产物写入 run 目录。
-4. 输出最终结果正文。
+1. What to do first.
+2. What to do next.
+3. Where key intermediate artifacts should be written.
 
-# 输出要求
+# Output Requirements
 
-- 最后一条 assistant 返回直接作为最终结果，不要附带冗长日志。
-- 最后一条 assistant 返回直接输出交付物本身，不要输出任务管理过程、发送过程或状态汇报。
-- 不要使用“我来为你…… / 首先让我…… / 已发送……”这类元话术。
-- 默认不要再次调用 chat plugin 的发送 action。
+- What format the final result must use.
+- Whether a table, JSON, or Markdown is required.
+- What content must not be included.
 
-# 触发与状态建议
+# Trigger And Status Recommendation
 
-- 默认创建后立即启用；如果只是先保存草稿或等待人工确认，再改成 `paused`。
+- Why this task is suitable for `@manual`, cron, or `time:...`.
+- Whether it should currently be `paused` or `enabled`.
 
-# 注意事项
+# Notes
 
-- 仅在明确需要跨会话或额外通知时，才调用 chat plugin 的发送 action。
+- Risks, boundaries, and things not to do.
 ```
 
-### script 模板
+### Agent Task Body Writing Constraints
+
+- The task body must read like a delivery contract, so another executor can run it directly without relying on the current chat context.
+- `# Task Goal` must clearly state the final deliverable. Do not write vague goals such as "take a look", "research this", or "handle this".
+- `# Background And Input` must specify sources, scope, objects, time range, and constraints. Do not assume the executor can see the original chat context.
+- `# Execution Steps` should describe the task workflow, not task-management actions. Do not write "first check whether a task with the same name exists", "then create a task", or "then trigger the task".
+- `# Output Requirements` must clearly specify the final artifact's format, structure, tone, length, and excluded content.
+- Explicitly state that the final assistant message will be written directly to `output.md` and sent to the user. Therefore, the final answer must be exactly the deliverable content.
+- Content-generation tasks such as daily reports, reminders, morning briefings, summaries, and reports must explicitly require "the final output is the deliverable body itself". Do not let the executor output process notes.
+- If the task result should be sent to the user, the body should require "output send-ready message content" instead of asking the executor to explain what it has sent.
+- Unless truly needed, do not ask the executor to repeat the task title, sessionId, execution time, status, or other metadata in the body.
+- Constraints in the body must be executable and checkable. Avoid weak phrases such as "appropriately", "as much as possible", or "depending on the situation".
+- Do not put task creation, task update, task status lookup, or same-title existence checks into the body. Those belong to the task plugin, not to the task deliverable.
+
+### Forbidden Agent Task Body Patterns
+
+- Do not write the body in chat-reply style, for example:
+  - "I will help you..."
+  - "First, let me..."
+  - "I will check first..."
+  - "I see there is already a task with the same name..."
+- Do not write the body as task-management instructions, for example:
+  - "If the task exists, update it; otherwise create it."
+  - "First list, then run."
+  - "Tell the user that the task has started when done."
+- Do not write the body as a status-report template, for example:
+  - "Task status summary"
+  - "Sent / completed / updated"
+  - "Current task configuration"
+- Do not describe only actions without describing the deliverable, for example:
+  - "Go collect some materials."
+  - "Generate some content and see."
+  - "Report back after finishing."
+- Do not use references that depend on the current context, for example:
+  - "Do what was said above."
+  - "Continue the previous one."
+  - "Send this out."
+
+### How To Judge Whether The Body Is Good
+
+- If you can copy the task body alone to another agent and it can still understand the goal, input, steps, and deliverable, the body is valid.
+- If deleting the output section leaves only "go do something" style instructions, the body is invalid.
+- If the body looks more like instructions for creating or updating a task than instructions for executing the task, the layering is wrong and the body must be rewritten.
+- If the body naturally encourages the executor to output process notes instead of the final artifact, the `# Output Requirements` section is not strong enough and must add explicit prohibitions.
+
+### Recommended Script Task Structure
+
+- The body must be a pure shell script. Do not mix in explanatory natural language.
+- Start with comments that describe the script's purpose, input dependencies, and failure conditions when possible.
+- Keep output stable so it can be sent directly as the final result.
+- If files need to be generated, write them to the run directory or to an explicit project path.
+
+### Output Design Principles
+
+- When a task completes, the system automatically sends the final result body back to the chat bound to `sessionId` through the chat plugin runtime's `send`.
+- The current implementation uses the simplest rule: the final assistant message is treated directly as the final result body and written to `output.md`.
+- Therefore, the "Output Requirements" section must be written for the final user, not only for developers.
+- For user-facing agent tasks, the body should require "the final assistant message directly outputs the deliverable itself". Do not let the executor explain how it created, checked, updated, triggered, or sent the task.
+- For content-generation tasks such as daily reports, reminders, morning briefings, and summaries, the final output should be exactly that content. It should not include process language such as "I will handle this", "task sent", or "task status summary".
+- By default, do not ask the executor to call chat plugin send actions again. The system handles final-result delivery.
+- Explicitly require chat plugin actions only for cross-conversation sending, additional CCs, multi-channel notifications, or similar cases.
+
+### Choosing `when` And `status`
+
+- A task is created as `status=enabled` by default. Set `paused` explicitly only when it is still a draft, likely to fail, or needs human confirmation.
+- For verified stable tasks that need automatic execution, use cron with `status=enabled`.
+- For a clear one-time execution, use `time:<ISO time with timezone>`. After execution, the system automatically falls back to `@manual` and `paused`.
+- If the user only wants to save it for later, do not enable scheduling directly.
+
+## Body Templates
+
+### Agent Template
+
+```md
+# Task Goal
+
+- Produce a final result that can be sent directly to the user.
+
+# Background And Input
+
+- Add context, files, links, scope, and assumptions here.
+
+# Execution Steps
+
+1. Understand the task goal and completion criteria.
+2. Collect necessary information and execute the task.
+3. Write key intermediate artifacts to the run directory.
+4. Output the final result body.
+
+# Output Requirements
+
+- The final assistant message is the final result. Do not include long logs.
+- The final assistant message must output the deliverable itself. Do not output task-management process, sending process, or status reports.
+- Do not use meta language such as "I will help you...", "First, let me...", or "sent".
+- By default, do not call the chat plugin send action again.
+
+# Trigger And Status Recommendation
+
+- Enable by default after creation. If this is only a draft or waiting for human confirmation, set it to `paused`.
+
+# Notes
+
+- Call chat plugin send actions only when cross-conversation or additional notifications are explicitly needed.
+```
+
+### Script Template
 
 ```bash
-# 任务目标：一句话说明脚本要做什么
-# 输入依赖：列出环境变量、文件、命令依赖
-# 失败条件：列出应该 exit 1 的情况
+# Task goal: state in one sentence what the script should do
+# Input dependencies: list environment variables, files, and command dependencies
+# Failure conditions: list cases that should exit 1
 
 set -euo pipefail
 
-# 1. 准备输入
+# 1. Prepare input
 
-# 2. 执行主逻辑
+# 2. Execute main logic
 
-# 3. 输出最终结果（这段输出会被直接发送给用户）
+# 3. Output final result. This output will be sent directly to the user.
 ```
 
-## 建议
+## Recommendations
 
-- 先 `list`，再 `create`/`update`。
-- 简单内容生成任务优先保持默认单轮；只有确实需要“先生成、再复核、再修订”时再设置 `review: true`。
-- script 任务正文保持纯脚本，不要混入冗余自然语言。
-- 如果用户只是先存起来以后再跑，创建后显式设成 `paused`；否则保持默认启用。
-- task 正文要写“最终结果长什么样”，不要只写“去做一下看看”。
-- 对内容生成任务，要明确写“最后一条 assistant 返回只能是成品正文”，避免执行器把过程说明误当成最终结果。
+- Run `list` before `create` or `update`.
+- Keep simple content-generation tasks single-turn by default. Set `review: true` only when you truly need "draft, review, revise".
+- Keep script task bodies as pure scripts, without redundant natural-language explanation.
+- If the user only wants to save something for later, create it as `paused`; otherwise keep the default enabled state.
+- The task body must describe what the final result should look like, not only say "go do this and see".
+- For content-generation tasks, explicitly require "the final assistant message can only be the finished content body" so the executor does not mistake process notes for the final result.

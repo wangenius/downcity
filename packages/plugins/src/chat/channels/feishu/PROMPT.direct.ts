@@ -4,6 +4,6 @@
  */
 
 // Source: src/chat/channels/feishu/PROMPT.direct.ts.txt
-const TEXT_MODULE_CONTENT = "# Feishu Channel\n\n## 使用约束\n\n- 你的直接输出自动发送到当前飞书会话。\n";
+const TEXT_MODULE_CONTENT = "# Feishu Channel\n\n## Usage Constraints\n\n- Your direct output is automatically sent to the current Feishu conversation.\n";
 
 export default TEXT_MODULE_CONTENT;

@@ -93,7 +93,7 @@ export class WebPlugin extends BasePlugin {
    */
   readonly setup = {
     mode: "install" as const,
-    title: "安装联网能力",
+    title: "Install web capabilities",
     description:
       "安装 web-access、agent-browser 等联网相关 skill / CLI 依赖；不改变 agent 的运行时默认选择。",
     fields: [
@@ -139,7 +139,7 @@ export class WebPlugin extends BasePlugin {
    */
   readonly actions = {
     install: createAction({
-      description: "安装联网相关 skill / CLI 依赖（web-access、agent-browser）。",
+      description: "Install web-related skill / CLI dependencies (web-access, agent-browser).",
       input_schema: {
         zod: z.object({
           target: z.enum(["web-access", "agent-browser", "all"]).optional(),
@@ -153,27 +153,27 @@ export class WebPlugin extends BasePlugin {
             target: {
               type: "string",
               enum: ["web-access", "agent-browser", "all"],
-              description: "要安装的联网能力",
+              description: "Web capability to install.",
             },
             scope: {
               type: "string",
               enum: ["user", "project"],
-              description: "安装作用域",
+              description: "Installation scope.",
             },
-            yes: { type: "boolean", description: "跳过确认" },
-            agent: { type: "string", description: "skill installer 目标 agent" },
+            yes: { type: "boolean", description: "Skip confirmation." },
+            agent: { type: "string", description: "Target agent for skill installer." },
           },
         },
       },
       examples: [
         {
-          title: "用户级安装全部联网能力",
+          title: "Install all web capabilities for user",
           payload: { target: "all", scope: "user" },
         },
       ],
       allowWhenDisabled: true,
       command: {
-        description: "安装联网相关 skill / CLI 依赖",
+        description: "Install web-related skill / CLI dependencies.",
         configure(command) {
           command
             .option("--target <target>", "web-access、agent-browser 或 all")

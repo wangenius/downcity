@@ -1,53 +1,53 @@
-# Chat Plugin 使用说明
+# Chat Plugin Instructions
 
-## 用户可见回复规则
+## User-Visible Reply Rules
 
-- 当前模式下，直接输出，即会发送消息给到用户对应的channel
+- In the current mode, your direct assistant output is sent as a message to the user's corresponding channel.
 
-## 输出协议
+## Output Protocol
 
-- 需要普通回复时，直接输出文本即可。文本顶部可用 frontmatter metadata (optional)，字段语义与 chat plugin 的 direct send 协议保持一致：
+- For a normal reply, output plain text directly. Optional frontmatter metadata may appear at the very top of the text. Field semantics match the chat plugin direct-send protocol:
 
-- `delay` / `delayMs`：延迟发送毫秒数。
-- `time` / `sendAt` / `sendAtMs`：定时发送时间。
-- `reply`：是否使用 reply 语义发送。
-- `messageId`：目标 `message_id`（群聊推荐）。
-- `react`：发送表情反应。
-  - 单个字符串：`react: "👍"`
-  - 或对象/数组：`emoji/big`
-  - 设置 `messageId` 时，`react` 会优先复用该消息作为目标消息。
-- 附件使用 `<file type="...">path</file>`（支持 `document/photo/voice/audio/video`）。
-- 附件路径必须是项目内可访问的相对路径。多附件可输出多个 `<file>` 标签。
+- `delay` / `delayMs`: delay before sending, in milliseconds.
+- `time` / `sendAt` / `sendAtMs`: scheduled send time.
+- `reply`: whether to send with reply semantics.
+- `messageId`: target `message_id`, recommended for group chats.
+- `react`: send an emoji reaction.
+  - Single string: `react: "thumbs up"`
+  - Or an object/array: `emoji/big`
+  - When `messageId` is set, `react` reuses that message as the target first.
+- Attachments use `<file type="...">path</file>` and support `document/photo/voice/audio/video`.
+- Attachment paths must be relative paths accessible inside the project. For multiple attachments, output multiple `<file>` tags.
 
-### 示例
+### Example
 
 ```text
 ---
 reply: true
 messageId: "128"
 react:
-  - emoji: "✅"
+  - emoji: "done"
 ---
-这是今天的报告。
+Here is today's report.
 <file type="document">reports/daily.md</file>
 ```
 
-### 协议约束
+### Protocol Constraints
 
-- frontmatter 必须位于文本最开头（`---` 包裹）。
-- 除 `<file>` 附件标签外，不要使用尖括号格式做控制参数。
+- Frontmatter must be at the very beginning of the text and wrapped with `---`.
+- Except for `<file>` attachment tags, do not use angle-bracket syntax for control parameters.
 
-## 跨协议/跨平台操作
+## Cross-Protocol Or Cross-Platform Operations
 
-- 当前会话内回复优先直接输出文本，系统会自动发送到当前 channel。
-- 当任务需要跨会话、跨平台或复杂路由，使用 chat plugin action。
-- 如果当前工具集中存在 `plugin_call`，可通过 `plugin_call({ plugin: "chat", action: "send", payload })` 或 `plugin_call({ plugin: "chat", action: "react", payload })` 触发。
-- metadata 只适用于当前会话内的 direct 出站，不要拿 metadata 做跨 chat 路由。
-- 如果不清楚跨 chat 路由参数，应先读取当前 chat context 或调用 chat plugin 的查询类 action，而不是猜测。
+- For replies inside the current conversation, prefer outputting text directly. The system will send it to the current channel automatically.
+- When a task needs cross-conversation, cross-platform, or complex routing, use chat plugin actions.
+- If `plugin_call` is available, call `plugin_call({ plugin: "chat", action: "send", payload })` or `plugin_call({ plugin: "chat", action: "react", payload })`.
+- Metadata applies only to direct outbound messages in the current conversation. Do not use metadata for cross-chat routing.
+- If cross-chat routing parameters are unclear, first read the current chat context or call chat plugin query actions instead of guessing.
 
-## 入站消息结构（仅供内部理解）
+## Inbound Message Structure
 
-- 每条入队用户消息包含 `<info>...</info>` 元信息块 + 用户正文。
-- `<info>` 仅保留 user/request 元信息，例如 `user_id`、`username`、`message_id`、`permissions`、`received_at`。
-- 当前 chat 路由环境（例如 `channel`、`session_id`、`chat_key`、`chat_id`）会通过 system prompt 单独注入，不再混在 `<info>` 里。
-- `<info>` 不要原样回传给用户。
+- Each queued user message contains an `<info>...</info>` metadata block plus the user text.
+- `<info>` keeps only user/request metadata such as `user_id`, `username`, `message_id`, `permissions`, and `received_at`.
+- The current chat routing environment, such as `channel`, `session_id`, `chat_key`, and `chat_id`, is injected separately through the system prompt and is no longer mixed into `<info>`.
+- Do not echo `<info>` back to the user.

@@ -143,7 +143,8 @@ export async function compactSessionMessagesIfNeeded(
   const maxOlderChars = 24_000;
   const olderText =
     olderTextAll.length > maxOlderChars
-      ? "（注意：更早历史过长，已截断保留末尾）\n" + olderTextAll.slice(-maxOlderChars)
+      ? "(Note: earlier history was too long and was truncated to keep the tail.)\n"
+        + olderTextAll.slice(-maxOlderChars)
       : olderTextAll;
   const prompt = previous_summary
     ? build_update_session_compaction_prompt({
@@ -183,7 +184,8 @@ export async function compactSessionMessagesIfNeeded(
       },
     );
     summary = append_session_compaction_file_operations({
-      summary: "（系统自动压缩：摘要生成失败，已丢弃更早历史，仅保留最近对话。）",
+      summary:
+        "(Automatic session compaction: summary generation failed, so earlier history was discarded and only recent conversation was retained.)",
       file_operations_xml,
     });
     await publish_action({

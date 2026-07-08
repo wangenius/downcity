@@ -127,14 +127,14 @@ export class MemoryPlugin extends BasePlugin {
    */
   readonly actions: PluginActions = {
     status: createAction({
-      description: "查看 memory wiki 状态（wiki/source/working）。",
+      description: "View memory wiki status (wiki/source/working).",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {} },
       },
-      examples: [{ title: "查看状态", payload: {} }],
+      examples: [{ title: "View status", payload: {} }],
       command: {
-        description: "查看 memory wiki 状态（wiki/source/working）",
+        description: "View memory wiki status (wiki/source/working).",
         mapInput() {
           return {};
         },
@@ -145,7 +145,7 @@ export class MemoryPlugin extends BasePlugin {
       },
     }),
     search: createAction({
-      description: "检索 memory wiki，可选择是否扩展到 source 层。",
+      description: "Search memory wiki, optionally extending into the source layer.",
       input_schema: {
         zod: z.object({
           query: z.string(),
@@ -157,24 +157,24 @@ export class MemoryPlugin extends BasePlugin {
           type: "object",
           required: ["query"],
           properties: {
-            query: { type: "string", description: "检索关键词" },
-            maxResults: { type: "number", description: "返回条数上限" },
-            minScore: { type: "number", description: "最小相关分数" },
-            includeSources: { type: "boolean", description: "是否包含 source 层" },
+            query: { type: "string", description: "Search query." },
+            maxResults: { type: "number", description: "Maximum number of results." },
+            minScore: { type: "number", description: "Minimum relevance score." },
+            includeSources: { type: "boolean", description: "Whether to include the source layer." },
           },
         },
       },
       examples: [
-        { title: "搜索记忆", payload: { query: "用户偏好" } },
+        { title: "Search memory", payload: { query: "user preferences" } },
       ],
       command: {
-        description: "检索 memory wiki",
+        description: "Search memory wiki.",
         configure(command: Command) {
           command
             .argument("<query>")
-            .option("--max-results <number>", "返回条数上限", parsePositiveInteger)
-            .option("--min-score <number>", "最小相关分数", parseNumber)
-            .option("--include-sources", "同时检索原始 source 层");
+            .option("--max-results <number>", "Maximum number of results.", parsePositiveInteger)
+            .option("--min-score <number>", "Minimum relevance score.", parseNumber)
+            .option("--include-sources", "Also search the raw source layer.");
         },
         mapInput({ args, opts }) {
           const payload: JsonObject = {
@@ -204,7 +204,7 @@ export class MemoryPlugin extends BasePlugin {
       },
     }),
     read: createAction({
-      description: "读取 memory wiki/source 文件片段。",
+      description: "Read a memory wiki/source file excerpt.",
       input_schema: {
         zod: z.object({
           path: z.string(),
@@ -215,22 +215,22 @@ export class MemoryPlugin extends BasePlugin {
           type: "object",
           required: ["path"],
           properties: {
-            path: { type: "string", description: "记忆文件路径（相对项目根目录）" },
-            from: { type: "number", description: "起始行（1-based）" },
-            lines: { type: "number", description: "读取行数" },
+            path: { type: "string", description: "Memory file path relative to the project root." },
+            from: { type: "number", description: "Starting line, 1-based." },
+            lines: { type: "number", description: "Number of lines to read." },
           },
         },
       },
       examples: [
-        { title: "读取整页", payload: { path: ".downcity/memory/wiki/index.md" } },
+        { title: "Read full page", payload: { path: ".downcity/memory/wiki/index.md" } },
       ],
       command: {
-        description: "读取 memory wiki/source 文件片段",
+        description: "Read a memory wiki/source file excerpt.",
         configure(command: Command) {
           command
-            .argument("<memoryPath>", "记忆文件路径（相对项目根目录）")
-            .option("--from <number>", "起始行（1-based）", parsePositiveInteger)
-            .option("--lines <number>", "读取行数", parsePositiveInteger);
+            .argument("<memoryPath>", "Memory file path relative to the project root.")
+            .option("--from <number>", "Starting line, 1-based.", parsePositiveInteger)
+            .option("--lines <number>", "Number of lines to read.", parsePositiveInteger);
         },
         mapInput({ args, opts }) {
           const payload: JsonObject = {
@@ -255,7 +255,7 @@ export class MemoryPlugin extends BasePlugin {
       },
     }),
     remember: createAction({
-      description: "把事实/偏好/决策记入 memory wiki。",
+      description: "Record facts, preferences, or decisions into memory wiki.",
       input_schema: {
         zod: z.object({
           content: z.string(),
@@ -267,24 +267,24 @@ export class MemoryPlugin extends BasePlugin {
           type: "object",
           required: ["content"],
           properties: {
-            content: { type: "string", description: "需要记住的内容" },
-            topic: { type: "string", description: "记忆主题" },
-            path: { type: "string", description: "目标 wiki page 路径" },
-            source: { type: "string", description: "来源说明" },
+            content: { type: "string", description: "Content to remember." },
+            topic: { type: "string", description: "Memory topic." },
+            path: { type: "string", description: "Target wiki page path." },
+            source: { type: "string", description: "Source note." },
           },
         },
       },
       examples: [
-        { title: "记住偏好", payload: { content: "用户偏好简短回答", topic: "user-prefs" } },
+        { title: "Remember preference", payload: { content: "User prefers concise answers", topic: "user-prefs" } },
       ],
       command: {
-        description: "把事实/偏好/决策记入 memory wiki",
+        description: "Record facts, preferences, or decisions into memory wiki.",
         configure(command: Command) {
           command
-            .requiredOption("--content <text>", "需要记住的内容")
-            .option("--topic <topic>", "记忆主题")
-            .option("--wiki-path <path>", "目标 wiki page 路径")
-            .option("--source <source>", "来源说明");
+            .requiredOption("--content <text>", "Content to remember.")
+            .option("--topic <topic>", "Memory topic.")
+            .option("--wiki-path <path>", "Target wiki page path.")
+            .option("--source <source>", "Source note.");
         },
         mapInput({ opts }) {
           const payload: JsonObject = {
@@ -313,7 +313,7 @@ export class MemoryPlugin extends BasePlugin {
       },
     }),
     digest: createAction({
-      description: "把 session 提炼进 memory wiki。",
+      description: "Digest a session into memory wiki.",
       input_schema: {
         zod: z.object({
           sessionId: z.string(),
@@ -323,20 +323,20 @@ export class MemoryPlugin extends BasePlugin {
           type: "object",
           required: ["sessionId"],
           properties: {
-            sessionId: { type: "string", description: "会话 ID" },
-            maxMessages: { type: "number", description: "提取消息窗口" },
+            sessionId: { type: "string", description: "Session ID." },
+            maxMessages: { type: "number", description: "Message extraction window." },
           },
         },
       },
       examples: [
-        { title: "提炼会话", payload: { sessionId: "sess-1" } },
+        { title: "Digest session", payload: { sessionId: "sess-1" } },
       ],
       command: {
-        description: "把 session 提炼进 memory wiki",
+        description: "Digest a session into memory wiki.",
         configure(command: Command) {
           command
-            .requiredOption("--session-id <sessionId>", "会话 ID")
-            .option("--max-messages <number>", "提取消息窗口", parsePositiveInteger);
+            .requiredOption("--session-id <sessionId>", "Session ID.")
+            .option("--max-messages <number>", "Message extraction window.", parsePositiveInteger);
         },
         mapInput({ opts }) {
           const payload: JsonObject = {
@@ -357,7 +357,7 @@ export class MemoryPlugin extends BasePlugin {
       },
     }),
     revise: createAction({
-      description: "基于新证据修订 memory wiki page。",
+      description: "Revise a memory wiki page based on new evidence.",
       input_schema: {
         zod: z.object({
           path: z.string(),
@@ -368,25 +368,25 @@ export class MemoryPlugin extends BasePlugin {
           type: "object",
           required: ["path", "instruction"],
           properties: {
-            path: { type: "string", description: "目标 wiki page 路径" },
-            instruction: { type: "string", description: "修订指令" },
-            evidence: { type: "string", description: "新证据" },
+            path: { type: "string", description: "Target wiki page path." },
+            instruction: { type: "string", description: "Revision instruction." },
+            evidence: { type: "string", description: "New evidence." },
           },
         },
       },
       examples: [
         {
-          title: "修订条目",
-          payload: { path: "wiki/preferences.md", instruction: "替换最新偏好" },
+          title: "Revise entry",
+          payload: { path: "wiki/preferences.md", instruction: "Replace with latest preference." },
         },
       ],
       command: {
-        description: "基于新证据修订 memory wiki page",
+        description: "Revise a memory wiki page based on new evidence.",
         configure(command: Command) {
           command
-            .argument("<memoryPath>", "目标 wiki page 路径")
-            .requiredOption("--instruction <text>", "修订指令")
-            .option("--evidence <text>", "新证据");
+            .argument("<memoryPath>", "Target wiki page path.")
+            .requiredOption("--instruction <text>", "Revision instruction.")
+            .option("--evidence <text>", "New evidence.");
         },
         mapInput({ args, opts }) {
           const payload: JsonObject = {

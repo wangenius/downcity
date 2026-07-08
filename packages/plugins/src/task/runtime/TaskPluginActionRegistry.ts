@@ -93,7 +93,7 @@ export function createTaskPluginActions(params: {
 }): PluginActions {
   return {
     list: createAction({
-      description: "列出任务定义；可按状态过滤。",
+      description: "List task definitions, optionally filtered by status.",
       input_schema: {
         zod: TASK_LIST_SCHEMA,
         json_schema: {
@@ -102,21 +102,21 @@ export function createTaskPluginActions(params: {
             status: {
               type: "string",
               enum: ["enabled", "paused", "disabled"],
-              description: "按任务状态过滤",
+              description: "Filter by task status.",
             },
           },
         },
       },
       examples: [
-        { title: "全部任务", payload: {} },
-        { title: "只看已启用", payload: { status: "enabled" } },
+        { title: "All tasks", payload: {} },
+        { title: "Enabled only", payload: { status: "enabled" } },
       ],
       command: {
-        description: "列出任务",
+        description: "List tasks.",
         configure(command: Command) {
           command.option(
             "--status <status>",
-            "按状态过滤（enabled|paused|disabled）",
+            "Filter by status (enabled|paused|disabled).",
           );
         },
         mapInput: mapTaskListCommandPayload,
@@ -129,61 +129,61 @@ export function createTaskPluginActions(params: {
       },
     }),
     create: createAction({
-      description: "创建任务定义。",
+      description: "Create a task definition.",
       input_schema: {
         zod: TASK_CREATE_SCHEMA,
         json_schema: {
           type: "object",
           required: ["title", "when", "description", "sessionId"],
           properties: {
-            title: { type: "string", description: "任务名称（唯一语义标识）" },
-            when: { type: "string", description: "触发条件（@manual | cron | time:ISO8601）" },
-            description: { type: "string", description: "任务描述" },
-            sessionId: { type: "string", description: "任务执行 sessionId" },
-            kind: { type: "string", enum: ["agent", "script"], description: "执行类型" },
-            review: { type: "boolean", description: "是否启用 review 多轮复核" },
-            status: { type: "string", enum: ["enabled", "paused", "disabled"], description: "任务状态" },
-            body: { type: "string", description: "任务正文" },
-            overwrite: { type: "boolean", description: "是否覆盖已有 task.md" },
+            title: { type: "string", description: "Task name and unique semantic identifier." },
+            when: { type: "string", description: "Trigger condition (@manual | cron | time:ISO8601)." },
+            description: { type: "string", description: "Task description." },
+            sessionId: { type: "string", description: "Task execution sessionId." },
+            kind: { type: "string", enum: ["agent", "script"], description: "Execution kind." },
+            review: { type: "boolean", description: "Whether to enable multi-turn review." },
+            status: { type: "string", enum: ["enabled", "paused", "disabled"], description: "Task status." },
+            body: { type: "string", description: "Task body." },
+            overwrite: { type: "boolean", description: "Whether to overwrite an existing task.md." },
           },
         },
       },
       examples: [
         {
-          title: "创建一个手动任务",
+          title: "Create a manual task",
           payload: {
             title: "daily-report",
             when: "@manual",
-            description: "每天生成报告",
+            description: "Generate a daily report",
             sessionId: "session-1",
             status: "enabled",
           },
         },
       ],
       command: {
-        description: "创建任务定义",
+        description: "Create a task definition.",
         configure(command: Command) {
           command
-            .requiredOption("--title <title>", "任务名称（唯一语义标识）")
-            .requiredOption("--description <description>", "任务描述")
-            .option("--when <when>", "触发条件（@manual | cron | time:ISO8601）", "@manual")
-            .option("--kind <kind>", "执行类型（agent|script）", "agent")
-            .option("--review <review>", "是否启用 review 多轮复核（true|false）")
+            .requiredOption("--title <title>", "Task name and unique semantic identifier.")
+            .requiredOption("--description <description>", "Task description.")
+            .option("--when <when>", "Trigger condition (@manual | cron | time:ISO8601).", "@manual")
+            .option("--kind <kind>", "Execution kind (agent|script).", "agent")
+            .option("--review <review>", "Whether to enable multi-turn review (true|false).")
             .option(
               "--session-id <sessionId>",
-              "任务执行 sessionId（不传尝试使用 DC_SESSION_ID）",
+              "Task execution sessionId. If omitted, DC_SESSION_ID is used when available.",
             )
             .option(
               "--status <status>",
-              "状态（enabled|paused|disabled，默认 enabled）",
+              "Status (enabled|paused|disabled, default enabled).",
             )
             .option(
               "--activate",
-              "创建后立即启用（等同 --status enabled）",
+              "Enable immediately after creation (same as --status enabled).",
               false,
             )
-            .option("--body <body>", "任务正文")
-            .option("--overwrite", "覆盖已有 task.md", false);
+            .option("--body <body>", "Task body.")
+            .option("--overwrite", "Overwrite an existing task.md.", false);
         },
         mapInput: mapTaskCreateCommandPayload,
       },
@@ -196,25 +196,25 @@ export function createTaskPluginActions(params: {
       },
     }),
     run: createAction({
-      description: "手动运行任务。",
+      description: "Run a task manually.",
       input_schema: {
         zod: TASK_RUN_SCHEMA,
         json_schema: {
           type: "object",
           required: ["title"],
           properties: {
-            title: { type: "string", description: "任务名称" },
-            reason: { type: "string", description: "手动运行原因" },
+            title: { type: "string", description: "Task name." },
+            reason: { type: "string", description: "Reason for manual run." },
           },
         },
       },
-      examples: [{ title: "手动运行", payload: { title: "daily-report" } }],
+      examples: [{ title: "Manual run", payload: { title: "daily-report" } }],
       command: {
-        description: "手动运行任务",
+        description: "Run a task manually.",
         configure(command: Command) {
           command
             .argument("<title>")
-            .option("--reason <reason>", "手动运行原因");
+            .option("--reason <reason>", "Reason for manual run.");
         },
         mapInput: mapTaskRunCommandPayload,
       },
@@ -226,20 +226,20 @@ export function createTaskPluginActions(params: {
       },
     }),
     delete: createAction({
-      description: "删除任务定义与历史运行目录。",
+      description: "Delete a task definition and historical run directories.",
       input_schema: {
         zod: TASK_DELETE_SCHEMA,
         json_schema: {
           type: "object",
           required: ["title"],
           properties: {
-            title: { type: "string", description: "任务名称" },
+            title: { type: "string", description: "Task name." },
           },
         },
       },
-      examples: [{ title: "删除任务", payload: { title: "daily-report" } }],
+      examples: [{ title: "Delete task", payload: { title: "daily-report" } }],
       command: {
-        description: "删除任务定义与历史运行目录",
+        description: "Delete a task definition and historical run directories.",
         configure(command: Command) {
           command.argument("<title>");
         },
@@ -254,53 +254,53 @@ export function createTaskPluginActions(params: {
       },
     }),
     update: createAction({
-      description: "更新任务定义。",
+      description: "Update a task definition.",
       input_schema: {
         zod: TASK_UPDATE_SCHEMA,
         json_schema: {
           type: "object",
           required: ["title"],
           properties: {
-            title: { type: "string", description: "当前任务名称" },
-            titleNext: { type: "string", description: "新任务名称" },
-            when: { type: "string", description: "新触发条件" },
-            clearWhen: { type: "boolean", description: "是否清空触发条件" },
-            description: { type: "string", description: "新描述" },
-            sessionId: { type: "string", description: "新 sessionId" },
+            title: { type: "string", description: "Current task name." },
+            titleNext: { type: "string", description: "New task name." },
+            when: { type: "string", description: "New trigger condition." },
+            clearWhen: { type: "boolean", description: "Whether to clear the trigger condition." },
+            description: { type: "string", description: "New description." },
+            sessionId: { type: "string", description: "New sessionId." },
             kind: { type: "string", enum: ["agent", "script"] },
             review: { type: "boolean" },
             status: { type: "string", enum: ["enabled", "paused", "disabled"] },
-            body: { type: "string", description: "新正文" },
-            clearBody: { type: "boolean", description: "是否清空正文" },
+            body: { type: "string", description: "New body." },
+            clearBody: { type: "boolean", description: "Whether to clear the body." },
           },
         },
       },
       examples: [
         {
-          title: "更新触发器",
+          title: "Update trigger",
           payload: { title: "daily-report", when: "cron:0 9 * * *" },
         },
       ],
       command: {
-        description: "更新任务定义",
+        description: "Update a task definition.",
         configure(command: Command) {
           command
             .argument("<title>")
-            .option("--title <title>", "任务名称（保持同一语义）")
-            .option("--description <description>", "任务描述")
-            .option("--when <when>", "触发条件（@manual | cron | time:ISO8601）")
-            .option("--kind <kind>", "执行类型（agent|script）")
-            .option("--review <review>", "是否启用 review 多轮复核（true|false）")
-            .option("--clear-when", "清空 when（回退为 @manual）", false)
-            .option("--session-id <sessionId>", "任务执行 sessionId")
-            .option("--status <status>", "状态（enabled|paused|disabled）")
+            .option("--title <title>", "Task name while preserving the same semantics.")
+            .option("--description <description>", "Task description.")
+            .option("--when <when>", "Trigger condition (@manual | cron | time:ISO8601).")
+            .option("--kind <kind>", "Execution kind (agent|script).")
+            .option("--review <review>", "Whether to enable multi-turn review (true|false).")
+            .option("--clear-when", "Clear when and fall back to @manual.", false)
+            .option("--session-id <sessionId>", "Task execution sessionId.")
+            .option("--status <status>", "Status (enabled|paused|disabled).")
             .option(
               "--activate",
-              "更新后立即启用（等同 --status enabled）",
+              "Enable immediately after update (same as --status enabled).",
               false,
             )
-            .option("--body <body>", "设置任务正文")
-            .option("--clear-body", "清空任务正文", false);
+            .option("--body <body>", "Set task body.")
+            .option("--clear-body", "Clear task body.", false);
         },
         mapInput: mapTaskUpdateCommandPayload,
       },
@@ -313,23 +313,23 @@ export function createTaskPluginActions(params: {
       },
     }),
     status: createAction({
-      description: "设置任务状态（enabled|paused|disabled）。",
+      description: "Set task status (enabled|paused|disabled).",
       input_schema: {
         zod: TASK_STATUS_REQ_SCHEMA,
         json_schema: {
           type: "object",
           required: ["title", "status"],
           properties: {
-            title: { type: "string", description: "任务名称" },
+            title: { type: "string", description: "Task name." },
             status: { type: "string", enum: ["enabled", "paused", "disabled"] },
           },
         },
       },
       examples: [
-        { title: "暂停任务", payload: { title: "daily-report", status: "paused" } },
+        { title: "Pause task", payload: { title: "daily-report", status: "paused" } },
       ],
       command: {
-        description: "设置任务状态（enabled|paused|disabled）",
+        description: "Set task status (enabled|paused|disabled).",
         configure(command: Command) {
           command.argument("<title>").argument("<status>");
         },
@@ -344,18 +344,18 @@ export function createTaskPluginActions(params: {
       },
     }),
     enable: createAction({
-      description: "启用任务（status=enabled）。",
+      description: "Enable a task (status=enabled).",
       input_schema: {
         zod: z.object({ title: z.string() }),
         json_schema: {
           type: "object",
           required: ["title"],
-          properties: { title: { type: "string", description: "任务名称" } },
+          properties: { title: { type: "string", description: "Task name." } },
         },
       },
-      examples: [{ title: "启用", payload: { title: "daily-report" } }],
+      examples: [{ title: "Enable", payload: { title: "daily-report" } }],
       command: {
-        description: "启用任务（status=enabled）",
+        description: "Enable a task (status=enabled).",
         configure(command: Command) {
           command.argument("<title>");
         },
@@ -370,18 +370,18 @@ export function createTaskPluginActions(params: {
       },
     }),
     disable: createAction({
-      description: "禁用任务（status=disabled）。",
+      description: "Disable a task (status=disabled).",
       input_schema: {
         zod: z.object({ title: z.string() }),
         json_schema: {
           type: "object",
           required: ["title"],
-          properties: { title: { type: "string", description: "任务名称" } },
+          properties: { title: { type: "string", description: "Task name." } },
         },
       },
-      examples: [{ title: "禁用", payload: { title: "daily-report" } }],
+      examples: [{ title: "Disable", payload: { title: "daily-report" } }],
       command: {
-        description: "禁用任务（status=disabled）",
+        description: "Disable a task (status=disabled).",
         configure(command: Command) {
           command.argument("<title>");
         },

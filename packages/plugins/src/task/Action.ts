@@ -396,7 +396,7 @@ export async function runTaskDefinition(params: {
       success: true,
       accepted: true,
       // 关键点（中文）：这里直接返回给 agent 作为 tool result，提醒它这是异步任务，无需等待完成即可继续后续流程。
-      message: "任务已经开始执行，完成后 task 会自动发送给用户。请直接继续后续流程，无需等待 task 完成。",
+      message: "The task has started. When it finishes, the task runtime will send the result to the user automatically. Continue the current flow without waiting for the task to complete.",
       executionId,
       title,
     };

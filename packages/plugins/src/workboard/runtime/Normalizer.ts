@@ -149,7 +149,7 @@ export function buildIdleActivity(params: {
   return {
     id: "idle:standby",
     kind: "idle",
-    title: "当前处于安静待命",
+    title: "Quietly standing by",
     summary: params.recentCount > 0
       ? "刚刚有过新的更新，现在等待下一次输入。"
       : "当前没有明显变化，等待新的触发。",

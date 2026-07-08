@@ -165,7 +165,7 @@ export function createChatAuthorizationResolves(): PluginResolves {
 export function createChatAuthorizationActions(): PluginActions {
   return {
     [CHAT_AUTHORIZATION_ACTIONS.snapshot]: createAction({
-      description: "读取 chat 授权快照（catalog/config/users/chats）。",
+      description: "Read chat authorization snapshot (catalog/config/users/chats).",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {} },
@@ -181,7 +181,7 @@ export function createChatAuthorizationActions(): PluginActions {
       },
     }),
     [CHAT_AUTHORIZATION_ACTIONS.readConfig]: createAction({
-      description: "读取当前 chat 授权配置。",
+      description: "Read current chat authorization config.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {} },
@@ -194,7 +194,7 @@ export function createChatAuthorizationActions(): PluginActions {
       },
     }),
     [CHAT_AUTHORIZATION_ACTIONS.writeConfig]: createAction({
-      description: "写入 chat 授权配置（整体覆盖）。",
+      description: "Write chat authorization config as a full replacement.",
       input_schema: {
         zod: z.object({
           config: z.record(z.string(), z.unknown()).optional(),
@@ -202,7 +202,7 @@ export function createChatAuthorizationActions(): PluginActions {
         json_schema: {
           type: "object",
           properties: {
-            config: { type: "object", description: "授权配置" },
+            config: { type: "object", description: "Authorization config." },
           },
         },
       },
@@ -225,7 +225,7 @@ export function createChatAuthorizationActions(): PluginActions {
       },
     }),
     [CHAT_AUTHORIZATION_ACTIONS.setUserRole]: createAction({
-      description: "为某个渠道用户设置角色。",
+      description: "Set the role for a channel user.",
       input_schema: {
         zod: z.object({
           channel: z.enum(["telegram", "feishu", "qq"]),

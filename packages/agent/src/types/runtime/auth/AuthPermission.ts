@@ -93,19 +93,19 @@ export interface AuthDefaultRoleDefinition {
 export const AUTH_DEFAULT_ROLES: AuthDefaultRoleDefinition[] = [
   {
     name: "admin",
-    description: "系统管理员，可管理统一账户与所有控制面能力。",
+    description: "System administrator who can manage unified accounts and all control-plane capabilities.",
     permissions: [...AUTH_PERMISSION_KEYS],
   },
   {
     name: "operator",
-    description: "运维角色，可查看并操作运行时，但不管理统一账户。",
+    description: "Operations role that can view and operate the runtime but cannot manage unified accounts.",
     permissions: AUTH_PERMISSION_KEYS.filter((permission) =>
       permission !== "auth.write" && permission !== "auth.read"
     ),
   },
   {
     name: "viewer",
-    description: "只读角色，可查看状态但不能执行高危变更。",
+    description: "Read-only role that can view status but cannot perform high-risk changes.",
     permissions: [
       "agent.read",
       "task.read",

@@ -59,12 +59,12 @@ export class WorkboardPlugin extends BasePlugin {
    */
   readonly actions: PluginActions = {
     snapshot: createAction({
-      description: "读取 workboard 当前的结构化运行态快照。",
+      description: "Read the current structured runtime snapshot from the workboard.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {} },
       },
-      examples: [{ title: "读取快照", payload: {} }],
+      examples: [{ title: "Read snapshot", payload: {} }],
       execute: async ({ context }) => {
         const response = await readWorkboardSnapshot(context);
         return {

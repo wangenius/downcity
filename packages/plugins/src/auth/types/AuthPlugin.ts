@@ -183,19 +183,19 @@ export function createDefaultChatAuthorizationRoles(): Record<string, ChatAuthor
     default: {
       roleId: "default",
       name: "Default",
-      description: "新用户的起始权限组，不授予任何消息或管理能力。",
+      description: "Initial permission group for new users, with no messaging or admin capabilities.",
       permissions: [],
     },
     member: {
       roleId: "member",
       name: "Member",
-      description: "标准协作者，可在私聊与群聊中使用 agent。",
+      description: "Standard collaborator who can use the agent in direct and group chats.",
       permissions: ["chat.dm.use", "chat.group.use"],
     },
     admin: {
       roleId: "admin",
       name: "Admin",
-      description: "完全管理权限，可调整授权、查看日志并执行 agent 管理动作。",
+      description: "Full admin permission to adjust authorization, view logs, and perform agent management actions.",
       permissions: [...CHAT_AUTHORIZATION_PERMISSIONS],
     },
   };

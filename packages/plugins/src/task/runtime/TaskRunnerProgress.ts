@@ -60,7 +60,7 @@ export function createRunProgressWriter(params: {
   let current: RunProgressSnapshot = {
     status: "running",
     phase: "preparing",
-    message: "任务已唤起，正在准备执行环境",
+    message: "Task has been awakened; preparing the execution environment.",
   };
 
   const persist = async (): Promise<void> => {

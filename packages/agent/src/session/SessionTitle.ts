@@ -207,10 +207,10 @@ async function generateSessionTitle(input: {
     const result = await generateText({
       model: input.model,
       system:
-        "你负责为一段会话生成极简标题。只输出标题本身，不要解释，不要使用引号。",
+        "You generate minimal conversation titles. Output only the title itself, with no explanation and no quotation marks.",
       prompt: [
-        "根据下面这条用户首条消息，生成一个简短的会话标题。",
-        "要求：3 到 12 个汉字或 2 到 6 个英文词；不要句号；不要前缀。",
+        "Generate a short conversation title from the first user message below.",
+        "Requirements: 3 to 12 Chinese characters or 2 to 6 English words; no period; no prefix.",
         "",
         input.firstUserText,
       ].join("\n"),

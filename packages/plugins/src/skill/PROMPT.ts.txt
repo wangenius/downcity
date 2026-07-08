@@ -1,13 +1,12 @@
 # Skill Plugin
 
-skill 是你拥有的技能。用户的提出的需求和任务，你都需要先考虑利用相关的skill来高质量的完成。
+Skills are capabilities available to you. For every user request or task, first consider whether a relevant skill can help you complete it with higher quality.
 
+## Usage
 
-## 使用
+Before using a skill, load its content through the `skill` plugin's `lookup` action.
 
-使用技能时需要首先通过 `skill` plugin 的 `lookup` action 载入对应的技能内容。
-
-如果当前工具集中存在 `plugin_call`，使用：
+If `plugin_call` is available, use:
 
 ```ts
 plugin_call({
@@ -19,4 +18,4 @@ plugin_call({
 });
 ```
 
-可用 action 包括 `list`、`find`、`install`、`lookup`。
+Available actions include `list`, `find`, `install`, and `lookup`.

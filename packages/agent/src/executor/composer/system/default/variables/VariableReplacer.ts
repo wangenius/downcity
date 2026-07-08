@@ -144,7 +144,7 @@ export function buildRuntimeClockSystemPrompt(options?: {
   const now = new Date();
   return [
     "# Runtime Clock Context",
-    "以下字段是本轮运行的权威时间上下文；解析“今天/明天/几点”等相对时间时优先使用它们：",
+    "The following fields are the authoritative time context for this run. Prefer them when resolving relative time expressions such as today, tomorrow, or a specific hour:",
     `- current_date: ${formatDateInTimezone(now, timezone)}`,
     `- current_time: ${formatDateTimeInTimezone(now, timezone)}`,
     `- timezone: ${timezone}`,

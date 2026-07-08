@@ -142,7 +142,7 @@ export async function runTaskNow(params: {
   await runProgress.update({
     status: "running",
     phase: "preparing",
-    message: "执行输入已写入，准备开始任务执行",
+    message: "Execution input has been written; preparing to start task execution.",
     ...(taskKind === "agent" ? { maxRounds: maxDialogueRounds } : {}),
   });
 
@@ -444,7 +444,7 @@ export async function runTaskNow(params: {
   await runProgress.update({
     status: "running",
     phase: "writing_artifacts",
-    message: "正在写入 output/result/run 元数据",
+    message: "Writing output/result/run metadata.",
     ...(taskKind === "agent" ? { maxRounds: maxDialogueRounds } : { maxRounds: 1 }),
     ...(dialogueRounds > 0 ? { round: dialogueRounds } : {}),
   });

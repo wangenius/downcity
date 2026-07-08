@@ -108,7 +108,7 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
     },
     actions: {
       [SKILL_PLUGIN_ACTIONS.find]: createAction({
-        description: "查找 `list` 中不存在的未学会 skills（缺失时再 install）",
+        description: "Find unlearned skills that are not in `list`; install only if missing.",
         input_schema: {
           zod: z.object({
             query: z.string(),
@@ -117,18 +117,18 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
             type: "object",
             required: ["query"],
             properties: {
-              query: { type: "string", description: "Skill 查询词" },
+              query: { type: "string", description: "Skill search query." },
             },
           },
         },
         examples: [
           {
-            title: "查找 skill",
+            title: "Find skill",
             payload: { query: "web-search" },
           },
         ],
         command: {
-          description: "查找 `list` 中不存在的未学会 skills（缺失时再 install）",
+          description: "Find unlearned skills that are not in `list`; install only if missing.",
           configure(command) {
             command.argument("<query>");
           },
@@ -151,7 +151,7 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
               success: true,
               data: {
                 query: payload.query,
-                message: "该技能已在 list 中，无需 install。使用前请先执行 lookup。",
+                message: "This skill is already in list; installation is not needed. Run lookup before using it.",
                 workflow: ["list", "lookup"],
                 nextAction: "lookup",
                 learnedSkill: exactLearned,
@@ -171,7 +171,7 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
             success: true,
             data: {
               query: payload.query,
-              message: "已执行缺失技能检索；若目标不在 list 中，可 install 后再 lookup。",
+              message: "Missing-skill search completed. If the target is not in list, install it and then run lookup.",
               workflow: ["find", "install", "lookup"],
               nextAction: "install",
               learnedSkill: null,
@@ -181,7 +181,7 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
         },
       }),
       [SKILL_PLUGIN_ACTIONS.install]: createAction({
-        description: "安装 `list` 中不存在的 skill（完成后请先 lookup）",
+        description: "Install a skill that is not in `list`; run lookup after installation.",
         input_schema: {
           zod: z.object({
             spec: z.string(),
@@ -193,21 +193,21 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
             type: "object",
             required: ["spec"],
             properties: {
-              spec: { type: "string", description: "Skill 安装 spec" },
-              global: { type: "boolean", description: "是否全局安装" },
-              yes: { type: "boolean", description: "跳过确认" },
-              agent: { type: "string", description: "指定 agent" },
+              spec: { type: "string", description: "Skill installation spec." },
+              global: { type: "boolean", description: "Whether to install globally." },
+              yes: { type: "boolean", description: "Skip confirmation." },
+              agent: { type: "string", description: "Target agent." },
             },
           },
         },
         examples: [
           {
-            title: "安装 skill",
+            title: "Install skill",
             payload: { spec: "web-search", global: true, yes: true },
           },
         ],
         command: {
-          description: "安装 `list` 中不存在的 skill（完成后请先 lookup）",
+          description: "Install a skill that is not in `list`; run lookup after installation.",
           configure(command) {
             command
               .argument("<spec>")
@@ -242,7 +242,7 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
               data: {
                 spec: payload.spec,
                 skipped: true,
-                message: "技能已在 list 中，无需 install。使用前请先执行 lookup。",
+                message: "The skill is already in list; installation is not needed. Run lookup before using it.",
                 workflow: ["list", "lookup"],
                 nextAction: "lookup",
                 queryFromSpec,
@@ -268,7 +268,7 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
             success: true,
             data: {
               spec: payload.spec,
-              message: "技能学习完成。使用技能前请先执行 lookup 读取该技能的 SKILL.md 内容。",
+              message: "Skill learning completed. Before using the skill, run lookup to read its SKILL.md content.",
               workflow: ["find", "install", "lookup"],
               nextAction: "lookup",
               skipped: false,
@@ -280,7 +280,7 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
         },
       }),
       [SKILL_PLUGIN_ACTIONS.list]: createAction({
-        description: "列出当前已学会（本地可发现）的 skills",
+        description: "List currently learned skills discoverable locally.",
         input_schema: {
           zod: z.object({}).passthrough(),
           json_schema: {
@@ -290,12 +290,12 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
         },
         examples: [
           {
-            title: "列出 skills",
+            title: "List skills",
             payload: {},
           },
         ],
         command: {
-          description: "列出当前已学会（本地可发现）的 skills",
+          description: "List currently learned skills discoverable locally.",
           mapInput() {
             return {};
           },
@@ -311,7 +311,7 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
         },
       }),
       [SKILL_PLUGIN_ACTIONS.lookup]: createAction({
-        description: "读取已学会 skill 内容（SKILL.md）",
+        description: "Read learned skill content (SKILL.md).",
         input_schema: {
           zod: z.object({
             name: z.string(),
@@ -320,18 +320,18 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
             type: "object",
             required: ["name"],
             properties: {
-              name: { type: "string", description: "Skill 名称" },
+              name: { type: "string", description: "Skill name." },
             },
           },
         },
         examples: [
           {
-            title: "读取 skill",
+            title: "Read skill",
             payload: { name: "web-search" },
           },
         ],
         command: {
-          description: "读取已学会 skill 内容（SKILL.md）",
+          description: "Read learned skill content (SKILL.md).",
           configure(command) {
             command.argument("<name>");
           },
@@ -384,7 +384,7 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
             data: {
               success: true,
               ...(result.skill ? { skill: result.skill } : {}),
-              message: "技能内容已准备，下一步将以 `<skill>...</skill>` user message 注入。",
+              message: "Skill content is ready. Next it will be injected as a `<skill>...</skill>` user message.",
               __ship: {
                 injectUserMessages: [
                   {

@@ -97,21 +97,21 @@ export type ContactActionHandlers = {
 export function createContactActions(handlers: ContactActionHandlers): PluginActions {
   return {
     link: createAction({
-      description: "生成一次性 contact link code，供其他 agent approve。",
+      description: "Create a one-time contact link code for another agent to approve.",
       input_schema: {
         zod: z.object({ ttlSeconds: z.number().optional() }),
         json_schema: {
           type: "object",
           properties: {
-            ttlSeconds: { type: "number", description: "link 过期秒数，默认 600" },
+            ttlSeconds: { type: "number", description: "Link expiration in seconds, defaulting to 600." },
           },
         },
       },
-      examples: [{ title: "生成默认 link", payload: {} }],
+      examples: [{ title: "Create default link", payload: {} }],
       command: {
-        description: "生成一次性 contact link code，交给另一个 agent approve",
+        description: "Create a one-time contact link code for another agent to approve.",
         configure(command) {
-          command.option("--ttl-seconds <seconds>", "link 过期秒数，默认 600", Number);
+          command.option("--ttl-seconds <seconds>", "Link expiration in seconds, defaulting to 600.", Number);
         },
         mapInput({ opts }) {
           const payload: JsonObject = {};
@@ -128,7 +128,7 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
       }),
     }),
     approve: createAction({
-      description: "使用 contact link code 建立点对点联系。",
+      description: "Use a contact link code to establish a peer-to-peer contact.",
       input_schema: {
         zod: z.object({
           code: z.string(),
@@ -139,7 +139,7 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
           required: ["code"],
           properties: {
             code: { type: "string", description: "link code" },
-            name: { type: "string", description: "本地 contact 别名" },
+            name: { type: "string", description: "Local contact alias." },
           },
         },
       },
@@ -147,11 +147,11 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
         { title: "approve link", payload: { code: "abc123", name: "alice" } },
       ],
       command: {
-        description: "使用 contact link code 建立点对点联系",
+        description: "Use a contact link code to establish a peer-to-peer contact.",
         configure(command) {
           command
             .argument("<code>")
-            .option("--name <alias>", "本地 contact 别名");
+            .option("--name <alias>", "Local contact alias.");
         },
         mapInput({ args, opts }) {
           const code = String(args[0] || "").trim();
@@ -170,14 +170,14 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
       }),
     }),
     list: createAction({
-      description: "列出已建立的 contact。",
+      description: "List established contacts.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {} },
       },
-      examples: [{ title: "列出 contact", payload: {} }],
+      examples: [{ title: "List contacts", payload: {} }],
       command: {
-        description: "列出已建立的 contact",
+        description: "List established contacts.",
         mapInput() {
           return {};
         },
@@ -190,7 +190,7 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
       }),
     }),
     check: createAction({
-      description: "检查 contact 或 endpoint 当前是否在线可用。",
+      description: "Check whether a contact or endpoint is currently online and reachable.",
       input_schema: {
         zod: z.object({
           target: z.string().optional(),
@@ -199,21 +199,21 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
         json_schema: {
           type: "object",
           properties: {
-            target: { type: "string", description: "已保存的 contact 名" },
-            endpoint: { type: "string", description: "直接检查的 endpoint" },
+            target: { type: "string", description: "Saved contact name." },
+            endpoint: { type: "string", description: "Endpoint to check directly." },
           },
         },
       },
       examples: [
-        { title: "检查 contact", payload: { target: "alice" } },
-        { title: "检查 endpoint", payload: { endpoint: "https://example.com" } },
+        { title: "Check contact", payload: { target: "alice" } },
+        { title: "Check endpoint", payload: { endpoint: "https://example.com" } },
       ],
       command: {
-        description: "检查 contact 或 endpoint 当前是否在线可用",
+        description: "Check whether a contact or endpoint is currently online and reachable.",
         configure(command) {
           command
             .argument("[target]")
-            .option("--to <endpoint>", "直接检查未保存的 endpoint");
+            .option("--to <endpoint>", "Directly check an unsaved endpoint.");
         },
         mapInput({ args, opts }) {
           const payload: JsonObject = {};
@@ -232,7 +232,7 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
       }),
     }),
     chat: createAction({
-      description: "和某个 contact 的长期对话线聊天，或读取对话历史。",
+      description: "Chat with a contact in its long-lived conversation thread, or read conversation history.",
       input_schema: {
         zod: z.object({
           to: z.string(),
@@ -242,19 +242,19 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
           type: "object",
           required: ["to"],
           properties: {
-            to: { type: "string", description: "目标 contact" },
-            message: { type: "string", description: "要发送的消息" },
+            to: { type: "string", description: "Target contact." },
+            message: { type: "string", description: "Message to send." },
           },
         },
       },
       examples: [
-        { title: "发送消息", payload: { to: "alice", message: "hello" } },
-        { title: "读取历史", payload: { to: "alice" } },
+        { title: "Send message", payload: { to: "alice", message: "hello" } },
+        { title: "Read history", payload: { to: "alice" } },
       ],
       command: {
-        description: "和某个 contact 的长期对话线聊天",
+        description: "Chat with a contact in its long-lived conversation thread.",
         configure(command) {
-          command.requiredOption("--to <contact>", "目标 contact").argument("[message...]");
+          command.requiredOption("--to <contact>", "Target contact.").argument("[message...]");
         },
         mapInput({ args, opts }) {
           const payload: JsonObject = {
@@ -274,7 +274,7 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
       }),
     }),
     share: createAction({
-      description: "向 contact 分享文本、链接、文件或目录。",
+      description: "Share text, links, files, or directories with a contact.",
       input_schema: {
         zod: z.object({
           to: z.string(),
@@ -286,26 +286,26 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
           type: "object",
           required: ["to"],
           properties: {
-            to: { type: "string", description: "目标 contact" },
-            text: { type: "string", description: "分享文本" },
-            links: { type: "array", items: { type: "string" }, description: "分享链接" },
-            paths: { type: "array", items: { type: "string" }, description: "分享文件/目录路径" },
+            to: { type: "string", description: "Target contact." },
+            text: { type: "string", description: "Text to share." },
+            links: { type: "array", items: { type: "string" }, description: "Links to share." },
+            paths: { type: "array", items: { type: "string" }, description: "File or directory paths to share." },
           },
         },
       },
       examples: [
         {
-          title: "分享一段文本",
+          title: "Share text",
           payload: { to: "alice", text: "看看这个" },
         },
       ],
       command: {
-        description: "向 contact 分享文本、链接、文件或目录",
+        description: "Share text, links, files, or directories with a contact.",
         configure(command) {
           command
-            .requiredOption("--to <contact>", "目标 contact")
-            .option("--text <text>", "分享文本")
-            .option("--link <url...>", "分享链接")
+            .requiredOption("--to <contact>", "Target contact.")
+            .option("--text <text>", "Text to share.")
+            .option("--link <url...>", "Links to share.")
             .argument("[paths...]");
         },
         mapInput({ args, opts }) {
@@ -331,14 +331,14 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
       }),
     }),
     inbox: createAction({
-      description: "查看 contact inbox。",
+      description: "View the contact inbox.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {} },
       },
-      examples: [{ title: "查看 inbox", payload: {} }],
+      examples: [{ title: "View inbox", payload: {} }],
       command: {
-        description: "查看 contact inbox",
+        description: "View the contact inbox.",
         mapInput() {
           return {};
         },
@@ -351,20 +351,20 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
       }),
     }),
     receive: createAction({
-      description: "接收 inbox 中的 share。",
+      description: "Receive a share from the inbox.",
       input_schema: {
         zod: z.object({ shareId: z.string() }),
         json_schema: {
           type: "object",
           required: ["shareId"],
           properties: {
-            shareId: { type: "string", description: "inbox 中的 shareId" },
+            shareId: { type: "string", description: "Share ID from the inbox." },
           },
         },
       },
-      examples: [{ title: "接收 share", payload: { shareId: "share_1" } }],
+      examples: [{ title: "Receive share", payload: { shareId: "share_1" } }],
       command: {
-        description: "接收 inbox 中的 share",
+        description: "Receive a share from the inbox.",
         configure(command) {
           command.argument("<shareId>");
         },
@@ -383,7 +383,7 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
       }),
     }),
     remoteping: createAction({
-      description: "处理远端 ping 请求（内部 endpoint）。",
+      description: "Handle a remote ping request (internal endpoint).",
       execute: async (params) => ({
         success: true,
         data: (await handlers.remotePing(
@@ -393,7 +393,7 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
       }),
     }),
     remoteapprove: createAction({
-      description: "处理远端 approve 请求（内部 endpoint）。",
+      description: "Handle a remote approve request (internal endpoint).",
       execute: async (params) => ({
         success: true,
         data: (await handlers.remoteApprove(
@@ -403,7 +403,7 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
       }),
     }),
     remoteconfirm: createAction({
-      description: "处理远端 confirm 请求（内部 endpoint）。",
+      description: "Handle a remote confirm request (internal endpoint).",
       execute: async (params) => ({
         success: true,
         data: (await handlers.remoteConfirm(
@@ -413,7 +413,7 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
       }),
     }),
     remotechat: createAction({
-      description: "处理远端 chat 请求（内部 endpoint）。",
+      description: "Handle a remote chat request (internal endpoint).",
       execute: async (params) => {
         const payload = readContactObject(params.input);
         const body = readContactObject(payload.body);
@@ -428,7 +428,7 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
       },
     }),
     remoteshare: createAction({
-      description: "处理远端 share 请求（内部 endpoint）。",
+      description: "Handle a remote share request (internal endpoint).",
       execute: async (params) => ({
         success: true,
         data: (await handlers.remoteShare(params.context, params.input)) as unknown as JsonValue,

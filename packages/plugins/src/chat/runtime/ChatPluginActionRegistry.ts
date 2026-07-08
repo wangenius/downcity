@@ -104,15 +104,15 @@ export function createChatPluginActions(params: {
 }): PluginActions {
   return {
     status: createAction({
-      description: "查看 chat 渠道连接状态。",
+      description: "View chat channel connection status.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {}, additionalProperties: true },
       },
       command: {
-        description: "查看 chat 渠道连接状态",
+        description: "View chat channel connection status.",
         configure(command: Command) {
-          command.option("--channel <name>", "指定渠道（telegram|feishu|qq）");
+          command.option("--channel <name>", "Specify channel (telegram|feishu|qq).");
         },
         mapInput: mapChatChannelCommandInput,
       },
@@ -125,15 +125,15 @@ export function createChatPluginActions(params: {
       },
     }),
     test: createAction({
-      description: "测试 chat 渠道连通性。",
+      description: "Test chat channel connectivity.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {}, additionalProperties: true },
       },
       command: {
-        description: "测试 chat 渠道连通性",
+        description: "Test chat channel connectivity.",
         configure(command: Command) {
-          command.option("--channel <name>", "指定渠道（telegram|feishu|qq）");
+          command.option("--channel <name>", "Specify channel (telegram|feishu|qq).");
         },
         mapInput: mapChatChannelCommandInput,
       },
@@ -146,15 +146,15 @@ export function createChatPluginActions(params: {
       },
     }),
     reconnect: createAction({
-      description: "重连 chat 渠道（默认全部）。",
+      description: "Reconnect chat channels, all by default.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {}, additionalProperties: true },
       },
       command: {
-        description: "重连 chat 渠道（默认全部）",
+        description: "Reconnect chat channels, all by default.",
         configure(command: Command) {
-          command.option("--channel <name>", "指定渠道（telegram|feishu|qq）");
+          command.option("--channel <name>", "Specify channel (telegram|feishu|qq).");
         },
         mapInput: mapChatChannelCommandInput,
       },
@@ -167,15 +167,15 @@ export function createChatPluginActions(params: {
       },
     }),
     open: createAction({
-      description: "打开（启用）指定 chat 渠道。",
+      description: "Open and enable the specified chat channel.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {}, additionalProperties: true },
       },
       command: {
-        description: "打开 chat 渠道（enabled=true，已配置则尝试启动）",
+        description: "Open chat channel (enabled=true, and start it if configured).",
         configure(command: Command) {
-          command.option("--channel <name>", "指定渠道（telegram|feishu|qq）");
+          command.option("--channel <name>", "Specify channel (telegram|feishu|qq).");
         },
         mapInput: mapChatChannelCommandInput,
       },
@@ -188,15 +188,15 @@ export function createChatPluginActions(params: {
       },
     }),
     close: createAction({
-      description: "关闭（禁用）指定 chat 渠道。",
+      description: "Close and disable the specified chat channel.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {}, additionalProperties: true },
       },
       command: {
-        description: "关闭 chat 渠道（enabled=false，并停止运行）",
+        description: "Close chat channel (enabled=false and stop runtime).",
         configure(command: Command) {
-          command.option("--channel <name>", "指定渠道（telegram|feishu|qq）");
+          command.option("--channel <name>", "Specify channel (telegram|feishu|qq).");
         },
         mapInput: mapChatChannelCommandInput,
       },
@@ -209,15 +209,15 @@ export function createChatPluginActions(params: {
       },
     }),
     configuration: createAction({
-      description: "查看 chat 渠道配置元信息。",
+      description: "View chat channel configuration metadata.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {}, additionalProperties: true },
       },
       command: {
-        description: "查看 chat 渠道配置元信息（字段、类型、说明）",
+        description: "View chat channel configuration metadata (fields, types, descriptions).",
         configure(command: Command) {
-          command.option("--channel <name>", "指定渠道（telegram|feishu|qq）");
+          command.option("--channel <name>", "Specify channel (telegram|feishu|qq).");
         },
         mapInput: mapChatChannelCommandInput,
       },
@@ -229,21 +229,21 @@ export function createChatPluginActions(params: {
       },
     }),
     configure: createAction({
-      description: "更新 chat 渠道运行态参数。",
+      description: "Update runtime parameters for a chat channel.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {}, additionalProperties: true },
       },
       command: {
-        description: "更新 chat 渠道运行态参数（可选立即重载）",
+        description: "Update runtime parameters for a chat channel, optionally restarting it immediately.",
         configure(command: Command) {
           command
-            .requiredOption("--channel <name>", "指定渠道（telegram|feishu|qq）")
+            .requiredOption("--channel <name>", "Specify channel (telegram|feishu|qq).")
             .requiredOption(
               "--config-json <json>",
-              "配置 patch JSON（例如 '{\"channelAccountId\":\"qq-main\",\"enabled\":true}'）",
+              "Configuration patch JSON, for example '{\"channelAccountId\":\"qq-main\",\"enabled\":true}'.",
             )
-            .option("--restart", "配置后立即重载渠道", false);
+            .option("--restart", "Restart the channel immediately after configuration.", false);
         },
         mapInput: mapChatConfigureCommandInput,
       },
@@ -256,18 +256,18 @@ export function createChatPluginActions(params: {
       },
     }),
     list: createAction({
-      description: "列出当前 agent 已记录的 chat 会话。",
+      description: "List chat conversations recorded by the current agent.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {}, additionalProperties: true },
       },
       command: {
-        description: "列出当前 agent 已记录的 chat 会话（chatTitle/chatKey）",
+        description: "List chat conversations recorded by the current agent (chatTitle/chatKey).",
         configure(command: Command) {
           command
-            .option("--channel <name>", "渠道过滤（telegram|feishu|qq）")
-            .option("--limit <n>", "返回最近 N 条（默认 50）")
-            .option("--q <text>", "关键词过滤（title/chatId/sessionId/actor）");
+            .option("--channel <name>", "Filter by channel (telegram|feishu|qq).")
+            .option("--limit <n>", "Return the latest N records, default 50.")
+            .option("--q <text>", "Keyword filter (title/chatId/sessionId/actor).");
         },
         mapInput: mapChatListCommandInput,
       },
@@ -279,17 +279,17 @@ export function createChatPluginActions(params: {
       },
     }),
     info: createAction({
-      description: "查看指定 chat 会话的路由/路径/上下文快照。",
+      description: "View route, paths, and context snapshot for a specified chat conversation.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {}, additionalProperties: true },
       },
       command: {
-        description: "查看指定 chat 会话信息（路由/本地路径/上下文快照）",
+        description: "View specified chat conversation info (route/local paths/context snapshot).",
         configure(command: Command) {
           command
-            .option("--chat-key <chatKey>", "目标 chatKey（不传则尝试读取 DC_CTX_CHAT_KEY）")
-            .option("--session-id <sessionId>", "显式指定 sessionId（优先级更高）");
+            .option("--chat-key <chatKey>", "Target chatKey; reads DC_CTX_CHAT_KEY if omitted.")
+            .option("--session-id <sessionId>", "Explicit sessionId, with higher priority.");
         },
         mapInput: mapChatInfoCommandInput,
       },
@@ -301,23 +301,23 @@ export function createChatPluginActions(params: {
       },
     }),
     send: createAction({
-      description: "向目标 chatKey 发送消息（支持文本/附件/延迟）。",
+      description: "Send a message to the target chatKey, supporting text, attachments, and delay.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {}, additionalProperties: true },
       },
       command: {
-        description: "发送消息到目标 chatKey",
+        description: "Send a message to the target chatKey.",
         configure(command: Command) {
           command
-            .option("--text <text>", "消息正文")
-            .option("--stdin", "从标准输入读取消息正文", false)
-            .option("--text-file <file>", "从文件读取消息正文（相对当前目录）")
-            .option("--reply", "显式使用 reply_to_message 回复目标消息", false)
-            .option("--message-id <id>", "显式指定 reply 目标消息 ID")
+            .option("--text <text>", "Message body.")
+            .option("--stdin", "Read message body from stdin.", false)
+            .option("--text-file <file>", "Read message body from a file relative to the current directory.")
+            .option("--reply", "Explicitly reply to the target message with reply_to_message.", false)
+            .option("--message-id <id>", "Explicit reply target message ID.")
             .option(
               "--chat-key <chatKey>",
-              "目标 chatKey（不传则尝试读取 DC_CTX_CHAT_KEY）",
+              "Target chatKey; reads DC_CTX_CHAT_KEY if omitted.",
             );
           attachCommandHelpText(command, CHAT_SEND_HELP_TEXT);
         },
@@ -331,21 +331,21 @@ export function createChatPluginActions(params: {
       },
     }),
     react: createAction({
-      description: "给目标消息贴表情（当前仅 Telegram 支持）。",
+      description: "React to a target message, currently supported only by Telegram.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {}, additionalProperties: true },
       },
       command: {
-        description: "给目标消息贴表情（当前仅 Telegram 支持）",
+        description: "React to a target message, currently supported only by Telegram.",
         configure(command: Command) {
           command
-            .option("--emoji <emoji>", "表情字符（默认 👍）")
-            .option("--big", "使用大表情效果（Telegram is_big）", false)
-            .option("--message-id <id>", "目标消息 ID（默认尝试从 chat meta 回填）")
+            .option("--emoji <emoji>", "Emoji character, default thumbs-up.")
+            .option("--big", "Use large reaction effect (Telegram is_big).", false)
+            .option("--message-id <id>", "Target message ID; defaults to chat meta when available.")
             .option(
               "--chat-key <chatKey>",
-              "目标 chatKey（不传则尝试读取 DC_CTX_CHAT_KEY）",
+              "Target chatKey; reads DC_CTX_CHAT_KEY if omitted.",
             );
           attachCommandHelpText(command, CHAT_REACT_HELP_TEXT);
         },
@@ -359,15 +359,15 @@ export function createChatPluginActions(params: {
       },
     }),
     context: createAction({
-      description: "查看当前会话上下文快照。",
+      description: "View current conversation context snapshot.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {}, additionalProperties: true },
       },
       command: {
-        description: "查看当前会话上下文快照",
+        description: "View current conversation context snapshot.",
         configure(command: Command) {
-          command.option("--chat-key <chatKey>", "显式覆盖 chatKey");
+          command.option("--chat-key <chatKey>", "Explicitly override chatKey.");
         },
         mapInput(input) {
           const chatKey =
@@ -385,17 +385,17 @@ export function createChatPluginActions(params: {
       },
     }),
     delete: createAction({
-      description: "彻底删除指定 chat 会话（映射+历史+context）。",
+      description: "Permanently delete a specified chat conversation, including mapping, history, and context.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {}, additionalProperties: true },
       },
       command: {
-        description: "彻底删除指定 chat 会话（映射+历史+context）",
+        description: "Permanently delete a specified chat conversation, including mapping, history, and context.",
         configure(command: Command) {
           command
-            .option("--chat-key <chatKey>", "显式指定 chatKey")
-            .option("--session-id <sessionId>", "显式指定 sessionId");
+            .option("--chat-key <chatKey>", "Explicit chatKey.")
+            .option("--session-id <sessionId>", "Explicit sessionId.");
         },
         mapInput: mapChatDeleteCommandInput,
       },
@@ -407,24 +407,24 @@ export function createChatPluginActions(params: {
       },
     }),
     history: createAction({
-      description: "读取 chat 历史消息。",
+      description: "Read chat history messages.",
       input_schema: {
         zod: z.object({}).passthrough(),
         json_schema: { type: "object", properties: {}, additionalProperties: true },
       },
       command: {
-        description: "读取 chat 历史消息（默认最近 30 条）",
+        description: "Read chat history messages, defaulting to the latest 30.",
         configure(command: Command) {
           command
-            .option("--chat-key <chatKey>", "显式覆盖 chatKey")
-            .option("--session-id <sessionId>", "显式覆盖 sessionId")
-            .option("--limit <n>", "返回最近 N 条（默认 30）")
+            .option("--chat-key <chatKey>", "Explicitly override chatKey.")
+            .option("--session-id <sessionId>", "Explicitly override sessionId.")
+            .option("--limit <n>", "Return the latest N records, default 30.")
             .option(
               "--direction <direction>",
-              "方向过滤（all|inbound|outbound）",
+              "Direction filter (all|inbound|outbound).",
             )
-            .option("--before-ts <ts>", "仅返回 ts 小于该值的记录（毫秒）")
-            .option("--after-ts <ts>", "仅返回 ts 大于该值的记录（毫秒）");
+            .option("--before-ts <ts>", "Return only records with ts lower than this value, in milliseconds.")
+            .option("--after-ts <ts>", "Return only records with ts greater than this value, in milliseconds.");
         },
         mapInput: mapChatHistoryCommandInput,
       },

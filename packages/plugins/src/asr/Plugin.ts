@@ -287,18 +287,18 @@ export class AsrPlugin extends BasePlugin {
         json_schema: {
           type: "object",
           properties: {
-            audio_path: { type: "string", description: "本地音频绝对/相对路径" },
-            url: { type: "string", description: "在线音频 URL" },
-            data_url: { type: "string", description: "data: URL 形式音频" },
-            language: { type: "string", description: "目标语言代码（可选）" },
-            media_type: { type: "string", description: "媒体类型（可选）" },
-            file_name: { type: "string", description: "文件名（可选）" },
+            audio_path: { type: "string", description: "Absolute or relative local audio path." },
+            url: { type: "string", description: "Online audio URL." },
+            data_url: { type: "string", description: "Audio as a data: URL." },
+            language: { type: "string", description: "Target language code, optional." },
+            media_type: { type: "string", description: "Media type, optional." },
+            file_name: { type: "string", description: "File name, optional." },
           },
         },
       },
       examples: [
-        { title: "本地音频", payload: { audio_path: "./input.wav" } },
-        { title: "远程 URL", payload: { url: "https://example.com/a.mp3" } },
+        { title: "Local audio", payload: { audio_path: "./input.wav" } },
+        { title: "Remote URL", payload: { url: "https://example.com/a.mp3" } },
       ],
       execute: async ({ input }: { input: JsonValue }) => {
         try {

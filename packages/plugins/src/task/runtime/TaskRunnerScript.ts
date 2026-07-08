@@ -102,7 +102,7 @@ export async function runScriptTaskBranch(
   await params.runProgress.update({
     status: "running",
     phase: "script_running",
-    message: "正在执行 script 任务",
+    message: "Executing script task.",
     round: 1,
     maxRounds: 1,
   });
@@ -118,7 +118,7 @@ export async function runScriptTaskBranch(
     await params.runProgress.update({
       status: "running",
       phase: "validating",
-      message: "script 执行完成，正在校验输出与产物",
+      message: "Script execution completed; validating output and artifacts.",
       round: 1,
       maxRounds: 1,
     });
@@ -141,7 +141,7 @@ export async function runScriptTaskBranch(
       await params.runProgress.update({
         status: "running",
         phase: "validating",
-        message: "输出校验未通过，准备写入失败产物",
+        message: "Output validation failed; preparing failure artifacts.",
         round: 1,
         maxRounds: 1,
       });

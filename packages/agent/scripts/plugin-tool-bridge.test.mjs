@@ -17,6 +17,7 @@ import {
   invokePluginReadTool,
 } from "../bin/executor/tools/plugin/PluginToolBridge.js";
 import { createPluginTools } from "../bin/executor/tools/plugin/PluginToolDefinition.js";
+import { plugin_call_input_schema } from "../bin/executor/tools/plugin/PluginToolSchemas.js";
 import { withSessionRunScope } from "../bin/executor/SessionRunScope.js";
 import { createAction, createPlugin } from "../bin/plugin/core/PluginActionFactory.js";
 import { createAgentPluginRegistry } from "../bin/agent/local/AgentPluginFactory.js";
@@ -31,6 +32,18 @@ function create_run_context(project_root) {
     pendingAssistantFileParts: [],
   };
 }
+
+test("plugin_call payload schema allows arbitrary object properties", async () => {
+  const plugin_call_schema = await plugin_call_input_schema.jsonSchema;
+  const payload_schema = plugin_call_schema.properties.payload;
+
+  assert.equal(plugin_call_schema.type, "object");
+  assert.deepEqual(plugin_call_schema.required, ["plugin", "action"]);
+  assert.equal(plugin_call_schema.additionalProperties, false);
+  assert.equal(payload_schema.type, "object");
+  assert.equal(payload_schema.additionalProperties, true);
+  assert.deepEqual(payload_schema.default, {});
+});
 
 test("invokePluginCallTool returns absolute paths for materialized file parts", async () => {
   const project_root = await fs.mkdtemp(

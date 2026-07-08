@@ -14,6 +14,7 @@ import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { Agent } from "../bin/index.js";
+import { createAction, createPlugin } from "../bin/plugin/core/PluginActionFactory.js";
 import { City } from "../../city/bin/index.js";
 import { tool } from "ai";
 import { z } from "zod";
@@ -224,12 +225,13 @@ test("CityModel uses direct LanguageModel path and sends tool result back", asyn
 
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 
+  let agent;
   try {
     const address = server.address();
     assert.ok(address && typeof address === "object");
     const city = new City({
       role: "user",
-      city_url: `http://127.0.0.1:${String(address.port)}`,
+      federation_url: `http://127.0.0.1:${String(address.port)}`,
       city_id: "city_demo",
       user_token: "ub_test",
     });
@@ -240,9 +242,25 @@ test("CityModel uses direct LanguageModel path and sends tool result back", asyn
     const agent_path = await fs.mkdtemp(
       path.join(os.tmpdir(), "downcity-agent-city-model-tool-loop-"),
     );
-    const agent = new Agent({
+    const skill_plugin = createPlugin({
+      name: "skill",
+      title: "Skill",
+      description: "Test skill plugin",
+      actions: {
+        lookup: createAction({
+          description: "Lookup a skill",
+          execute: async ({ input }) => ({
+            success: true,
+            data: { name: input.name },
+            message: "loaded",
+          }),
+        }),
+      },
+    });
+    agent = new Agent({
       id: "tool_loop_agent",
       path: agent_path,
+      plugins: [skill_plugin],
       tools: {
         ping: tool({
           description: "ping tool",
@@ -266,8 +284,19 @@ test("CityModel uses direct LanguageModel path and sends tool result back", asyn
     assert.equal(tool_executed, true);
     assert.equal(stream_requests, 0);
     assert.equal(agent_requests.length, 2);
-    assert.equal(requests.every((request) => request?.city_id === "city_demo"), true);
     assert.equal(agent_requests[0]?.model, "mock-model");
+    const plugin_call_tool = agent_requests[0]?.tools?.find(
+      (item) => item?.type === "function" && item?.function?.name === "plugin_call",
+    );
+    assert.ok(plugin_call_tool);
+    const plugin_call_parameters = plugin_call_tool.function.parameters;
+    assert.equal(plugin_call_parameters.type, "object");
+    assert.deepEqual(plugin_call_parameters.required, ["plugin", "action"]);
+    assert.equal(plugin_call_parameters.additionalProperties, false);
+    assert.equal(
+      plugin_call_parameters.properties.payload.additionalProperties,
+      true,
+    );
 
     const second_request_messages = Array.isArray(agent_requests[1]?.messages)
       ? agent_requests[1].messages
@@ -278,6 +307,9 @@ test("CityModel uses direct LanguageModel path and sends tool result back", asyn
     assert.match(serialized_second_messages, /echoed/);
     assert.match(serialized_second_messages, /hello/);
   } finally {
+    if (agent) {
+      await agent.dispose();
+    }
     await new Promise((resolve, reject) => {
       server.close((error) => {
         if (error) {

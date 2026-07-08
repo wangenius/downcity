@@ -99,7 +99,7 @@ test("action record is upserted but filtered from LLM history", async () => {
   );
 });
 
-test("session.set persists and publishes model-switching actions", async () => {
+test("session.set only persists and publishes model-switching actions when model changes", async () => {
   const agent_path = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-agent-model-switching-"),
   );
@@ -122,6 +122,24 @@ test("session.set persists and publishes model-switching actions", async () => {
         provider: "test",
       },
     });
+
+    assert.deepEqual(events, []);
+
+    await session.set({
+      model: {
+        modelId: "test-model",
+        provider: "test",
+      },
+    });
+
+    assert.deepEqual(events, []);
+
+    await session.set({
+      model: {
+        modelId: "next-test-model",
+        provider: "test",
+      },
+    });
     unsubscribe();
 
     assert.deepEqual(
@@ -138,6 +156,32 @@ test("session.set persists and publishes model-switching actions", async () => {
       action_events.map((event) => `${event.actionTitle}:${event.actionState}`),
       ["Session model switched:completed"],
     );
+  } finally {
+    await agent.dispose();
+  }
+});
+
+test("default model initialization does not persist model-switching actions", async () => {
+  const agent_path = await fs.mkdtemp(
+    path.join(os.tmpdir(), "downcity-agent-model-init-action-"),
+  );
+  const agent = new Agent({
+    id: "model_init_action_agent",
+    path: agent_path,
+    model: {
+      modelId: "default-test-model",
+      provider: "test",
+    },
+  });
+  try {
+    const session = await agent.sessions.create({
+      sessionId: "model_init_action_session",
+    });
+    const records = await session.records({ view: "timeline" });
+    const action_events = records.items.filter(
+      (item) => item.role === "action",
+    );
+    assert.deepEqual(action_events, []);
   } finally {
     await agent.dispose();
   }
@@ -192,7 +236,7 @@ test("session.fork persists and publishes history-forking actions on source sess
     const forked_model_actions = forked_records.items.filter(
       (item) => item.role === "action" && item.actionTitle === "Session model switched",
     );
-    assert.equal(forked_model_actions.length, 1);
+    assert.equal(forked_model_actions.length, 0);
   } finally {
     await agent.dispose();
   }

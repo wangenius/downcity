@@ -226,9 +226,17 @@ export class SessionStateService {
     const next_model_label = input.model
       ? inferAgentModelLabel(input.model)
       : undefined;
+    const should_emit_model_switch_action = Boolean(
+      input.model &&
+        should_emit_action &&
+        this.state.sessionConfig.model &&
+        previous_model_label &&
+        next_model_label &&
+        previous_model_label !== next_model_label,
+    );
     const action_id = `model-switching:${this.session_id}:${Date.now()}:${generateId()}`;
 
-    if (input.model && should_emit_action) {
+    if (should_emit_model_switch_action) {
       await this.emit_action_event({
         id: action_id,
         title: "Switching session model",
@@ -252,7 +260,7 @@ export class SessionStateService {
         model: this.state.sessionConfig.model,
       });
     } catch (error) {
-      if (input.model && should_emit_action) {
+      if (should_emit_model_switch_action) {
         await this.emit_action_event({
           id: action_id,
           title: "Session model switch failed",
@@ -263,7 +271,7 @@ export class SessionStateService {
       throw error;
     }
 
-    if (input.model && should_emit_action) {
+    if (should_emit_model_switch_action) {
       await this.emit_action_event({
         id: action_id,
         title: "Session model switched",

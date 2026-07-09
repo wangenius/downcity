@@ -117,6 +117,10 @@ function systemsEqual(a: string[], b: string[]): boolean {
 
 /**
  * 构建静态系统提示列表。
+ *
+ * 关键点（中文）
+ * - PROFILE/SOUL 这类项目指令在前，Downcity core 在后。
+ * - 该顺序对应 SDK session 中 instruction -> core 的稳定分层。
  */
 export function buildStaticSystemPrompts(staticProfiles: string[]): string[] {
   return [...staticProfiles, DEFAULT_SHIP_PROMPTS].filter(Boolean);

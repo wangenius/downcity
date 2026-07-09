@@ -3,6 +3,7 @@
  *
  * 关键点（中文）
  * - 这里只处理静态 instruction 与默认 core prompt。
+ * - instruction 永远在 core 前面；core 不会被调用方 instruction 替代。
  * - 不读取 session、plugin 或 runtime 状态，保持为纯函数。
  */
 
@@ -51,18 +52,17 @@ export function createInstructionSystemBlocks(
   instruction: string[],
   project_root: string,
 ): AgentSessionSystemBlock[] {
-  if (instruction.length === 0) {
-    return [
-      {
-        source: "core",
-        name: "default",
-        content: createCoreInstructionContent(project_root),
-      },
-    ];
-  }
-  return instruction.map((content, index) => ({
+  const instruction_blocks = instruction.map((content, index) => ({
     source: "instruction" as const,
     name: instruction.length === 1 ? "agent" : `agent:${index + 1}`,
     content,
   }));
+  return [
+    ...instruction_blocks,
+    {
+      source: "core",
+      name: "default",
+      content: createCoreInstructionContent(project_root),
+    },
+  ];
 }

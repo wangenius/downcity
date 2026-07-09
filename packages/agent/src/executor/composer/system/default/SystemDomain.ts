@@ -12,7 +12,6 @@ import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import { buildRuntimeClockSystemPrompt } from "@executor/composer/system/default/variables/VariableReplacer.js";
 import {
   CORE_SYSTEM_PROMPT,
-  PLUGIN_SYSTEM_PROMPT,
   TASK_SYSTEM_PROMPT,
 } from "@executor/composer/system/default/SystemPromptAssets.js";
 
@@ -26,8 +25,6 @@ function normalizeSystemText(input: string | null | undefined): string {
  * Ship 默认系统提示模板。
  */
 export const DEFAULT_SHIP_PROMPTS = CORE_SYSTEM_PROMPT;
-
-const MAIN_PLUGIN_PROMPT = PLUGIN_SYSTEM_PROMPT;
 
 /**
  * 构建一次运行的运行时 system prompt。
@@ -146,7 +143,7 @@ export function resolveSystemContextProfile(
  * 收集受 agent 托管的 plugin system 文本。
  *
  * 关键点（中文）
- * - 顺序：main plugin prompt -> plugin.system。
+ * - core prompt 已包含 plugin 系统总规则；这里仅收集各 plugin 自己的 system prompt。
  * - 单个加载失败走 fail-open，不阻断主链路。
  */
 export async function loadManagedPluginSystemPrompts(input: {
@@ -161,11 +158,6 @@ export async function loadManagedPluginSystemPrompts(input: {
   disabledPluginNames: string[];
 }): Promise<string[]> {
   const out: string[] = [];
-  const mainPluginPrompt = normalizeSystemText(MAIN_PLUGIN_PROMPT);
-  if (mainPluginPrompt) {
-    out.push(mainPluginPrompt);
-  }
-
   const disabledPluginNames = new Set(
     input.disabledPluginNames
       .map((item) => String(item || "").trim())

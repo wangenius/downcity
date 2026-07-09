@@ -35,14 +35,25 @@ It returns a structured system snapshot:
 
 The blocks can include:
 
-- the SDK core fallback, when no `instruction` was provided
 - caller-provided static `instruction`
-- registered plugin system text
+- Downcity Agent core guidance, including Harness design, Shell command rules, and plugin system rules
+- registered and enabled plugin system text
 - stable session context, including `agentId`, `sessionId`, `projectRoot`, creation time, and timezone
 
 The returned blocks are the same stable system blocks used by `session.prompt()`.
 
 The session creation time and timezone are the reference time context for the conversation. Dynamic values such as current time should be placed in the user message, not in `instruction`.
+
+## Block Order
+
+`@downcity/agent` builds system blocks in a fixed order:
+
+1. `instruction`: the host-provided Agent role, business rules, and response preferences.
+2. `core`: fixed Downcity Agent runtime guidance, including Harness design, Shell command rules, and plugin system rules.
+3. `plugin`: each enabled, ready, and currently available plugin's own system prompt.
+4. `session`: stable context for the current session.
+
+Even when the host provides `instruction`, `core` is still injected immediately after it.
 
 ## Example Snapshot
 
@@ -61,6 +72,16 @@ The session creation time and timezone are the reference time context for the co
       "source": "instruction",
       "name": "agent",
       "content": "You are the Downcity project assistant."
+    },
+    {
+      "source": "core",
+      "name": "default",
+      "content": "# Downcity Agent\n\nYou are a Downcity Agent running inside the Downcity Agent runtime...\n\n# Harness Design\n\nDowncity Agent is a harness around an existing human-owned workspace, not a replacement platform...\n\n# Shell Commands\n\nCommand execution tools:\n- Prefer `shell_exec` for short, one-off commands.\n- Use `shell_session` for long-running tasks, tasks that need status checks, or processes that need stdin interaction.\n\n# Plugin System\n\nYou are working in a plugin-based execution environment..."
+    },
+    {
+      "source": "plugin",
+      "name": "task",
+      "content": "# Task Plugin\n\nThe task plugin manages scheduled and repeatable tasks..."
     },
     {
       "source": "session",

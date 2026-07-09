@@ -35,14 +35,25 @@ const system = await session.system();
 
 这些 blocks 可以包括：
 
-- 未传入 `instruction` 时的 SDK core fallback
 - 调用方传入的静态 `instruction`
-- 已注册 plugin 的 system 文本
+- Downcity Agent core 说明，包括 Harness 设计思路、Shell command 规则和 plugin 系统总规则
+- 已注册并启用的 plugin system 文本
 - 稳定的 session 上下文，包括 `agentId`、`sessionId`、`projectRoot`、创建时间与时区
 
 返回内容和 `session.prompt()` 使用的是同一套稳定 system blocks。
 
 session 创建时间和时区是当前会话的参考时间上下文。当前时间等动态值应放入 user message，不应放进 `instruction`。
+
+## Block 顺序
+
+`@downcity/agent` 会按固定顺序构造 system blocks：
+
+1. `instruction`：宿主传入的 Agent 角色、业务规则和回复偏好。
+2. `core`：Downcity Agent 固定运行说明，包括 Harness 设计思路、Shell command 与 plugin 系统总规则。
+3. `plugin`：每个已经启用、已 ready 且当前可用的 plugin 自己的 system prompt。
+4. `session`：当前 session 的稳定上下文。
+
+即使宿主传入了 `instruction`，`core` 也会继续注入，并紧跟在 `instruction` 后面。
 
 ## 示例快照
 
@@ -61,6 +72,16 @@ session 创建时间和时区是当前会话的参考时间上下文。当前时
       "source": "instruction",
       "name": "agent",
       "content": "你是 Downcity 的项目助手。"
+    },
+    {
+      "source": "core",
+      "name": "default",
+      "content": "# Downcity Agent\n\nYou are a Downcity Agent running inside the Downcity Agent runtime...\n\n# Harness Design\n\nDowncity Agent is a harness around an existing human-owned workspace, not a replacement platform...\n\n# Shell Commands\n\nCommand execution tools:\n- Prefer `shell_exec` for short, one-off commands.\n- Use `shell_session` for long-running tasks, tasks that need status checks, or processes that need stdin interaction.\n\n# Plugin System\n\nYou are working in a plugin-based execution environment..."
+    },
+    {
+      "source": "plugin",
+      "name": "task",
+      "content": "# Task Plugin\n\nThe task plugin manages scheduled and repeatable tasks..."
     },
     {
       "source": "session",

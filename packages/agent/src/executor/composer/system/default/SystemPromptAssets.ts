@@ -7,18 +7,12 @@
  */
 
 import coreSystemPromptText from "@executor/composer/system/default/assets/core.prompt.js";
-import pluginSystemPromptText from "@executor/composer/system/default/assets/plugin.prompt.js";
 import taskSystemPromptText from "@executor/composer/system/default/assets/task.prompt.js";
 
 /**
  * 默认 core system prompt。
  */
 export const CORE_SYSTEM_PROMPT = coreSystemPromptText.trim();
-
-/**
- * plugin 层稳定 system prompt。
- */
-export const PLUGIN_SYSTEM_PROMPT = pluginSystemPromptText.trim();
 
 /**
  * task 模式专用 system prompt。

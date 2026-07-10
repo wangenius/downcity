@@ -64,6 +64,8 @@ city agent chat
 
 `city federation ...` only manages local Federation membership and user login state. It does not deploy Federations.
 
+After selecting an OAuth provider such as GitHub or Google, the CLI always prints the `authorization_url`. In a local graphical session it also attempts to open the default browser. When connected to a VPS over SSH or running headlessly, open that URL in your own browser while the CLI waits for the login result.
+
 ## Default Storage In federation.json
 
 Cloudflare Workers Federation projects can declare default storage in `federation.json`. R2 is currently supported:

@@ -7,8 +7,8 @@
  * - 交互菜单只调用这里的高层函数，避免 FederationConnection 模块继续膨胀。
  */
 
-import { spawnSync } from "node:child_process";
 import { emitCliBlock } from "@/shared/CliReporter.js";
+import { open_system_browser } from "@/shared/SystemBrowser.js";
 import { CityUserManager } from "@/city/shared/CityUserManager.js";
 import type {
   CityBalanceAccount,
@@ -54,7 +54,7 @@ export async function rechargeCurrentCityUser(
   });
   const checkout_url = normalizeText(checkout.checkout_url);
   const should_open = input.open_checkout !== false;
-  const opened = should_open && checkout_url ? openBrowser(checkout_url) : false;
+  const opened = should_open && checkout_url ? open_system_browser(checkout_url) : false;
 
   return {
     topup,
@@ -138,23 +138,4 @@ function normalizePositiveInteger(value: unknown, label: string): number {
 
 function normalizeText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
-}
-
-function openBrowser(url: string): boolean {
-  const command = process.platform === "darwin"
-    ? "open"
-    : process.platform === "win32"
-      ? "cmd"
-      : "xdg-open";
-  const args = process.platform === "win32"
-    ? ["/c", "start", "", url]
-    : [url];
-  try {
-    const result = spawnSync(command, args, {
-      stdio: "ignore",
-    });
-    return result.status === 0;
-  } catch {
-    return false;
-  }
 }

@@ -6,10 +6,10 @@
  * - 不读写 City 本地状态，调用方负责持久化 session。
  */
 
-import { spawnSync } from "node:child_process";
 import prompts from "@/city/tui/Prompts.js";
 import { City } from "@downcity/city";
 import { emitCliBlock } from "@/shared/CliReporter.js";
+import { open_system_browser } from "@/shared/SystemBrowser.js";
 import type {
   CityLoginInput,
   CityUserSession,
@@ -50,11 +50,6 @@ interface AccountsMeResult {
      */
     display_name?: string;
   } | null;
-}
-
-interface city_user_login_options {
-  /** 是否禁止向命令行直接输出提示块。 */
-  silent?: boolean;
 }
 
 function readString(value: unknown): string {
@@ -110,19 +105,14 @@ async function loadAuthOptions(federation_url: string): Promise<AuthOption[]> {
   return mapProvidersToOptions(result.items ?? []);
 }
 
-async function promptAuthMethod(
-  federation_url: string,
-  options?: city_user_login_options,
-): Promise<CityAuthMethod | null> {
+async function promptAuthMethod(federation_url: string): Promise<CityAuthMethod | null> {
   const auth_options = await loadAuthOptions(federation_url);
   if (auth_options.length === 0) {
-    if (options?.silent !== true) {
-      emitCliBlock({
-        tone: "warning",
-        title: "No sign-in methods",
-        note: "This City base has no enabled user auth providers.",
-      });
-    }
+    emitCliBlock({
+      tone: "warning",
+      title: "No sign-in methods",
+      note: "This City base has no enabled user auth providers.",
+    });
     return null;
   }
   const response = (await prompts({
@@ -185,10 +175,7 @@ async function emailLogin(input: CityLoginInput): Promise<CityUserSession | null
   });
 }
 
-async function emailRegister(
-  input: CityLoginInput,
-  options?: city_user_login_options,
-): Promise<CityUserSession | null> {
+async function emailRegister(input: CityLoginInput): Promise<CityUserSession | null> {
   const response = (await prompts([
     {
       type: "text",
@@ -216,13 +203,11 @@ async function emailRegister(
     throw new Error(registered.error || "registration failed");
   }
 
-  if (options?.silent !== true) {
-    emitCliBlock({
-      tone: "success",
-      title: "Verification code sent",
-      note: "If email delivery is unavailable, check server logs for the verification code.",
-    });
-  }
+  emitCliBlock({
+    tone: "success",
+    title: "Verification code sent",
+    note: "If email delivery is unavailable, check server logs for the verification code.",
+  });
 
   const verify_response = (await prompts({
     type: "text",
@@ -250,7 +235,6 @@ async function emailRegister(
 async function oauthAuth(
   input: CityLoginInput,
   provider: string,
-  options?: city_user_login_options,
 ): Promise<CityUserSession | null> {
   const client = new City({ role: "user", federation_url: input.federation_url });
   const accounts = client.service("accounts");
@@ -262,14 +246,19 @@ async function oauthAuth(
     throw new Error(started.error || "failed to start OAuth");
   }
 
-  const opened = openBrowser(started.url);
-  if (options?.silent !== true) {
-    emitCliBlock({
-      tone: opened ? "info" : "warning",
-      title: `OAuth: ${formatProviderLabel(provider)}`,
-      note: opened ? "Waiting for browser authorization..." : started.url,
-    });
-  }
+  const opened = open_system_browser(started.url);
+  emitCliBlock({
+    tone: opened ? "info" : "warning",
+    title: `OAuth: ${formatProviderLabel(provider)}`,
+    summary: opened
+      ? "Browser opened. Complete authorization to continue."
+      : "Open the authorization URL in a browser to continue.",
+    facts: [
+      { label: "authorization_url", value: started.url },
+      { label: "browser", value: opened ? "opened" : "not opened" },
+    ],
+    note: "Waiting for browser authorization...",
+  });
 
   const result = await pollLoginResult(client, started.login_id);
   if (!result || result.error || !result.user_token) {
@@ -375,25 +364,6 @@ async function readUserSessionFromToken(input: CityLoginInput & {
   };
 }
 
-function openBrowser(url: string): boolean {
-  const command = process.platform === "darwin"
-    ? "open"
-    : process.platform === "win32"
-      ? "cmd"
-      : "xdg-open";
-  const args = process.platform === "win32"
-    ? ["/c", "start", "", url]
-    : [url];
-  try {
-    const result = spawnSync(command, args, {
-      stdio: "ignore",
-    });
-    return result.status === 0;
-  } catch {
-    return false;
-  }
-}
-
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -416,18 +386,17 @@ function formatProviderLabel(provider: string): string {
  */
 export async function performCityUserLogin(
   input: CityLoginInput,
-  options?: city_user_login_options,
 ): Promise<CityUserSession | null> {
-  const method = await promptAuthMethod(input.federation_url, options);
+  const method = await promptAuthMethod(input.federation_url);
   if (!method) return null;
   if (method.startsWith("oauth:")) {
-    return await oauthAuth(input, method.slice("oauth:".length), options);
+    return await oauthAuth(input, method.slice("oauth:".length));
   }
   if (method.startsWith("input:")) {
     return await inputAuth(input, method.slice("input:".length));
   }
   if (method === "register") {
-    return await emailRegister(input, options);
+    return await emailRegister(input);
   }
   return await emailLogin(input);
 }

@@ -426,7 +426,7 @@ export async function handle_city_prompt_action(
     const session = await performCityUserLogin({
       federation_url: membership.federation_url,
       city_id: read_current_city_session()?.city_id || DEFAULT_CITY_ID,
-    }, { silent: true });
+    });
     if (!session) {
       return {
         initial_action: "login",

@@ -64,6 +64,8 @@ city agent chat
 
 `city federation ...` 只管理本机的 Federation 成员资格和用户登录态，不负责部署 Federation。
 
+选择 GitHub、Google 等 OAuth 登录方式后，CLI 会始终输出 `authorization_url`。本地图形环境会同时尝试打开默认浏览器；通过 SSH 登录 VPS 或运行在无图形环境时，请复制该链接到你自己的浏览器中完成授权，CLI 会继续等待登录结果。
+
 ## federation.json 里的默认存储
 
 Cloudflare Workers Federation 项目可以在 `federation.json` 里声明默认 storage。当前支持 R2：

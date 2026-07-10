@@ -8,7 +8,7 @@
 
 import fs from "fs-extra";
 import { basename, dirname, join } from "path";
-import { runPluginCommand } from "@downcity/agent/internal/plugin/core/Manager.js";
+import { runPluginCommand } from "@downcity/agent";
 import { getDowncityTasksDirPath } from "@/city/config/Paths.js";
 import type { ControlRouteRegistrationParams } from "@/city/agent/http/control/types/ControlRoutes.js";
 import {

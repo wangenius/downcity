@@ -8,7 +8,7 @@
  */
 
 import { Hono } from "hono";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 
 /**
  * 执行入口路由参数。

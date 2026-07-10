@@ -7,7 +7,7 @@
  * - target 表示要准备的联网能力，不表示 agent 运行时默认选择。
  */
 
-import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import type { JsonValue } from "@downcity/agent";
 
 /**
  * WebPlugin 可安装目标。

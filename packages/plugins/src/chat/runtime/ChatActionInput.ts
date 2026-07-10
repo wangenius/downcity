@@ -7,8 +7,8 @@
  * - `chat send` 的 frontmatter / <file> 协议也在这里完成标准化解析。
  */
 
-import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
-import type { PluginActionCommandInput } from "@downcity/agent/internal/plugin/types/Plugin.js";
+import type { JsonObject, JsonValue } from "@downcity/agent";
+import type { PluginActionCommandInput } from "@downcity/agent";
 import type {
   ChatConfigureActionPayload,
   ChatDeleteActionPayload,

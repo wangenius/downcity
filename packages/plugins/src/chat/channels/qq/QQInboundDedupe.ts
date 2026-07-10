@@ -9,7 +9,7 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import type { Logger } from "@downcity/agent/internal/utils/logger/Logger.js";
+import type { Logger } from "@downcity/agent";
 import type { QqInboundDedupeSnapshotV1 } from "@/chat/types/QqInboundDedupe.js";
 
 /**

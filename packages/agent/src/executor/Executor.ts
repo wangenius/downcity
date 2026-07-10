@@ -86,10 +86,6 @@ type ExecutorOptions = {
    */
   contextComposer?: SessionContextComposer;
 
-  /**
-   * session 更新后的异步回调。
-   */
-  runAfterSessionUpdated?: (sessionId: string) => Promise<void>;
 };
 
 /**
@@ -139,13 +135,10 @@ export class Executor implements SessionExecutor {
     this.historyWriter = new SessionHistoryWriter({
       sessionId,
       getHistoryStore: () => this.getHistoryStore(),
-      runAfterSessionUpdated: options.runAfterSessionUpdated,
     });
     this.inflight_service = new ExecutorInflightService({
       session_id: this.sessionId,
       history_store: this.historyStore,
-      run_after_session_updated_async: async () =>
-        await this.afterSessionUpdatedAsync(),
     });
     this.recovery_policy = new ExecutorRecoveryPolicy({
       compaction_composer: this.compactionComposer,
@@ -194,22 +187,6 @@ export class Executor implements SessionExecutor {
    */
   getExecutor(): SessionExecutor {
     return this;
-  }
-
-  /**
-   * 清理当前 session 的执行器运行态。
-   *
-   * 关键点（中文）
-   * - 当前 Executor 不缓存模型实例，模型每轮 run 都从 `getModel()` 读取。
-   * - history 是事实源，不应随着执行态一起丢失。
-   */
-  clearExecutor(): void {}
-
-  /**
-   * 触发 session 更新后的异步回调。
-   */
-  async afterSessionUpdatedAsync(): Promise<void> {
-    await this.historyWriter.afterSessionUpdatedAsync();
   }
 
   /**

@@ -7,7 +7,7 @@
  */
 
 import type { Hono } from "hono";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 
 /**
  * Control 路由注册入参。

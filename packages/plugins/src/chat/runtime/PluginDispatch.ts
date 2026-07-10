@@ -6,8 +6,8 @@
  * - 这里封装 chat 领域的 plugin 点调用语义，保持 service 边界稳定。
  */
 
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
+import type { AgentContext } from "@downcity/agent";
+import type { JsonObject } from "@downcity/agent";
 import type {
   ChatAuthorizationObservePrincipalPayload,
   ChatAuthorizationEvaluateInput,

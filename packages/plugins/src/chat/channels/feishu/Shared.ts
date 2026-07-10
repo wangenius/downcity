@@ -2,7 +2,7 @@ import type {
   FeishuAttachmentType,
   ParsedFeishuAttachmentCommand,
 } from "@/chat/types/FeishuAttachment.js";
-import { parseChatMessageMarkup } from "@downcity/agent/internal/executor/messages/ChatMessageMarkup.js";
+import { parseChatMessageMarkup } from "@downcity/agent";
 
 /**
  * Feishu channel 公共工具。

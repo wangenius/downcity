@@ -7,9 +7,9 @@
  * - 当前文件只保留实例骨架与 lifecycle，不再依赖旧的模块级单例。
  */
 
-import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
-import type { PluginActions } from "@downcity/agent/internal/plugin/types/Plugin.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import { BasePlugin } from "@downcity/agent";
+import type { PluginActions } from "@downcity/agent";
+import type { AgentContext } from "@downcity/agent";
 import type {
   TaskCronRegisterResult,
   TaskSchedulerReloadResult,
@@ -24,7 +24,7 @@ import {
   reloadTaskSchedulerAfterMutation,
 } from "@/task/runtime/TaskActionExecution.js";
 import { TASK_PLUGIN_PROMPT } from "@/task/runtime/TaskPluginSystem.js";
-import { resolveRuntimeTimezone } from "@downcity/agent/internal/utils/Time.js";
+import { resolveRuntimeTimezone } from "@downcity/agent";
 
 const TASK_LOG_PREFIX = "[TASK]";
 

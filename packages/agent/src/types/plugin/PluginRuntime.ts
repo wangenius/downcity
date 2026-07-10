@@ -57,8 +57,6 @@ export interface PluginActionReadView {
   input_schema?: JsonValue;
   /** Action 调用示例。 */
   examples?: PluginActionExample[];
-  /** disabled 状态下是否仍允许执行。 */
-  allow_when_disabled: boolean;
   /** 是否声明 CLI command。 */
   has_command: boolean;
   /** 是否声明 HTTP API。 */

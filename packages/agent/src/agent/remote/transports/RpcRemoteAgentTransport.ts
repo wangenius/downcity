@@ -76,11 +76,13 @@ export class RpcRemoteAgentTransport implements RemoteAgentTransport {
     session_id: string;
     on_ready: () => void;
     on_event: (event: AgentSessionEvent) => void;
+    on_close: (error?: unknown) => void;
   }): Promise<TransportSubscription> {
     const subscription = await this.client.subscribe_session({
       session_id: params.session_id,
       on_ready: params.on_ready,
       on_event: params.on_event,
+      on_close: params.on_close,
     });
     return {
       close: async () => {

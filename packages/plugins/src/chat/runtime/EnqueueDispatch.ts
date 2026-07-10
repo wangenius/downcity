@@ -6,12 +6,12 @@
  * - service 通过这里暴露 queue 生命周期，不直接散落调用细节。
  */
 
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import type {
   ChatEnqueueEffectInput,
   ChatEnqueuePipelineInput,
 } from "@/chat/types/ChatPlugin.js";
-import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import type { JsonValue } from "@downcity/agent";
 import { CHAT_PLUGIN_POINTS } from "@/chat/runtime/PluginPoints.js";
 
 function normalizeText(value: string): string {

@@ -8,7 +8,7 @@
  * - 把最终产物写入 run 目录的具体格式委托给 `TaskRunArtifacts.ts`。
  */
 
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import type {
   DialogueRoundRecord,
   UserSimulatorDecision,

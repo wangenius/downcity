@@ -7,8 +7,8 @@
  */
 
 import { listTaskDefinitions } from "@/task/Action.js";
-import { listPluginStates } from "@downcity/agent/internal/plugin/core/Manager.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import { listPluginStates } from "@downcity/agent";
+import type { AgentContext } from "@downcity/agent";
 import type { WorkboardSnapshot } from "@/workboard/types/Workboard.js";
 import { listWorkboardSessionSummaries } from "@/workboard/runtime/SessionSummary.js";
 import {

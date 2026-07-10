@@ -25,7 +25,6 @@ import type {
   ShellApprovalView,
   Shell,
 } from "@downcity/shell";
-import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 import { Logger } from "@/utils/logger/Logger.js";
 import { normalizeInstructionInput } from "@/agent/local/AgentInstructions.js";
 import {
@@ -47,7 +46,6 @@ export class Agent {
 
   private readonly logger: Logger;
   private readonly agentContext: AgentContext;
-  private readonly pluginRegistry: PluginRegistry;
   private readonly config: DowncityConfig;
   private readonly env: Record<string, string>;
   private readonly defaultModel?: AgentModel;
@@ -84,7 +82,6 @@ export class Agent {
     this.plugins = assembly.plugins;
     this.logger = assembly.logger;
     this.agentContext = assembly.agent_context;
-    this.pluginRegistry = assembly.plugin_registry;
     this.config = assembly.config;
     this.env = assembly.env;
     this.instruction = assembly.instruction;
@@ -262,7 +259,6 @@ export class Agent {
       logger: this.logger || assembly.logger,
       get_agent_context: () => this.agentContext ?? assembly.agent_context,
       get_instruction: () => this.instruction,
-      plugin_instances: assembly.plugin_instances,
       ensure_agent_ready: async () => {
         await this.backgroundService.ready();
       },

@@ -6,7 +6,7 @@
  * - 具体 action 的 payload 组装留在各 action input 模块中。
  */
 
-import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import type { JsonObject, JsonValue } from "@downcity/agent";
 
 /**
  * 判断 JsonValue 是否为对象。

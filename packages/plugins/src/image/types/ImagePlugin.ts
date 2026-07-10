@@ -11,8 +11,8 @@ import type { UIMessage } from "ai";
 import type {
   JsonObject,
   JsonValue,
-} from "@downcity/agent/internal/types/common/Json.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+} from "@downcity/agent";
+import type { AgentContext } from "@downcity/agent";
 
 /**
  * 图片生成文本内容片段。

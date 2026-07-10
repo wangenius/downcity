@@ -8,7 +8,7 @@
  */
 
 import { getLogger } from "@downcity/agent";
-import { normalizeAgentModel } from "@downcity/agent/internal/model/CityModelAdapter.js";
+import { normalizeAgentModel } from "@downcity/agent";
 import type { LanguageModel } from "ai";
 import { createCityAiAgentModel } from "@/city/runtime/city-model/CityAiServiceBinding.js";
 import type { StoredAgentConfig } from "@/city/process/registry/AgentConfigStore.js";

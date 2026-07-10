@@ -8,13 +8,13 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
-import type { PluginActionCommandInput } from "@downcity/agent/internal/plugin/types/Plugin.js";
+import type { JsonObject, JsonValue } from "@downcity/agent";
+import type { PluginActionCommandInput } from "@downcity/agent";
 import type { ChatSendActionPayload } from "@/chat/types/ChatPluginActionPayload.js";
 import {
   buildChatMessageText,
   parseChatMessageMarkup,
-} from "@downcity/agent/internal/executor/messages/ChatMessageMarkup.js";
+} from "@downcity/agent";
 import { parseChatSendOptionsFromMetadata } from "@/chat/runtime/ChatSendMetadata.js";
 import {
   normalizeChatSendText,

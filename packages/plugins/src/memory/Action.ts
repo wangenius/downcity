@@ -9,9 +9,9 @@
 
 import type { UIDataTypes, UIMessagePart, UITools } from "ai";
 import { isTextUIPart } from "ai";
-import type { PluginActionResult } from "@downcity/agent/internal/plugin/types/Plugin.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import type { PluginActionResult } from "@downcity/agent";
+import type { AgentContext } from "@downcity/agent";
+import type { JsonValue } from "@downcity/agent";
 import type {
   MemoryDigestPayload,
   MemoryDigestResponse,

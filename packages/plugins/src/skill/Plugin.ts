@@ -7,12 +7,12 @@
  * - skills overview 文本通过 `plugin.system` 注入，不再依赖 plugin.system。
  */
 
-import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
-import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
+import { BasePlugin } from "@downcity/agent";
+import { createAction } from "@downcity/agent";
 import { z } from "zod";
-import type { Plugin } from "@downcity/agent/internal/plugin/types/Plugin.js";
-import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
-import type { PluginActionResult } from "@downcity/agent/internal/types/plugin/PluginAction.js";
+import type { Plugin } from "@downcity/agent";
+import type { JsonObject, JsonValue } from "@downcity/agent";
+import type { PluginActionResult } from "@downcity/agent";
 import type {
   SkillPluginFindPayload,
   SkillPluginInstallPayload,

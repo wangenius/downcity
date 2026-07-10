@@ -165,3 +165,41 @@ test("session.prompt waits for agent background ready before model execution", a
     await agent.dispose();
   }
 });
+
+test("agent ready isolates plugin lifecycle start failures", async () => {
+  const agent_path = await fs.mkdtemp(
+    path.join(os.tmpdir(), "downcity-agent-ready-isolation-"),
+  );
+  let healthy_started = false;
+  const failing_plugin = createPlugin({
+    name: "failing",
+    lifecycle: {
+      start: async () => {
+        throw new Error("start failed");
+      },
+    },
+  });
+  const healthy_plugin = createPlugin({
+    name: "healthy",
+    lifecycle: {
+      start: async () => {
+        healthy_started = true;
+      },
+    },
+  });
+  const agent = new Agent({
+    id: "ready_isolation_agent",
+    path: agent_path,
+    plugins: [failing_plugin, healthy_plugin],
+  });
+
+  try {
+    await agent.ready();
+
+    assert.equal(healthy_started, true);
+    assert.equal(agent.plugins.status("failing")?.status, "error");
+    assert.equal(agent.plugins.status("healthy")?.status, "ready");
+  } finally {
+    await agent.dispose();
+  }
+});

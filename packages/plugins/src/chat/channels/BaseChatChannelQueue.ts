@@ -15,8 +15,8 @@ import {
   prepareChatEnqueue,
 } from "@/chat/runtime/EnqueueDispatch.js";
 import type { ChatDispatchChannel } from "@/chat/types/ChatDispatcher.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
+import type { AgentContext } from "@downcity/agent";
+import type { JsonObject } from "@downcity/agent";
 import type { IncomingChatMessage } from "./BaseChatChannel.js";
 import {
   appendInboundChannelHistory,

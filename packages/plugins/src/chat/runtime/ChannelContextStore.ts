@@ -8,8 +8,8 @@
  */
 
 import fs from "fs-extra";
-import { generateId } from "@downcity/agent/internal/utils/Id.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import { generateId } from "@downcity/agent";
+import type { AgentContext } from "@downcity/agent";
 import type {
   ChannelContextMetaFileV1,
   ChannelContextRouteV1,

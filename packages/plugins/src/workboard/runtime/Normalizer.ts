@@ -6,7 +6,7 @@
  * - 所有会泄漏上下文的字段都必须在这里截断或抽象。
  */
 
-import type { PluginStateSnapshot } from "@downcity/agent/internal/plugin/types/PluginState.js";
+import type { PluginStateSnapshot } from "@downcity/agent";
 import type { TaskListResponse } from "@/task/types/TaskCommand.js";
 import type { WorkboardSessionSummary } from "@/workboard/runtime/SessionSummary.js";
 import type {
@@ -15,7 +15,7 @@ import type {
   WorkboardSignalItem,
   WorkboardSummary,
 } from "@/workboard/types/Workboard.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 
 function toIsoString(timestamp?: number): string {
   if (!timestamp || !Number.isFinite(timestamp)) {

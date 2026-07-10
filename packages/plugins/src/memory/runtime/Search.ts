@@ -7,7 +7,7 @@
  */
 
 import fs from "node:fs/promises";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import type {
   MemorySearchPayload,
   MemorySearchResponse,

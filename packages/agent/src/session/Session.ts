@@ -26,9 +26,9 @@ import {
   getSdkAgentSessionArchiveDirPath,
   getSdkAgentSessionDirPath,
   getSdkAgentSessionInflightPath,
-  resolveSystemTimezone,
-  createRuntimeSessionPort,
-} from "@/session/index.js";
+} from "@/session/storage/Paths.js";
+import { resolveSystemTimezone } from "@/session/storage/Metadata.js";
+import { createRuntimeSessionPort } from "@/session/storage/RuntimeSessionPort.js";
 import { SessionSystemBuilder } from "@/session/SessionSystemBuilder.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import type {
@@ -257,13 +257,6 @@ export class Session implements AgentSession {
   }
 
   /**
-   * 清理当前 session 的执行器缓存。
-   */
-  clearExecutor(): void {
-    this.executor.clearExecutor();
-  }
-
-  /**
    * 从当前 session 创建一个分叉会话。
    */
   async fork(input?: AgentSessionForkInput | string): Promise<this> {
@@ -284,12 +277,6 @@ export class Session implements AgentSession {
       publishEvent: (event) => {
         this.eventHub.publish(event);
       },
-      clearExecutor: () => {
-        this.executor.clearExecutor();
-      },
-      afterSessionUpdatedAsync: async () => {
-        await this.executor.afterSessionUpdatedAsync();
-      },
       append_user_message: async (message_params) => {
         await this.stateService.append_user_message(message_params);
       },
@@ -300,9 +287,6 @@ export class Session implements AgentSession {
       historyStore: this.historyStore,
       ensureReadyForExecution: async () => {
         await this.ensureReadyForExecution();
-      },
-      touchMetadata: async () => {
-        await this.stateService.touch_metadata();
       },
     });
     return this.runtimePort;

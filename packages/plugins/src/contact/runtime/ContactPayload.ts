@@ -6,7 +6,7 @@
  * - 这里统一收口对象、字符串与 contact token 读取，避免 action 注册表重复解析细节。
  */
 
-import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import type { JsonObject, JsonValue } from "@downcity/agent";
 
 /**
  * 将任意 JSON 值安全读取为对象。

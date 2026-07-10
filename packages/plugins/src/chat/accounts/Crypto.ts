@@ -13,7 +13,7 @@
 import crypto from "node:crypto";
 import fs from "fs-extra";
 import path from "node:path";
-import { getPlatformStoreKeyPath } from "@downcity/agent/internal/config/PlatformPaths.js";
+import { getPlatformStoreKeyPath } from "@downcity/agent";
 
 const ENCRYPTION_ALGO = "aes-256-gcm";
 

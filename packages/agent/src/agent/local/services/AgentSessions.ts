@@ -32,12 +32,13 @@ import {
   getSdkAgentArchivedSessionDirPath,
   getSdkAgentArchivedSessionsDirPath,
   getSdkAgentSessionDirPath,
+} from "@/session/storage/Paths.js";
+import {
   listArchivedAgentSessionSummaryPage,
   listAgentSessionSummaryPage,
-} from "@/session/index.js";
+} from "@/session/browse/Browse.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
-import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import { createInstructionSystemBlocks } from "@/agent/local/AgentInstructions.js";
 
 function decodeMaybe(input: string): string {
@@ -83,11 +84,6 @@ type AgentSessionsOptions = {
   get_instruction: () => string[];
 
   /**
-   * 当前 plugin 实例集合。
-   */
-  plugin_instances: Map<string, Plugin>;
-
-  /**
    * 等待当前 Agent 后台能力启动完成。
    */
   ensure_agent_ready: () => Promise<void>;
@@ -113,7 +109,6 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
   private readonly logger: Logger;
   private readonly get_agent_context: AgentSessionsOptions["get_agent_context"];
   private readonly get_instruction: AgentSessionsOptions["get_instruction"];
-  private readonly plugin_instances: Map<string, Plugin>;
   private readonly ensure_agent_ready: AgentSessionsOptions["ensure_agent_ready"];
   private readonly default_model?: AgentModel;
   private readonly SessionClass: AgentSessionConstructor;
@@ -127,7 +122,6 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
     this.logger = options.logger;
     this.get_agent_context = options.get_agent_context;
     this.get_instruction = options.get_instruction;
-    this.plugin_instances = options.plugin_instances;
     this.ensure_agent_ready = options.ensure_agent_ready;
     this.default_model = options.default_model;
     this.SessionClass = options.SessionClass || Session;

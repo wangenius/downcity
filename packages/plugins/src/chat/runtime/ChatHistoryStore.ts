@@ -9,9 +9,9 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import { generateId } from "@downcity/agent/internal/utils/Id.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
+import { generateId } from "@downcity/agent";
+import type { AgentContext } from "@downcity/agent";
+import type { JsonObject } from "@downcity/agent";
 import type { ChatDispatchChannel } from "@/chat/types/ChatDispatcher.js";
 import type {
   ChatHistoryDirection,

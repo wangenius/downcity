@@ -7,9 +7,9 @@
  */
 
 import type { Hono } from "hono";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
-import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import type { AgentContext } from "@downcity/agent";
+import type { JsonObject } from "@downcity/agent";
+import type { JsonValue } from "@downcity/agent";
 import { CHAT_AUTHORIZATION_ACTIONS } from "@downcity/plugins";
 import { buildControlRouteAliases } from "@/city/agent/control/CommonHelpers.js";
 

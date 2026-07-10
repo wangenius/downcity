@@ -6,7 +6,7 @@
  * - route 与 action 共享同一份快照，确保 workboard 展示一致。
  */
 
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import type { WorkboardSnapshot } from "@/workboard/types/Workboard.js";
 import { collectWorkboardSnapshot } from "@/workboard/runtime/Collector.js";
 

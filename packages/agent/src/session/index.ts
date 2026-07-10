@@ -52,6 +52,9 @@ export {
   listAgentSessionSummaryPage,
   loadSessionArchiveMessagesFromPath,
   loadSessionMessagesFromPath,
-  resolveSessionMessagePreview,
   toSessionTimelineEvents,
 } from "./browse/Browse.js";
+export {
+  resolveSessionMessagePreview,
+  resolve_session_message_preview,
+} from "./preview/SessionMessagePreview.js";

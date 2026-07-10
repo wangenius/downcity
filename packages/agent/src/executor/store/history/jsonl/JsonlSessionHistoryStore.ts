@@ -34,6 +34,7 @@ import type {
   SessionHistoryCompactInput,
   SessionHistoryStore,
 } from "@/executor/store/history/SessionHistoryStore.js";
+import { resolve_session_message_preview } from "@/session/preview/SessionMessagePreview.js";
 
 /**
  * JSONL history store 构造参数。
@@ -359,6 +360,19 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
         ...(this.normalizeText(raw.modelLabel)
           ? { modelLabel: this.normalizeText(raw.modelLabel) }
           : {}),
+        ...(typeof raw.messageCount === "number" &&
+        Number.isInteger(raw.messageCount) &&
+        raw.messageCount >= 0
+          ? { messageCount: raw.messageCount }
+          : {}),
+        ...(this.normalizeText(raw.previewText)
+          ? { previewText: this.normalizeText(raw.previewText) }
+          : {}),
+        ...(typeof raw.historyBytes === "number" &&
+        Number.isInteger(raw.historyBytes) &&
+        raw.historyBytes >= 0
+          ? { historyBytes: raw.historyBytes }
+          : {}),
       };
     } catch {
       return {
@@ -390,6 +404,19 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
         : {}),
       ...(this.normalizeText(next.modelLabel)
         ? { modelLabel: this.normalizeText(next.modelLabel) }
+        : {}),
+      ...(typeof next.messageCount === "number" &&
+      Number.isInteger(next.messageCount) &&
+      next.messageCount >= 0
+        ? { messageCount: next.messageCount }
+        : {}),
+      ...(this.normalizeText(next.previewText)
+        ? { previewText: this.normalizeText(next.previewText) }
+        : {}),
+      ...(typeof next.historyBytes === "number" &&
+      Number.isInteger(next.historyBytes) &&
+      next.historyBytes >= 0
+        ? { historyBytes: next.historyBytes }
         : {}),
     };
     await fs.writeJson(this.getMetaFilePath(), normalized, { spaces: 2 });
@@ -432,6 +459,82 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
     );
   }
 
+  private async get_history_bytes_unsafe(): Promise<number> {
+    try {
+      const file_stat = await statNative(this.getMessagesFilePath());
+      return file_stat.size;
+    } catch {
+      return 0;
+    }
+  }
+
+  private async read_persisted_records_unsafe(): Promise<SessionRecordV1[]> {
+    const raw = await fs.readFile(this.getMessagesFilePath(), "utf8").catch(() => "");
+    const records: SessionRecordV1[] = [];
+    for (const line of raw.split("\n").filter(Boolean)) {
+      try {
+        const record = this.normalizePersistedMessage(JSON.parse(line));
+        if (record) records.push(record);
+      } catch {
+        // 关键点（中文）：摘要重建跳过损坏行，与正式历史读取语义保持一致。
+      }
+    }
+    return records;
+  }
+
+  private async write_history_summary_unsafe(
+    records: SessionRecordV1[],
+  ): Promise<void> {
+    const current = await this.readMetaUnsafe();
+    const last_record = records[records.length - 1];
+    const preview_text = last_record
+      ? resolve_session_message_preview(last_record).slice(0, 180).trim()
+      : "";
+    const { previewText: _previous_preview, ...metadata_without_preview } = current;
+    void _previous_preview;
+    await this.writeMetaUnsafe({
+      ...metadata_without_preview,
+      updatedAt: Date.now(),
+      messageCount: records.length,
+      historyBytes: await this.get_history_bytes_unsafe(),
+      ...(preview_text ? { previewText: preview_text } : {}),
+    });
+  }
+
+  private async update_history_summary_after_append_unsafe(input: {
+    /** 本次追加前 messages.jsonl 的字节长度。 */
+    previous_history_bytes: number;
+    /** 本次实际追加的 records，按写入顺序排列。 */
+    appended_records: SessionRecordV1[];
+  }): Promise<void> {
+    if (input.appended_records.length === 0) return;
+    const current = await this.readMetaUnsafe();
+    const previous_message_count = current.messageCount;
+    if (
+      current.historyBytes !== input.previous_history_bytes ||
+      typeof previous_message_count !== "number"
+    ) {
+      await this.write_history_summary_unsafe(
+        await this.read_persisted_records_unsafe(),
+      );
+      return;
+    }
+
+    const last_record = input.appended_records[input.appended_records.length - 1];
+    const preview_text = resolve_session_message_preview(last_record)
+      .slice(0, 180)
+      .trim();
+    const { previewText: _previous_preview, ...metadata_without_preview } = current;
+    void _previous_preview;
+    await this.writeMetaUnsafe({
+      ...metadata_without_preview,
+      updatedAt: Date.now(),
+      messageCount: previous_message_count + input.appended_records.length,
+      historyBytes: await this.get_history_bytes_unsafe(),
+      ...(preview_text ? { previewText: preview_text } : {}),
+    });
+  }
+
   private async rewriteMessagesUnsafe(messages: SessionRecordV1[]): Promise<void> {
     const file = this.getMessagesFilePath();
     const temp = `${file}.${process.pid}.${Date.now()}.tmp`;
@@ -445,7 +548,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
 
   private async upsert_action_record_unsafe(
     message: SessionActionRecordV1,
-  ): Promise<void> {
+  ): Promise<SessionRecordV1[]> {
     const file = this.getMessagesFilePath();
     const raw = await fs.readFile(file, "utf8").catch(() => "");
     const messages: SessionRecordV1[] = [];
@@ -468,6 +571,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
 
     if (!replaced) messages.push(message);
     await this.rewriteMessagesUnsafe(messages);
+    return messages;
   }
 
   private async withWriteLock<T>(fn: () => Promise<T>): Promise<T> {
@@ -555,8 +659,8 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
         }),
         getArchiveDirPath: () => this.getArchiveDirPath(),
         getMessagesFilePath: () => this.getMessagesFilePath(),
-        readMetaUnsafe: () => this.readMetaUnsafe(),
-        writeMetaUnsafe: (next) => this.writeMetaUnsafe(next),
+        writeHistorySummaryUnsafe: (records) =>
+          this.write_history_summary_unsafe(records),
       },
       {
         model: input.model,
@@ -575,9 +679,13 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
       const normalized = this.normalizePersistedMessage(message);
       if (!normalized) return;
       if (is_session_action_record(normalized)) {
-        await this.upsert_action_record_unsafe(normalized);
+        const records = await this.upsert_action_record_unsafe(normalized);
+        await this.write_history_summary_unsafe(records);
         return;
       }
+
+      const previous_history_bytes = await this.get_history_bytes_unsafe();
+      const appended_records: SessionRecordV1[] = [];
 
       // 关键点（中文）：若上一次 assistant 在运行中中断，新的 user 到来前先把残留快照收口到正式历史，
       // 避免 `list_records()` 时旧 inflight 跑到新 user 后面，打乱时序。
@@ -585,11 +693,17 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
         const current_inflight = await this.read_inflight_unsafe();
         if (current_inflight) {
           await this.appendMessageUnsafe(current_inflight);
+          appended_records.push(current_inflight);
           await this.removeInflightUnsafe();
         }
       }
 
       await this.appendMessageUnsafe(normalized);
+      appended_records.push(normalized);
+      await this.update_history_summary_after_append_unsafe({
+        previous_history_bytes,
+        appended_records,
+      });
     });
   }
 
@@ -611,7 +725,12 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
       .map((message) => `${JSON.stringify(message)}\n`)
       .join("");
     await this.withWriteLock(async () => {
+      const previous_history_bytes = await this.get_history_bytes_unsafe();
       await fs.appendFile(this.getMessagesFilePath(), payload, "utf8");
+      await this.update_history_summary_after_append_unsafe({
+        previous_history_bytes,
+        appended_records: normalized_list,
+      });
     });
   }
 
@@ -628,6 +747,7 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
 
   async finalize_inflight(message?: SessionRecordV1 | null): Promise<void> {
     await this.withWriteLock(async () => {
+      const previous_history_bytes = await this.get_history_bytes_unsafe();
       const current_inflight = await this.read_inflight_unsafe();
       const normalized_message = this.normalizePersistedMessage(message);
       const final_message =
@@ -639,6 +759,12 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
       }
       if (current_inflight) {
         await this.removeInflightUnsafe();
+      }
+      if (final_message) {
+        await this.update_history_summary_after_append_unsafe({
+          previous_history_bytes,
+          appended_records: [final_message],
+        });
       }
     });
   }

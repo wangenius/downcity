@@ -6,9 +6,9 @@
  * - 参数校验尽量前置到输入层，避免进入执行层后才发现字段非法。
  */
 
-import { resolveSessionId } from "@downcity/agent/internal/executor/ids/resolveSessionId.js";
-import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
-import type { PluginActionCommandInput } from "@downcity/agent/internal/plugin/types/Plugin.js";
+import { resolveSessionId } from "@downcity/agent";
+import type { JsonValue } from "@downcity/agent";
+import type { PluginActionCommandInput } from "@downcity/agent";
 import type { ShipTaskKind, ShipTaskStatus } from "@/task/types/Task.js";
 import type {
   TaskCreateRequest,

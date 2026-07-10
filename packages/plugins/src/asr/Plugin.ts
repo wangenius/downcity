@@ -8,14 +8,14 @@
  */
 
 import path from "node:path";
-import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
-import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
+import { BasePlugin } from "@downcity/agent";
+import { createAction } from "@downcity/agent";
 import { z } from "zod";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import type {
   JsonObject,
   JsonValue,
-} from "@downcity/agent/internal/types/common/Json.js";
+} from "@downcity/agent";
 import { CHAT_PLUGIN_POINTS } from "@/chat/runtime/PluginPoints.js";
 import type {
   ChatInboundAugmentInput,

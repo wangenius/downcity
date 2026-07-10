@@ -9,7 +9,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 
 const MAX_SYSTEM_MEMORY_ITEMS = 6;
 const MAX_SYSTEM_MEMORY_ITEM_CHARS = 260;

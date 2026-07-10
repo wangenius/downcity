@@ -9,7 +9,7 @@
 import type {
   ChatMessageFileTag,
   ChatMessageFileType,
-} from "@downcity/agent/internal/executor/messages/ChatMessageMarkupTypes.js";
+} from "@downcity/agent";
 
 export type DirectFileType = ChatMessageFileType;
 export type DirectFileTagPayload = ChatMessageFileTag;

@@ -8,7 +8,7 @@
  */
 
 import type { UIMessage } from "ai";
-import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import type { JsonObject, JsonValue } from "@downcity/agent";
 
 /**
  * TTS 输入。

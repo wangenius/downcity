@@ -8,13 +8,13 @@
 
 import path from "node:path";
 import fs from "fs-extra";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import { runSandboxCommand } from "@downcity/shell/sandbox/SandboxRunner.js";
 import type { ShellHostContext } from "@downcity/shell/types/ShellHostContext.js";
 import { withShellRunScope } from "@downcity/shell";
-import type { SessionRunResult } from "@downcity/agent/internal/executor/types/SessionRun.js";
-import type { SessionRunContext } from "@downcity/agent/internal/types/executor/SessionRunContext.js";
-import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
+import type { SessionRunResult } from "@downcity/agent";
+import type { SessionRunContext } from "@downcity/agent";
+import type { JsonObject } from "@downcity/agent";
 import type {
   ChatSendOutputPick,
   ScriptExecutionResult,
@@ -22,7 +22,7 @@ import type {
   TaskSessionRuntimePort,
   UserSimulatorDecision,
 } from "@/task/runtime/TaskRunnerTypes.js";
-import { withSessionRunScope } from "@downcity/agent/internal/executor/SessionRunScope.js";
+import { withSessionRunScope } from "@downcity/agent";
 import { appendTaskRoundUserMessage } from "./TaskRunnerSession.js";
 
 function stripTaskSecretEnv(env: NodeJS.ProcessEnv): void {

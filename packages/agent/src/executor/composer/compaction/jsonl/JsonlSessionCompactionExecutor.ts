@@ -26,7 +26,6 @@ import type {
 import {
   is_session_message_record,
 } from "@/executor/types/SessionRecords.js";
-import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import {
   append_session_compaction_file_operations,
   build_initial_session_compaction_prompt,
@@ -57,8 +56,7 @@ type SessionCompactDeps = {
   }) => SessionRecordV1;
   getArchiveDirPath: () => string;
   getMessagesFilePath: () => string;
-  readMetaUnsafe: () => Promise<SessionHistoryMetaV1>;
-  writeMetaUnsafe: (next: SessionHistoryMetaV1) => Promise<void>;
+  writeHistorySummaryUnsafe: (records: SessionRecordV1[]) => Promise<void>;
 };
 
 /**
@@ -259,11 +257,7 @@ export async function compactSessionMessagesIfNeeded(
     await fs.writeFile(tmp, next.map((m) => JSON.stringify(m)).join("\n") + "\n", "utf8");
     await fs.move(tmp, messagesPath, { overwrite: true });
 
-    const prevMeta = await deps.readMetaUnsafe();
-    await deps.writeMetaUnsafe({
-      ...prevMeta,
-      updatedAt: Date.now(),
-    });
+    await deps.writeHistorySummaryUnsafe(next);
   });
 
   if (action_started) {

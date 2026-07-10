@@ -9,7 +9,7 @@
 import crypto from "node:crypto";
 import fs from "fs-extra";
 import path from "node:path";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import type {
   ContactInboxShareFileInput,
   ContactInboxShareMeta,

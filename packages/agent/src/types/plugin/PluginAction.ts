@@ -139,14 +139,6 @@ export interface PluginAction<
   P extends JsonValue = JsonValue,
   R extends JsonValue = JsonValue,
 > extends PluginActionMetadata<P> {
-  /**
-   * disabled 状态下是否仍允许执行。
-   *
-   * 说明（中文）
-   * - 用于 `on` / `status` / `models` / `configure` / `install` 这类 setup 相关 action。
-   * - 默认 false，避免 disabled plugin 绕过 registry 保护执行普通业务 action。
-   */
-  allowWhenDisabled?: boolean;
   /** CLI 定义（可选）。 */
   command?: PluginActionCommand<P>;
   /** HTTP 定义（可选）。 */

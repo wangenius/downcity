@@ -11,11 +11,11 @@ import { nanoid } from "nanoid";
 import {
   buildSessionRecordsPage,
   buildSessionInfo,
-  getSdkAgentSessionArchiveFilePath,
-  ensureSessionTitle,
   loadSessionArchiveMessagesFromPath,
-  readSessionMetadata,
-} from "@/session/index.js";
+} from "@/session/browse/Browse.js";
+import { getSdkAgentSessionArchiveFilePath } from "@/session/storage/Paths.js";
+import { ensureSessionTitle } from "@/session/SessionTitle.js";
+import { readSessionMetadata } from "@/session/storage/Metadata.js";
 import { buildSessionSystemBlocks } from "@/session/SessionSystemBuilder.js";
 import type { JsonlSessionHistoryStore } from "@/executor/store/history/jsonl/JsonlSessionHistoryStore.js";
 import type { SessionSystemComposer } from "@/executor/composer/system/SessionSystemComposer.js";

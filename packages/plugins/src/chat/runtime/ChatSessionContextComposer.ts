@@ -8,10 +8,10 @@
  */
 
 import type { ModelMessage, Tool } from "ai";
-import { drainInjectedUserMessages } from "@downcity/agent/internal/executor/SessionRunScope.js";
-import { LocalSessionContextComposer } from "@downcity/agent/internal/executor/composer/context/LocalSessionContextComposer.js";
-import type { SessionRecordV1 } from "@downcity/agent/internal/executor/types/SessionRecords.js";
-import type { SessionSystemMessage } from "@downcity/agent/internal/executor/types/SessionPrompts.js";
+import { drainInjectedUserMessages } from "@downcity/agent";
+import { LocalSessionContextComposer } from "@downcity/agent";
+import type { SessionRecordV1 } from "@downcity/agent";
+import type { SessionSystemMessage } from "@downcity/agent";
 import type { ChatSessionTurnState } from "@/chat/runtime/ChatSessionTypes.js";
 
 type ChatSessionContextComposerOptions = {

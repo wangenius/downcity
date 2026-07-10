@@ -7,7 +7,7 @@
  */
 
 import WebSocket from "ws";
-import type { Logger } from "@downcity/agent/internal/utils/logger/Logger.js";
+import type { Logger } from "@downcity/agent";
 import { OpCode } from "@/chat/channels/qq/types/QqChannel.js";
 import {
   getQqHeartbeatAckTimeoutMs,

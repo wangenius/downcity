@@ -10,13 +10,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
-import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
-import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import { createAction } from "@downcity/agent";
+import { BasePlugin } from "@downcity/agent";
+import type { AgentContext } from "@downcity/agent";
 import type {
   JsonObject,
   JsonValue,
-} from "@downcity/agent/internal/types/common/Json.js";
+} from "@downcity/agent";
 import type {
   ImagePluginInput,
   ImagePluginJobCreateResult,

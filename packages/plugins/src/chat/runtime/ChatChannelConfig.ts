@@ -7,9 +7,9 @@
  * - 该模块不直接负责 action 流程控制，只提供可复用的底层能力。
  */
 
-import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { StoredChannelAccount } from "@downcity/agent/internal/types/platform/Store.js";
+import type { JsonObject, JsonValue } from "@downcity/agent";
+import type { AgentContext } from "@downcity/agent";
+import type { StoredChannelAccount } from "@downcity/agent";
 import type {
   ChatChannelName,
   ChatChannelStateSnapshot,

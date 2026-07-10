@@ -91,7 +91,10 @@ export type {
 export { Executor } from "./executor/Executor.js";
 export {
   drainDeferredPersistedUserMessages,
+  drainInjectedUserMessages,
+  getSessionRunContext,
   getSessionRunScope,
+  withSessionRunScope,
 } from "./executor/SessionRunScope.js";
 export { JsonlSessionHistoryComposer } from "./executor/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 export { LocalSessionContextComposer } from "./executor/composer/context/LocalSessionContextComposer.js";
@@ -110,6 +113,27 @@ export type {
   SessionHistoryPrepareInput,
 } from "./executor/composer/history/SessionHistoryComposer.js";
 export type { SessionSystemComposer } from "./executor/composer/system/SessionSystemComposer.js";
+export { DefaultSessionSystemComposer } from "./executor/composer/system/default/DefaultSessionSystemComposer.js";
+export { resolveSessionSystemMessages } from "./executor/composer/system/default/SystemDomain.js";
+export type { SessionHistoryStore } from "./executor/store/history/SessionHistoryStore.js";
+export type { SessionExecutor } from "./executor/types/SessionExecutor.js";
+export type {
+  SessionAssistantStepCallback,
+  SessionRunResult,
+} from "./executor/types/SessionRun.js";
+export type { SessionRunContext } from "./types/executor/SessionRunContext.js";
+export type {
+  SessionActionRecordV1,
+  SessionMessageRecordV1,
+  SessionMetadataV1,
+  SessionRecordV1,
+  SessionUserMessageV1,
+} from "./executor/types/SessionRecords.js";
+export {
+  is_session_action_record,
+  is_session_message_record,
+} from "./executor/types/SessionRecords.js";
+export type { SessionSystemMessage } from "./executor/types/SessionPrompts.js";
 export type {
   SessionComposerFactoryContext,
   SessionComposerInput,
@@ -152,6 +176,18 @@ export {
   pickLastSuccessfulChatSendText,
   resolveAssistantMessageForPersistence,
 } from "./executor/messages/UserVisibleText.js";
+export { extractToolCallsFromUiMessage } from "./executor/messages/UIMessageTransformer.js";
+export {
+  buildChatMessageText,
+  parseChatMessageMarkup,
+  renderChatMessageFileTag,
+} from "./executor/messages/ChatMessageMarkup.js";
+export type {
+  ChatMessageFileTag,
+  ChatMessageFileType,
+  ChatMessageSegment,
+  ChatMessageSendOptions,
+} from "./executor/messages/ChatMessageMarkupTypes.js";
 
 // 项目与配置集成
 export {
@@ -161,12 +197,25 @@ export {
 } from "./config/AgentInitializer.js";
 export { loadDowncityConfig } from "./config/Config.js";
 export {
+  getDowncityChatHistoryPath,
+  getDowncitySessionMessagesPath,
+} from "./config/Paths.js";
+export {
+  getPlatformStoreDbPath,
+  getPlatformStoreKeyPath,
+} from "./config/PlatformPaths.js";
+export {
   ensureRuntimeProjectReady,
 } from "./agent/local/ProjectSetup.js";
 export { assertProjectExecutionTarget } from "./config/ExecutionBinding.js";
 
 // 日志
 export { getLogger, logger, type Logger } from "./utils/logger/Logger.js";
+export { generateId } from "./utils/Id.js";
+export {
+  formatDateTimeInTimezone,
+  resolveRuntimeTimezone,
+} from "./utils/Time.js";
 
 // 宿主端口类型
 export type {
@@ -248,6 +297,7 @@ export type {
   PluginHooks,
   PluginHttpDefinition,
   PluginPipelineHook,
+  PluginResolves,
   AgentPlugins,
   PluginResolveHook,
   PluginHttpRegistration,
@@ -294,6 +344,20 @@ export type {
   PluginStateControlResult,
   PluginStateSnapshot,
 } from "./plugin/core/Manager.js";
+export {
+  controlPluginState,
+  listPluginStates,
+  runPluginCommand,
+} from "./plugin/core/Manager.js";
+export { parsePluginCommandRequestBody } from "./plugin/core/PluginCommandRequest.js";
+
+// 跨包 RPC 与 session 标识协议
+export type {
+  RpcEventFrame,
+  RpcRequest,
+  RpcServerFrame,
+} from "./types/rpc/RpcProtocol.js";
+export { resolveSessionId } from "./executor/ids/resolveSessionId.js";
 
 // Platform store 类型
 export type {

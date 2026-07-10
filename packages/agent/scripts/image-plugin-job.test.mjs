@@ -38,6 +38,7 @@ function create_context(rootPath = process.cwd()) {
 function create_registry(plugin, rootPath = process.cwd()) {
   return createAgentPluginRegistry({
     plugins: [plugin],
+    plugin_instances: new Map(),
     get_context: () => create_context(rootPath),
   });
 }
@@ -110,7 +111,6 @@ test("ImagePlugin models lists image-capable models", async () => {
   });
 
   assert.equal(result.success, true);
-  assert.equal(result.data.default_model_id, "image_1");
   assert.deepEqual(result.data.items.map((item) => item.id), ["image_1"]);
   assert.equal(result.data.items[0].meta.provider, "test");
 });

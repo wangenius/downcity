@@ -6,7 +6,7 @@
  * - `QQGatewayClient` 只负责编排状态，不再直接内嵌所有 OpenAPI 请求细节。
  */
 
-import type { Logger } from "@downcity/agent/internal/utils/logger/Logger.js";
+import type { Logger } from "@downcity/agent";
 import type { ChatChannelTestResult } from "@/chat/types/ChannelStatus.js";
 import type { QqGatewayRuntimeStatus } from "@/chat/channels/qq/types/QqChannel.js";
 

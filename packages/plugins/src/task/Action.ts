@@ -8,8 +8,8 @@
 
 import path from "node:path";
 import type { ShipTaskStatus } from "./types/Task.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import type { AgentContext } from "@downcity/agent";
+import type { JsonValue } from "@downcity/agent";
 import {
   deriveTaskIdFromTitle,
   normalizeTaskId,

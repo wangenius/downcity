@@ -8,13 +8,13 @@
  * - action 注册表已经拆到独立模块，当前文件只保留实例骨架。
  */
 
-import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
+import { BasePlugin } from "@downcity/agent";
 import type {
   PluginActions,
   PluginHooks,
   PluginResolves,
-} from "@downcity/agent/internal/plugin/types/Plugin.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+} from "@downcity/agent";
+import type { AgentContext } from "@downcity/agent";
 import type { ChatChannelState } from "@/chat/types/ChatRuntime.js";
 import type { ChatQueueWorkerConfig } from "@/chat/types/ChatQueueWorker.js";
 import type {

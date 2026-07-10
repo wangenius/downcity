@@ -8,7 +8,7 @@
  */
 
 import type WebSocket from "ws";
-import type { Logger } from "@downcity/agent/internal/utils/logger/Logger.js";
+import type { Logger } from "@downcity/agent";
 import type {
   QQGatewayPayload,
   QqDispatchHandler,

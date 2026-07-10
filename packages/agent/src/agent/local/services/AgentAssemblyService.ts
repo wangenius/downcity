@@ -103,11 +103,6 @@ export interface AgentAssemblyResult {
   plugin_instances: Map<string, Plugin>;
 
   /**
-   * 当前 plugin 注册表。
-   */
-  plugin_registry: PluginRegistry;
-
-  /**
    * 当前 agent plugin 调用面。
    */
   plugins: AgentPlugins;
@@ -238,7 +233,6 @@ export class AgentAssemblyService {
       instruction,
       config,
       plugin_instances,
-      plugin_registry,
       plugins,
       agent_context: agent_context!,
       ...(shell ? { shell } : {}),

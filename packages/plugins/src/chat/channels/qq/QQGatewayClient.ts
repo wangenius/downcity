@@ -8,8 +8,8 @@
  */
 
 import WebSocket from "ws";
-import type { Logger } from "@downcity/agent/internal/utils/logger/Logger.js";
-import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
+import type { Logger } from "@downcity/agent";
+import type { JsonObject } from "@downcity/agent";
 import type {
   QQEventCaptureConfig,
   QqDispatchHandler,

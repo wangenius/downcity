@@ -101,6 +101,45 @@ test("materializeAssistantFileParts downloads remote file URLs into resources", 
   }
 });
 
+test("materializeAssistantFileParts rejects oversized remote resources before download", async () => {
+  const project_root = await fs.mkdtemp(
+    path.join(os.tmpdir(), "downcity-agent-assistant-large-resource-"),
+  );
+  const server = http.createServer((_, response) => {
+    response.writeHead(200, {
+      "content-type": "application/octet-stream",
+      "content-length": String(26 * 1024 * 1024),
+    });
+    response.end("oversized");
+  });
+
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const address = server.address();
+    assert.equal(typeof address, "object");
+    assert.ok(address);
+    const remote_url = `http://127.0.0.1:${address.port}/large.bin`;
+    const parts = await materializeAssistantFileParts({
+      projectRoot: project_root,
+      parts: [
+        {
+          type: "file",
+          mediaType: "application/octet-stream",
+          url: remote_url,
+        },
+      ],
+    });
+
+    assert.equal(parts[0].url, remote_url);
+    const resources_path = path.join(project_root, ".downcity", "resources");
+    await assert.rejects(fs.access(resources_path));
+  } finally {
+    await new Promise((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve())),
+    );
+  }
+});
+
 test("materializeAssistantFileParts resolves relative local file URLs from agent project root", async () => {
   const project_root = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-agent-assistant-relative-resource-"),

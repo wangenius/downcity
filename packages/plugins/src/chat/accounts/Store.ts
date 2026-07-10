@@ -14,13 +14,13 @@
 import Database from "better-sqlite3";
 import fs from "fs-extra";
 import path from "node:path";
-import { getPlatformStoreDbPath } from "@downcity/agent/internal/config/PlatformPaths.js";
+import { getPlatformStoreDbPath } from "@downcity/agent";
 import { decryptTextSync, encryptTextSync } from "./Crypto.js";
 import type {
   StoredChannelAccount,
   StoredChannelAccountChannel,
   UpsertChannelAccountInput,
-} from "@downcity/agent/internal/types/platform/Store.js";
+} from "@downcity/agent";
 
 function nowIso(): string {
   return new Date().toISOString();

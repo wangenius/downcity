@@ -23,10 +23,6 @@ interface ExecutorInflightServiceOptions {
    */
   history_store: SessionHistoryStore;
 
-  /**
-   * inflight 更新完成后的异步通知。
-   */
-  run_after_session_updated_async?: () => Promise<void>;
 }
 
 /**
@@ -35,13 +31,10 @@ interface ExecutorInflightServiceOptions {
 export class ExecutorInflightService {
   private readonly session_id: string;
   private readonly history_store: SessionHistoryStore;
-  private readonly run_after_session_updated_async?: ExecutorInflightServiceOptions["run_after_session_updated_async"];
 
   constructor(options: ExecutorInflightServiceOptions) {
     this.session_id = String(options.session_id || "").trim();
     this.history_store = options.history_store;
-    this.run_after_session_updated_async =
-      options.run_after_session_updated_async;
 
     if (!this.session_id) {
       throw new Error("ExecutorInflightService requires a non-empty session_id");
@@ -98,8 +91,5 @@ export class ExecutorInflightService {
         };
 
     await this.history_store.write_inflight(next_message);
-    if (this.run_after_session_updated_async) {
-      await this.run_after_session_updated_async();
-    }
   }
 }

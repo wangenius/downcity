@@ -10,7 +10,7 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import { resolveChatQueueStore } from "@/chat/runtime/ChatQueue.js";
 import { removeChatMetaBySessionId } from "@/chat/runtime/ChatMetaStore.js";
 
@@ -51,7 +51,6 @@ export async function deleteChatSessionById(params: {
 
   try {
     // 关键点（中文）：先停执行，再删文件，避免删除过程中仍有任务写入。
-    params.context.session.get(sessionId).clearExecutor();
     resolveChatQueueStore(params.context).clear(sessionId);
 
     const removedMetaResult = await removeChatMetaBySessionId({

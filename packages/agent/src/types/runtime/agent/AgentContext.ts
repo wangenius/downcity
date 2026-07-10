@@ -145,14 +145,6 @@ export interface SessionPort {
    */
   publishEvent(event: AgentSessionEvent): void;
   /**
-   * 清理当前 session 的 executor 缓存。
-   */
-  clearExecutor(): void;
-  /**
-   * 当前 session 更新后的异步通知钩子。
-   */
-  afterSessionUpdatedAsync(): Promise<void>;
-  /**
    * 追加一条 user 消息。
    */
   append_user_message(params: {

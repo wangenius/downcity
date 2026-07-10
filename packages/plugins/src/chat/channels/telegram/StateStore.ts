@@ -1,6 +1,6 @@
 import path from "path";
 import fs from "fs-extra";
-import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
+import type { JsonObject } from "@downcity/agent";
 
 /**
  * Telegram 轮询模式的持久化状态存储。

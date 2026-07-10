@@ -15,9 +15,9 @@ import {
   patchSessionModelLabel,
   readSessionMetadata,
   resolveSystemTimezone,
-  touchSessionMetadata,
   writeSessionMetadata,
-} from "@/session/index.js";
+} from "@/session/storage/Metadata.js";
+import { touchSessionMetadata } from "@/session/storage/Persistence.js";
 import { ensureSessionTitle } from "@/session/SessionTitle.js";
 import { persistSdkAssistantResult } from "@/session/storage/Persistence.js";
 import { hydrateUserPromptFileParts } from "@executor/messages/SessionAttachmentMapper.js";
@@ -259,7 +259,6 @@ export class SessionStateService {
       if (input.model) {
         this.state.sessionConfig.model = normalizeAgentModel(input.model);
         this.state.sessionConfig.modelLabel = next_model_label;
-        this.executor.clearExecutor();
       }
       await patchSessionModelLabel({
         projectRoot: this.project_root,

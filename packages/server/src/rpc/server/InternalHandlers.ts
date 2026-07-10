@@ -10,7 +10,7 @@
 import { rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { SystemModelMessage } from "ai";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import type { RpcRequest } from "@/types/RpcProtocol.js";
 import type {
   RpcRequestHandlerOptions,
@@ -19,14 +19,14 @@ import type {
 import {
   getDowncityChatHistoryPath,
   getDowncitySessionMessagesPath,
-} from "@downcity/agent/internal/config/Paths.js";
-import { resolveSessionSystemMessages } from "@downcity/agent/internal/executor/composer/system/default/SystemDomain.js";
+} from "@downcity/agent";
+import { resolveSessionSystemMessages } from "@downcity/agent";
 import {
   controlPluginState,
   listPluginStates,
-} from "@downcity/agent/internal/plugin/core/PluginStateController.js";
-import { parsePluginCommandRequestBody } from "@downcity/agent/internal/plugin/core/PluginCommandRequest.js";
-import { runPluginCommand } from "@downcity/agent/internal/plugin/core/PluginActionRunner.js";
+} from "@downcity/agent";
+import { parsePluginCommandRequestBody } from "@downcity/agent";
+import { runPluginCommand } from "@downcity/agent";
 
 /**
  * 处理 internal RPC 请求。
@@ -56,7 +56,6 @@ export async function handleInternalRpcRequest(params: {
         session_id,
       );
       await rm(dirname(messages_path), { recursive: true, force: true });
-      context.getSession(session_id).clearExecutor();
       write_success(request.id, {
         sessionId: session_id,
         cleared: true,

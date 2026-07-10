@@ -11,7 +11,7 @@ import type { QueuedUserInfoInput } from "@/chat/types/ChatPromptContext.js";
 import {
   formatDateTimeInTimezone,
   resolveRuntimeTimezone,
-} from "@downcity/agent/internal/utils/Time.js";
+} from "@downcity/agent";
 
 function normalizeInfoValue(value: unknown): string {
   const text = String(value ?? "").replace(/\r?\n/g, " ").trim();

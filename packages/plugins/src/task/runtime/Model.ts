@@ -17,7 +17,7 @@ import type {
   ShipTaskKind,
   ShipTaskStatus,
 } from "@/task/types/Task.js";
-import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import type { JsonObject, JsonValue } from "@downcity/agent";
 
 /**
  * 必填 frontmatter 字段清单。

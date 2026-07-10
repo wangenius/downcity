@@ -61,6 +61,8 @@ export type RemoteSessionTransport = {
     session_id: string;
     on_ready: () => void;
     on_event: (event: AgentSessionEvent) => void;
+    /** 底层事件连接结束后的通知；主动关闭不触发。 */
+    on_close: (error?: unknown) => void;
   }): Promise<TransportSubscription>;
   /** 读取 history。 */
   records(

@@ -48,14 +48,6 @@ export interface CreateRuntimeSessionPortParams {
    */
   publishEvent: (event: AgentSessionEvent) => void;
   /**
-   * 清理当前 session executor 状态。
-   */
-  clearExecutor: () => void;
-  /**
-   * session 更新后的异步通知回调。
-   */
-  afterSessionUpdatedAsync: () => Promise<void>;
-  /**
    * 追加 user 消息到底层历史。
    */
   append_user_message: SessionPort["append_user_message"];
@@ -75,10 +67,6 @@ export interface CreateRuntimeSessionPortParams {
    * 在执行前确保当前 session 已完成初始化与宿主级配置。
    */
   ensureReadyForExecution: () => Promise<void>;
-  /**
-   * session 更新后需要同步执行的持久化回调。
-   */
-  touchMetadata: () => Promise<void>;
 }
 
 /**
@@ -105,19 +93,11 @@ export function createRuntimeSessionPort(
     publishEvent: (event) => {
       params.publishEvent(event);
     },
-    clearExecutor: () => {
-      params.clearExecutor();
-    },
-    afterSessionUpdatedAsync: async () => {
-      await params.afterSessionUpdatedAsync();
-    },
     append_user_message: async (messageParams) => {
       await params.append_user_message(messageParams);
-      await params.touchMetadata();
     },
     append_assistant_message: async (messageParams) => {
       await params.append_assistant_message(messageParams);
-      await params.touchMetadata();
     },
     isExecuting: () => params.isExecuting(),
   };

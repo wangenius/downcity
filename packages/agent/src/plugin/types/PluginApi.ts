@@ -7,70 +7,13 @@
  */
 
 import type { JsonValue } from "@/types/common/Json.js";
+import type {
+  PluginAvailability,
+  PluginView,
+} from "@/types/plugin/PluginRuntime.js";
 
-/**
- * Plugin 概览视图。
- */
-export interface PluginView {
-  /**
-   * Plugin 稳定名称。
-   */
-  name: string;
-  /**
-   * Plugin 展示标题。
-   */
-  title: string;
-  /**
-   * Plugin 面向人类的用途说明。
-   */
-  description: string;
-  /**
-   * 已声明的 Action 名称列表。
-   */
-  actions: string[];
-  /**
-   * 已声明的 pipeline 点名称列表。
-   */
-  pipelines: string[];
-  /**
-   * 已声明的 guard 点名称列表。
-   */
-  guards: string[];
-  /**
-   * 已声明的 effect 点名称列表。
-   */
-  effects: string[];
-  /**
-   * 已声明的 resolve 点名称列表。
-   */
-  resolves: string[];
-  /**
-   * 是否声明了 system 注入。
-   */
-  hasSystem: boolean;
-  /**
-   * 是否声明了 availability 检查。
-   */
-  hasAvailability: boolean;
-}
-
-/**
- * Plugin 可用性响应视图。
- */
-export interface PluginAvailabilityView {
-  /**
-   * Plugin 是否启用。
-   */
-  enabled: boolean;
-  /**
-   * Plugin 当前是否可用。
-   */
-  available: boolean;
-  /**
-   * 不可用原因列表。
-   */
-  reasons: string[];
-}
+export type { PluginView } from "@/types/plugin/PluginRuntime.js";
+export type PluginAvailabilityView = PluginAvailability;
 
 /**
  * plugin catalog 响应。
@@ -140,22 +83,4 @@ export interface PluginActionResponse {
    * 错误信息（可选）。
    */
   error?: string;
-}
-
-/**
- * plugin CLI 通用选项。
- */
-export interface PluginCliBaseOptions {
- /**
-  * agent 项目路径（默认当前目录）。
-  */
-  path?: string;
-  /**
-   * 是否输出 JSON。
-   */
-  json?: boolean;
-  /**
-   * agent id（从 managed agent registry 解析到项目路径）。
-   */
-  agent?: string;
 }

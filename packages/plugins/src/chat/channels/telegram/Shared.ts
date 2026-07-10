@@ -1,5 +1,5 @@
 import path from "path";
-import { parseChatMessageMarkup } from "@downcity/agent/internal/executor/messages/ChatMessageMarkup.js";
+import { parseChatMessageMarkup } from "@downcity/agent";
 
 /**
  * Telegram 集成配置。

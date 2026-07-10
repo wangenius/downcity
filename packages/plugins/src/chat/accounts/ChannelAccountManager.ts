@@ -8,7 +8,7 @@
  */
 
 import crypto from "node:crypto";
-import type { StoredChannelAccountChannel } from "@downcity/agent/internal/types/platform/Store.js";
+import type { StoredChannelAccountChannel } from "@downcity/agent";
 import { resolveChatChannelBotInfo } from "@/chat/channels/BotInfoProvider.js";
 import {
   getStoredChannelAccountSync,
@@ -24,7 +24,7 @@ import type {
   ChatChannelAccountProbeResult,
   ChatChannelAccountUpsertInput,
 } from "@/chat/types/ChannelAccount.js";
-import type { StoredChannelAccount } from "@downcity/agent/internal/types/platform/Store.js";
+import type { StoredChannelAccount } from "@downcity/agent";
 
 const SUPPORTED_CHANNELS: readonly StoredChannelAccountChannel[] = [
   "telegram",

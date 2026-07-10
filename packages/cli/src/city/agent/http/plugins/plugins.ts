@@ -8,14 +8,14 @@
  */
 
 import { Hono } from "hono";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import {
   controlPluginState,
   listPluginStates,
-} from "@downcity/agent/internal/plugin/core/PluginStateController.js";
-import type { PluginStateControlAction } from "@downcity/agent/internal/plugin/types/Plugin.js";
-import { parsePluginCommandRequestBody } from "@downcity/agent/internal/plugin/core/PluginCommandRequest.js";
-import { runPluginCommand } from "@downcity/agent/internal/plugin/core/PluginActionRunner.js";
+} from "@downcity/agent";
+import type { PluginStateControlAction } from "@downcity/agent";
+import { parsePluginCommandRequestBody } from "@downcity/agent";
+import { runPluginCommand } from "@downcity/agent";
 
 /**
  * Plugin 路由参数。

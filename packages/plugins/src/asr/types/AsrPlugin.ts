@@ -7,7 +7,7 @@
  * - `auto` 只表示是否在 chat 入站时自动转写语音附件。
  */
 
-import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import type { JsonObject, JsonValue } from "@downcity/agent";
 
 /**
  * ASR 输入。

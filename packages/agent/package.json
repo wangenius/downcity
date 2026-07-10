@@ -1,6 +1,6 @@
 {
   "name": "@downcity/agent",
-  "version": "1.1.208",
+  "version": "1.1.209",
   "type": "module",
   "description": "Downcity Agent 运行时 — 单 Agent 执行壳与本机 RPC 能力",
   "main": "./bin/index.js",
@@ -9,15 +9,12 @@
     ".": {
       "import": "./bin/index.js",
       "types": "./bin/index.d.ts"
-    },
-    "./internal/*": {
-      "import": "./bin/*",
-      "types": "./bin/*"
     }
   },
   "scripts": {
     "build": "node scripts/agent-compiler.mjs build",
     "dev": "node scripts/agent-compiler.mjs dev",
+    "test": "pnpm build && pnpm -C ../plugins build && node --test scripts/*.test.mjs",
     "test:executor-runtime": "pnpm build && node --test scripts/session-prompt-runtime.test.mjs",
     "typecheck": "node scripts/agent-compiler.mjs typecheck",
     "prepack": "npm run build && node ../../scripts/rewrite-workspace-dependencies.mjs prepare ./package.json",

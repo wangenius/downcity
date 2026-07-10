@@ -7,7 +7,7 @@
  * - 字段命名保持与 CLI/API 参数一致，降低映射心智负担。
  */
 
-import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import type { JsonValue } from "@downcity/agent";
 import type {
   ChatDeleteRequest,
   ChatHistoryRequest,

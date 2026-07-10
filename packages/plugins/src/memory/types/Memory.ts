@@ -7,7 +7,7 @@
  * - LLM 能力只通过 constructor 注入，plugin 自身不绑定具体模型或服务。
  */
 
-import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import type { JsonValue } from "@downcity/agent";
 
 /**
  * 记忆来源类型。

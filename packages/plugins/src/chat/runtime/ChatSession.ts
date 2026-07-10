@@ -8,16 +8,16 @@
  */
 
 import type { LanguageModel, Tool } from "ai";
-import { Executor } from "@downcity/agent/internal/executor/Executor.js";
-import type { SessionHistoryComposer } from "@downcity/agent/internal/executor/composer/history/SessionHistoryComposer.js";
-import type { SessionHistoryStore } from "@downcity/agent/internal/executor/store/history/SessionHistoryStore.js";
-import type { SessionCompactionComposer } from "@downcity/agent/internal/executor/composer/compaction/SessionCompactionComposer.js";
-import type { SessionSystemComposer } from "@downcity/agent/internal/executor/composer/system/SessionSystemComposer.js";
+import { Executor } from "@downcity/agent";
+import type { SessionHistoryComposer } from "@downcity/agent";
+import type { SessionHistoryStore } from "@downcity/agent";
+import type { SessionCompactionComposer } from "@downcity/agent";
+import type { SessionSystemComposer } from "@downcity/agent";
 import type { ChatSessionContextComposer } from "@/chat/runtime/ChatSessionContextComposer.js";
-import type { Logger } from "@downcity/agent/internal/utils/logger/Logger.js";
-import type { SessionAssistantStepCallback } from "@downcity/agent/internal/executor/types/SessionRun.js";
-import type { SessionRunResult } from "@downcity/agent/internal/executor/types/SessionRun.js";
-import type { SessionRunContext } from "@downcity/agent/internal/types/executor/SessionRunContext.js";
+import type { Logger } from "@downcity/agent";
+import type { SessionAssistantStepCallback } from "@downcity/agent";
+import type { SessionRunResult } from "@downcity/agent";
+import type { SessionRunContext } from "@downcity/agent";
 import type { ChatSessionTurnState } from "@/chat/runtime/ChatSessionTypes.js";
 
 type ChatSessionOptions = {
@@ -69,7 +69,6 @@ type ChatSessionOptions = {
   /**
    * session 更新后的异步回调。
    */
-  runAfterSessionUpdated?: (sessionId: string) => Promise<void>;
 };
 
 /**
@@ -95,9 +94,6 @@ export class ChatSession extends Executor {
       systemComposer: options.systemComposer,
       getTools: options.getTools,
       contextComposer,
-      ...(options.runAfterSessionUpdated
-        ? { runAfterSessionUpdated: options.runAfterSessionUpdated }
-        : {}),
     });
     this.contextComposer = contextComposer;
   }

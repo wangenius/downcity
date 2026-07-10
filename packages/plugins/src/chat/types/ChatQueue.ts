@@ -6,7 +6,7 @@
  * - 供 services 与 process 统一复用
  */
 
-import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
+import type { JsonObject } from "@downcity/agent";
 
 export type ChatQueueItemKind = "exec" | "audit" | "control";
 

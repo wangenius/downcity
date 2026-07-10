@@ -4,7 +4,6 @@
  * 关键点（中文）
  * - 只负责当前 session 的 user / assistant 消息补写。
  * - 只依赖当前 session 的 history Store，不感知其他 session。
- * - 会话更新后的通知也收在这里，避免把写入细节散到 Session 主类里。
  */
 
 import type { JsonObject } from "@/types/common/Json.js";
@@ -25,10 +24,6 @@ type SessionHistoryWriterOptions = {
    */
   getHistoryStore: () => SessionHistoryStore;
 
-  /**
-   * session 更新后的异步回调。
-   */
-  runAfterSessionUpdated?: (sessionId: string) => Promise<void>;
 };
 
 /**
@@ -37,26 +32,12 @@ type SessionHistoryWriterOptions = {
 export class SessionHistoryWriter {
   private readonly sessionId: string;
   private readonly getHistoryStore: SessionHistoryWriterOptions["getHistoryStore"];
-  private readonly runAfterSessionUpdated?: SessionHistoryWriterOptions["runAfterSessionUpdated"];
 
   constructor(options: SessionHistoryWriterOptions) {
     this.sessionId = String(options.sessionId || "").trim();
     this.getHistoryStore = options.getHistoryStore;
-    this.runAfterSessionUpdated = options.runAfterSessionUpdated;
     if (!this.sessionId) {
       throw new Error("SessionHistoryWriter requires a non-empty sessionId");
-    }
-  }
-
-  /**
-   * 触发 session 更新后的异步回调。
-   */
-  async afterSessionUpdatedAsync(): Promise<void> {
-    if (!this.runAfterSessionUpdated) return;
-    try {
-      await this.runAfterSessionUpdated(this.sessionId);
-    } catch {
-      // ignore
     }
   }
 
@@ -68,29 +49,23 @@ export class SessionHistoryWriter {
     text?: string;
     extra?: JsonObject;
   }): Promise<void> {
-    try {
-      const historyStore = this.getHistoryStore();
-      if (params.message && typeof params.message === "object") {
-        await historyStore.write_record(params.message);
-        void this.afterSessionUpdatedAsync();
-        return;
-      }
-
-      const fallbackText = String(params.text || "").trim();
-      if (!fallbackText) return;
-
-      const message = historyStore.userText({
-        text: fallbackText,
-        metadata: {
-          sessionId: this.sessionId,
-          extra: params.extra,
-        } as Omit<SessionMetadataV1, "v" | "ts">,
-      });
-      await historyStore.write_record(message);
-      void this.afterSessionUpdatedAsync();
-    } catch {
-      // ignore
+    const historyStore = this.getHistoryStore();
+    if (params.message && typeof params.message === "object") {
+      await historyStore.write_record(params.message);
+      return;
     }
+
+    const fallbackText = String(params.text || "").trim();
+    if (!fallbackText) return;
+
+    const message = historyStore.userText({
+      text: fallbackText,
+      metadata: {
+        sessionId: this.sessionId,
+        extra: params.extra,
+      } as Omit<SessionMetadataV1, "v" | "ts">,
+    });
+    await historyStore.write_record(message);
   }
 
   /**
@@ -101,31 +76,25 @@ export class SessionHistoryWriter {
     fallbackText?: string;
     extra?: JsonObject;
   }): Promise<void> {
-    try {
-      const historyStore = this.getHistoryStore();
-      if (params.message && typeof params.message === "object") {
-        await historyStore.finalize_inflight(params.message);
-        void this.afterSessionUpdatedAsync();
-        return;
-      }
-
-      const fallbackText = String(params.fallbackText || "").trim();
-      if (!fallbackText) return;
-
-      await historyStore.finalize_inflight(
-        historyStore.assistantText({
-          text: fallbackText,
-          metadata: {
-            sessionId: this.sessionId,
-            extra: params.extra,
-          },
-          kind: "normal",
-          source: "egress",
-        }),
-      );
-      void this.afterSessionUpdatedAsync();
-    } catch {
-      // ignore
+    const historyStore = this.getHistoryStore();
+    if (params.message && typeof params.message === "object") {
+      await historyStore.finalize_inflight(params.message);
+      return;
     }
+
+    const fallbackText = String(params.fallbackText || "").trim();
+    if (!fallbackText) return;
+
+    await historyStore.finalize_inflight(
+      historyStore.assistantText({
+        text: fallbackText,
+        metadata: {
+          sessionId: this.sessionId,
+          extra: params.extra,
+        },
+        kind: "normal",
+        source: "egress",
+      }),
+    );
   }
 }

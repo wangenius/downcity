@@ -9,6 +9,7 @@
  */
 
 import fs from "fs-extra";
+import path from "node:path";
 import {
   getToolName,
   isTextUIPart,
@@ -36,7 +37,7 @@ import {
   is_session_message_record,
 } from "@/executor/types/SessionRecords.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
-import { pickLastSuccessfulChatSendText } from "@/executor/messages/UserVisibleText.js";
+import { resolveSessionMessagePreview } from "@/session/preview/SessionMessagePreview.js";
 import { getSdkAgentSessionMessagesPath } from "@/session/storage/Paths.js";
 import { getSdkAgentSessionMetaPath } from "@/session/storage/Paths.js";
 import { getSdkAgentSessionsRootDirPath } from "@/session/storage/Paths.js";
@@ -80,8 +81,10 @@ type SessionBrowseBaseInput = {
 
   /**
    * 当前 session 已读取到的完整消息。
+   *
+   * 说明（中文）：列表查询已有 metadata 摘要时可省略，详情查询仍传完整记录。
    */
-  messages: SessionRecordV1[];
+  messages?: SessionRecordV1[];
 
   /**
    * 当前 session 是否正在执行。
@@ -161,52 +164,6 @@ function stringifyForDisplay(input: unknown, maxChars = 2400): string {
   } catch {
     return truncateText(String(input), maxChars);
   }
-}
-
-function extractMessageText(parts: unknown): string {
-  if (!Array.isArray(parts)) return "";
-  const texts: string[] = [];
-  for (const part of parts) {
-    if (!part || typeof part !== "object") continue;
-    const textPart = part as { type?: unknown; text?: unknown };
-    if (textPart.type !== "text" || typeof textPart.text !== "string") continue;
-    const text = textPart.text.trim();
-    if (!text) continue;
-    texts.push(text);
-  }
-  return texts.join("\n").trim();
-}
-
-function extractAssistantToolSummary(message: SessionMessageRecordV1): string {
-  if (!Array.isArray(message.parts)) return "";
-  const toolNames = new Set<string>();
-  for (const part of message.parts as AnyUiPart[]) {
-    if (!part || typeof part !== "object") continue;
-    if (!isToolUIPart(part)) continue;
-    const toolName = String(getToolName(part) || "").trim();
-    if (toolName) toolNames.add(toolName);
-  }
-  if (toolNames.size === 0) return "";
-  return `[tool] ${Array.from(toolNames).join(", ")}`;
-}
-
-/**
- * 解析单条 session 消息的用户可见预览文本。
- */
-export function resolveSessionMessagePreview(message: SessionRecordV1): string {
-  if (is_session_action_record(message)) {
-    return message.description
-      ? `${message.title}\n${message.description}`
-      : message.title;
-  }
-  if (!is_session_message_record(message)) return "";
-  const plainText = extractMessageText(message.parts);
-  if (plainText) return plainText;
-  if (message.role !== "assistant") return "";
-
-  const userVisible = pickLastSuccessfulChatSendText(message).trim();
-  if (userVisible) return userVisible;
-  return extractAssistantToolSummary(message);
 }
 
 function resolveToolName(part: ToolPartCompatShape, aiToolName?: string): string {
@@ -467,12 +424,16 @@ function filterUserVisibleHistoryMessages(
 export function buildSessionInfo(
   input: SessionBrowseBaseInput,
 ): AgentSessionInfo {
-  const previewText = input.messages.length > 0
+  const messages = input.messages;
+  const previewText = messages && messages.length > 0
     ? truncateText(
-        resolveSessionMessagePreview(input.messages[input.messages.length - 1]),
+        resolveSessionMessagePreview(messages[messages.length - 1]),
         180,
       )
-    : undefined;
+    : input.metadata.previewText;
+  const message_count = messages
+    ? messages.length
+    : input.metadata.messageCount || 0;
   const title =
     typeof input.metadata.title === "string" && input.metadata.title.trim()
       ? input.metadata.title.trim()
@@ -482,7 +443,7 @@ export function buildSessionInfo(
     sessionId: input.sessionId,
     ...(title ? { title } : {}),
     ...(previewText ? { previewText } : {}),
-    messageCount: input.messages.length,
+    messageCount: message_count,
     ...(typeof input.metadata.createdAt === "number"
       ? { createdAt: input.metadata.createdAt }
       : {}),
@@ -497,6 +458,56 @@ export function buildSessionInfo(
       : {}),
     ...(input.executing ? { executing: true } : {}),
   };
+}
+
+/**
+ * 读取列表所需的轻量 session 摘要。
+ *
+ * 关键点（中文）
+ * - 新记录直接使用 metadata 摘要，不扫描 messages.jsonl。
+ * - 旧记录或执行中记录回退读取一次完整历史，并把摘要补写回 metadata。
+ */
+async function resolve_session_summary_metadata(input: {
+  /** 当前 session metadata。 */
+  metadata: SessionHistoryMetaV1;
+  /** 当前消息 JSONL 路径。 */
+  messagesPath: string;
+  /** 当前 metadata 路径。 */
+  metaPath: string;
+  /** 是否强制刷新摘要。 */
+  refresh: boolean;
+}): Promise<SessionHistoryMetaV1> {
+  const history_bytes = await fs.stat(input.messagesPath)
+    .then((file_stat) => file_stat.size)
+    .catch(() => 0);
+  const inflight_path = `${input.messagesPath.slice(0, -"messages.jsonl".length)}inflight.json`;
+  const has_inflight = await fs.pathExists(inflight_path);
+  if (
+    !input.refresh &&
+    !has_inflight &&
+    typeof input.metadata.messageCount === "number" &&
+    input.metadata.historyBytes === history_bytes
+  ) {
+    return input.metadata;
+  }
+  const messages = await loadSessionMessagesFromPath(input.messagesPath);
+  const last_message = messages[messages.length - 1];
+  const preview_text = last_message
+    ? truncateText(resolveSessionMessagePreview(last_message), 180)
+    : "";
+  const { previewText: _previous_preview, ...metadata_without_preview } = input.metadata;
+  void _previous_preview;
+  const next_metadata: SessionHistoryMetaV1 = {
+    ...metadata_without_preview,
+    messageCount: messages.length,
+    historyBytes: history_bytes,
+    ...(preview_text ? { previewText: preview_text } : {}),
+  };
+  const temp_path = `${input.metaPath}.${process.pid}.${Date.now()}.tmp`;
+  await fs.ensureDir(path.dirname(input.metaPath));
+  await fs.writeJson(temp_path, next_metadata, { spaces: 2 });
+  await fs.move(temp_path, input.metaPath, { overwrite: true });
+  return next_metadata;
 }
 
 /**
@@ -584,28 +595,32 @@ export async function listAgentSessionSummaryPage(params: {
     if (!entry.isDirectory()) continue;
     const sessionId = decodeMaybe(entry.name);
     if (!sessionId) continue;
-    const metadata = await readSessionMetadataFromPath({
-      filePath: getSdkAgentSessionMetaPath(
-        params.projectRoot,
-        params.agentId,
-        sessionId,
-      ),
+    const meta_path = getSdkAgentSessionMetaPath(
+      params.projectRoot,
+      params.agentId,
+      sessionId,
+    );
+    const messages_path = getSdkAgentSessionMessagesPath(
+      params.projectRoot,
+      params.agentId,
+      sessionId,
+    );
+    const persisted_metadata = await readSessionMetadataFromPath({
+      filePath: meta_path,
       sessionId,
       agentId: params.agentId,
     });
-    const messages = await loadSessionMessagesFromPath(
-      getSdkAgentSessionMessagesPath(
-        params.projectRoot,
-        params.agentId,
-        sessionId,
-      ),
-    );
+    const metadata = await resolve_session_summary_metadata({
+      metadata: persisted_metadata,
+      messagesPath: messages_path,
+      metaPath: meta_path,
+      refresh: params.executingSessionIds?.has(sessionId) === true,
+    });
     const info = buildSessionInfo({
       projectRoot: params.projectRoot,
       agentId: params.agentId,
       sessionId,
       metadata,
-      messages,
       executing: params.executingSessionIds?.has(sessionId),
     });
     const summary: AgentSessionSummary = {
@@ -679,29 +694,33 @@ export async function listArchivedAgentSessionSummaryPage(params: {
     if (!entry.isDirectory()) continue;
     const sessionId = decodeMaybe(entry.name);
     if (!sessionId) continue;
-    const metadata = await readSessionMetadataFromPath({
-      filePath: getSdkAgentArchivedSessionMetaPath(
-        params.projectRoot,
-        params.agentId,
-        sessionId,
-      ),
+    const meta_path = getSdkAgentArchivedSessionMetaPath(
+      params.projectRoot,
+      params.agentId,
+      sessionId,
+    );
+    const messages_path = getSdkAgentArchivedSessionMessagesPath(
+      params.projectRoot,
+      params.agentId,
+      sessionId,
+    );
+    const persisted_metadata = await readSessionMetadataFromPath({
+      filePath: meta_path,
       sessionId,
       agentId: params.agentId,
     });
-    const messages = await loadSessionMessagesFromPath(
-      getSdkAgentArchivedSessionMessagesPath(
-        params.projectRoot,
-        params.agentId,
-        sessionId,
-      ),
-    );
+    const metadata = await resolve_session_summary_metadata({
+      metadata: persisted_metadata,
+      messagesPath: messages_path,
+      metaPath: meta_path,
+      refresh: false,
+    });
     // 关键点（中文）：归档 session 不再生成新 title，仅读取归档目录内已有 meta。
     const info = buildSessionInfo({
       projectRoot: params.projectRoot,
       agentId: params.agentId,
       sessionId,
       metadata,
-      messages,
       executing: false,
     });
     const summary: AgentSessionSummary = {

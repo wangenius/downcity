@@ -16,9 +16,9 @@ import type {
 import {
   buildChatMessageText,
   parseChatMessageMarkup,
-} from "@downcity/agent/internal/executor/messages/ChatMessageMarkup.js";
+} from "@downcity/agent";
 import { parseChatSendOptionsFromMetadata } from "@/chat/runtime/ChatSendMetadata.js";
-import type { ChatMessageSegment } from "@downcity/agent/internal/executor/messages/ChatMessageMarkupTypes.js";
+import type { ChatMessageSegment } from "@downcity/agent";
 
 function normalizeText(value: unknown): string {
   return String(value ?? "").trim();

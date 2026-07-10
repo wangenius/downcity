@@ -171,6 +171,9 @@ export class RemoteSession implements RemoteAgentSession {
         on_event: (event) => {
           this.handle_event(event);
         },
+        on_close: (error) => {
+          this.handle_event_pump_closed(error);
+        },
       });
       this.event_pump_running = true;
       if (!resolved_ready) {
@@ -209,6 +212,22 @@ export class RemoteSession implements RemoteAgentSession {
     }
 
     this.event_hub.publish(event);
+  }
+
+  /**
+   * 收口底层事件连接断开后的运行态。
+   *
+   * 关键点（中文）
+   * - 连接已经结束时必须清除 running 标记，后续 prompt 才会重新订阅。
+   * - 当前未完成 turn 立即失败，避免调用侧永久等待 finished。
+   */
+  private handle_event_pump_closed(error?: unknown): void {
+    this.event_subscription = null;
+    this.event_pump_running = false;
+    const message = error instanceof Error
+      ? error.message
+      : String(error || "Remote session events connection closed");
+    this.fail_pending_turns(message);
   }
 
   private ensure_turn_lifecycle(turn_id: string): RemoteTurnLifecycle {

@@ -7,7 +7,7 @@
  * - `TelegramBot` 只传入平台能力与队列写入能力，保持门面轻量。
  */
 
-import type { Logger } from "@downcity/agent/internal/utils/logger/Logger.js";
+import type { Logger } from "@downcity/agent";
 import type { ChannelUserMessageMeta } from "@/chat/channels/BaseChatChannelSupport.js";
 import {
   getTelegramChatTitle,

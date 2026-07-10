@@ -13,8 +13,8 @@ import path from "node:path";
 import type {
   JsonObject,
   JsonValue,
-} from "@downcity/agent/internal/types/common/Json.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+} from "@downcity/agent";
+import type { AgentContext } from "@downcity/agent";
 import { skillInstallCommand } from "@/skill/Command.js";
 import type {
   WebPluginInstallPayload,

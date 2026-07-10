@@ -7,7 +7,7 @@
  * - 回发失败只记录日志，不影响 task run 自身状态。
  */
 
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import type { ShipTaskDefinitionV1 } from "@/task/types/Task.js";
 
 function resolveTaskFinalText(params: {

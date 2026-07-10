@@ -56,6 +56,23 @@ function normalizeTimezone(input: unknown): string | undefined {
   return timezone || undefined;
 }
 
+function normalize_message_count(input: unknown): number | undefined {
+  return typeof input === "number" && Number.isInteger(input) && input >= 0
+    ? input
+    : undefined;
+}
+
+function normalize_preview_text(input: unknown): string | undefined {
+  const preview_text = typeof input === "string" ? input.trim() : "";
+  return preview_text || undefined;
+}
+
+function normalize_history_bytes(input: unknown): number | undefined {
+  return typeof input === "number" && Number.isInteger(input) && input >= 0
+    ? input
+    : undefined;
+}
+
 /**
  * 从模型实例推导轻量可读标签。
  */
@@ -135,6 +152,15 @@ export async function readSessionMetadataFromPath(input: {
         : {}),
       ...(normalizeModelLabel(raw.modelLabel)
         ? { modelLabel: normalizeModelLabel(raw.modelLabel) }
+        : {}),
+      ...(normalize_message_count(raw.messageCount) !== undefined
+        ? { messageCount: normalize_message_count(raw.messageCount) }
+        : {}),
+      ...(normalize_preview_text(raw.previewText)
+        ? { previewText: normalize_preview_text(raw.previewText) }
+        : {}),
+      ...(normalize_history_bytes(raw.historyBytes) !== undefined
+        ? { historyBytes: normalize_history_bytes(raw.historyBytes) }
         : {}),
     };
   } catch {

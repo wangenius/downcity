@@ -9,7 +9,7 @@
 import fs from "fs-extra";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { listPluginStates } from "@downcity/agent/internal/plugin/core/Manager.js";
+import { listPluginStates } from "@downcity/agent";
 import { buildControlRouteAliases, toLimit } from "@/city/agent/control/CommonHelpers.js";
 import { listControlSessionSummaries, readRecentLogs } from "@/city/agent/control/Helpers.js";
 import type { ControlRouteRegistrationParams } from "@/city/agent/http/control/types/ControlRoutes.js";

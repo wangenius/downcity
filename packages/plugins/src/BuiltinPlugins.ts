@@ -7,7 +7,7 @@
  * - 调用方需要完整内建集合时，显式调用 `createBuiltinPlugins()` 并传给 Agent 或通用 helper。
  */
 
-import type { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
+import type { BasePlugin } from "@downcity/agent";
 import { SkillPlugin } from "@/skill/Plugin.js";
 import { WebPlugin } from "@/web/Plugin.js";
 import { WorkboardPlugin } from "@/workboard/Plugin.js";

@@ -10,18 +10,18 @@
 
 import path from "node:path";
 import type { LanguageModel, Tool } from "ai";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import { Executor } from "@downcity/agent/internal/executor/Executor.js";
-import type { SessionRunResult } from "@downcity/agent/internal/executor/types/SessionRun.js";
+import type { AgentContext } from "@downcity/agent";
+import { Executor } from "@downcity/agent";
+import type { SessionRunResult } from "@downcity/agent";
 import type { TaskSessionRuntimePort } from "@/task/runtime/TaskRunnerTypes.js";
-import { drainDeferredPersistedUserMessages } from "@downcity/agent/internal/executor/SessionRunScope.js";
-import { JsonlSessionHistoryComposer } from "@downcity/agent/internal/executor/composer/history/jsonl/JsonlSessionHistoryComposer.js";
-import { JsonlSessionHistoryStore } from "@downcity/agent/internal/executor/store/history/jsonl/JsonlSessionHistoryStore.js";
-import { JsonlSessionCompactionComposer } from "@downcity/agent/internal/executor/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
-import { LocalSessionContextComposer } from "@downcity/agent/internal/executor/composer/context/LocalSessionContextComposer.js";
-import { DefaultSessionSystemComposer } from "@downcity/agent/internal/executor/composer/system/default/DefaultSessionSystemComposer.js";
+import { drainDeferredPersistedUserMessages } from "@downcity/agent";
+import { JsonlSessionHistoryComposer } from "@downcity/agent";
+import { JsonlSessionHistoryStore } from "@downcity/agent";
+import { JsonlSessionCompactionComposer } from "@downcity/agent";
+import { LocalSessionContextComposer } from "@downcity/agent";
+import { DefaultSessionSystemComposer } from "@downcity/agent";
 import { Shell } from "@downcity/shell";
-import type { SessionExecutor } from "@downcity/agent/internal/executor/types/SessionExecutor.js";
+import type { SessionExecutor } from "@downcity/agent";
 
 /**
  * 把 task round 的 user query 落盘到对应 run context。

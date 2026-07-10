@@ -8,14 +8,14 @@
  * - 具体执行能力由当前 agent 已注册的 tools、skills 或外部 plugin 决定。
  */
 
-import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
-import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
+import { BasePlugin } from "@downcity/agent";
+import { createAction } from "@downcity/agent";
 import { z } from "zod";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import type {
   JsonObject,
   JsonValue,
-} from "@downcity/agent/internal/types/common/Json.js";
+} from "@downcity/agent";
 import { WEB_PLUGIN_PROMPT } from "@/web/WebPromptAssets.js";
 import { installWebPluginTargets } from "@/web/runtime/Install.js";
 import type { WebPluginInstallPayload } from "@/web/types/WebPlugin.js";
@@ -171,7 +171,6 @@ export class WebPlugin extends BasePlugin {
           payload: { target: "all", scope: "user" },
         },
       ],
-      allowWhenDisabled: true,
       command: {
         description: "Install web-related skill / CLI dependencies.",
         configure(command) {

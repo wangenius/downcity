@@ -7,8 +7,8 @@
  * - 只有极少数非 turn 场景才允许显式补写 `session messages`
  */
 
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
+import type { AgentContext } from "@downcity/agent";
+import type { JsonObject } from "@downcity/agent";
 import type { ChatDispatchChannel } from "@/chat/types/ChatDispatcher.js";
 import { appendInboundChatHistory } from "./ChatHistoryStore.js";
 

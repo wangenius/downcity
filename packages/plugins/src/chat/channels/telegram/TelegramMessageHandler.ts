@@ -8,9 +8,9 @@
  */
 
 import path from "path";
-import type { Logger } from "@downcity/agent/internal/utils/logger/Logger.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
+import type { Logger } from "@downcity/agent";
+import type { AgentContext } from "@downcity/agent";
+import type { JsonObject } from "@downcity/agent";
 import type {
   IncomingAuthorizationParams,
   IncomingAuthorizationResult,
@@ -24,7 +24,7 @@ import {
   augmentChatInboundInput,
   buildChatInboundText,
 } from "@/chat/runtime/InboundAugment.js";
-import { renderChatMessageFileTag } from "@downcity/agent/internal/executor/messages/ChatMessageMarkup.js";
+import { renderChatMessageFileTag } from "@downcity/agent";
 import { extractTelegramReplyContext } from "./ReplyContext.js";
 import {
   getActorName,

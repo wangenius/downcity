@@ -1,6 +1,6 @@
 import path from "path";
 import fs from "fs-extra";
-import { Logger } from "@downcity/agent/internal/utils/logger/Logger.js";
+import { Logger } from "@downcity/agent";
 import {
   guessMimeType,
   parseTelegramAttachments,

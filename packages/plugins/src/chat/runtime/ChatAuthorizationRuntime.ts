@@ -11,10 +11,10 @@ import type {
   PluginActions,
   PluginHooks,
   PluginResolves,
-} from "@downcity/agent/internal/plugin/types/Plugin.js";
-import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
+} from "@downcity/agent";
+import { createAction } from "@downcity/agent";
 import { z } from "zod";
-import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import type { JsonValue } from "@downcity/agent";
 import { CHAT_PLUGIN_POINTS } from "@/chat/runtime/PluginPoints.js";
 import type { ChatDispatchChannel } from "@/chat/types/ChatDispatcher.js";
 import {

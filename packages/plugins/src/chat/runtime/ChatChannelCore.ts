@@ -7,8 +7,8 @@
  * - 目标是让 chat platform 子模块共享同一套最小公共基元。
  */
 
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { StoredChannelAccount } from "@downcity/agent/internal/types/platform/Store.js";
+import type { AgentContext } from "@downcity/agent";
+import type { StoredChannelAccount } from "@downcity/agent";
 import type { ChatChannelName } from "@/chat/types/ChannelStatus.js";
 import type { ChatChannelState } from "@/chat/types/ChatRuntime.js";
 import { getStoredChannelAccountSync } from "@/chat/accounts/Store.js";

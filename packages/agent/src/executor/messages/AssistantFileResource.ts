@@ -15,6 +15,11 @@ import fs from "fs-extra";
 import type { FileUIPart } from "ai";
 import { getDowncityResourcesDirPath } from "@/config/Paths.js";
 
+/** 单个 assistant 资源下载允许占用的最长时间。 */
+const ASSISTANT_RESOURCE_TIMEOUT_MS = 30_000;
+/** 单个 assistant 资源允许写入内存与磁盘的最大字节数。 */
+const MAX_ASSISTANT_RESOURCE_BYTES = 25 * 1024 * 1024;
+
 type ParsedDataUrl = {
   /**
    * data URL 声明的媒体类型。
@@ -186,22 +191,49 @@ async function read_remote_resource(raw_url: string): Promise<{
   filename?: string;
   bytes: Buffer;
 }> {
-  const result = await fetch_with_retry(raw_url);
-  if (!result.ok) {
-    throw new Error(
-      `Failed to download assistant file resource: ${result.status} :: url=${raw_url}`,
-    );
+  const abort_controller = new AbortController();
+  const timeout = setTimeout(() => {
+    abort_controller.abort(new Error("Assistant resource download timed out"));
+  }, ASSISTANT_RESOURCE_TIMEOUT_MS);
+  try {
+    const result = await fetch_with_retry(raw_url, abort_controller.signal);
+    if (!result.ok) {
+      throw new Error(
+        `Failed to download assistant file resource: ${result.status} :: url=${raw_url}`,
+      );
+    }
+    const declared_size = Number(result.headers.get("content-length"));
+    if (Number.isFinite(declared_size) && declared_size > MAX_ASSISTANT_RESOURCE_BYTES) {
+      throw new Error(`Assistant file resource exceeds 25 MiB :: url=${raw_url}`);
+    }
+    if (!result.body) {
+      throw new Error(`Assistant file resource has no response body :: url=${raw_url}`);
+    }
+
+    const reader = result.body.getReader();
+    const chunks: Buffer[] = [];
+    let total_bytes = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total_bytes += value.byteLength;
+      if (total_bytes > MAX_ASSISTANT_RESOURCE_BYTES) {
+        await reader.cancel();
+        throw new Error(`Assistant file resource exceeds 25 MiB :: url=${raw_url}`);
+      }
+      chunks.push(Buffer.from(value));
+    }
+    if (total_bytes === 0) {
+      throw new Error(`Downloaded assistant file resource is empty :: url=${raw_url}`);
+    }
+    return {
+      mediaType: result.headers.get("content-type")?.split(";")[0]?.trim(),
+      filename: filename_from_url(raw_url),
+      bytes: Buffer.concat(chunks, total_bytes),
+    };
+  } finally {
+    clearTimeout(timeout);
   }
-  const array_buffer = await result.arrayBuffer();
-  const bytes = Buffer.from(array_buffer);
-  if (bytes.length === 0) {
-    throw new Error(`Downloaded assistant file resource is empty :: url=${raw_url}`);
-  }
-  return {
-    mediaType: result.headers.get("content-type")?.split(";")[0]?.trim(),
-    filename: filename_from_url(raw_url),
-    bytes,
-  };
 }
 
 /**
@@ -213,13 +245,14 @@ async function read_remote_resource(raw_url: string): Promise<{
  */
 async function fetch_with_retry(
   raw_url: string,
+  signal: AbortSignal,
 ): Promise<Response> {
   const delays_ms = [250, 1_000];
   const attempts = delays_ms.length + 1;
   let last_error: unknown;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
-      return await fetch(raw_url);
+      return await fetch(raw_url, { signal });
     } catch (error) {
       last_error = error;
       if (!is_transient_fetch_error(error) || attempt === attempts - 1) {
@@ -286,7 +319,14 @@ async function read_local_resource(
     : path.isAbsolute(raw)
       ? raw
       : path.resolve(projectRoot, raw);
+  const file_stat = await fs.stat(file_path);
+  if (file_stat.size > MAX_ASSISTANT_RESOURCE_BYTES) {
+    throw new Error(`Assistant file resource exceeds 25 MiB: ${file_path}`);
+  }
   const bytes = await fs.readFile(file_path);
+  if (bytes.length > MAX_ASSISTANT_RESOURCE_BYTES) {
+    throw new Error(`Assistant file resource exceeds 25 MiB: ${file_path}`);
+  }
   if (bytes.length === 0) {
     throw new Error(`Assistant file resource is empty: ${file_path}`);
   }
@@ -306,6 +346,9 @@ async function materialize_file_part(params: {
   }
   const parsed_data_url = parse_data_url(raw_url);
   if (parsed_data_url) {
+    if (parsed_data_url.bytes.length > MAX_ASSISTANT_RESOURCE_BYTES) {
+      throw new Error("Assistant data URL resource exceeds 25 MiB");
+    }
     const media_type =
       String(params.part.mediaType || parsed_data_url.media_type || "").trim() ||
       "application/octet-stream";
@@ -352,8 +395,9 @@ async function materialize_file_part(params: {
     } catch (error) {
       // 关键点（中文）：远程下载失败时保留原始 URL，不让整张图导致 action 失败。
       // 这样图片至少以链接形式存在，用户可手动点击或后续再试。
+      const error_message = error instanceof Error ? error.message : String(error);
       console.warn(
-        `[AssistantFileResource] remote download failed, keeping original url :: ${describe_error_cause(error instanceof Error ? error : new Error(String(error)))} :: url=${raw_url}`,
+        `[AssistantFileResource] remote download failed, keeping original url :: ${error_message}`,
       );
       return params.part;
     }

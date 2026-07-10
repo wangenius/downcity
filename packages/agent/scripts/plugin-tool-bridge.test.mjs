@@ -132,7 +132,6 @@ test("invokePluginReadTool returns plugin action metadata", async () => {
               payload: { prompt: "draw" },
             },
           ],
-          allow_when_disabled: false,
           has_command: false,
           has_api: false,
         },

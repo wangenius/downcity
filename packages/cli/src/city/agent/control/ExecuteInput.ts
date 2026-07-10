@@ -9,7 +9,7 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { getCacheDirPath } from "@/city/config/Paths.js";
-import { renderChatMessageFileTag } from "@downcity/agent/internal/executor/messages/ChatMessageMarkup.js";
+import { renderChatMessageFileTag } from "@downcity/agent";
 import type {
   ControlSessionExecuteAttachmentInput,
   ControlSessionExecuteAttachmentType,

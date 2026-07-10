@@ -8,11 +8,11 @@
  */
 
 import type { Command } from "commander";
-import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { PluginActions } from "@downcity/agent/internal/plugin/types/Plugin.js";
-import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
-import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
+import type { JsonObject, JsonValue } from "@downcity/agent";
+import type { AgentContext } from "@downcity/agent";
+import type { PluginActions } from "@downcity/agent";
+import { BasePlugin } from "@downcity/agent";
+import { createAction } from "@downcity/agent";
 import { z } from "zod";
 import {
   digestMemoryAction,

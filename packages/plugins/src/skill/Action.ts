@@ -10,7 +10,7 @@ import fs from "fs-extra";
 import path from "node:path";
 import { discoverSkillsSync } from "@/skill/runtime/Discovery.js";
 import type { SkillDefinition } from "@/skill/types/SkillDefinition.js";
-import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import type { JsonValue } from "@downcity/agent";
 import type {
   SkillListResponse,
   SkillLookupRequest,

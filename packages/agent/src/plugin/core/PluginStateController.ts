@@ -1,9 +1,9 @@
 /**
- * Plugin 注册状态兼容控制模块。
+ * Plugin 注册状态控制模块。
  *
  * 关键点（中文）
  * - 新模型中 plugin 只有注册 / 卸载，不再暴露 start / stop / restart。
- * - 该模块保留旧内部函数名，方便 RPC、CLI 与内建 plugin 渐进迁移。
+ * - 控制动作与类型协议保持一致，只支持状态查询和卸载。
  */
 
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
@@ -35,7 +35,7 @@ export function isPluginRunning(
 }
 
 /**
- * 执行兼容 plugin 控制动作。
+ * 执行 plugin 控制动作。
  */
 export async function controlPluginState(params: {
   pluginName: string;
@@ -51,14 +51,14 @@ export async function controlPluginState(params: {
   }
 
   const action = String(params.action || "").trim().toLowerCase();
-  if (action === "status" || action === "start" || action === "restart") {
+  if (action === "status") {
     const plugin = params.context.plugins.status(pluginName);
     return plugin
       ? { success: true, plugin }
       : { success: false, error: `Unknown plugin: ${pluginName}` };
   }
 
-  if (action === "unregister" || action === "stop") {
+  if (action === "unregister") {
     const plugin = params.context.plugins.status(pluginName) || undefined;
     const success = await params.context.plugins.unregister(pluginName);
     return success

@@ -190,7 +190,11 @@ export class PluginRegistry implements AgentPlugins {
   async startAll(): Promise<PluginSnapshot[]> {
     const snapshots: PluginSnapshot[] = [];
     for (const record of this.records.values()) {
-      await this.start_record(record);
+      try {
+        await this.start_record(record);
+      } catch {
+        // 关键点（中文）：单个 plugin 启动失败只影响自身，不能阻断其他 plugin 与 Agent ready。
+      }
       snapshots.push(to_plugin_snapshot(record));
     }
     return snapshots;
@@ -367,7 +371,6 @@ export class PluginRegistry implements AgentPlugins {
         ? { input_schema: action.input_schema.json_schema }
         : {}),
       ...(action.examples ? { examples: action.examples } : {}),
-      allow_when_disabled: action.allowWhenDisabled === true,
       has_command: Boolean(action.command),
       has_api: Boolean(action.api),
     };

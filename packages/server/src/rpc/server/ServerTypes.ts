@@ -7,7 +7,7 @@
  */
 
 import type { AgentSessions } from "@downcity/agent";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import type { Shell } from "@downcity/shell";
 import type { RpcEventFrame } from "@/types/RpcProtocol.js";
 

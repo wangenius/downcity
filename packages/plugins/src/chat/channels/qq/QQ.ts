@@ -9,7 +9,7 @@
  */
 
 import { BaseChatChannel } from "@/chat/channels/BaseChatChannel.js";
-import { parseChatMessageMarkup } from "@downcity/agent/internal/executor/messages/ChatMessageMarkup.js";
+import { parseChatMessageMarkup } from "@downcity/agent";
 import { QqInboundDedupeStore } from "./QQInboundDedupe.js";
 import { getQqEventCaptureConfig } from "./QQEventCapture.js";
 import { QQGatewayClient } from "./QQGatewayClient.js";
@@ -28,8 +28,8 @@ import type {
   ChannelChatKeyParams,
   ChannelSendTextParams,
 } from "@/chat/channels/BaseChatChannel.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
+import type { AgentContext } from "@downcity/agent";
+import type { JsonObject } from "@downcity/agent";
 import type { ChatChannelTestResult } from "@/chat/types/ChannelStatus.js";
 import type { QQConfig, QQMessageData } from "@/chat/channels/qq/types/QqChannel.js";
 import { EventType } from "@/chat/channels/qq/types/QqChannel.js";

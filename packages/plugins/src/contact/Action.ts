@@ -6,10 +6,10 @@
  * - 业务动作通过 handlers 注入，保持 `ContactPlugin` 类本身更薄。
  */
 
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
-import type { PluginActions } from "@downcity/agent/internal/plugin/types/Plugin.js";
-import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
+import type { AgentContext } from "@downcity/agent";
+import type { JsonObject, JsonValue } from "@downcity/agent";
+import type { PluginActions } from "@downcity/agent";
+import { createAction } from "@downcity/agent";
 import { z } from "zod";
 import type {
   ContactApproveCommandPayload,

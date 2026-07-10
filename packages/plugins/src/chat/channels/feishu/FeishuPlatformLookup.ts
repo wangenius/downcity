@@ -8,7 +8,7 @@
 
 import fs from "fs-extra";
 import path from "path";
-import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
+import type { JsonObject } from "@downcity/agent";
 import type {
   FeishuDownloadedAttachment,
 } from "@/chat/channels/feishu/types/FeishuChannel.js";

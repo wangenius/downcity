@@ -7,8 +7,8 @@
  * - `QQBot` 因此只保留渠道生命周期、dispatch 分流、发送与命令处理。
  */
 
-import type { Logger } from "@downcity/agent/internal/utils/logger/Logger.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { Logger } from "@downcity/agent";
+import type { AgentContext } from "@downcity/agent";
 import type {
   ChannelChatKeyParams,
   IncomingAuthorizationParams,

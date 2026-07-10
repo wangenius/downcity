@@ -145,6 +145,7 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
     session_id: string;
     on_ready: () => void;
     on_event: (event: AgentSessionEvent) => void;
+    on_close: (error?: unknown) => void;
   }): Promise<TransportSubscription> {
     const abort_controller = new AbortController();
     let resolve_ready!: () => void;
@@ -175,6 +176,10 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
         reject_ready(error);
       },
       on_event: params.on_event,
+    }).then((error) => {
+      if (!abort_controller.signal.aborted) {
+        params.on_close(error);
+      }
     });
     await ready_promise;
     return {
@@ -495,11 +500,12 @@ async function consume_http_event_stream(params: {
   on_ready: () => void;
   on_ready_error: (error: unknown) => void;
   on_event: (event: AgentSessionEvent) => void;
-}): Promise<void> {
+}): Promise<unknown | undefined> {
   const decoder = new TextDecoder();
   const reader = params.body.getReader();
   let buffered = "";
   let ready_resolved = false;
+  let close_error: unknown;
 
   try {
     while (true) {
@@ -546,6 +552,7 @@ async function consume_http_event_stream(params: {
       });
     }
   } catch (error) {
+    close_error = error;
     if (!params.abort_controller.signal.aborted) {
       if (!ready_resolved) {
         params.on_ready_error(error);
@@ -562,6 +569,7 @@ async function consume_http_event_stream(params: {
       // ignore
     }
   }
+  return close_error;
 }
 
 function extract_error_message(payload: unknown): string {

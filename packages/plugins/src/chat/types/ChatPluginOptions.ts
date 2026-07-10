@@ -7,8 +7,8 @@
  * - 这样 ChatPlugin 不再理解 Telegram、Feishu、QQ 的具体配置字段。
  */
 
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { StoredChannelAccount } from "@downcity/agent/internal/types/platform/Store.js";
+import type { AgentContext } from "@downcity/agent";
+import type { StoredChannelAccount } from "@downcity/agent";
 import type { ChatChannelName } from "@/chat/types/ChannelStatus.js";
 import type { ChatQueueWorkerConfig } from "@/chat/types/ChatQueueWorker.js";
 

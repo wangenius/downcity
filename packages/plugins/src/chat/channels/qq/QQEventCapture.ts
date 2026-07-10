@@ -8,7 +8,7 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Logger } from "@downcity/agent/internal/utils/logger/Logger.js";
+import type { Logger } from "@downcity/agent";
 import type { QQEventCaptureConfig, QQEventCaptureMode, QQGatewayPayload } from "@/chat/channels/qq/types/QqChannel.js";
 
 /**

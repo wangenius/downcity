@@ -66,6 +66,8 @@ type PendingRequest = {
 type RpcSubscription = {
   on_ready: () => void;
   on_event: (event: AgentSessionEvent) => void;
+  /** 底层 RPC 连接结束后的通知。 */
+  on_close: (error?: unknown) => void;
 };
 
 /**
@@ -249,6 +251,7 @@ export class RpcClient {
     session_id: string;
     on_ready: () => void;
     on_event: (event: AgentSessionEvent) => void;
+    on_close: (error?: unknown) => void;
   }): Promise<RpcSessionSubscription> {
     const data = await this.request<{ subscriptionId: string }>({
       method: "sdk.sessions.subscribe",
@@ -263,6 +266,7 @@ export class RpcClient {
     this.subscriptions.set(subscription_id, {
       on_ready: params.on_ready,
       on_event: params.on_event,
+      on_close: params.on_close,
     });
     params.on_ready();
     return {
@@ -650,6 +654,7 @@ export class RpcClient {
         type: "error",
         message,
       });
+      subscription.on_close(new Error(message));
     }
     this.subscriptions.clear();
   }

@@ -7,14 +7,14 @@
  * - action 返回 AI SDK UIMessage，音频 file part 会由 plugin tool bridge 统一落盘到资源目录。
  */
 
-import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
-import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
+import { BasePlugin } from "@downcity/agent";
+import { createAction } from "@downcity/agent";
 import { z } from "zod";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import type {
   JsonObject,
   JsonValue,
-} from "@downcity/agent/internal/types/common/Json.js";
+} from "@downcity/agent";
 import type {
   TtsPluginInput,
   TtsPluginOptions,

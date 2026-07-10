@@ -18,13 +18,13 @@ import type {
   SessionRecordV1,
   SessionMessageRecordV1,
   SessionMetadataV1,
-} from "@downcity/agent/internal/executor/types/SessionRecords.js";
+} from "@downcity/agent";
 import {
   is_session_action_record,
   is_session_message_record,
-} from "@downcity/agent/internal/executor/types/SessionRecords.js";
+} from "@downcity/agent";
 import { pickLastSuccessfulChatSendText } from "@downcity/agent";
-import { extractToolCallsFromUiMessage } from "@downcity/agent/internal/executor/messages/UIMessageTransformer.js";
+import { extractToolCallsFromUiMessage } from "@downcity/agent";
 import type { ControlTimelineEvent, ControlTimelineRole } from "@/city/agent/control/types/ControlViewData.js";
 import { truncateText } from "@/city/agent/control/CommonHelpers.js";
 

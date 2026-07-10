@@ -10,7 +10,7 @@
 import type { SystemModelMessage } from "ai";
 import fs from "fs-extra";
 import { dirname } from "path";
-import { resolveSessionSystemMessages } from "@downcity/agent/internal/executor/composer/system/default/SystemDomain.js";
+import { resolveSessionSystemMessages } from "@downcity/agent";
 import {
   getDowncityChatHistoryPath,
   getDowncitySessionMessagesArchiveDirPath,
@@ -184,9 +184,6 @@ export function registerControlSessionRoutes(
         );
         const messagesDirPath = dirname(messagesPath);
         await fs.remove(messagesDirPath);
-        // 关键点（中文）：清理消息文件后，同步清掉内存中的 session runtime，避免旧上下文继续运行。
-        runtime.getSession(sessionId).clearExecutor();
-
         return c.json({
           success: true,
           sessionId,

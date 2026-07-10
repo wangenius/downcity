@@ -7,10 +7,10 @@
  * - `share` 分享文本、链接、文件和目录，并进入对方 inbox。
  */
 
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { JsonValue } from "@downcity/agent/internal/types/common/Json.js";
-import type { PluginActions } from "@downcity/agent/internal/plugin/types/Plugin.js";
-import { BasePlugin } from "@downcity/agent/internal/plugin/core/BasePlugin.js";
+import type { AgentContext } from "@downcity/agent";
+import type { JsonValue } from "@downcity/agent";
+import type { PluginActions } from "@downcity/agent";
+import { BasePlugin } from "@downcity/agent";
 import type {
   ContactApproveCommandPayload,
   ContactChatCommandPayload,

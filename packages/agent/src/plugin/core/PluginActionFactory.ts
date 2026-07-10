@@ -56,8 +56,6 @@ export interface CreatePluginActionOptions<
   input_schema?: z.ZodTypeAny | PluginActionInputSchema<P>;
   /** Action 调用示例。 */
   examples?: PluginActionExample<P>[];
-  /** disabled 状态下是否仍允许执行。 */
-  allowWhenDisabled?: boolean;
   /** CLI 定义。 */
   command?: PluginActionCommand<P>;
   /** HTTP 定义。 */
@@ -148,9 +146,6 @@ export function createAction(
       ? { input_schema: normalize_input_schema(options.input_schema) }
       : {}),
     ...(options.examples ? { examples: options.examples } : {}),
-    ...(typeof options.allowWhenDisabled === "boolean"
-      ? { allowWhenDisabled: options.allowWhenDisabled }
-      : {}),
     ...(options.command ? { command: options.command } : {}),
     ...(options.api ? { api: options.api } : {}),
     execute: options.execute,

@@ -6,7 +6,7 @@
  * - `QQGatewayClient` 只调用这些函数，不再内嵌大段重试细节。
  */
 
-import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import type { JsonObject, JsonValue } from "@downcity/agent";
 
 /**
  * 解析 QQ API 业务错误文本。

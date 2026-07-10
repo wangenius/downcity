@@ -9,7 +9,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import type {
   MemoryReadPayload,
   MemoryReadResponse,

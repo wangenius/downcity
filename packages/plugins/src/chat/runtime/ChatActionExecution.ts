@@ -8,8 +8,8 @@
  */
 
 import path from "node:path";
-import type { JsonObject } from "@downcity/agent/internal/types/common/Json.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { JsonObject } from "@downcity/agent";
+import type { AgentContext } from "@downcity/agent";
 import type {
   ChatDeleteActionPayload,
   ChatHistoryActionPayload,

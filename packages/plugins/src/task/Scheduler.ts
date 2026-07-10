@@ -6,7 +6,7 @@
  * - cron 调度执行器由宿主注入，task runtime 不依赖具体实现。
  */
 
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import {
   isTaskWhenManual,
   resolveTaskWhenCronExpression,

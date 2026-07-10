@@ -7,19 +7,19 @@
  * - turn 并入策略、history 落盘、assistant 收敛统一交给 Session
  */
 
-import type { Logger } from "@downcity/agent/internal/utils/logger/Logger.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { Logger } from "@downcity/agent";
+import type { AgentContext } from "@downcity/agent";
 import type { ChatQueueWorkerConfig } from "@/chat/types/ChatQueueWorker.js";
 import type { ChatQueueItem } from "@/chat/types/ChatQueue.js";
-import type { AgentSessionEvent } from "@downcity/agent/internal/types/sdk/AgentSessionEvent.js";
-import type { AgentSessionTurnResult } from "@downcity/agent/internal/types/sdk/AgentSessionTurn.js";
+import type { AgentSessionEvent } from "@downcity/agent";
+import type { AgentSessionTurnResult } from "@downcity/agent";
 import {
   getSharedChatQueueStore,
 } from "./ChatQueue.js";
 import { getChatSender } from "./ChatSendRegistry.js";
 import {
   pickLastSuccessfulChatSendText,
-} from "@downcity/agent/internal/executor/messages/UserVisibleText.js";
+} from "@downcity/agent";
 import {
   buildChannelErrorText,
   collectInitialBurstItems,
@@ -185,7 +185,6 @@ export class ChatQueueWorker {
     const control = item.control;
     if (!control) return false;
     if (control.type === "clear") {
-      this.requireContext(item.sessionId).clearExecutor();
       this.queueStore.clear(item.sessionId);
       return true;
     }
@@ -314,7 +313,6 @@ export class ChatQueueWorker {
     }
 
     if (clearRequested) {
-      serviceContext.clearExecutor();
       this.queueStore.clear(first.sessionId);
     }
   }

@@ -8,8 +8,8 @@
  */
 
 import type { Command } from "commander";
-import type { PluginActions } from "@downcity/agent/internal/plugin/types/Plugin.js";
-import { createAction } from "@downcity/agent/internal/plugin/core/PluginActionFactory.js";
+import type { PluginActions } from "@downcity/agent";
+import { createAction } from "@downcity/agent";
 import { z } from "zod";
 import type {
   ChatCloseActionPayload,

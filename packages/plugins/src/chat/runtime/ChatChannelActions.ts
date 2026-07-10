@@ -7,7 +7,7 @@
  * - 对外只暴露 action 级入口，供 ChatPluginActions 装配使用。
  */
 
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import type { ChatChannelState } from "@/chat/types/ChatRuntime.js";
 import { getStoredChannelAccountSync } from "@/chat/accounts/Store.js";
 import type {

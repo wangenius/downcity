@@ -13,7 +13,7 @@ import { logger } from "hono/logger";
 import http from "node:http";
 import { Readable } from "node:stream";
 import { finished } from "node:stream/promises";
-import { logger as serverLogger } from "@downcity/agent/internal/utils/logger/Logger.js";
+import { logger as serverLogger } from "@downcity/agent";
 import type { Hono as HonoType } from "hono";
 import { createExecuteRouter } from "@/city/agent/http/execute/execute.js";
 import { healthRouter } from "@/city/agent/http/health/health.js";
@@ -21,7 +21,7 @@ import { createPluginsRouter } from "@/city/agent/http/plugins/plugins.js";
 import { createStaticRouter } from "@/city/agent/http/static/static.js";
 import { createControlRouter } from "@/city/agent/http/control/ControlRouter.js";
 import { createShellRouter } from "@/city/agent/http/shell/shell.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import type { Shell } from "@downcity/shell";
 
 /**

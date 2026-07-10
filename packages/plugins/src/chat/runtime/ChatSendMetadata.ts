@@ -6,7 +6,7 @@
  * - direct 模式也复用同一解析逻辑，避免 metadata 协议分叉。
  */
 
-import type { ChatMessageSendOptions } from "@downcity/agent/internal/executor/messages/ChatMessageMarkupTypes.js";
+import type { ChatMessageSendOptions } from "@downcity/agent";
 
 function normalizeText(value: unknown): string {
   return String(value ?? "").trim();

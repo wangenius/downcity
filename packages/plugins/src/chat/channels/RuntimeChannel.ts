@@ -7,8 +7,8 @@
  * - channelAccountId 仅作为账号池绑定能力保留，不再是 ChatPlugin 顶层配置。
  */
 
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
-import type { StoredChannelAccount } from "@downcity/agent/internal/types/platform/Store.js";
+import type { AgentContext } from "@downcity/agent";
+import type { StoredChannelAccount } from "@downcity/agent";
 import type { ChatChannelName } from "@/chat/types/ChannelStatus.js";
 import type {
   ChatChannel,

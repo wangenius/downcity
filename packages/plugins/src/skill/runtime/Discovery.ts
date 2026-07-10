@@ -18,7 +18,7 @@ import type {
   SkillPluginIgnoreRule,
   SkillPluginOptions,
 } from "@/skill/types/SkillPlugin.js";
-import type { JsonObject, JsonValue } from "@downcity/agent/internal/types/common/Json.js";
+import type { JsonObject, JsonValue } from "@downcity/agent";
 
 function matchesIgnoreRule(
   skill: SkillDefinition,

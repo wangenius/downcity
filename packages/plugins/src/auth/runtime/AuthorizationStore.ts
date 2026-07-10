@@ -14,7 +14,7 @@ import type {
   ChatAuthorizationSnapshot,
   ChatAuthorizationStateFile,
 } from "@/auth/types/AuthPlugin.js";
-import type { AgentContext } from "@downcity/agent/internal/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@downcity/agent";
 import type { ChatDispatchChannel } from "@/chat/types/ChatDispatcher.js";
 import { readChatAuthorizationConfig } from "@/auth/runtime/AuthorizationConfig.js";
 

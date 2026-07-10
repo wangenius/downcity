@@ -83,6 +83,15 @@ export class SessionTurnService {
           input,
         );
       },
+      emit_steer_action: async ({ turn_id, message }) => {
+        await this.state_service.emit_action_event({
+          id: `steer-message:${message.id}`,
+          title: "Session steer message sent",
+          description: "Merged a new user message into the active turn.",
+          state: "completed",
+          turnId: turn_id,
+        });
+      },
       executeTurn: async ({ turnId, promptInput, onStepMerge, abortSignal }) => {
         return await this.execute_prompt_turn({
           turnId,

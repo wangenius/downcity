@@ -99,6 +99,21 @@ export interface SessionPromptRuntimeOptions {
   ) => Promise<SessionUserMessageV1>;
 
   /**
+   * 在 steer message 成功持久化后发送对应 action。
+   */
+  emit_steer_action: (input: {
+    /**
+     * steer message 所属的当前 turn 标识。
+     */
+    turn_id: string;
+
+    /**
+     * 已成功持久化的 steer message。
+     */
+    message: SessionUserMessageV1;
+  }) => Promise<void>;
+
+  /**
    * 执行单轮 turn。
    */
   executeTurn: (input: {
@@ -126,6 +141,7 @@ export class SessionPromptRuntime {
   private readonly sessionId: string;
   private readonly publish: SessionPromptRuntimeOptions["publish"];
   private readonly createAndPersistUserMessage: SessionPromptRuntimeOptions["createAndPersistUserMessage"];
+  private readonly emit_steer_action: SessionPromptRuntimeOptions["emit_steer_action"];
   private readonly executeTurn: SessionPromptRuntimeOptions["executeTurn"];
   private readonly stopTurn: SessionPromptRuntimeOptions["stopTurn"];
   private readonly queue: QueuedPrompt[] = [];
@@ -136,6 +152,7 @@ export class SessionPromptRuntime {
     this.sessionId = String(options.sessionId || "").trim();
     this.publish = options.publish;
     this.createAndPersistUserMessage = options.createAndPersistUserMessage;
+    this.emit_steer_action = options.emit_steer_action;
     this.executeTurn = options.executeTurn;
     this.stopTurn = options.stopTurn;
     if (!this.sessionId) {
@@ -329,12 +346,20 @@ export class SessionPromptRuntime {
     const merged: SessionUserMessageV1[] = [];
 
     for (let index = 0; index < drained.length; index += 1) {
-        const item = drained[index];
+      const item = drained[index];
+      try {
+        const message = await this.createAndPersistUserMessage(item.input);
+        item.deferredHandle.resolve(createTurnHandle(activeTurn));
+        merged.push(message);
         try {
-          const message = await this.createAndPersistUserMessage(item.input);
-          item.deferredHandle.resolve(createTurnHandle(activeTurn));
-          merged.push(message);
+          await this.emit_steer_action({
+            turn_id: activeTurn.turnId,
+            message,
+          });
         } catch {
+          // action 发送失败不应阻断已经持久化的 steer message。
+        }
+      } catch {
         // 关键点（中文）：若某条消息持久化失败，把未处理部分重新放回队列头部，避免静默丢失。
         const remaining = drained.slice(index);
         this.queue.unshift(...remaining);

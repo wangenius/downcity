@@ -87,7 +87,7 @@ The returned handle gives you:
 ## What the Session does internally
 
 - if the session is idle, it starts a new turn
-- if the current turn can still absorb new user input, it merges it
+- if the current turn can still absorb new user input, it merges it; after the message is persisted, `subscribe()` receives a completed action event titled `Session steer message sent`
 - otherwise it queues the input for the next turn
 
 The caller does not need to manage a second queue or a second runtime.

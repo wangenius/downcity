@@ -43,6 +43,30 @@ test("AIInvoker.text() posts to /v1/ai/text", async () => {
   assert.deepEqual(JSON.parse(requests[0].init.body), { model: "gpt-5.4", prompt: "hi" })
 })
 
+test("AIInvoker.text() serializes reasoning_effort", async () => {
+  const requests = []
+  const msg = { id: "msg_1", role: "assistant", parts: [{ type: "text", text: "hello", state: "done" }] }
+  const client = new City({
+    role: "user",
+    federation_url: "https://api.example.com/base/",
+    city_id: "city_demo",
+    user_token: "ub_test",
+    fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
+  })
+
+  await client.ai.text({
+    model: "gpt-5.4",
+    prompt: "hi",
+    reasoning_effort: "high",
+  })
+
+  assert.deepEqual(JSON.parse(requests[0].init.body), {
+    model: "gpt-5.4",
+    prompt: "hi",
+    reasoning_effort: "high",
+  })
+})
+
 test("AIInvoker.image_create() posts to /v1/ai/image/create", async () => {
   const requests = []
   const client = new City({

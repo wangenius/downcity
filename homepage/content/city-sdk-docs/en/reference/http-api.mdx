@@ -73,7 +73,14 @@ The same route returns different visibility by identity:
 { "items": [
   { "id": "deepseek-v4-flash", "name": "DeepSeek V4 Flash",
     "description": "...", "modalities": ["text","stream"],
-    "tags": ["deepseek"], "meta": {} }
+    "tags": ["deepseek"], "meta": {},
+    "reasoning": {
+      "efforts": [
+        { "id": "low", "name": "Low" },
+        { "id": "high", "name": "High" }
+      ],
+      "default_effort": "low"
+    } }
 ]}
 ```
 
@@ -92,8 +99,10 @@ The same route returns different visibility by identity:
 
 Request:
 ```json
-{ "model": "deepseek-v4-flash", "prompt": "Hello" }
+{ "model": "deepseek-v4-flash", "prompt": "Hello", "reasoning_effort": "high" }
 ```
+
+`reasoning_effort` is optional, but when present it must match an ID from the model catalog's `reasoning.efforts`. If model fallback changes the execution model, AIService validates the level against that final model.
 
 Response:
 ```json

@@ -27,6 +27,14 @@ const ai: AIInvoker = client.ai;
 const textResult = ai.text({ model: "gpt-5.4", prompt: "hello" });
 const textContract: Promise<UIMessage> = textResult;
 
+const reasoningTextResult = ai.text({
+  model: "gpt-5.4",
+  prompt: "hello",
+  reasoning_effort: "high",
+});
+const reasoningTextContract: Promise<UIMessage> = reasoningTextResult;
+void reasoningTextContract;
+
 const streamResult = ai.stream({ model: "gpt-5.4", prompt: "hello" });
 const streamContract: Promise<ReadableStream<UIMessageChunk>> = streamResult;
 
@@ -75,7 +83,9 @@ async function testCatalog() {
   const m = catalog.get("gpt-5.4");
   const all = catalog.all();
   const t = catalog.forModality("text");
-  void m; void all; void t;
+  const reasoning_efforts = m?.reasoning?.efforts;
+  const default_reasoning_effort = m?.reasoning?.default_effort;
+  void m; void all; void t; void reasoning_efforts; void default_reasoning_effort;
 }
 void testCatalog();
 

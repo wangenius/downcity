@@ -152,6 +152,22 @@ if (!model) throw new Error("model not found");
 
 这样你的业务代码不会到处散落模型 ID 字符串。
 
+模型支持推理强度时，目录会同时返回可选档位：
+
+```ts
+const model = catalog.get("gpt-5.6-sol");
+if (!model) throw new Error("model not found");
+const efforts = model?.reasoning?.efforts ?? [];
+
+await client.ai.text({
+  model,
+  prompt: "分析这个问题",
+  reasoning_effort: "high",
+});
+```
+
+`reasoning_effort` 必须使用目录中的档位 ID。省略时由模型的 `default_effort` 或上游默认行为决定。
+
 ## `ai.text()`
 
 ```ts
@@ -166,6 +182,7 @@ const result = await client.ai.text({
 输入仍然是开放对象：
 
 - `model` 必填；AIService 不会自动选择默认模型
+- `reasoning_effort` 可选，必须来自当前模型目录声明的推理档位
 - 其他字段由 `AIService` 命中的 Provider `text` action 决定
 - handler 返回值应该是一个 `UIMessage`
 

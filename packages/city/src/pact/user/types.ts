@@ -179,5 +179,7 @@ export interface UserAsrInput extends UserServiceInput {
 export interface UserServiceInput {
   /** AIService 调用必须显式传入的模型引用或模型 ID。 */
   model: UserModelInput;
+  /** 模型推理强度档位，必须来自模型目录 `reasoning.efforts`。 */
+  reasoning_effort?: string;
   [key: string]: unknown;
 }

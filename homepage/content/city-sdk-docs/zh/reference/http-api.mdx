@@ -87,7 +87,14 @@ Content-Type: application/json
       "description": "DeepSeek text model",
       "modalities": ["text", "stream"],
       "tags": ["deepseek", "text"],
-      "meta": {}
+      "meta": {},
+      "reasoning": {
+        "efforts": [
+          { "id": "low", "name": "低" },
+          { "id": "high", "name": "高" }
+        ],
+        "default_effort": "low"
+      }
     }
   ]
 }
@@ -124,9 +131,12 @@ Content-Type: application/json
 ```json
 {
   "model": "deepseek-v4-flash",
-  "prompt": "写一段欢迎语"
+  "prompt": "写一段欢迎语",
+  "reasoning_effort": "high"
 }
 ```
+
+`reasoning_effort` 可选，但传入时必须匹配模型目录中的 `reasoning.efforts[].id`。请求经过模型 fallback 时，AIService 会按照最终执行模型重新校验该档位。
 
 返回：
 

@@ -46,6 +46,42 @@ description: Provider 是第三方 AI 提供商的基类，通过子类化声明
 
  `passthroughModel` 控制自动透传时发往上游的 model 值。
 
+## 模型推理强度
+
+支持推理强度的模型通过 `reasoning` 声明可选档位和默认档位：
+
+```ts
+ai.use(openai.model({
+  id: "gpt-5.6-sol",
+  name: "GPT-5.6 Sol",
+  reasoning: {
+    efforts: [
+      { id: "low", name: "低" },
+      { id: "medium", name: "标准" },
+      { id: "high", name: "高" },
+      { id: "xhigh", name: "极高" },
+    ],
+    default_effort: "medium",
+  },
+}));
+```
+
+这些档位会通过 `/v1/ai/models` 返回。调用方只传一个字段，值必须是当前模型 `reasoning.efforts[].id` 中的一项：
+
+```ts
+await client.ai.text({
+  model: "gpt-5.6-sol",
+  prompt: "分析这个问题",
+  reasoning_effort: "high",
+});
+```
+
+AIService 会先完成模型 fallback，再按照最终模型校验 `reasoning_effort`。请求没有指定档位时使用 `default_effort`；模型没有配置默认档位时使用上游默认行为。不支持的档位会返回 `422`。
+
+默认 OpenAI-compatible `text` / `stream` 实现会把已校验档位转换成 AI SDK `providerOptions` 的 `reasoningEffort`。字段结构不同的 Provider 可以覆盖 `build_reasoning_provider_options(ctx, model)`，例如 Anthropic 映射到 `anthropic.thinking` / `anthropic.effort`，Gemini 映射到 `google.thinkingConfig`。自定义实现应通过 `read_resolved_reasoning(ctx)` 读取 AIService 已校验的结果，不要重新解析原始请求。
+
+`/v1/ai/chat/completions` 已经是 OpenAI-compatible 协议，不转换成 `providerOptions`；校验后的 `reasoning_effort` 会留在请求体中交给 `openai` action 或自动透传。
+
  ## 覆盖默认 text / stream
 
  如果默认的 OpenAI-compatible 实现不满足需求，可以直接覆盖 `text` / `stream` 方法：

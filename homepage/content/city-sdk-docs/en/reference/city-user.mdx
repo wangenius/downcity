@@ -152,6 +152,22 @@ if (!model) throw new Error("model not found");
 
 This keeps raw model IDs from scattering across your city code.
 
+When a model supports configurable reasoning, the catalog also exposes its available levels:
+
+```ts
+const model = catalog.get("gpt-5.6-sol");
+if (!model) throw new Error("model not found");
+const efforts = model?.reasoning?.efforts ?? [];
+
+await client.ai.text({
+  model,
+  prompt: "Analyze this problem",
+  reasoning_effort: "high",
+});
+```
+
+`reasoning_effort` must use an ID from the model catalog. When omitted, the model's `default_effort` or the upstream default applies.
+
 ## `ai.text()`
 
 ```ts
@@ -166,6 +182,7 @@ const result = await client.ai.text({
 The input object is still intentionally open:
 
 - `model` is required; AIService never chooses a default model
+- `reasoning_effort` is optional and must come from the current model's catalog entry
 - other fields are defined by the Provider `text` action resolved by `AIService`
 - the handler result should be a `UIMessage`
 

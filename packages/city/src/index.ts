@@ -73,6 +73,7 @@ export type {
 
 export { AIService } from "./service/ai/ai-service.js";
 export { Provider } from "./service/ai/provider.js";
+export { read_resolved_reasoning } from "./service/ai/reasoning.js";
 
 export type {
   AIServiceOptions,
@@ -85,6 +86,13 @@ export type {
   ProviderOptions,
   PublicModel,
 } from "./service/ai/types.js";
+
+export type {
+  AIProviderOptionObject,
+  AIProviderOptions,
+  AIProviderOptionValue,
+  AIResolvedReasoning,
+} from "./types/AIReasoning.js";
 
 export {
   buildAssistantMessage,
@@ -171,6 +179,8 @@ export type {
   CityModel,
   CityModelDescriptor,
   CityModelEnvRequirement,
+  CityModelReasoning,
+  CityModelReasoningEffort,
 } from "@downcity/type";
 
 export { City } from "./client/city.js";

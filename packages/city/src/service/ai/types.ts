@@ -6,6 +6,11 @@
 
 import type { ActionFn } from "../action.js";
 import type { AIBalanceBridge, AIProviderBillFn } from "./charge.js";
+import type {
+  CityModelDescriptor,
+  CityModelEnvRequirement,
+  CityModelReasoning,
+} from "@downcity/type";
 import type { LanguageModel } from "ai";
 
 // ===========================================================================
@@ -125,6 +130,8 @@ export interface ModelConfig {
   tags?: string[];
   /** 模型元数据 */
   meta?: Record<string, unknown>;
+  /** 模型支持的推理强度配置。 */
+  reasoning?: CityModelReasoning;
   /** 模型所需环境变量 */
   env?: Record<string, string>;
   /** Provider 的 baseURL（用于自动透传） */
@@ -145,22 +152,7 @@ export interface ModelConfig {
 // PublicModel — API 返回的模型信息
 // ===========================================================================
 
-export interface PublicModel {
-  /** 模型 ID */
-  id: string;
-  /** 模型展示名称 */
-  name: string;
-  /** 模型描述 */
-  description: string;
-  /** 模型支持的 modality 列表 */
-  modalities: string[];
-  /** 模型标签 */
-  tags: string[];
-  /** 模型元数据 */
-  meta: Record<string, unknown>;
-  /** 模型依赖的环境变量需求（通常仅在 admin 身份下返回） */
-  env_requirements?: AIModelEnvRequirement[];
-}
+export type PublicModel = CityModelDescriptor;
 
 /**
  * AI 模型环境变量需求。
@@ -168,14 +160,7 @@ export interface PublicModel {
  * 用于 admin 视角展示某个模型依赖哪些运行时 key，
  * 以及这些 key 当前是否已经配置完成。
  */
-export interface AIModelEnvRequirement {
-  /** 环境变量 key，例如 `DEEPSEEK_API_KEY` */
-  key: string;
-  /** 给管理员展示的说明文本 */
-  description: string;
-  /** 当前是否必须提供该 key 才能调用模型 */
-  required: boolean;
-}
+export type AIModelEnvRequirement = CityModelEnvRequirement;
 
 /**
  * AIService 配置。

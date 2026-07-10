@@ -8,7 +8,12 @@
   */
 
 import { convertToModelMessages, generateText, streamText } from "ai";
-import type { LanguageModel, ToolSet, UIMessage } from "ai";
+import type {
+  LanguageModel,
+  ToolSet,
+  UIMessage,
+} from "ai";
+import type { CityModelReasoning } from "@downcity/type";
 import type { Context } from "../service.js";
 import type { ActionFn } from "../action.js";
 import type {
@@ -36,6 +41,8 @@ import {
   readRequiredEnv,
   resolveUpstreamModel,
 } from "./helpers.js";
+import { read_resolved_reasoning } from "./reasoning.js";
+import type { AIProviderOptions } from "../../types/AIReasoning.js";
 
 // ===========================================================================
 // 内部类型
@@ -173,19 +180,48 @@ export abstract class Provider {
    }
 
    /**
+    * 将 AIService 已解析的推理强度转换为当前 AI SDK Provider 的 providerOptions。
+    *
+    * 默认实现适用于 OpenAI-compatible Provider。Anthropic、Gemini 等字段结构不同的
+    * Provider 应覆盖该方法，但不能重新读取或校验原始 reasoning_effort。
+    */
+   protected build_reasoning_provider_options(
+     ctx: Context,
+     model: LanguageModel,
+   ): AIProviderOptions | undefined {
+     const reasoning = read_resolved_reasoning(ctx);
+     if (!reasoning) return undefined;
+     const provider = typeof model === "object" && model !== null && "provider" in model
+       ? (model as { provider?: unknown }).provider
+       : undefined;
+     const provider_id = typeof provider === "string"
+       ? provider.split(".")[0]?.trim()
+       : undefined;
+     if (!provider_id) {
+       throw new Error(`Provider ${this.id} cannot resolve AI SDK provider id`);
+     }
+     return {
+       [provider_id]: {
+         reasoningEffort: reasoning.effort,
+       },
+     };
+   }
+
+   /**
     * 文本生成 action（OpenAI-compatible 默认实现）。
     */
    async text(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
      const input = ctx.input as OpenAIActionInput;
      const resolved_input = await this.resolveActionInput(input);
      const model = this.createChatModel(ctx);
+     const provider_options = this.build_reasoning_provider_options(ctx, model);
 
      if ("messages" in resolved_input) {
        const result = await generateText({
          model,
          messages: resolved_input.messages,
          ...("tools" in resolved_input ? { tools: resolved_input.tools } : {}),
-         ...(!("tools" in resolved_input) ? { temperature: 1 } : {}),
+         ...(provider_options ? { providerOptions: provider_options } : {}),
        });
        return buildAssistantMessage(result.text, ctx, {
          finishReason: result.finishReason,
@@ -197,7 +233,7 @@ export abstract class Provider {
      const result = await generateText({
        model,
        prompt: resolved_input.prompt,
-       temperature: 1,
+       ...(provider_options ? { providerOptions: provider_options } : {}),
      });
      return buildAssistantMessage(result.text, ctx, {
        finishReason: result.finishReason,
@@ -212,13 +248,14 @@ export abstract class Provider {
      const input = ctx.input as OpenAIActionInput;
      const resolved_input = await this.resolveActionInput(input);
      const model = this.createChatModel(ctx);
+     const provider_options = this.build_reasoning_provider_options(ctx, model);
 
      if ("messages" in resolved_input) {
       const result = streamText({
         model,
         messages: resolved_input.messages,
         ...("tools" in resolved_input ? { tools: resolved_input.tools } : {}),
-        ...(!("tools" in resolved_input) ? { temperature: 1 } : {}),
+        ...(provider_options ? { providerOptions: provider_options } : {}),
       });
       return {
         response: result.toUIMessageStreamResponse(),
@@ -228,7 +265,7 @@ export abstract class Provider {
     const result = streamText({
       model,
       prompt: resolved_input.prompt,
-      temperature: 1,
+      ...(provider_options ? { providerOptions: provider_options } : {}),
     });
     return {
       response: result.toUIMessageStreamResponse(),
@@ -289,6 +326,7 @@ export abstract class Provider {
      description?: string;
      tags?: string[];
      meta?: Record<string, unknown>;
+     reasoning?: CityModelReasoning;
      fallback?: ModelFallbackRule[];
      bill?: AIProviderBillFn;
    }): ModelConfig {
@@ -326,6 +364,7 @@ export abstract class Provider {
        description: spec.description,
        tags: spec.tags,
        meta: spec.meta,
+       reasoning: spec.reasoning,
        env: this.env,
        baseURL: this.baseURL,
        envKey: this.envKey,

@@ -46,6 +46,42 @@ description: Provider is an abstract base class for AI upstreams. Subclass it to
 
  `passthroughModel` is the upstream model id used during auto-passthrough.
 
+## Model reasoning effort
+
+A reasoning-capable model declares its available levels and optional default through `reasoning`:
+
+```ts
+ai.use(openai.model({
+  id: "gpt-5.6-sol",
+  name: "GPT-5.6 Sol",
+  reasoning: {
+    efforts: [
+      { id: "low", name: "Low" },
+      { id: "medium", name: "Standard" },
+      { id: "high", name: "High" },
+      { id: "xhigh", name: "Extra high" },
+    ],
+    default_effort: "medium",
+  },
+}));
+```
+
+These levels are returned by `/v1/ai/models`. A caller sends one field whose value must match an entry in `reasoning.efforts[].id`:
+
+```ts
+await client.ai.text({
+  model: "gpt-5.6-sol",
+  prompt: "Analyze this problem",
+  reasoning_effort: "high",
+});
+```
+
+AIService resolves model fallback first, then validates `reasoning_effort` against the final model. When the request omits it, AIService uses `default_effort`; when the model has no default, the upstream provider keeps its own default. Unsupported levels return `422`.
+
+The default OpenAI-compatible `text` / `stream` implementation converts the validated level into AI SDK `providerOptions.reasoningEffort`. Providers with different option shapes can override `build_reasoning_provider_options(ctx, model)`: Anthropic can map to `anthropic.thinking` / `anthropic.effort`, while Gemini can map to `google.thinkingConfig`. Custom actions should read the validated result with `read_resolved_reasoning(ctx)` instead of parsing the raw request again.
+
+`/v1/ai/chat/completions` is already OpenAI-compatible, so it does not use `providerOptions`; the validated `reasoning_effort` remains in the request body for the custom `openai` action or automatic passthrough.
+
  ## Overriding text / stream
 
  If the default OpenAI-compatible implementation is not enough, override `text` / `stream` directly:

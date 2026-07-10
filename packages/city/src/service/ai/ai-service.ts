@@ -24,11 +24,8 @@ import { normalizeAIUsage } from "./helpers.js";
 import type { AsyncJobRecord, AsyncJobStatus } from "../../types/AsyncJob.js";
 import type {
   AIServiceOptions,
-  AIModelEnvRequirement,
   ModelConfig,
   ModelActions,
-  ModelFallbackMedia,
-  ModelFallbackRule,
   PublicModel,
 } from "./types.js";
 import type {
@@ -45,6 +42,17 @@ import type {
   UserImageJobCreateResult,
   UserImageJobResult,
 } from "./job-types.js";
+import {
+  attach_resolved_reasoning,
+  resolve_model_reasoning,
+} from "./reasoning.js";
+import { AIModelRegistry } from "./model-registry.js";
+import { resolve_text_routing_plan } from "./model-routing.js";
+import type {
+  AIRoutingFallbackReason,
+  AIResolvedAction,
+  AIResolvedRoutingPlan,
+} from "../../types/AIRouting.js";
 
 /** AIService 直接暴露的 SDK 通路模态列表。图片只通过 image/create + image/result 暴露。 */
 const MODALITIES = ["text", "stream", "video", "tts", "asr"] as const;
@@ -67,17 +75,6 @@ type UsageRecord = Record<string, unknown>;
 type ResolvedProviderOutput = {
   output: unknown;
   charge?: AIProviderChargeLine | Promise<AIProviderChargeLine | undefined>;
-};
-type ResolvedAction = {
-  model?: ModelConfig;
-  action: ActionFn;
-};
-type RoutingFallbackReason = "input_requires_media";
-type ResolvedRoutingPlan = {
-  resolved: ResolvedAction;
-  fallback_from?: string;
-  fallback_reason?: RoutingFallbackReason;
-  fallback_media_type?: string;
 };
 type StoredImagePart = Record<string, unknown> & {
   type: "file";
@@ -149,15 +146,6 @@ function readOptionalNumber(value: unknown): number | undefined {
   if (typeof value !== "string" || !value.trim()) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-/**
- * 读取 part 的 MIME 类型。
- */
-function readPartMediaType(part: Record<string, unknown>): string {
-  return readOptionalString(part.mediaType)
-    ?? readOptionalString(part.media_type)
-    ?? "";
 }
 
 /**
@@ -335,7 +323,7 @@ function isImageJobStatus(value: unknown): boolean {
 
 export class AIService extends Service {
   /** 模型注册表 */
-  private modelMap = new Map<string, ModelConfig>();
+  private readonly models = new AIModelRegistry();
 
   /** SDK 通路 action 映射（modality → action） */
   private modalityActions = new Map<string, ActionFn>();
@@ -388,24 +376,16 @@ export class AIService extends Service {
   // ========== 模型注册 ==========
 
   use(...inputs: (ModelConfig | ModelConfig[])[]): this {
-    const configs: ModelConfig[] = [];
-    for (const input of inputs) {
-      if (Array.isArray(input)) configs.push(...input);
-      else configs.push(input);
-    }
-    for (const config of configs) {
-      if (this.modelMap.has(config.id)) throw new Error(`Duplicate model: ${config.id}`);
-      this.modelMap.set(config.id, config);
-    }
+    this.models.register(...inputs);
     return this;
   }
 
   listModels(): ModelConfig[] {
-    return [...this.modelMap.values()];
+    return this.models.list();
   }
 
   hasAction(): boolean {
-    return this.modelMap.size > 0;
+    return this.models.size > 0;
   }
 
   // ========== 模型匹配 ==========
@@ -416,9 +396,9 @@ export class AIService extends Service {
 
     if (!modelId) throw httpError(422, "model is required");
 
-    const model = this.modelMap.get(modelId);
+    const model = this.models.get(modelId);
     if (!model) throw httpError(422, `Unknown model: ${modelId}`);
-    if (env && this.getMissingEnv(model, env).length > 0) {
+    if (env && this.models.get_missing_env(model, env).length > 0) {
       throw httpError(422, `No available model: ${modelId}`);
     }
     const action = isOpenAIMode ? this.resolveOpenAIAction(model) : this.getAction(model, mode);
@@ -492,217 +472,33 @@ export class AIService extends Service {
     return modalities.filter((mode) => mode !== "image_create" && mode !== "image_fetch" && mode !== "image_result");
   }
 
-  private getModelEnvRequirements(model: ModelConfig): AIModelEnvRequirement[] {
-    const requirements = model.env
-      ? Object.entries(model.env)
-      : model.envKey
-        ? [[model.envKey, `${model.id} API Key`]]
-        : [];
-
-    return requirements.map(([key, description]) => ({
-      key,
-      description,
-      required: true,
-    }));
-  }
-
-  private getMissingEnv(model: ModelConfig, env: EnvReader): string[] {
-    return this.getModelEnvRequirements(model)
-      .filter((item) => item.required && !env(item.key))
-      .map((item) => item.key);
-  }
-
-  /**
-   * 按请求媒体输入和模型级 fallback 规则决定实际执行模型。
-   *
-   * 关键说明（中文）
-   * - 这里只做路由，不改写请求体，避免 AIService 绑定具体上游协议。
-   * - UIMessage 只从 file part 提取媒体信息，具体如何分流交给 fallback.match。
-   * - OpenAI image_url / input_image 会归一为 image 媒体输入后进入同一套规则。
-   * - fallback 规则按数组顺序匹配，规则顺序高于请求里的 file 顺序。
-   * - 没有配置 fallback 时保持既有行为，由 Provider 自己决定如何处理。
-   */
-  private planTextExecution(resolved: ResolvedAction, ctx: Context, mode: string): ResolvedRoutingPlan {
-    const model = resolved.model;
-    if (!model || !model.fallback?.length) {
-      return { resolved };
-    }
-
-    const media_inputs = this.extractMediaInputs(ctx.input, mode);
-    if (media_inputs.length === 0) {
-      return { resolved };
-    }
-
-    for (const rule of model.fallback ?? []) {
-      for (const media of media_inputs) {
-        const plan = this.resolveMediaFallbackPlan(model, rule, media, mode, ctx.env);
-        if (!plan) continue;
-        return plan;
-      }
-    }
-
-    return { resolved };
-  }
-
-  /**
-   * 解析模型 fallback 引用。
-   */
-  private resolveFallbackModel(input: ModelConfig | string | undefined): ModelConfig | undefined {
-    if (!input) return undefined;
-    if (typeof input === "string") return this.modelMap.get(input);
-    return this.modelMap.get(input.id) ?? input;
-  }
-
-  /**
-   * 根据一条规则和一个媒体输入解析 fallback 计划。
-   */
-  private resolveMediaFallbackPlan(
-    model: ModelConfig,
-    rule: ModelFallbackRule,
-    media: ModelFallbackMedia,
+  /** 按媒体输入解析最终模型，推理强度必须在该步骤之后解析。 */
+  private plan_text_execution(
+    resolved: AIResolvedAction,
+    ctx: Context,
     mode: string,
-    env: EnvReader,
-  ): ResolvedRoutingPlan | undefined {
-    if (!this.matchesFallbackRule(rule, media)) return undefined;
-
-    const fallback_model = this.resolveFallbackModel(rule.model);
-    if (!fallback_model || fallback_model.id === model.id) return undefined;
-
-    const action = mode === "openai"
-      ? this.resolveOpenAIAction(fallback_model)
-      : this.getAction(fallback_model, mode);
-    if (!action || this.getMissingEnv(fallback_model, env).length > 0) return undefined;
-
-    return {
-      resolved: {
-        model: fallback_model,
-        action,
-      },
-      fallback_from: model.id,
-      fallback_reason: "input_requires_media",
-      fallback_media_type: media.media_type,
-    };
-  }
-
-  /**
-   * 安全执行 fallback 规则匹配。
-   */
-  private matchesFallbackRule(rule: ModelFallbackRule, media: ModelFallbackMedia): boolean {
-    try {
-      return rule.match(media);
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * 从当前请求中提取可参与 fallback 判断的媒体输入。
-   */
-  private extractMediaInputs(input: unknown, mode: string): ModelFallbackMedia[] {
-    if (!isRecord(input)) return [];
-    if (mode === "openai") {
-      return this.extractOpenAIMediaInputs(input.messages);
-    }
-    return this.extractUiMediaInputs(input.messages);
-  }
-
-  /**
-   * 扫描 OpenAI-compatible messages 的媒体输入。
-   */
-  private extractOpenAIMediaInputs(messages: unknown): ModelFallbackMedia[] {
-    if (!Array.isArray(messages)) return [];
-    const media_inputs: ModelFallbackMedia[] = [];
-    for (const message of messages) {
-      if (!isRecord(message)) continue;
-      const content = message.content;
-      if (!Array.isArray(content)) continue;
-      for (const part of content) {
-        const media = this.readOpenAIMediaPart(part);
-        if (media) media_inputs.push(media);
-      }
-    }
-    return media_inputs;
-  }
-
-  /**
-   * 读取 OpenAI-compatible content part 的媒体输入。
-   */
-  private readOpenAIMediaPart(part: unknown): ModelFallbackMedia | undefined {
-    if (!isRecord(part)) return undefined;
-    const type = readOptionalString(part.type);
-    if (type === "image_url" || type === "input_image") {
-      return this.buildFallbackMedia("image/*", {
-        url: this.readOpenAIImageUrl(part),
-      });
-    }
-    if (type !== "file") return undefined;
-    const media_type = readPartMediaType(part);
-    if (!media_type) return undefined;
-    return this.buildFallbackMedia(media_type, {
-      filename: readFilePartFilename(part),
-      url: readOptionalString(part.url),
+  ): AIResolvedRoutingPlan {
+    return resolve_text_routing_plan(resolved, ctx.input, mode, {
+      resolve_model: (input) => typeof input === "string"
+        ? this.models.get(input)
+        : this.models.get(input.id) ?? input,
+      resolve_action: (model, target_mode) => target_mode === "openai"
+        ? this.resolveOpenAIAction(model)
+        : this.getAction(model, target_mode),
+      is_available: (model) => this.models.get_missing_env(model, ctx.env).length === 0,
     });
-  }
-
-  /**
-   * 读取 OpenAI-compatible 图片 URL。
-   */
-  private readOpenAIImageUrl(part: Record<string, unknown>): string | undefined {
-    const direct_url = readOptionalString(part.url);
-    if (direct_url) return direct_url;
-    if (!isRecord(part.image_url)) return undefined;
-    return readOptionalString(part.image_url.url);
-  }
-
-  /**
-   * 扫描 UIMessage messages 的 file 媒体输入。
-   */
-  private extractUiMediaInputs(messages: unknown): ModelFallbackMedia[] {
-    if (!Array.isArray(messages)) return [];
-    const media_inputs: ModelFallbackMedia[] = [];
-    for (const message of messages) {
-      if (!isRecord(message) || !Array.isArray(message.parts)) continue;
-      for (const part of message.parts) {
-        const media = this.readUiFilePart(part);
-        if (media) media_inputs.push(media);
-      }
-    }
-    return media_inputs;
-  }
-
-  /**
-   * 读取 UIMessage file part 的媒体输入。
-   */
-  private readUiFilePart(part: unknown): ModelFallbackMedia | undefined {
-    if (!isRecord(part) || part.type !== "file") return undefined;
-    const media_type = readPartMediaType(part);
-    if (!media_type) return undefined;
-    return this.buildFallbackMedia(media_type, {
-      filename: readFilePartFilename(part),
-      url: readOptionalString(part.url),
-    });
-  }
-
-  /**
-   * 构造 fallback 媒体输入，避免可选字段写入 undefined。
-   */
-  private buildFallbackMedia(
-    media_type: string,
-    optional: { filename?: string; url?: string },
-  ): ModelFallbackMedia {
-    return {
-      media_type,
-      ...(optional.filename ? { filename: optional.filename } : {}),
-      ...(optional.url ? { url: optional.url } : {}),
-    };
   }
 
   // ========== SDK 通路 ==========
 
   private async handleModality(modality: Modality, ctx: Context): Promise<unknown | Response> {
     const initial_resolved = this.resolve({ model: this.normalizeModelId(ctx.input.model), mode: modality }, ctx.env);
-    const { resolved, fallback_from, fallback_reason, fallback_media_type } = this.planTextExecution(initial_resolved, ctx, modality);
+    const { resolved, fallback_from, fallback_reason, fallback_media_type } = this.plan_text_execution(initial_resolved, ctx, modality);
+    const reasoning = resolved.model && (modality === "text" || modality === "stream")
+      ? resolve_model_reasoning(resolved.model, ctx.input)
+      : undefined;
     this.attachResolvedModel(ctx, resolved.model, modality, { fallback_from, fallback_reason, fallback_media_type });
+    attach_resolved_reasoning(ctx, reasoning);
     const started_at = Date.now();
 
     try {
@@ -763,7 +559,7 @@ export class AIService extends Service {
 
       const model_id = job.model_id ?? readOptionalString(ctx.input.model);
       if (!model_id) throw httpError(422, "Image job is missing model_id");
-      const model = this.modelMap.get(model_id);
+      const model = this.models.get(model_id);
       if (!model?.actions.image_fetch) {
         throw httpError(422, `No image_fetch action for model: ${model_id}`);
       }
@@ -1003,9 +799,13 @@ export class AIService extends Service {
     const body = ctx.input as Record<string, unknown>;
     const modelId = this.normalizeModelId(body.model);
     const initial_resolved = this.resolve({ model: modelId, mode: "openai" }, ctx.env);
-    const { resolved, fallback_from, fallback_reason, fallback_media_type } = this.planTextExecution(initial_resolved, ctx, "openai");
+    const { resolved, fallback_from, fallback_reason, fallback_media_type } = this.plan_text_execution(initial_resolved, ctx, "openai");
+    const reasoning = resolved.model
+      ? resolve_model_reasoning(resolved.model, body)
+      : undefined;
     this.attachResolvedModel(ctx, resolved.model, "openai", { fallback_from, fallback_reason, fallback_media_type });
     ctx.input = body;
+    attach_resolved_reasoning(ctx, reasoning);
     const started_at = Date.now();
 
     try {
@@ -1031,7 +831,7 @@ export class AIService extends Service {
     ctx: Context,
     model: ModelConfig | undefined,
     mode: string,
-    routing?: { fallback_from?: string; fallback_reason?: RoutingFallbackReason; fallback_media_type?: string },
+    routing?: { fallback_from?: string; fallback_reason?: AIRoutingFallbackReason; fallback_media_type?: string },
   ): void {
     if (!model) return;
     ctx.variant = { id: model.id, name: model.name, meta: model.meta };
@@ -1166,28 +966,9 @@ export class AIService extends Service {
     env: EnvReader;
     identity: "guest" | "user" | "admin";
   }): PublicModel[] {
-    const { env, identity } = options;
-    const includeAdminFields = identity === "admin";
-    const items = identity === "admin"
-      ? [...aiService.modelMap.values()]
-      : [...aiService.modelMap.values()].filter((config) => aiService.getMissingEnv(config, env).length === 0);
-
-    return items.map((config) => aiService.toPublicModel(config, includeAdminFields));
-  }
-
-  private toPublicModel(config: ModelConfig, includeAdminFields = false): PublicModel {
-    return {
-      id: config.id,
-      name: config.name,
-      description: config.description ?? "",
-      modalities: this.getModelModalities(config),
-      tags: config.tags ?? [],
-      meta: config.meta ?? {},
-      ...(includeAdminFields
-        ? {
-            env_requirements: this.getModelEnvRequirements(config),
-          }
-        : {}),
-    };
+    return aiService.models.list_public({
+      ...options,
+      get_modalities: (model) => aiService.getModelModalities(model),
+    });
   }
 }

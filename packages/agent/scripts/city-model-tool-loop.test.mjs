@@ -2,7 +2,8 @@
  * @file 验证 CityModel 会优先走 OpenAI-compatible LanguageModel 并完成 tool loop。
  *
  * 关键点（中文）
- * - 这里直接走编译后的 Agent / City 产物，避免测试只覆盖源码级辅助函数。
+ * - 这里直接走编译后的 Agent 产物，避免测试只覆盖源码级辅助函数。
+ * - CityModel 使用 @downcity/type 的共享协议构造，避免反向依赖 City SDK 实现。
  * - 重点锁住 CityModel -> LanguageModel -> tool-call -> 本地执行 -> tool-result 回传链路。
  * - 新路径不应再调用 `/v1/ai/stream`，避免 UIMessage stream 反向适配丢失 finish 语义。
  */
@@ -15,7 +16,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { Agent } from "../bin/index.js";
 import { createAction, createPlugin } from "../bin/plugin/core/PluginActionFactory.js";
-import { City } from "../../city/bin/index.js";
+import { CITY_MODEL_INVOKER, CITY_MODEL_KIND } from "@downcity/type";
 import { tool } from "ai";
 import { z } from "zod";
 
@@ -45,31 +46,12 @@ async function read_json_body(req) {
 }
 
 test("CityModel uses direct LanguageModel path and sends tool result back", async () => {
-  const requests = [];
   const agent_requests = [];
   let stream_requests = 0;
   let tool_executed = false;
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(String(req.url || "/"), "http://127.0.0.1");
-
-    if (req.method === "GET" && url.pathname === "/v1/ai/models") {
-      res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify({
-        items: [
-          {
-            id: "mock-model",
-            name: "Mock Model",
-            description: "mock",
-            modalities: ["text", "stream"],
-            tags: [],
-            meta: {},
-            env: {},
-          },
-        ],
-      }));
-      return;
-    }
 
     if (req.method === "POST" && url.pathname === "/v1/ai/stream") {
       stream_requests += 1;
@@ -80,7 +62,6 @@ test("CityModel uses direct LanguageModel path and sends tool result back", asyn
 
     if (req.method === "POST" && url.pathname === "/v1/ai/chat/completions") {
       const body = await read_json_body(req);
-      requests.push(body);
 
       if (!Array.isArray(body.tools)) {
         write_openai_sse(res, [
@@ -229,15 +210,22 @@ test("CityModel uses direct LanguageModel path and sends tool result back", asyn
   try {
     const address = server.address();
     assert.ok(address && typeof address === "object");
-    const city = new City({
-      role: "user",
-      federation_url: `http://127.0.0.1:${String(address.port)}`,
-      city_id: "city_demo",
-      user_token: "ub_test",
+    const model = Object.freeze({
+      id: "mock-model",
+      name: "Mock Model",
+      description: "mock",
+      modalities: ["text", "stream"],
+      tags: [],
+      meta: {},
+      kind: CITY_MODEL_KIND,
+      [CITY_MODEL_INVOKER]: {
+        connection: () => ({
+          base_url: `http://127.0.0.1:${String(address.port)}/v1/ai`,
+          api_key: "ub_test",
+          model_id: "mock-model",
+        }),
+      },
     });
-    const catalog = await city.ai.listModels();
-    const model = catalog.get("mock-model");
-    assert.ok(model);
 
     const agent_path = await fs.mkdtemp(
       path.join(os.tmpdir(), "downcity-agent-city-model-tool-loop-"),

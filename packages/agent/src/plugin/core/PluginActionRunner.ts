@@ -1,19 +1,16 @@
 /**
- * PluginActionRunner：plugin command/action 兼容执行模块。
+ * PluginActionRunner：plugin command/action 执行模块。
  *
  * 关键点（中文）
  * - 新模型中注册即生效，不再要求 plugin 处于 running 状态。
- * - `command` 仅作为 CLI/RPC 对 action 的兼容入口；优先执行同名 action。
+ * - CLI/RPC command 优先解析为同名 action，再处理 plugin 自定义命令。
  * - 延迟调度仍复用本模块，保证 schedule 到点后走统一 action 规则。
  */
 
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
-import type {
-  PluginAction,
-  PluginActionResult,
-  PluginCommandResult,
-  PluginStateSnapshot,
-} from "@/plugin/types/Plugin.js";
+import type { PluginAction, PluginActionResult } from "@/types/plugin/PluginAction.js";
+import type { PluginCommandResult } from "@/types/plugin/PluginCommand.js";
+import type { PluginSnapshot } from "@/types/plugin/PluginState.js";
 import type { PluginActionScheduleInput } from "@/plugin/types/ActionSchedule.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import { ActionScheduleStore } from "@/plugin/core/ActionScheduleStore.js";
@@ -54,9 +51,9 @@ async function schedulePluginAction(params: {
   command: string;
   payload?: JsonValue;
   schedule: JsonValue | PluginActionScheduleInput;
-  recordSnapshot: PluginStateSnapshot;
+  recordSnapshot: PluginSnapshot;
   context: AgentContext;
-}): Promise<PluginCommandResult & { plugin?: PluginStateSnapshot }> {
+}): Promise<PluginCommandResult & { plugin?: PluginSnapshot }> {
   try {
     const scheduleInput = params.schedule as Partial<PluginActionScheduleInput>;
     const runAtMs = normalizeRunAtMsOrThrow(
@@ -102,7 +99,7 @@ export async function runPluginCommand(params: {
   payload?: JsonValue;
   schedule?: JsonValue | PluginActionScheduleInput;
   context: AgentContext;
-}): Promise<PluginCommandResult & { plugin?: PluginStateSnapshot }> {
+}): Promise<PluginCommandResult & { plugin?: PluginSnapshot }> {
   const pluginName = String(params.pluginName || "").trim();
   const command = String(params.command || "")
     .trim()

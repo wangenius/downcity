@@ -13,7 +13,7 @@ import {
   controlPluginState,
   listPluginStates,
 } from "@downcity/agent";
-import type { PluginStateControlAction } from "@downcity/agent";
+import type { PluginControlAction } from "@downcity/agent";
 import { parsePluginCommandRequestBody } from "@downcity/agent";
 import { runPluginCommand } from "@downcity/agent";
 
@@ -68,7 +68,7 @@ export function createPluginsRouter(
 
     const result = await controlPluginState({
       pluginName,
-      action: action as PluginStateControlAction,
+      action: action as PluginControlAction,
       context: options.getAgentContext(),
     });
     return c.json(result, result.success ? 200 : 400);

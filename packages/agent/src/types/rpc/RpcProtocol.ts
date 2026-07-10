@@ -16,13 +16,13 @@ import type {
   AgentArchiveSessionsResult,
   AgentCleanArchiveResult,
   AgentSessionRecordsInput,
-  AgentSessionStopResult,
   AgentSessionSystemSnapshot,
-} from "@/types/agent/AgentTypes.js";
+} from "@/types/agent/SessionTypes.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
+import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
-import type { PluginStateControlAction } from "@/plugin/types/Plugin.js";
+import type { PluginControlAction } from "@/types/plugin/PluginState.js";
 import type { ShellApprovalMode } from "@downcity/shell";
 
 /**
@@ -229,7 +229,7 @@ export type RpcRequest =
         /** plugin 名称。 */
         pluginName: string;
         /** 控制动作。 */
-        action: PluginStateControlAction;
+        action: PluginControlAction;
       };
     }
   | {

@@ -147,8 +147,6 @@ export interface PluginAction<
   execute: (params: {
     /** 当前执行上下文。 */
     context: AgentContext;
-    /** 输入 payload。 */
-    payload: P;
     /** 已通过 schema 校验后的输入。 */
     input: P;
     /** 当前插件名称。 */

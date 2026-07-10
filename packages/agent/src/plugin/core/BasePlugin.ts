@@ -8,38 +8,26 @@
  */
 
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { Plugin } from "@/types/plugin/PluginDefinition.js";
+import type { PluginActions } from "@/types/plugin/PluginAction.js";
+import type { PluginCommandContext, PluginLifecycle } from "@/types/plugin/PluginCommand.js";
 import type {
-  Plugin,
-  PluginActions,
   PluginAvailability,
-  PluginCommandContext,
   PluginConfigDefinition,
   PluginHooks,
-  PluginHttpDefinition,
-  PluginLifecycle,
   PluginResolves,
+} from "@/types/plugin/PluginRuntime.js";
+import type { PluginHttpDefinition } from "@/types/plugin/PluginHttp.js";
+import type {
   PluginSetupDefinition,
   PluginUsageDefinition,
-} from "@/plugin/types/Plugin.js";
-import type { PluginRuntimeRecord } from "@/types/plugin/PluginState.js";
+} from "@/types/plugin/PluginSetup.js";
 import type { StructuredConfig } from "@/types/runtime/agent/AgentContext.js";
 
 /**
  * BasePlugin 抽象基类。
  */
 export abstract class BasePlugin implements Plugin {
-  /**
-   * 当前实例持有的 plugin 注册状态记录。
-   */
-  public readonly pluginStateRecord: PluginRuntimeRecord = {
-    plugin: this,
-    state: "ready",
-    registered_at: Date.now(),
-    updated_at: Date.now(),
-    chain: Promise.resolve(),
-    lifecycle_started: false,
-  };
-
   /**
    * 当前 plugin 名称。
    */
@@ -90,9 +78,7 @@ export abstract class BasePlugin implements Plugin {
    */
   readonly http?: PluginHttpDefinition;
 
-  /**
-   * 生命周期兼容层。
-   */
+  /** Plugin 生命周期钩子。 */
   lifecycle?: PluginLifecycle;
 
   /**

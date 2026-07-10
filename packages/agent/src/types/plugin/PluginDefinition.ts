@@ -63,7 +63,7 @@ export interface Plugin {
   resolves?: PluginResolves;
   /** Plugin system 文本构建器（可选）。 */
   system?: (context: AgentContext) => string | Promise<string>;
-  /** 旧生命周期兼容定义（可选）。 */
+  /** Plugin 生命周期定义（可选）。 */
   lifecycle?: PluginLifecycle;
   /** Plugin 可用性检查器（可选）。 */
   availability?: (

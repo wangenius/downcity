@@ -16,22 +16,15 @@ export {
   inferAgentModelLabel,
   normalizeAgentModel,
 } from "./model/CityModelAdapter.js";
+export type { AgentModel } from "./model/CityModelAdapter.js";
 export type {
   AgentArchiveSessionInput,
   AgentArchiveSessionsInput,
   AgentArchiveSessionResult,
   AgentArchiveSessionsResult,
   AgentCleanArchiveResult,
-  AgentSessions,
-  AgentModel,
-  AgentManagedSession,
-  AgentSessionActor,
-  AgentSession,
-  AgentSessionConstructor,
   AgentCreateSessionInput,
   AgentListSessionsInput,
-  AgentOptions,
-  RemoteAgentOptions,
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
   AgentSessionRecordsInput,
@@ -46,10 +39,23 @@ export type {
   AgentSessionSystemSessionInfo,
   AgentSessionSystemSnapshot,
   AgentSessionTimelineEvent,
+} from "./types/agent/SessionTypes.js";
+export type {
+  AgentOptions,
+  AgentSessionConstructor,
+} from "./types/agent/AgentOptions.js";
+export type {
+  AgentSession,
+  AgentSessionActor,
+  AgentSessions,
+  RemoteAgentSession,
+} from "./types/agent/SessionActor.js";
+export type { AgentManagedSession } from "./types/session/SessionOptions.js";
+export type { RemoteAgentOptions } from "./types/agent/RemoteAgentOptions.js";
+export type {
   RemoteAgentPluginActionInput,
   RemoteAgentPluginActionResult,
-  RemoteAgentSession,
-} from "./types/agent/AgentTypes.js";
+} from "./types/agent/RemoteAgentPluginAction.js";
 export type {
   AgentSessionEvent,
   AgentSessionSubscriber,
@@ -280,7 +286,6 @@ export type {
 
 // Plugin 作者与控制面类型
 export type {
-  Plugin,
   PluginAction,
   PluginActionApi,
   PluginActionCommand,
@@ -290,28 +295,39 @@ export type {
   PluginActionMetadata,
   PluginActionResult,
   PluginActions,
+  PluginActionInvokeParams,
+  PluginActionInvokePort,
+  PluginActionInvokeResult,
+} from "./types/plugin/PluginAction.js";
+export type { Plugin } from "./types/plugin/PluginDefinition.js";
+export type {
+  PluginCommandResult,
+  PluginLifecycle,
+} from "./types/plugin/PluginCommand.js";
+export type {
+  AgentPlugins,
   PluginAvailability,
   PluginConfigDefinition,
   PluginEffectHook,
   PluginGuardHook,
   PluginHooks,
-  PluginHttpDefinition,
   PluginPipelineHook,
   PluginResolves,
-  AgentPlugins,
   PluginResolveHook,
+  PluginView,
+} from "./types/plugin/PluginRuntime.js";
+export type {
+  PluginHttpDefinition,
   PluginHttpRegistration,
-  PluginActionInvokeParams,
-  PluginActionInvokePort,
-  PluginActionInvokeResult,
+} from "./types/plugin/PluginHttp.js";
+export type {
   PluginSetupDefinition,
   PluginSetupField,
   PluginSetupFieldOption,
   PluginUsageDefinition,
   PluginUsageField,
   PluginUsageFieldOption,
-  PluginView,
-} from "./plugin/types/Plugin.js";
+} from "./types/plugin/PluginSetup.js";
 export type {
   PluginActionResponse,
   PluginCatalogResponse,
@@ -320,11 +336,7 @@ export type {
 } from "./plugin/types/PluginApi.js";
 
 // 主动型 plugin 与 CLI/control 协议类型
-export type {
-  PluginCommandResult,
-  PluginLifecycle,
-  PluginState,
-} from "./plugin/types/Plugin.js";
+export type { PluginState, PluginSnapshot } from "./types/plugin/PluginState.js";
 export type {
   ActionScheduleJobRecord,
   ActionScheduleJobStatus,
@@ -337,18 +349,13 @@ export type {
   PluginControlAction,
   PluginControlResponse,
   PluginStateListResponse,
-  PluginStateView,
-} from "./plugin/types/Plugins.js";
-export type {
-  PluginStateControlAction,
-  PluginStateControlResult,
-  PluginStateSnapshot,
-} from "./plugin/core/Manager.js";
+} from "./types/plugin/PluginControl.js";
+export type { PluginControlResult } from "./types/plugin/PluginState.js";
 export {
   controlPluginState,
   listPluginStates,
-  runPluginCommand,
-} from "./plugin/core/Manager.js";
+} from "./plugin/core/PluginStateController.js";
+export { runPluginCommand } from "./plugin/core/PluginActionRunner.js";
 export { parsePluginCommandRequestBody } from "./plugin/core/PluginCommandRequest.js";
 
 // 跨包 RPC 与 session 标识协议

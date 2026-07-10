@@ -9,7 +9,8 @@
 import path from "node:path";
 import type { Command } from "commander";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
-import type { Plugin, PluginAction } from "@/plugin/types/Plugin.js";
+import type { Plugin } from "@/types/plugin/PluginDefinition.js";
+import type { PluginAction } from "@/types/plugin/PluginAction.js";
 import { runLocalPluginAction } from "@/plugin/core/PluginLocalExecution.js";
 import { printResult } from "@/utils/cli/CliOutput.js";
 

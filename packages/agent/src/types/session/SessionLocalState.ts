@@ -7,7 +7,7 @@
  * - 这里只保存运行态，不承载行为逻辑。
  */
 
-import type { AgentSessionConfigSnapshot } from "@/types/agent/AgentTypes.js";
+import type { AgentSessionConfigSnapshot } from "@/types/agent/SessionTypes.js";
 
 /**
  * 本地 Session 内存状态。

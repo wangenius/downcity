@@ -15,7 +15,7 @@ import type {
 } from "@/types/agent/AgentRuntimeAssembly.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { JsonValue } from "@/types/common/Json.js";
-import type { AgentPlugins } from "@/plugin/types/Plugin.js";
+import type { AgentPlugins } from "@/types/plugin/PluginRuntime.js";
 import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import type {
   SessionMetadataV1,

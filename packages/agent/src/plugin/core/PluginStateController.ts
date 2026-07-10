@@ -8,30 +8,18 @@
 
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type {
-  PluginStateControlAction,
-  PluginStateControlResult,
-  PluginStateSnapshot,
-} from "@/plugin/types/Plugin.js";
+  PluginControlAction,
+  PluginControlResult,
+  PluginSnapshot,
+} from "@/types/plugin/PluginState.js";
 
 /**
  * 列出当前 Agent 已注册 plugin 快照。
  */
 export function listPluginStates(input?: {
   context?: AgentContext;
-}): PluginStateSnapshot[] {
+}): PluginSnapshot[] {
   return input?.context?.plugins.snapshots() || [];
-}
-
-/**
- * 判断指定 plugin 是否已注册且 ready。
- */
-export function isPluginRunning(
-  pluginName: string,
-  input?: {
-    context?: AgentContext;
-  },
-): boolean {
-  return input?.context?.plugins.status(pluginName)?.status === "ready";
 }
 
 /**
@@ -39,9 +27,9 @@ export function isPluginRunning(
  */
 export async function controlPluginState(params: {
   pluginName: string;
-  action: PluginStateControlAction;
+  action: PluginControlAction;
   context: AgentContext;
-}): Promise<PluginStateControlResult> {
+}): Promise<PluginControlResult> {
   const pluginName = String(params.pluginName || "").trim();
   if (!pluginName) {
     return {
@@ -69,41 +57,5 @@ export async function controlPluginState(params: {
   return {
     success: false,
     error: `Unsupported plugin control action: ${params.action}`,
-  };
-}
-
-/**
- * 启动当前上下文中全部已挂载 plugin。
- */
-export async function startAllPlugins(context: AgentContext): Promise<{
-  success: boolean;
-  results: PluginStateControlResult[];
-}> {
-  const snapshots = await context.plugins.startAll();
-  return {
-    success: snapshots.every((item) => item.status === "ready"),
-    results: snapshots.map((plugin) => ({
-      success: plugin.status === "ready",
-      plugin,
-      ...(plugin.last_error ? { error: plugin.last_error } : {}),
-    })),
-  };
-}
-
-/**
- * 卸载当前上下文中全部 plugin。
- */
-export async function stopAllPlugins(context: AgentContext): Promise<{
-  success: boolean;
-  results: PluginStateControlResult[];
-}> {
-  const snapshots = context.plugins.snapshots();
-  await context.plugins.unregisterAll();
-  return {
-    success: true,
-    results: snapshots.map((plugin) => ({
-      success: true,
-      plugin,
-    })),
   };
 }

@@ -13,7 +13,7 @@ import type {
   SessionMessageRecordV1,
 } from "@/executor/types/SessionRecords.js";
 import { persistAssistantResult } from "@/executor/messages/AssistantResultPersistence.js";
-import type { AgentSessionConfigSnapshot } from "@/types/agent/AgentTypes.js";
+import type { AgentSessionConfigSnapshot } from "@/types/agent/SessionTypes.js";
 import {
   readSessionMetadata,
   writeSessionMetadata,

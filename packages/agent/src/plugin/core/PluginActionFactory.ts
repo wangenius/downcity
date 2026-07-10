@@ -66,8 +66,6 @@ export interface CreatePluginActionOptions<
     context: AgentContext;
     /** 已通过 schema 校验后的输入。 */
     input: P;
-    /** 兼容旧命名的 payload。 */
-    payload: P;
     /** 当前插件名称。 */
     pluginName: string;
     /** 当前 Action 名称。 */
@@ -99,7 +97,7 @@ export interface CreatePluginOptions<TActions extends PluginActions> {
   resolves?: PluginResolves;
   /** Plugin system 文本构建器。 */
   system?: (context: AgentContext) => string | Promise<string>;
-  /** 旧生命周期兼容定义。 */
+  /** Plugin 生命周期定义。 */
   lifecycle?: PluginLifecycle;
   /** Plugin 可用性检查。 */
   availability?: (

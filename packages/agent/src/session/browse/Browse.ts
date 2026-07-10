@@ -25,7 +25,7 @@ import type {
   AgentSessionSummary,
   AgentSessionSummaryPage,
   AgentSessionTimelineEvent,
-} from "@/types/agent/AgentTypes.js";
+} from "@/types/agent/SessionTypes.js";
 import type {
   SessionActionRecordV1,
   SessionRecordV1,
@@ -37,7 +37,7 @@ import {
   is_session_message_record,
 } from "@/executor/types/SessionRecords.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
-import { resolveSessionMessagePreview } from "@/session/preview/SessionMessagePreview.js";
+import { resolve_session_message_preview } from "@/session/preview/SessionMessagePreview.js";
 import { getSdkAgentSessionMessagesPath } from "@/session/storage/Paths.js";
 import { getSdkAgentSessionMetaPath } from "@/session/storage/Paths.js";
 import { getSdkAgentSessionsRootDirPath } from "@/session/storage/Paths.js";
@@ -220,7 +220,7 @@ function toActionTimelineEvent(
     id: `${String(message.id || "")}:0`,
     role: "action",
     ...(typeof metadata?.ts === "number" ? { ts: metadata.ts } : {}),
-    text: resolveSessionMessagePreview(message),
+    text: resolve_session_message_preview(message),
     actionTitle: message.title,
     ...(message.description ? { actionDescription: message.description } : {}),
     actionState: message.state,
@@ -243,7 +243,7 @@ export function toSessionTimelineEvents(
       toTimelineEvent({
         message,
         role: message.role === "user" ? "user" : "assistant",
-        text: resolveSessionMessagePreview(message),
+        text: resolve_session_message_preview(message),
         sequence: 0,
       }),
     ];
@@ -309,7 +309,7 @@ export function toSessionTimelineEvents(
       toTimelineEvent({
         message,
         role: "assistant",
-        text: resolveSessionMessagePreview(message),
+        text: resolve_session_message_preview(message),
         sequence: 0,
       }),
     );
@@ -427,7 +427,7 @@ export function buildSessionInfo(
   const messages = input.messages;
   const previewText = messages && messages.length > 0
     ? truncateText(
-        resolveSessionMessagePreview(messages[messages.length - 1]),
+        resolve_session_message_preview(messages[messages.length - 1]),
         180,
       )
     : input.metadata.previewText;
@@ -493,7 +493,7 @@ async function resolve_session_summary_metadata(input: {
   const messages = await loadSessionMessagesFromPath(input.messagesPath);
   const last_message = messages[messages.length - 1];
   const preview_text = last_message
-    ? truncateText(resolveSessionMessagePreview(last_message), 180)
+    ? truncateText(resolve_session_message_preview(last_message), 180)
     : "";
   const { previewText: _previous_preview, ...metadata_without_preview } = input.metadata;
   void _previous_preview;

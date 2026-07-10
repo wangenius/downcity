@@ -8,7 +8,7 @@
  */
 
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
-import type { AgentSessionSystemBlock } from "@/types/agent/AgentTypes.js";
+import type { AgentSessionSystemBlock } from "@/types/agent/SessionTypes.js";
 import { DEFAULT_SHIP_PROMPTS } from "@executor/composer/system/default/SystemDomain.js";
 
 /**

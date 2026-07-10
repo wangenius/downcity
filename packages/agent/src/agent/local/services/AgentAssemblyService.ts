@@ -11,8 +11,8 @@ import type { LanguageModel, Tool } from "ai";
 import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
-import type { AgentPlugins } from "@/plugin/types/Plugin.js";
-import type { AgentOptions } from "@/types/agent/AgentTypes.js";
+import type { AgentPlugins } from "@/types/plugin/PluginRuntime.js";
+import type { AgentOptions } from "@/types/agent/AgentOptions.js";
 import { Logger } from "@/utils/logger/Logger.js";
 import { loadDowncityConfig, resolveAgentEnv } from "@/config/Config.js";
 import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
@@ -30,7 +30,7 @@ import {
 import {
   createPluginTools,
 } from "@executor/tools/plugin/PluginToolDefinition.js";
-import type { AgentManagedSession } from "@/types/agent/AgentTypes.js";
+import type { AgentManagedSession } from "@/types/session/SessionOptions.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 

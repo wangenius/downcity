@@ -7,11 +7,8 @@
  * - Agent 的视角只有“传入的 plugin”，目录视图和可用性检查都从这些实例推导。
  */
 
-import type {
-  Plugin,
-  PluginAvailability,
-  PluginView,
-} from "@/plugin/types/Plugin.js";
+import type { Plugin } from "@/types/plugin/PluginDefinition.js";
+import type { PluginAvailability, PluginView } from "@/types/plugin/PluginRuntime.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 
 /**

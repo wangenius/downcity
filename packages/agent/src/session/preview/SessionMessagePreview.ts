@@ -73,8 +73,3 @@ export function resolve_session_message_preview(
   const user_visible = pickLastSuccessfulChatSendText(message).trim();
   return user_visible || extract_assistant_tool_summary(message);
 }
-
-/**
- * 兼容现有 SDK 导出命名。
- */
-export const resolveSessionMessagePreview = resolve_session_message_preview;

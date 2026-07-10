@@ -302,7 +302,7 @@ test("PluginRegistry keeps plugin ready after action business failure", async ()
     payload: { name: "missing" },
   });
   assert.equal(failed.success, false);
-  assert.equal(registry.status("skill").state, "ready");
+  assert.equal(registry.status("skill").status, "ready");
 
   const retry = await registry.runAction({
     plugin: "skill",
@@ -311,5 +311,5 @@ test("PluginRegistry keeps plugin ready after action business failure", async ()
   });
   assert.equal(retry.success, true);
   assert.equal(retry.data.loaded, true);
-  assert.equal(registry.status("skill").state, "ready");
+  assert.equal(registry.status("skill").status, "ready");
 });

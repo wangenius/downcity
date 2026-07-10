@@ -17,12 +17,10 @@ import {
 } from "@/agent/local/AgentRuntimeAssembly.js";
 import { createFallbackSdkConfig } from "@/agent/local/AgentInstructions.js";
 import type { JsonValue } from "@/types/common/Json.js";
-import type {
-  Plugin,
-  PluginActionResult,
-  PluginAvailability,
-  PluginCommandContext,
-} from "@/plugin/types/Plugin.js";
+import type { Plugin } from "@/types/plugin/PluginDefinition.js";
+import type { PluginActionResult } from "@/types/plugin/PluginAction.js";
+import type { PluginCommandContext } from "@/types/plugin/PluginCommand.js";
+import type { PluginAvailability } from "@/types/plugin/PluginRuntime.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 
@@ -155,7 +153,6 @@ export async function runLocalPluginAction(params: {
       : payload;
     return await action.execute({
       context: context as unknown as AgentContext,
-      payload: input_payload,
       input: input_payload,
       pluginName: plugin.name,
       actionName,

@@ -19,21 +19,22 @@ import type {
   AgentSessionRecordsInput,
   AgentSessionRecordsPage,
   AgentSessionInfo,
-  AgentSessionStopResult,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
-} from "@/types/agent/AgentTypes.js";
+} from "@/types/agent/SessionTypes.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { JsonObject } from "@/types/common/Json.js";
+import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type {
   PluginActionResult,
-  PluginAvailability,
-  PluginCommandResult,
-  PluginStateControlAction,
-  PluginStateControlResult,
-  PluginStateSnapshot,
-  PluginView,
-} from "@/plugin/types/Plugin.js";
+} from "@/types/plugin/PluginAction.js";
+import type { PluginCommandResult } from "@/types/plugin/PluginCommand.js";
+import type { PluginAvailability, PluginView } from "@/types/plugin/PluginRuntime.js";
+import type {
+  PluginControlAction,
+  PluginControlResult,
+  PluginSnapshot,
+} from "@/types/plugin/PluginState.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type {
@@ -347,8 +348,8 @@ export class RpcClient {
   /**
    * 列出 Agent runtime 内 plugin 状态。
    */
-  async list_internal_plugin_states(): Promise<PluginStateSnapshot[]> {
-    const data = await this.request<{ plugins: PluginStateSnapshot[] }>({
+  async list_internal_plugin_states(): Promise<PluginSnapshot[]> {
+    const data = await this.request<{ plugins: PluginSnapshot[] }>({
       method: "internal.plugins.list",
     });
     return Array.isArray(data.plugins) ? data.plugins : [];
@@ -359,9 +360,9 @@ export class RpcClient {
    */
   async control_internal_plugin(params: {
     plugin_name: string;
-    action: PluginStateControlAction;
-  }): Promise<PluginStateControlResult> {
-    return await this.request<PluginStateControlResult>({
+    action: PluginControlAction;
+  }): Promise<PluginControlResult> {
+    return await this.request<PluginControlResult>({
       method: "internal.plugins.control",
       params: {
         pluginName: params.plugin_name,
@@ -378,8 +379,8 @@ export class RpcClient {
     command: string;
     payload?: JsonValue;
     schedule?: JsonValue;
-  }): Promise<PluginCommandResult & { plugin?: PluginStateSnapshot }> {
-    return await this.request<PluginCommandResult & { plugin?: PluginStateSnapshot }>({
+  }): Promise<PluginCommandResult & { plugin?: PluginSnapshot }> {
+    return await this.request<PluginCommandResult & { plugin?: PluginSnapshot }>({
       method: "internal.plugins.command",
       params: {
         pluginName: params.plugin_name,

@@ -14,8 +14,8 @@ import type {
   AgentSessionInfo,
   AgentSessionSetInput,
   AgentSessionSystemSnapshot,
-  RemoteAgentSession,
-} from "@/types/agent/AgentTypes.js";
+} from "@/types/agent/SessionTypes.js";
+import type { RemoteAgentSession } from "@/types/agent/SessionActor.js";
 import { isAgentSessionPromptInputEmpty } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type {

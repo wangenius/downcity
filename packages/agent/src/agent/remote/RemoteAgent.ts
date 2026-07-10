@@ -16,12 +16,13 @@ import type {
   AgentCreateSessionInput,
   AgentListSessionsInput,
   AgentSessionSummaryPage,
-  AgentSessions,
+} from "@/types/agent/SessionTypes.js";
+import type { AgentSessions, RemoteAgentSession } from "@/types/agent/SessionActor.js";
+import type { RemoteAgentOptions } from "@/types/agent/RemoteAgentOptions.js";
+import type {
   RemoteAgentPluginActionInput,
   RemoteAgentPluginActionResult,
-  RemoteAgentOptions,
-  RemoteAgentSession,
-} from "@/types/agent/AgentTypes.js";
+} from "@/types/agent/RemoteAgentPluginAction.js";
 import type {
   ShellApprovalMode,
   ShellApprovalDecisionResult,

@@ -19,14 +19,13 @@ import type {
   AgentArchiveSessionsResult,
   AgentCleanArchiveResult,
   AgentListSessionsInput,
-  AgentManagedSession,
-  AgentModel,
-  AgentSession,
-  AgentSessions as AgentSessionsApi,
-  AgentSessionConstructor,
   AgentSessionSummaryPage,
   AgentSessionSystemBlock,
-} from "@/types/agent/AgentTypes.js";
+} from "@/types/agent/SessionTypes.js";
+import type { AgentModel } from "@/model/CityModelAdapter.js";
+import type { AgentSessionConstructor } from "@/types/agent/AgentOptions.js";
+import type { AgentSession, AgentSessions as AgentSessionsApi } from "@/types/agent/SessionActor.js";
+import type { AgentManagedSession } from "@/types/session/SessionOptions.js";
 import { Session } from "@/session/Session.js";
 import {
   getSdkAgentArchivedSessionDirPath,

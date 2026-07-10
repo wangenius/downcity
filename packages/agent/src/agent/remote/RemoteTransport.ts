@@ -20,12 +20,14 @@ import type {
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
-  AgentSessionStopResult,
+} from "@/types/agent/SessionTypes.js";
+import type {
   RemoteAgentPluginActionInput,
   RemoteAgentPluginActionResult,
-} from "@/types/agent/AgentTypes.js";
+} from "@/types/agent/RemoteAgentPluginAction.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
+import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type {
   ShellApprovalMode,
   ShellApprovalDecisionResult,

@@ -14,7 +14,7 @@ import type { JsonValue } from "@/types/common/Json.js";
 import type { PluginActionResult } from "@/types/plugin/PluginAction.js";
 import type { PluginActionExample } from "@/types/plugin/PluginAction.js";
 import type { Plugin } from "@/types/plugin/PluginDefinition.js";
-import type { AgentSessionSystemBlock } from "@/types/agent/AgentTypes.js";
+import type { AgentSessionSystemBlock } from "@/types/agent/SessionTypes.js";
 import type { PluginSnapshot } from "@/types/plugin/PluginState.js";
 
 /**

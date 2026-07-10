@@ -12,7 +12,7 @@ import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
 import type {
   AgentSessionSystemBlock,
   AgentSessionSystemSessionInfo,
-} from "@/types/agent/AgentTypes.js";
+} from "@/types/agent/SessionTypes.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 
 /**

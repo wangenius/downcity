@@ -10,12 +10,10 @@
 import type { Tool } from "ai";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
-import type { AgentPlugins } from "@/plugin/types/Plugin.js";
-import type {
-  AgentModel,
-  AgentOptions,
-  AgentSessions as AgentSessionsApi,
-} from "@/types/agent/AgentTypes.js";
+import type { AgentPlugins } from "@/types/plugin/PluginRuntime.js";
+import type { AgentModel } from "@/model/CityModelAdapter.js";
+import type { AgentOptions } from "@/types/agent/AgentOptions.js";
+import type { AgentSessions as AgentSessionsApi } from "@/types/agent/SessionActor.js";
 import type {
   ShellApprovalMode,
   ShellApprovalDecisionResult,

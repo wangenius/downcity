@@ -6,7 +6,7 @@
  * - 所有会泄漏上下文的字段都必须在这里截断或抽象。
  */
 
-import type { PluginStateSnapshot } from "@downcity/agent";
+import type { PluginSnapshot } from "@downcity/agent";
 import type { TaskListResponse } from "@/task/types/TaskCommand.js";
 import type { WorkboardSessionSummary } from "@/workboard/runtime/SessionSummary.js";
 import type {
@@ -181,11 +181,11 @@ export function toWorkboardSummary(params: {
 export function toWorkboardSignals(params: {
   currentCount: number;
   recentCount: number;
-  plugins: PluginStateSnapshot[];
+  plugins: PluginSnapshot[];
   taskResult: TaskListResponse;
 }): WorkboardSignalItem[] {
   const degradedCount = params.plugins.filter(
-    (item) => String(item.state) !== "ready",
+    (item) => item.status !== "ready",
   ).length;
   const taskCount = Array.isArray(params.taskResult.tasks) ? params.taskResult.tasks.length : 0;
 

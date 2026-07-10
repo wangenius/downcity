@@ -9,16 +9,16 @@
 
 import { toPluginView } from "@/plugin/core/PluginCatalog.js";
 import type { HookRegistry } from "@/plugin/core/HookRegistry.js";
+import type { Plugin } from "@/types/plugin/PluginDefinition.js";
+import type { PluginActionResult } from "@/types/plugin/PluginAction.js";
 import type {
-  Plugin,
-  PluginActionResult,
   AgentPlugins,
   PluginAvailability,
   PluginActionReadView,
   PluginReadView,
   PluginView,
-} from "@/plugin/types/Plugin.js";
-import type { AgentSessionSystemBlock } from "@/types/agent/AgentTypes.js";
+} from "@/types/plugin/PluginRuntime.js";
+import type { AgentSessionSystemBlock } from "@/types/agent/SessionTypes.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type {
@@ -56,11 +56,9 @@ function to_plugin_snapshot(record: PluginRuntimeRecord): PluginSnapshot {
     title: String(plugin.title || plugin.name || "").trim(),
     description: String(plugin.description || "").trim(),
     status: record.state,
-    state: record.state,
     registered_at: record.registered_at,
     updated_at: record.updated_at,
-    updatedAt: record.updated_at,
-    ...(last_error ? { last_error, lastError: last_error } : {}),
+    ...(last_error ? { last_error } : {}),
   };
 }
 
@@ -520,7 +518,6 @@ export class PluginRegistry implements AgentPlugins {
       }
       const result = await action.execute({
         context: this.contextResolver(),
-        payload: parsed_payload.input,
         input: parsed_payload.input,
         pluginName: record.plugin.name,
         actionName,

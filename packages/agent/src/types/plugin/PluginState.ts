@@ -46,40 +46,23 @@ export interface PluginSnapshot {
   description: string;
   /** 当前注册后的可用状态。 */
   status: PluginState;
-  /** 兼容旧字段的状态别名。 */
-  state: PluginState;
   /** 注册时间（毫秒时间戳）。 */
   registered_at: number;
   /** 最近更新时间（毫秒时间戳）。 */
   updated_at: number;
-  /** 兼容旧字段的最近更新时间。 */
-  updatedAt: number;
   /** 最近错误。 */
   last_error?: string;
-  /** 兼容旧字段的最近错误。 */
-  lastError?: string;
 }
 
 /**
- * 兼容旧名称的 plugin 快照类型。
+ * Plugin 控制动作。
  */
-export type PluginStateSnapshot = PluginSnapshot;
-
-/**
- * 兼容旧控制动作类型。
- *
- * 说明（中文）
- * - 控制面只保留状态查询与卸载。
- */
-export type PluginStateControlAction =
-  | "register"
-  | "unregister"
-  | "status";
+export type PluginControlAction = "unregister" | "status";
 
 /**
  * plugin 控制结果。
  */
-export interface PluginStateControlResult {
+export interface PluginControlResult {
   /** 控制动作是否成功。 */
   success: boolean;
   /** 成功或失败后返回的最新 plugin 快照。 */

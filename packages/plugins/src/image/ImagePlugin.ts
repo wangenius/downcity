@@ -711,12 +711,12 @@ export class ImagePlugin extends BasePlugin {
           },
         },
       ],
-      execute: async ({ context, payload }: { context: AgentContext; payload: JsonValue }) => {
+      execute: async ({ context, input }: { context: AgentContext; input: JsonValue }) => {
         try {
-          const input = normalize_image_payload(payload);
+          const normalized_payload = normalize_image_payload(input);
           const normalized_input = await apply_default_image_model(
             context,
-            await normalize_image_create_input(context, input),
+            await normalize_image_create_input(context, normalized_payload),
             this.default_model,
           );
           const created = await this.image_create(normalized_input);
@@ -782,15 +782,15 @@ export class ImagePlugin extends BasePlugin {
           },
         },
       ],
-      execute: async ({ payload }: { payload: JsonValue }) => {
+      execute: async ({ input }: { input: JsonValue }) => {
         try {
-          const input = normalize_image_result_payload(payload);
-          const current = await this.read_image_result(input);
+          const normalized_input = normalize_image_result_payload(input);
+          const current = await this.read_image_result(normalized_input);
           if (current.status === "failed") {
             return {
               success: false,
               data: current as unknown as JsonObject,
-              error: current.error ?? current.message ?? input.job_id,
+              error: current.error ?? current.message ?? normalized_input.job_id,
               message: current.error ?? current.message ?? "image job failed",
             };
           }

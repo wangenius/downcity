@@ -12,7 +12,7 @@ import type {
   PluginGuardHook,
   PluginPipelineHook,
   PluginResolveHook,
-} from "@/plugin/types/Plugin.js";
+} from "@/types/plugin/PluginRuntime.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 
 type ContextResolver = () => AgentContext;

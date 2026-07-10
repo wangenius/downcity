@@ -26,7 +26,7 @@ import type { JsonlSessionHistoryStore } from "@/executor/store/history/jsonl/Js
 import type {
   AgentSessionConfigSnapshot,
   AgentSessionSetInput,
-} from "@/types/agent/AgentTypes.js";
+} from "@/types/agent/SessionTypes.js";
 import type {
   AgentSessionEvent,
 } from "@/types/sdk/AgentSessionEvent.js";

@@ -24,10 +24,10 @@ import type {
   AgentSessionRecordsInput,
   AgentSessionRecordsPage,
   AgentSessionInfo,
-  AgentSession,
   AgentSessionSystemBlock,
   AgentSessionSystemSnapshot,
-} from "@/types/agent/AgentTypes.js";
+} from "@/types/agent/SessionTypes.js";
+import type { AgentSession } from "@/types/agent/SessionActor.js";
 import type { SessionRecordV1 } from "@/executor/types/SessionRecords.js";
 import { SessionStateService } from "@/session/services/SessionStateService.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";

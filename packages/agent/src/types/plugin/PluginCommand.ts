@@ -71,11 +71,10 @@ export interface PluginCommandResult {
 }
 
 /**
- * Plugin 生命周期兼容定义。
+ * Plugin 生命周期定义。
  *
  * 关键点（中文）
- * - 这是从旧运行生命周期过渡过来的兼容层。
- * - 新代码优先直接实现 `start/stop/command`。
+ * - 生命周期只描述 plugin 启动、停止和非 action 命令处理。
  */
 export interface PluginLifecycle {
   /** plugin 启动钩子。 */

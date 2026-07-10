@@ -12,7 +12,6 @@ import type { Tool } from "ai";
 import { JsonlSessionHistoryComposer } from "@executor/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 import { JsonlSessionHistoryStore } from "@/executor/store/history/jsonl/JsonlSessionHistoryStore.js";
 import type {
-  AgentSession,
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
   AgentSessionRecordsInput,
@@ -21,7 +20,8 @@ import type {
   AgentSessionSetInput,
   AgentSessionSystemBlock,
   AgentSessionSystemSnapshot,
-} from "@/types/agent/AgentTypes.js";
+} from "@/types/agent/SessionTypes.js";
+import type { AgentSession } from "@/types/agent/SessionActor.js";
 import {
   getSdkAgentSessionArchiveDirPath,
   getSdkAgentSessionDirPath,

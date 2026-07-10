@@ -9,7 +9,7 @@
 
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { ActionScheduleStore } from "@/plugin/core/ActionScheduleStore.js";
-import { runPluginCommand } from "@/plugin/core/Manager.js";
+import { runPluginCommand } from "@/plugin/core/PluginActionRunner.js";
 
 /**
  * 执行当前已到点的 pending 任务。

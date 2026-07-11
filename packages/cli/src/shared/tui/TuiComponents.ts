@@ -11,6 +11,7 @@ import {
   Input,
   Key,
   matchesKey,
+  visibleWidth,
   type Component,
   type Focusable,
 } from "@earendil-works/pi-tui";
@@ -33,8 +34,9 @@ import {
 
 const BORDER = "─";
 const POINTER = "❯";
-const LIST_HINT_MAX_WIDTH = 28;
-const DETAIL_PREVIEW_LINES = 2;
+const LIST_HINT_MIN_WIDTH = 12;
+const LIST_HINT_MAX_WIDTH = 80;
+const DETAIL_PREVIEW_LINES = 4;
 
 /**
  * TUI 组件完成回调。
@@ -234,9 +236,10 @@ export class TuiDashboardComponent implements Component, Focusable {
       const title = selected
         ? current_theme.bold_fg("primary", item_title)
         : current_theme.fg("text", item_title);
-      const subtitle = format_list_hint(item.subtitle, width);
+      const prefix = `${marker} ${title}`;
+      const subtitle = format_list_hint(item.subtitle, width, visibleWidth(prefix));
       const suffix = subtitle ? current_theme.dim_fg("textMuted", ` ${subtitle}`) : "";
-      return tui_truncate(`${marker} ${title}${suffix}`, width);
+      return tui_truncate(`${prefix}${suffix}`, width);
     });
   }
 
@@ -758,10 +761,12 @@ function format_list_text(text: string): string {
   return tui_compact_line(text);
 }
 
-function format_list_hint(text: string | undefined, width: number): string {
+function format_list_hint(text: string | undefined, width: number, used_width = 0): string {
   const compact = tui_compact_line(text ?? "");
   if (!compact) return "";
-  const max_width = Math.max(12, Math.min(LIST_HINT_MAX_WIDTH, Math.floor(width * 0.32)));
+  const available = Math.max(0, width - used_width - 1);
+  if (available < LIST_HINT_MIN_WIDTH) return "";
+  const max_width = Math.max(LIST_HINT_MIN_WIDTH, Math.min(LIST_HINT_MAX_WIDTH, available));
   return tui_truncate(compact, max_width);
 }
 

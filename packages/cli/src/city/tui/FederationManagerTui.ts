@@ -7,7 +7,7 @@
  * - 格式化与提示仍拆在 FederationManagerFormat.ts 与 FederationManagerPrompts.ts。
  */
 
-import { Key, matchesKey, type Component, type Focusable } from "@earendil-works/pi-tui";
+import { Key, matchesKey, visibleWidth, type Component, type Focusable } from "@earendil-works/pi-tui";
 import { ManagedTuiRuntime } from "@/shared/tui/ManagedTuiRuntime.js";
 import { current_theme } from "@/city/agent/tui/theme/index.js";
 import {
@@ -41,8 +41,9 @@ import type { tui_list_item } from "@/city/types/Tui.js";
 
 const BORDER = "─";
 const POINTER = "❯";
-const DETAIL_PREVIEW_LINES = 2;
-const LIST_HINT_MAX_WIDTH = 28;
+const DETAIL_PREVIEW_LINES = 4;
+const LIST_HINT_MIN_WIDTH = 12;
+const LIST_HINT_MAX_WIDTH = 80;
 
 /**
  * 打开 City Federation 管理 TUI。
@@ -258,9 +259,10 @@ class CityManagerComponent implements Component, Focusable {
       const title = selected
         ? current_theme.bold_fg("primary", item_title)
         : current_theme.fg("text", item_title);
-      const item_subtitle = format_list_hint(item.subtitle, width);
+      const prefix = `${marker} ${title}`;
+      const item_subtitle = format_list_hint(item.subtitle, width, visibleWidth(prefix));
       const subtitle = item_subtitle ? current_theme.dim_fg("textMuted", ` ${item_subtitle}`) : "";
-      return tui_truncate(`${marker} ${title}${subtitle}`, width);
+      return tui_truncate(`${prefix}${subtitle}`, width);
     });
   }
 
@@ -290,10 +292,12 @@ function format_list_text(text: string): string {
   return tui_compact_line(text);
 }
 
-function format_list_hint(text: string | undefined, width: number): string {
+function format_list_hint(text: string | undefined, width: number, used_width = 0): string {
   const compact = tui_compact_line(text ?? "");
   if (!compact) return "";
-  const max_width = Math.max(12, Math.min(LIST_HINT_MAX_WIDTH, Math.floor(width * 0.32)));
+  const available = Math.max(0, width - used_width - 1);
+  if (available < LIST_HINT_MIN_WIDTH) return "";
+  const max_width = Math.max(LIST_HINT_MIN_WIDTH, Math.min(LIST_HINT_MAX_WIDTH, available));
   return tui_truncate(compact, max_width);
 }
 

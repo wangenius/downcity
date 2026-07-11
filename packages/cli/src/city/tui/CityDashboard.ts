@@ -203,7 +203,10 @@ function section_item(id: string, title: string): tui_list_item {
 
 function read_city_cli_version(): string {
   try {
-    const package_json_path = new URL("../../package.json", import.meta.url);
+    // 文件位于 packages/cli/src/city/tui/CityDashboard.ts，
+    // 构建后位于 packages/cli/bin/city/tui/CityDashboard.js，
+    // 因此 ../../../package.json 始终指向 CLI 包根目录的 package.json。
+    const package_json_path = new URL("../../../package.json", import.meta.url);
     const package_json = JSON.parse(readFileSync(package_json_path, "utf8")) as {
       version?: string;
     };

@@ -2,10 +2,9 @@
  * 状态栏组件。
  *
  * 关键点（中文）
- * - 不展示 agent / session 标题，避免与终端标题重复。
- * - 执行中渲染单行 “{braille 动画帧} {status_text}”，与 Kimi Code 的活动指示器一致。
+ * - 始终渲染一行持久 header：`{session_title} · {session_id}`。
+ * - 执行中在 header 下方继续渲染 “{braille 动画帧} {status_text}” 活动指示器。
  * - 自驱动 braille 动画：执行态启动定时器逐帧推进并请求重绘，空闲态停止。
- * - 空闲时返回空数组，不占用消息区域空间。
  * - 超出宽度时截断。
  */
 
@@ -65,7 +64,11 @@ export class StatusLineComponent implements Component {
   }
 
   /**
-   * 渲染状态栏。空闲时不占用空间，仅在执行态返回一行动画状态提示。
+   * 渲染状态栏。
+   *
+   * 关键点（中文）
+   * - 第一行永远是 session header（title + sessionId）。
+   * - 执行中在 header 下方追加 braille 动画状态行。
    *
    * @param width 可用宽度。
    * @returns 渲染后的行数组。
@@ -76,18 +79,35 @@ export class StatusLineComponent implements Component {
       return [""];
     }
 
-    if (!this.is_active()) {
-      return [];
+    const lines: string[] = [this.build_header(safe_width)];
+
+    if (this.is_active()) {
+      // 对齐 Kimi Code 的 composing 活动指示器：
+      // - 仅 braille 帧染主色，标签保持默认色（MoonLoader 的 colorFn 只作用于帧）。
+      // - 左侧缩进 1 列（MoonLoader 的 padding）。
+      const frame = BRAILLE_SPINNER_FRAMES[this.spinner_frame] ?? BRAILLE_SPINNER_FRAMES[0];
+      const colored_frame = current_theme.fg("primary", frame);
+      const label = `${colored_frame} ${this.app_state.status_text}`;
+      const text_lines = new Text(label, 1, 0).render(safe_width);
+      for (const line of text_lines) {
+        lines.push(truncateToWidth(line, safe_width, "…"));
+      }
     }
 
-    // 对齐 Kimi Code 的 composing 活动指示器：
-    // - 仅 braille 帧染主色，标签保持默认色（MoonLoader 的 colorFn 只作用于帧）。
-    // - 指示器上方留 1 行空白（ActivityPane 的 Spacer(1)），左侧缩进 1 列（MoonLoader 的 padding）。
-    const frame = BRAILLE_SPINNER_FRAMES[this.spinner_frame] ?? BRAILLE_SPINNER_FRAMES[0];
-    const colored_frame = current_theme.fg("primary", frame);
-    const label = `${colored_frame} ${this.app_state.status_text}`;
-    const text_lines = new Text(label, 1, 0).render(safe_width);
-    return ["", ...text_lines.map((line) => truncateToWidth(line, safe_width, "…"))];
+    return lines;
+  }
+
+  /**
+   * 构建持久 session header。
+   *
+   * @param width 可用宽度。
+   * @returns 截断后的 header 行。
+   */
+  private build_header(width: number): string {
+    const title = this.app_state.session_title?.trim() || "Untitled";
+    const session_id = this.app_state.session_id;
+    const raw = `${title} · ${session_id}`;
+    return truncateToWidth(current_theme.dim_fg("textMuted", raw), width, "…");
   }
 
   /**

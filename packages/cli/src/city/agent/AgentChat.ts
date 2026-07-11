@@ -24,6 +24,8 @@ import {
   runOneShotChat,
   runSdkPromptTurn,
 } from "@/city/agent/AgentChatHelpers.js";
+import { timeline_events_to_entries } from "@/city/agent/tui/history/HistoryLoader.js";
+import type { AgentSessionTimelineEvent } from "@downcity/agent";
 
 /**
  * `city agent chat` 统一入口。
@@ -101,6 +103,19 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
         await createRemoteChatSession({
           remote_agent: interactive.remote_agent,
         }),
+      load_session_history: async (session_id) => {
+        const session = await interactive.remote_agent.sessions.get(session_id);
+        const records = await session.records({
+          view: "timeline",
+          order: "asc",
+          limit: 200,
+        });
+        const title = records.session.title?.trim() || "Untitled";
+        const entries = timeline_events_to_entries(
+          records.items as AgentSessionTimelineEvent[],
+        );
+        return { title, entries };
+      },
       approve: async (approval_id) =>
         await interactive.remote_agent.approve({ approval_id }),
       deny: async (approval_id) =>

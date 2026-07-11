@@ -134,6 +134,15 @@ export interface AppState {
   /** 当前 session id。 */
   session_id: string;
 
+  /**
+   * 当前 session 可读标题。
+   *
+   * 关键点（中文）
+   * - 由远程 session 的 `AgentSessionInfo.title` 提供。
+   * - 标题可能为空，UI 层需回退到占位文案。
+   */
+  session_title?: string;
+
   /** 是否正在等待助手回复。 */
   is_executing: boolean;
 

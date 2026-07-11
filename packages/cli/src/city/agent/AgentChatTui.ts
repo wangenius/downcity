@@ -9,6 +9,7 @@
 import { AgentChatTuiCoordinator } from "@/city/agent/tui/AgentChatTuiCoordinator.js";
 import type { AgentChatInteractiveRendererPort } from "@/city/types/AgentChatInteractive.js";
 import type { AgentChatSessionSummaryView } from "@/city/agent/AgentChatTypes.js";
+import type { TranscriptEntry } from "@/city/agent/tui/types.js";
 
 /**
  * 启动 city agent chat 的交互式 TUI。
@@ -24,6 +25,11 @@ export async function run_agent_chat_tui(params: {
   list_sessions: () => Promise<AgentChatSessionSummaryView[]>;
   /** 创建新 session。 */
   create_session: () => Promise<{ session_id: string }>;
+  /** 加载指定 session 历史。 */
+  load_session_history: (session_id: string) => Promise<{
+    title: string;
+    entries: TranscriptEntry[];
+  }>;
   /** 执行一轮对话。 */
   run_turn: (input: {
     session_id: string;
@@ -47,6 +53,7 @@ export async function run_agent_chat_tui(params: {
     session_id: params.session_id,
     list_sessions: params.list_sessions,
     create_session: params.create_session,
+    load_session_history: params.load_session_history,
     run_turn: params.run_turn,
     approve: params.approve,
     deny: params.deny,

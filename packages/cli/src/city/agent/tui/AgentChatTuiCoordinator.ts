@@ -26,7 +26,7 @@ import { ApprovalDialogComponent } from "@/city/agent/tui/dialogs/ApprovalDialog
 import { PiTuiChatRenderer } from "@/city/agent/tui/PiTuiChatRenderer.js";
 import type { AgentChatSessionSummaryView } from "@/city/agent/AgentChatTypes.js";
 import type { AgentChatInteractiveRendererPort } from "@/city/types/AgentChatInteractive.js";
-import type { AppState } from "@/city/agent/tui/types.js";
+import type { AppState, TranscriptEntry } from "@/city/agent/tui/types.js";
 import {
   dispatchSlashCommand,
   resolveSlashCommandInput,
@@ -45,6 +45,17 @@ export interface AgentChatTuiCoordinatorOptions {
   list_sessions: () => Promise<AgentChatSessionSummaryView[]>;
   /** 创建新 session。 */
   create_session: () => Promise<{ session_id: string }>;
+  /**
+   * 加载指定 session 的历史记录。
+   *
+   * 关键点（中文）
+   * - 返回可读标题与可渲染的 transcript 条目。
+   * - coordinator 在进入或切换 session 时调用。
+   */
+  load_session_history: (session_id: string) => Promise<{
+    title: string;
+    entries: TranscriptEntry[];
+  }>;
   /** 执行一轮对话。 */
   run_turn: (input: {
     session_id: string;
@@ -146,6 +157,7 @@ export class AgentChatTuiCoordinator {
     this.app_state = {
       agent_id: options.agent_id,
       session_id: options.session_id,
+      session_title: undefined,
       is_executing: false,
       status_text: "",
     };
@@ -200,6 +212,9 @@ export class AgentChatTuiCoordinator {
     this.remove_input_listener = this.tui.addInputListener((data) =>
       this.handle_global_input(data),
     );
+
+    // 先加载当前 session 历史，再把帮助提示放在最底部，避免历史被提示顶到上方。
+    await this.load_history(this.current_session_id);
 
     this.add_status_message(
       "Type /help for shortcuts · /session · /new · /clear · /quit",
@@ -464,7 +479,7 @@ export class AgentChatTuiCoordinator {
         if (result.kind === "create") {
           void this.create_new_session();
         } else if (result.sessionId) {
-          this.switch_session(result.sessionId);
+          void this.switch_session(result.sessionId);
         }
       },
       on_cancel: () => {
@@ -503,7 +518,7 @@ export class AgentChatTuiCoordinator {
 
     try {
       const created = await this.options.create_session();
-      this.switch_session(created.session_id);
+      await this.switch_session(created.session_id);
     } catch (error) {
       this.add_error_message(this.format_error(error));
       this.request_render();
@@ -515,14 +530,38 @@ export class AgentChatTuiCoordinator {
    *
    * @param session_id 目标 session id。
    */
-  private switch_session(session_id: string): void {
+  private async switch_session(session_id: string): Promise<void> {
     this.current_session_id = session_id;
     this.app_state.session_id = session_id;
+    this.app_state.session_title = undefined;
     this.status_line.set_state(this.app_state);
     this.terminal.setTitle(this.build_title());
     this.message_list.clear();
+
+    await this.load_history(session_id);
+
     this.add_status_message(`Agent chat · ${this.app_state.agent_id} · ${session_id}`);
     this.request_render();
+  }
+
+  /**
+   * 加载指定 session 的历史记录并更新标题。
+   *
+   * @param session_id 目标 session id。
+   */
+  private async load_history(session_id: string): Promise<void> {
+    try {
+      const { title, entries } = await this.options.load_session_history(session_id);
+      this.app_state.session_title = title;
+      this.status_line.set_state(this.app_state);
+      this.terminal.setTitle(this.build_title());
+      for (const entry of entries) {
+        this.message_list.add_entry(entry);
+      }
+      this.message_list.scroll_to_bottom();
+    } catch (error) {
+      this.add_error_message(`Failed to load history: ${this.format_error(error)}`);
+    }
   }
 
   /**
@@ -613,7 +652,8 @@ export class AgentChatTuiCoordinator {
    * 构建终端标题。
    */
   private build_title(): string {
-    return `Agent chat · ${this.app_state.agent_id} · ${this.current_session_id}`;
+    const title = this.app_state.session_title?.trim() || "Untitled";
+    return `Agent chat · ${this.app_state.agent_id} · ${title} · ${this.current_session_id}`;
   }
 
   /**

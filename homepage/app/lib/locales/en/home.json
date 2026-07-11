@@ -193,6 +193,7 @@
       "terms": "Terms",
       "privacy": "Privacy"
     },
-    "copyright": "© {{year}} Downcity. Open source under MIT License."
+    "copyright": "© {{year}} Downcity. Open source under Apache License 2.0.",
+    "poweredBy": "Powered by {{name}}"
   }
 }

@@ -62,7 +62,7 @@
       },
       "pricing": {
         "question": "收费模式是什么？",
-        "answer": "Downcity 是开源（MIT License）且免费使用。你只需承担你选择的大模型 API 成本，例如 OpenAI 或 DeepSeek。未来将提供带更多功能与支持的企业版本。",
+        "answer": "Downcity 是开源（Apache License 2.0）且免费使用。你只需承担你选择的大模型 API 成本，例如 OpenAI 或 DeepSeek。未来将提供带更多功能与支持的企业版本。",
         "category": "general"
       }
     },

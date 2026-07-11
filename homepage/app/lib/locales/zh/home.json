@@ -193,6 +193,7 @@
       "terms": "条款",
       "privacy": "隐私"
     },
-    "copyright": "© {{year}} Downcity。基于 MIT License 开源。"
+    "copyright": "© {{year}} Downcity。基于 Apache License 2.0 开源。",
+    "poweredBy": "由 {{name}} 驱动"
   }
 }

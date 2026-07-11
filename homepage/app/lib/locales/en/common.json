@@ -63,7 +63,7 @@
     "github": "GitHub",
     "issues": "Issues",
     "twitter": "Twitter",
-    "copyright": "© {{year}} {{productName}}. Open source under MIT License.",
+    "copyright": "© {{year}} {{productName}}. Open source under Apache License 2.0.",
     "madeWithIntent": "Made with intent"
   },
   "errors": {

@@ -93,6 +93,16 @@ export const Footer: FC = () => {
             <p className="text-xs text-text-subtle">
               {t("footer.copyright", { year: currentYear })}
             </p>
+            <p className="text-xs text-text-subtle">
+              <a
+                href="https://genesiscosmos.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-text-soft transition-colors hover:text-foreground hover:underline"
+              >
+                {t("footer.poweredBy", { name: "GenesisCosmos" })}
+              </a>
+            </p>
           </div>
 
           {/* Links columns */}

@@ -63,7 +63,7 @@
     "github": "GitHub",
     "issues": "Issues",
     "twitter": "Twitter",
-    "copyright": "© {{year}} {{productName}}。基于 MIT License 开源。",
+    "copyright": "© {{year}} {{productName}}。基于 Apache License 2.0 开源。",
     "madeWithIntent": "用心打造"
   },
   "errors": {

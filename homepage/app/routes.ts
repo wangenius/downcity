@@ -75,6 +75,7 @@ export default [
     index("routes/community._index.tsx"),
     route("faq", "routes/community.faq.tsx"),
     route("roadmap", "routes/community.roadmap.tsx"),
+    route("showcase", "routes/community.showcase.tsx"),
   ]),
   route(
     "zh/community",
@@ -85,6 +86,9 @@ export default [
       route("faq", "routes/community.faq.tsx", { id: "routes/zh/community.faq" }),
       route("roadmap", "routes/community.roadmap.tsx", {
         id: "routes/zh/community.roadmap",
+      }),
+      route("showcase", "routes/community.showcase.tsx", {
+        id: "routes/zh/community.showcase",
       }),
     ],
   ),
@@ -167,4 +171,5 @@ export default [
   route("api/payments/search", "routes/payments/search.ts"),
   route("api/plugins-docs/search", "routes/plugins-docs/search.ts"),
   route("api/ui-sdk-docs/search", "routes/ui-sdk-docs/search.ts"),
+  route("api/webcap", "routes/api.webcap.ts"),
 ] satisfies RouteConfig;

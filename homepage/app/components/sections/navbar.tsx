@@ -1,6 +1,6 @@
 "use client";
 
-import type * as React from "react";
+import * as React from "react";
 import { Link, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import {
   IconArrowUpRight,
   IconBook,
+  IconBox,
   IconBrandGithub,
   IconBrandX,
   IconCheck,
@@ -33,6 +34,7 @@ import {
   IconServer,
   IconSun,
   IconSunMoon,
+  IconTerminal,
 } from "@tabler/icons-react";
 
 /**
@@ -62,8 +64,20 @@ export function Navbar() {
   const location = useLocation();
   const isZh = i18n.language.toLowerCase().startsWith("zh");
 
+  const [scrolled, set_scrolled] = useState(false);
+  useEffect(() => {
+    const handle_scroll = () => set_scrolled(window.scrollY > 0);
+    handle_scroll();
+    window.addEventListener("scroll", handle_scroll, { passive: true });
+    return () => window.removeEventListener("scroll", handle_scroll);
+  }, []);
+
   const homePath = isZh ? "/zh" : "/";
   const productPath = isZh ? "/zh/product" : "/product";
+  const productSdkPath = isZh ? "/zh/product/sdk" : "/product/sdk";
+  const productAgentSdkPath = isZh ? "/zh/product/agent-sdk" : "/product/agent-sdk";
+  const productUiSdkPath = isZh ? "/zh/product/ui-sdk" : "/product/ui-sdk";
+  const startPath = isZh ? "/zh/start" : "/start";
   const featuresPath = isZh ? "/zh/features" : "/features";
   const docsPath = isZh ? "/zh/docs" : "/en/docs";
   const citySdkDocsPath = isZh ? "/zh/city-sdk-docs" : "/en/city-sdk-docs";
@@ -71,41 +85,47 @@ export function Navbar() {
   const pluginsDocsPath = isZh ? "/zh/plugins-docs" : "/en/plugins-docs";
   const uiSdkDocsPath = isZh ? "/zh/ui-sdk-docs" : "/en/ui-sdk-docs";
   const paymentsPath = isZh ? "/zh/payments" : "/en/payments";
+  const cliDocsPath = isZh ? "/zh/docs/cli/cli" : "/en/docs/cli/cli";
   const communityPath = isZh ? "/zh/community" : "/community";
   const faqPath = isZh ? "/zh/community/faq" : "/community/faq";
   const roadmapPath = isZh ? "/zh/community/roadmap" : "/community/roadmap";
+  const showcasePath = isZh ? "/zh/community/showcase" : "/community/showcase";
 
   const productGroup: NavGroup = {
     label: t("nav.product"),
-    activePaths: [productPath, featuresPath],
+    activePaths: [productPath, startPath, productSdkPath, productAgentSdkPath, productUiSdkPath, pluginsDocsPath, paymentsPath],
     items: [
       { label: t("nav.productOverview"), description: isZh ? "完整产品矩阵" : "Full product index", path: productPath, icon: IconLayoutDashboard },
-      { label: t("nav.productSdk"), description: isZh ? "City SDK" : "City SDK", path: productPath, icon: IconServer },
-      { label: t("nav.productAgentSdk"), description: isZh ? "Agent SDK" : "Agent SDK", path: productPath, icon: IconRobot },
-      { label: t("nav.productUiSdk"), description: isZh ? "UI SDK" : "UI SDK", path: productPath, icon: IconLayoutDashboard },
-      { label: t("nav.features"), description: isZh ? "核心能力一览" : "Core capabilities", path: featuresPath, icon: IconLayoutDashboard },
+      { label: "CLI", description: isZh ? "命令行工具" : "Command-line interface", path: startPath, icon: IconTerminal },
+      { label: "City SDK", description: isZh ? "城市运行时 SDK" : "City runtime SDK", path: productSdkPath, icon: IconServer },
+      { label: "Agent SDK", description: isZh ? "Agent 嵌入 SDK" : "Agent embedding SDK", path: productAgentSdkPath, icon: IconRobot },
+      { label: "UI SDK", description: isZh ? "UI 组件 SDK" : "UI component SDK", path: productUiSdkPath, icon: IconLayoutDashboard },
+      { label: "Plugins", description: isZh ? "插件系统" : "Plugin system", path: pluginsDocsPath, icon: IconPuzzle },
+      { label: "Services", description: isZh ? "服务与支付基础设施" : "Services & payment infrastructure", path: paymentsPath, icon: IconServer },
     ],
   };
 
   const docsGroup: NavGroup = {
     label: t("nav.docs"),
-    activePaths: [docsPath, citySdkDocsPath, agentSdkDocsPath, pluginsDocsPath, uiSdkDocsPath, paymentsPath],
+    activePaths: [docsPath, cliDocsPath, citySdkDocsPath, agentSdkDocsPath, pluginsDocsPath, uiSdkDocsPath, paymentsPath],
     items: [
-      { label: "Downcity Docs", description: isZh ? "核心文档" : "Core docs", path: docsPath, icon: IconBook },
+      { label: "Overview", description: isZh ? "核心文档" : "Core docs", path: docsPath, icon: IconBook },
+      { label: "CLI Docs", description: isZh ? "CLI 文档" : "CLI docs", path: cliDocsPath, icon: IconTerminal },
       { label: "City SDK", description: isZh ? "City SDK 文档" : "City SDK docs", path: citySdkDocsPath, icon: IconServer },
       { label: "Agent SDK", description: isZh ? "Agent SDK 文档" : "Agent SDK docs", path: agentSdkDocsPath, icon: IconRobot },
       { label: "Plugins", description: isZh ? "Plugins 文档" : "Plugins docs", path: pluginsDocsPath, icon: IconPuzzle },
       { label: "UI SDK", description: isZh ? "UI SDK 文档" : "UI SDK docs", path: uiSdkDocsPath, icon: IconLayoutDashboard },
-      { label: "Services", description: isZh ? "Services 文档" : "Services docs", path: paymentsPath, icon: IconLayoutDashboard },
+      { label: "Services Docs", description: isZh ? "Services 文档" : "Services docs", path: paymentsPath, icon: IconLayoutDashboard },
     ],
   };
 
   const communityGroup: NavGroup = {
     label: t("nav.community"),
-    activePaths: [communityPath],
+    activePaths: [communityPath, faqPath, roadmapPath, showcasePath],
     items: [
       { label: t("nav.faq"), description: isZh ? "常见问题" : "Frequently asked questions", path: faqPath, icon: IconBook },
       { label: t("nav.roadmap"), description: isZh ? "产品路线图" : "Product roadmap", path: roadmapPath, icon: IconBook },
+      { label: isZh ? "案例" : "Showcase", description: isZh ? "使用 Downcity 构建的产品" : "Products built with Downcity", path: showcasePath, icon: IconBox },
       { label: "GitHub", description: isZh ? "源码与 Issues" : "Source & issues", href: GITHUB_URL, external: true, icon: IconBrandGithub },
       { label: "X", description: isZh ? "官方账号" : "Official account", href: TWITTER_URL, external: true, icon: IconBrandX },
     ],
@@ -126,14 +146,21 @@ export function Navbar() {
     "inline-flex size-8 items-center justify-center rounded-md text-text-soft transition-colors hover:bg-foreground/[0.04] hover:text-foreground";
 
   const dropdownContentClass =
-    "rounded-[18px] border border-line bg-surface-overlay p-1.5 backdrop-blur-xl";
+    "rounded-[18px] border border-line bg-surface-overlay p-1 shadow-none backdrop-blur-xl";
   const dropdownItemClass =
-    "group relative flex items-start gap-3 rounded-lg px-3 py-2.5 text-[0.8125rem] font-medium text-foreground transition-colors hover:bg-foreground/[0.04] focus:bg-foreground/[0.04] data-[highlighted]:bg-foreground/[0.04] outline-none";
+    "group/dropdown-menu-item relative flex items-start gap-3 rounded-lg px-3 py-2 text-[0.8125rem] font-medium text-foreground outline-none transition-colors hover:!bg-surface-muted focus:!bg-surface-muted data-[highlighted]:!bg-surface-muted";
+  const dropdownItemIconClass =
+    "inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-foreground/[0.12] text-foreground";
+  const dropdownItemTitleClass =
+    "text-[0.8125rem] font-semibold text-foreground";
+  const dropdownItemDescClass =
+    "mt-1 text-[0.75rem] leading-[1.45] !text-text-soft";
+  const dropdownSeparatorClass = "bg-border -mx-1 my-1.5 h-px";
   const menuSelectItemClass =
-    "flex h-9 items-center justify-between rounded-lg px-2.5 text-[0.8125rem] font-medium text-text-soft transition-colors hover:bg-foreground/[0.04] hover:text-foreground focus:bg-foreground/[0.04] focus:text-foreground";
+    "flex h-9 items-center justify-between rounded-lg px-2.5 text-[0.8125rem] font-medium text-text-soft outline-none transition-colors hover:!bg-surface-muted hover:text-foreground focus:!bg-surface-muted focus:text-foreground data-[highlighted]:!bg-surface-muted";
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-line/60 bg-background/[0.86] backdrop-blur-[16px]">
+    <header className={cn("sticky top-0 z-50 w-full bg-background/[0.86] backdrop-blur-[16px]", scrolled && "border-b border-line/60")}>
       <div className="mx-auto flex h-[60px] max-w-[1320px] items-center justify-between gap-4 px-5 md:px-8 lg:px-20">
         <Link to={homePath} className="inline-flex items-center gap-2.5 text-[0.9375rem] font-semibold text-foreground">
           <img src="/icon.svg" alt="Downcity" className="brand-logo block h-6 w-6 shrink-0 object-contain" />
@@ -144,13 +171,14 @@ export function Navbar() {
           {groups.map((group) => {
             const active = isAnyActive(group.activePaths);
             return (
-              <DropdownMenu key={group.label}>
-                <DropdownMenuTrigger
-                  className={cn(
-                    "group inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-[0.8125rem] font-medium outline-none transition-colors",
-                    active ? "bg-foreground/[0.04] text-foreground" : "text-text-soft hover:bg-foreground/[0.04] hover:text-foreground"
-                  )}
-                >
+              <React.Fragment key={group.label}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    className={cn(
+                      "group inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-[0.8125rem] font-medium outline-none transition-colors",
+                      active ? "bg-foreground/[0.04] text-foreground" : "text-text-soft hover:bg-foreground/[0.04] hover:text-foreground"
+                    )}
+                  >
                   <span>{group.label}</span>
                   <IconChevronDown className="size-3.5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                 </DropdownMenuTrigger>
@@ -159,54 +187,81 @@ export function Navbar() {
                   sideOffset={8}
                   className={cn(dropdownContentClass, group.items.length > 4 ? "w-[22rem]" : "w-[18rem]")}
                 >
-                  <DropdownMenuGroup className="grid gap-1">
-                    {group.items.map((item) => {
-                      const Icon = item.icon;
-                      const isExternal = "external" in item;
-                      return "path" in item ? (
-                        <DropdownMenuItem
-                          key={item.path}
-                          className={dropdownItemClass}
-                          render={(itemProps: React.ComponentPropsWithoutRef<"a">) => (
-                            <Link {...itemProps} to={item.path} className={cn("flex items-start gap-3", itemProps.className)}>
-                              <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-soft text-foreground">
-                                <Icon className="size-4" strokeWidth={1.5} />
-                              </span>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="text-[0.8125rem] font-semibold text-foreground">{item.label}</span>
-                                  {isExternal && <IconArrowUpRight className="size-3.5 text-text-subtle" />}
+                  {group === docsGroup ? (
+                    <DocsDropdownGroups
+                      is_zh={isZh}
+                      docs_path={docsPath}
+                      cli_docs_path={cliDocsPath}
+                      city_sdk_docs_path={citySdkDocsPath}
+                      services_path={paymentsPath}
+                      agent_sdk_docs_path={agentSdkDocsPath}
+                      plugins_docs_path={pluginsDocsPath}
+                      ui_sdk_docs_path={uiSdkDocsPath}
+                      dropdown_item_class={dropdownItemClass}
+                      dropdown_item_icon_class={dropdownItemIconClass}
+                      dropdown_item_title_class={dropdownItemTitleClass}
+                      dropdown_item_desc_class={dropdownItemDescClass}
+                      dropdown_separator_class={dropdownSeparatorClass}
+                    />
+                  ) : (
+                    <DropdownMenuGroup className="grid gap-1">
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        const isExternal = "external" in item;
+                        return "path" in item ? (
+                          <DropdownMenuItem
+                            key={item.path}
+                            className={dropdownItemClass}
+                            render={(itemProps: React.ComponentPropsWithoutRef<"a">) => (
+                              <Link {...itemProps} to={item.path} className={cn("flex items-start gap-3", itemProps.className)}>
+                                <span className={dropdownItemIconClass}>
+                                  <Icon className="size-4" strokeWidth={1.5} />
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className={dropdownItemTitleClass}>{item.label}</span>
+                                    {isExternal && <IconArrowUpRight className="size-3.5 text-text-subtle" />}
+                                  </div>
+                                  <p className={dropdownItemDescClass}>{item.description}</p>
                                 </div>
-                                <p className="mt-1 text-[0.75rem] leading-[1.45] text-text-soft group-focus:text-text-soft! group-data-[highlighted]:text-text-soft!">{item.description}</p>
-                              </div>
-                            </Link>
-                          )}
-                        />
-                      ) : (
-                        <DropdownMenuItem
-                          key={item.href}
-                          className={dropdownItemClass}
-                          render={(itemProps: React.ComponentPropsWithoutRef<"a">) => (
-                            <a {...itemProps} href={item.href} target="_blank" rel="noreferrer" className={cn("flex items-start gap-3", itemProps.className)}>
-                              <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-soft text-foreground">
-                                <Icon className="size-4" strokeWidth={1.5} />
-                              </span>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="text-[0.8125rem] font-semibold text-foreground">{item.label}</span>
-                                  <IconArrowUpRight className="size-3.5 text-text-subtle" />
+                              </Link>
+                            )}
+                          />
+                        ) : (
+                          <DropdownMenuItem
+                            key={item.href}
+                            className={dropdownItemClass}
+                            render={(itemProps: React.ComponentPropsWithoutRef<"a">) => (
+                              <a {...itemProps} href={item.href} target="_blank" rel="noreferrer" className={cn("flex items-start gap-3", itemProps.className)}>
+                                <span className={dropdownItemIconClass}>
+                                  <Icon className="size-4" strokeWidth={1.5} />
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className={dropdownItemTitleClass}>{item.label}</span>
+                                    <IconArrowUpRight className="size-3.5 text-text-subtle" />
+                                  </div>
+                                  <p className={dropdownItemDescClass}>{item.description}</p>
                                 </div>
-                                <p className="mt-1 text-[0.75rem] leading-[1.45] text-text-soft group-focus:text-text-soft! group-data-[highlighted]:text-text-soft!">{item.description}</p>
-                              </div>
-                            </a>
-                          )}
-                        />
-                      );
-                    })}
-                  </DropdownMenuGroup>
+                              </a>
+                            )}
+                          />
+                        );
+                      })}
+                    </DropdownMenuGroup>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
-            );
+              {group === productGroup && (
+                <Link
+                  to={featuresPath}
+                  className={cn(linkBaseClass, isActive(featuresPath) ? linkActiveClass : linkInactiveClass)}
+                >
+                  {t("nav.features")}
+                </Link>
+              )}
+            </React.Fragment>
+          );
           })}
 
           <a
@@ -235,11 +290,13 @@ export function Navbar() {
           <MobileMenu
             is_zh={isZh}
             groups={groups}
+            features_path={featuresPath}
             github_url={GITHUB_URL}
             twitter_url={TWITTER_URL}
             icon_button_class={iconButtonClass}
             dropdown_content_class={dropdownContentClass}
             dropdown_item_class={dropdownItemClass}
+            dropdown_separator_class={dropdownSeparatorClass}
             menu_select_item_class={menuSelectItemClass}
           />
         </div>
@@ -364,23 +421,111 @@ function isThemeMode(value: string | undefined): value is ThemeMode {
   return value === "light" || value === "dark" || value === "system";
 }
 
+function DocsDropdownGroups({
+  is_zh,
+  docs_path,
+  cli_docs_path,
+  city_sdk_docs_path,
+  services_path,
+  agent_sdk_docs_path,
+  plugins_docs_path,
+  ui_sdk_docs_path,
+  dropdown_item_class,
+  dropdown_item_icon_class,
+  dropdown_item_title_class,
+  dropdown_item_desc_class,
+  dropdown_separator_class,
+}: {
+  is_zh: boolean;
+  docs_path: string;
+  cli_docs_path: string;
+  city_sdk_docs_path: string;
+  services_path: string;
+  agent_sdk_docs_path: string;
+  plugins_docs_path: string;
+  ui_sdk_docs_path: string;
+  dropdown_item_class: string;
+  dropdown_item_icon_class: string;
+  dropdown_item_title_class: string;
+  dropdown_item_desc_class: string;
+  dropdown_separator_class: string;
+}) {
+  type DocsItem = { label: string; description: string; path: string; icon: typeof IconBook };
+
+  const overviewGroup: readonly DocsItem[] = [
+    { label: "Overview", description: is_zh ? "核心文档" : "Core docs", path: docs_path, icon: IconBook },
+    { label: "CLI Docs", description: is_zh ? "CLI 文档" : "CLI docs", path: cli_docs_path, icon: IconTerminal },
+  ];
+  const cityGroup: readonly DocsItem[] = [
+    { label: "City SDK", description: is_zh ? "City SDK 文档" : "City SDK docs", path: city_sdk_docs_path, icon: IconServer },
+    { label: "Services Docs", description: is_zh ? "Services 文档" : "Services docs", path: services_path, icon: IconLayoutDashboard },
+  ];
+  const agentGroup: readonly DocsItem[] = [
+    { label: "Agent SDK", description: is_zh ? "Agent SDK 文档" : "Agent SDK docs", path: agent_sdk_docs_path, icon: IconRobot },
+    { label: "Plugins", description: is_zh ? "Plugins 文档" : "Plugins docs", path: plugins_docs_path, icon: IconPuzzle },
+  ];
+  const uiGroup: readonly DocsItem[] = [
+    { label: "UI SDK", description: is_zh ? "UI SDK 文档" : "UI SDK docs", path: ui_sdk_docs_path, icon: IconLayoutDashboard },
+  ];
+
+  const sections = [overviewGroup, cityGroup, agentGroup, uiGroup] as const;
+
+  return (
+    <>
+      {sections.map((section, index) => (
+        <React.Fragment key={section[0].label}>
+          <DropdownMenuGroup className="grid gap-1">
+            {section.map((item) => {
+              const Icon = item.icon;
+              return (
+                <DropdownMenuItem
+                  key={item.path}
+                  className={dropdown_item_class}
+                  render={(itemProps: React.ComponentPropsWithoutRef<"a">) => (
+                    <Link {...itemProps} to={item.path} className={cn("flex items-start gap-3", itemProps.className)}>
+                      <span className={dropdown_item_icon_class}>
+                        <Icon className="size-4" strokeWidth={1.5} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={dropdown_item_title_class}>{item.label}</span>
+                        </div>
+                        <p className={dropdown_item_desc_class}>{item.description}</p>
+                      </div>
+                    </Link>
+                  )}
+                />
+              );
+            })}
+          </DropdownMenuGroup>
+          {index < sections.length - 1 && <DropdownMenuSeparator className={dropdown_separator_class} />}
+        </React.Fragment>
+      ))}
+    </>
+  );
+}
+
 function MobileMenu({
   is_zh,
   groups,
+  features_path,
   github_url,
   twitter_url,
   icon_button_class,
   dropdown_content_class,
   dropdown_item_class,
+  dropdown_separator_class,
   menu_select_item_class,
 }: {
   is_zh: boolean;
   groups: readonly NavGroup[];
+  features_path: string;
   github_url: string;
   twitter_url: string;
   icon_button_class: string;
   dropdown_content_class: string;
   dropdown_item_class: string;
+  dropdown_separator_class: string;
   menu_select_item_class: string;
 }) {
   return (
@@ -416,9 +561,16 @@ function MobileMenu({
                 />
               )
             )}
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className={dropdown_separator_class} />
           </DropdownMenuGroup>
         ))}
+        <DropdownMenuItem
+          className={dropdown_item_class}
+          render={(itemProps: React.ComponentPropsWithoutRef<"a">) => (
+            <Link {...itemProps} to={features_path}>{is_zh ? "功能" : "Features"}</Link>
+          )}
+        />
+        <DropdownMenuSeparator className={dropdown_separator_class} />
         <DropdownMenuGroup>
           <DropdownMenuLabel className="px-3 pb-1 pt-2 text-[0.65rem] uppercase tracking-[0.1em] text-text-soft">
             {is_zh ? "链接" : "Links"}
@@ -436,7 +588,7 @@ function MobileMenu({
             )}
           />
         </DropdownMenuGroup>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className={dropdown_separator_class} />
         <DropdownMenuItem className={dropdown_item_class} onClick={() => setLang(is_zh ? "en" : "zh")}>
           {is_zh ? "Switch to English" : "切换到中文"}
         </DropdownMenuItem>

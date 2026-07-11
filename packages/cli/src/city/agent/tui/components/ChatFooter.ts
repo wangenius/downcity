@@ -1,14 +1,13 @@
 /**
- * 状态栏组件。
+ * Agent Chat TUI 底部信息栏。
  *
  * 关键点（中文）
- * - 始终渲染一行持久 header：`{session_title} · {session_id}`。
- * - 执行中在 header 下方继续渲染 “{braille 动画帧} {status_text}” 活动指示器。
- * - 自驱动 braille 动画：执行态启动定时器逐帧推进并请求重绘，空闲态停止。
- * - 超出宽度时截断。
+ * - 固定在输入框下方，常驻展示当前 session 标题与 sessionId。
+ * - 右侧根据状态切换：空闲时显示快捷键提示，执行中显示 braille 动画与状态文本。
+ * - 自驱动 braille 动画，与 Kimi Code 的活动指示器视觉一致。
  */
 
-import { Text, truncateToWidth, type Component, type TUI } from "@earendil-works/pi-tui";
+import { truncateToWidth, visibleWidth, type Component, type TUI } from "@earendil-works/pi-tui";
 
 import {
   BRAILLE_SPINNER_FRAMES,
@@ -17,23 +16,26 @@ import {
 import { current_theme } from "@/city/agent/tui/theme/index.js";
 import type { AppState } from "@/city/agent/tui/types.js";
 
+const FOOTER_RIGHT_IDLE = "Type /help for shortcuts · /session · /new · /clear · /quit";
+const MIN_GAP = 2;
+
 /**
- * 顶部状态栏。
+ * 聊天输入框底部信息栏。
  */
-export class StatusLineComponent implements Component {
-  /** 当前 braille 动画帧索引。 */
+export class ChatFooterComponent implements Component {
+  private app_state: AppState;
+  private readonly tui: TUI;
   private spinner_frame = 0;
-  /** 动画定时器句柄；空闲时为 null。 */
   private spinner_timer: ReturnType<typeof setInterval> | null = null;
 
   /**
    * @param app_state 初始应用状态。
    * @param tui 所属 TUI 实例，用于动画帧推进时请求重绘。
    */
-  constructor(
-    private app_state: AppState,
-    private readonly tui: TUI,
-  ) {}
+  constructor(app_state: AppState, tui: TUI) {
+    this.app_state = app_state;
+    this.tui = tui;
+  }
 
   /**
    * 更新状态。执行态启动动画，空闲态停止。
@@ -64,11 +66,7 @@ export class StatusLineComponent implements Component {
   }
 
   /**
-   * 渲染状态栏。
-   *
-   * 关键点（中文）
-   * - 第一行永远是 session header（title + sessionId）。
-   * - 执行中在 header 下方追加 braille 动画状态行。
+   * 渲染底部信息栏。
    *
    * @param width 可用宽度。
    * @returns 渲染后的行数组。
@@ -79,35 +77,44 @@ export class StatusLineComponent implements Component {
       return [""];
     }
 
-    const lines: string[] = [this.build_header(safe_width)];
+    const left = this.build_left();
+    const right = this.build_right();
+    const left_width = visibleWidth(left);
+    const right_width = visibleWidth(right);
 
-    if (this.is_active()) {
-      // 对齐 Kimi Code 的 composing 活动指示器：
-      // - 仅 braille 帧染主色，标签保持默认色（MoonLoader 的 colorFn 只作用于帧）。
-      // - 左侧缩进 1 列（MoonLoader 的 padding）。
-      const frame = BRAILLE_SPINNER_FRAMES[this.spinner_frame] ?? BRAILLE_SPINNER_FRAMES[0];
-      const colored_frame = current_theme.fg("primary", frame);
-      const label = `${colored_frame} ${this.app_state.status_text}`;
-      const text_lines = new Text(label, 1, 0).render(safe_width);
-      for (const line of text_lines) {
-        lines.push(truncateToWidth(line, safe_width, "…"));
-      }
+    if (left_width + right_width + MIN_GAP > safe_width) {
+      // 右侧优先完整展示，左侧截断。
+      const max_left = Math.max(0, safe_width - right_width - MIN_GAP);
+      const left_truncated = truncateToWidth(left, max_left, "…");
+      const gap = Math.max(1, safe_width - visibleWidth(left_truncated) - right_width);
+      return [left_truncated + " ".repeat(gap) + right];
     }
 
-    return lines;
+    const gap = safe_width - left_width - right_width;
+    return [left + " ".repeat(gap) + right];
   }
 
   /**
-   * 构建持久 session header。
-   *
-   * @param width 可用宽度。
-   * @returns 截断后的 header 行。
+   * 构建左侧 session 信息。
    */
-  private build_header(width: number): string {
+  private build_left(): string {
     const title = this.app_state.session_title?.trim() || "Untitled";
-    const session_id = this.app_state.session_id;
-    const raw = `${title} · ${session_id}`;
-    return truncateToWidth(current_theme.dim_fg("textMuted", raw), width, "…");
+    const raw = `${title} · ${this.app_state.session_id}`;
+    return current_theme.dim_fg("textMuted", raw);
+  }
+
+  /**
+   * 构建右侧提示/状态。
+   */
+  private build_right(): string {
+    if (!this.is_active()) {
+      return current_theme.dim_fg("textMuted", FOOTER_RIGHT_IDLE);
+    }
+
+    const frame = BRAILLE_SPINNER_FRAMES[this.spinner_frame] ?? BRAILLE_SPINNER_FRAMES[0];
+    const colored_frame = current_theme.fg("primary", frame);
+    const label = `${colored_frame} ${this.app_state.status_text}`;
+    return label;
   }
 
   /**

@@ -2,9 +2,10 @@
  * city agent chat TUI 协调器。
  *
  * 关键点（中文）
- * - 对齐 Kimi Code 的 KimiTUI 布局：transcript + status/activity + editor。
+ * - 对齐 Kimi Code 的 KimiTUI 布局：transcript → editor → footer。
  * - transcript 使用可滚动消息流，支持 PageUp/PageDown 回看历史。
  * - 编辑器负责消费标准快捷键（Ctrl+C/D/O/S），再回调 coordinator。
+ * - footer 固定在输入框下方，常驻展示 session 标题/id 与快捷键/状态。
  */
 
 import {
@@ -18,7 +19,7 @@ import {
 
 import {
   ChatEditorComponent,
-  StatusLineComponent,
+  ChatFooterComponent,
 } from "@/city/agent/tui/components/index.js";
 import { MessageListComponent } from "@/city/agent/tui/components/MessageList.js";
 import { SessionPickerComponent } from "@/city/agent/tui/dialogs/SessionPicker.js";
@@ -82,7 +83,7 @@ export class AgentChatTuiCoordinator {
   private readonly options: AgentChatTuiCoordinatorOptions;
   private readonly terminal: ProcessTerminal;
   private readonly tui: TUI;
-  private readonly status_line: StatusLineComponent;
+  private readonly footer: ChatFooterComponent;
   private readonly message_list: MessageListComponent;
   private readonly editor: ChatEditorComponent;
   private app_state: AppState;
@@ -166,8 +167,8 @@ export class AgentChatTuiCoordinator {
     this.tui = new TUI(this.terminal);
     this.terminal.setTitle(this.build_title());
 
-    this.status_line = new StatusLineComponent(this.app_state, this.tui);
     this.editor = new ChatEditorComponent(this.tui);
+    this.footer = new ChatFooterComponent(this.app_state, this.tui);
 
     this.message_list = new MessageListComponent({
       get_viewport_height: () => this.get_message_list_viewport_height(),
@@ -203,22 +204,19 @@ export class AgentChatTuiCoordinator {
     }
     this.running = true;
 
-    // 顺序：transcript → status/activity → editor，最新内容靠近底部输入区。
+    // 顺序：transcript → editor → footer，footer 常驻展示 session 信息与快捷键。
     this.tui.addChild(this.message_list as Component);
-    this.tui.addChild(this.status_line as Component);
     this.tui.addChild(this.editor as Component);
+    this.tui.addChild(this.footer as Component);
     this.tui.setFocus(this.editor as Component);
 
     this.remove_input_listener = this.tui.addInputListener((data) =>
       this.handle_global_input(data),
     );
 
-    // 先加载当前 session 历史，再把帮助提示放在最底部，避免历史被提示顶到上方。
+    // 先加载当前 session 历史，再启动 TUI；帮助提示已下沉到 footer，不再占用 transcript。
     await this.load_history(this.current_session_id);
 
-    this.add_status_message(
-      "Type /help for shortcuts · /session · /new · /clear · /quit",
-    );
     this.tui.start();
 
     return await new Promise<void>((resolve) => {
@@ -345,7 +343,7 @@ export class AgentChatTuiCoordinator {
     this.hide_session_picker();
     this.hide_approval_dialog();
     this.remove_input_listener?.();
-    this.status_line.dispose();
+    this.footer.dispose();
     this.tui.stop();
     this.resolve_run?.();
   }
@@ -365,9 +363,9 @@ export class AgentChatTuiCoordinator {
    */
   private get_message_list_viewport_height(): number {
     const width = this.terminal.columns;
-    const status_lines = this.status_line.render(width).length;
     const editor_lines = this.editor.render(width).length;
-    return Math.max(1, this.terminal.rows - status_lines - editor_lines);
+    const footer_lines = this.footer.render(width).length;
+    return Math.max(1, this.terminal.rows - editor_lines - footer_lines);
   }
 
   /**
@@ -421,7 +419,7 @@ export class AgentChatTuiCoordinator {
   private async run_turn(message: string): Promise<void> {
     this.app_state.is_executing = true;
     this.app_state.status_text = "working...";
-    this.status_line.set_state(this.app_state);
+    this.footer.set_state(this.app_state);
     this.editor.disableSubmit = true;
     this.message_list.scroll_to_bottom();
     this.add_user_message(message);
@@ -442,7 +440,7 @@ export class AgentChatTuiCoordinator {
 
     this.app_state.is_executing = false;
     this.app_state.status_text = "";
-    this.status_line.set_state(this.app_state);
+    this.footer.set_state(this.app_state);
     this.editor.disableSubmit = false;
 
     if (!outcome.success) {
@@ -534,7 +532,7 @@ export class AgentChatTuiCoordinator {
     this.current_session_id = session_id;
     this.app_state.session_id = session_id;
     this.app_state.session_title = undefined;
-    this.status_line.set_state(this.app_state);
+    this.footer.set_state(this.app_state);
     this.terminal.setTitle(this.build_title());
     this.message_list.clear();
 
@@ -553,7 +551,7 @@ export class AgentChatTuiCoordinator {
     try {
       const { title, entries } = await this.options.load_session_history(session_id);
       this.app_state.session_title = title;
-      this.status_line.set_state(this.app_state);
+      this.footer.set_state(this.app_state);
       this.terminal.setTitle(this.build_title());
       for (const entry of entries) {
         this.message_list.add_entry(entry);

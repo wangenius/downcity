@@ -41,8 +41,8 @@ export function registerGatewayCommands(
   program
     .command("init")
     .description(t({
-      zh: "初始化 City 全局配置（插件、env、账号等，写入 ~/.downcity/downcity.db）",
-      en: "initialize City global state (plugins, env, accounts, etc.) in ~/.downcity/downcity.db",
+      zh: "初始化 City 全局配置（写入 DC_PLATFORM_ROOT 下的 downcity.db）",
+      en: "initialize City global state in downcity.db under DC_PLATFORM_ROOT",
     }))
     .helpOption("--help", helpText())
     .action(createVersionBanner(context.version, async () => {

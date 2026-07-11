@@ -3,7 +3,7 @@
   "description": "Transform your repository into an AI agent in minutes",
   "step1": {
     "title": "Initialize Config",
-    "description": "Create an agent project in your repo. This generates `PROFILE.md` (Agent Instructions) and config files, giving your repository a unique personality and boundaries.",
+    "description": "Initialize an Agent project in your repository. Management config goes to the global database; the project keeps `.env`, Skills, and runtime data.",
     "command": "downcity agent create ."
   },
   "step2": {
@@ -23,8 +23,8 @@
       "windowTitle": "bash — 80x24",
       "step1": {
         "initializing": "Initializing Downcity...",
-        "agentMdCreated": "✔ PROFILE.md created",
-        "shipJsonCreated": "✔ downcity.json created",
+        "agentMdCreated": "✔ .agents/skills created",
+        "shipJsonCreated": "✔ global downcity.db updated",
         "ready": "Ready to ship."
       },
       "step2": {

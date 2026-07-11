@@ -3,7 +3,7 @@
  *
  * 职责说明（中文）
  * - CLI `downcity agent create` 与 Console 共用同一套初始化逻辑，避免模板与目录结构分叉。
- * - 负责创建项目骨架、静态 prompt、基础目录与 schema 文件。
+ * - 负责创建项目运行目录、项目 `.env` 与 Skills 目录。
  * - CLI 侧运行配置应写入宿主配置存储，不再由 SDK 初始化器写项目配置文件。
  *
  * 边界说明（中文）
@@ -17,8 +17,6 @@ import {
   getCacheDirPath,
   getDowncityAgentsRootDirPath,
   getLogsDirPath,
-  getProfileMdPath,
-  getDowncityConfigDirPath,
   getDowncityDataDirPath,
   getDowncityDebugDirPath,
   getDowncityDirPath,
@@ -28,16 +26,10 @@ import {
   getDowncityPublicDirPath,
   getDowncityResourcesDirPath,
   getDowncityTasksDirPath,
-  getSoulMdPath,
 } from "@/config/Paths.js";
-import {
-  DEFAULT_PROFILE_MD_TEMPLATE,
-  DEFAULT_SOUL_MD_TEMPLATE,
-} from "@executor/composer/system/default/InitPrompts.js";
 import type { EnvFileEntry } from "@/types/common/EnvFile.js";
 import { appendMissingEnvEntries } from "@/config/EnvFile.js";
 import { ensureGitignoreEntry } from "@/config/Gitignore.js";
-import { renderTemplateVariables } from "@/utils/Template.js";
 import { ensureDir } from "@/utils/storage/index.js";
 import type {
   AgentProjectChannel,
@@ -86,20 +78,18 @@ function normalizeChannels(input: AgentProjectChannel[] | undefined): AgentProje
  * 判断项目是否已经具备最小初始化文件。
  *
  * 关键点（中文）
- * - 当前只检查 `PROFILE.md`，用于快速判断项目行为资产是否已初始化过。
- * - 不把 `.downcity/` 目录作为硬性条件，避免用户手动清理缓存后被误判为未初始化。
+ * - Skills 是项目中唯一由用户管理并进入版本控制的 Agent 资产。
  */
 export async function isAgentProjectInitialized(projectRoot: string): Promise<boolean> {
   const normalizedRoot = path.resolve(String(projectRoot || "").trim() || ".");
-  const profileReady = await fs.pathExists(getProfileMdPath(normalizedRoot));
-  return profileReady;
+  return await fs.pathExists(path.join(normalizedRoot, ".agents", "skills"));
 }
 
 /**
  * 初始化 agent 项目骨架。
  *
  * 关键点（中文）
- * - 会创建 prompt 文件、`.downcity` 目录结构以及 schema 快照。
+ * - 会创建 `.downcity` 运行目录、项目 `.env` 与 `.agents/skills`。
  * - 对已存在文件采取“能跳过就跳过、明确冲突则报错”的策略，降低误覆盖风险。
  * - 返回结果只描述本次初始化写入摘要，方便 CLI 与控制台直接展示。
  */
@@ -125,33 +115,6 @@ export async function initializeAgentProject(
   });
 
   await ensureDir(projectRoot);
-
-  const profileMdPath = getProfileMdPath(projectRoot);
-  const soulMdPath = getSoulMdPath(projectRoot);
-  const initTemplateVariables = {
-    agent_id,
-  };
-  const staticPromptFiles = [
-    {
-      filename: "PROFILE.md",
-      filePath: profileMdPath,
-      content: renderTemplateVariables(DEFAULT_PROFILE_MD_TEMPLATE, initTemplateVariables),
-    },
-    {
-      filename: "SOUL.md",
-      filePath: soulMdPath,
-      content: renderTemplateVariables(DEFAULT_SOUL_MD_TEMPLATE, initTemplateVariables),
-    },
-  ] as const;
-
-  for (const file of staticPromptFiles) {
-    if (await fs.pathExists(file.filePath)) {
-      skippedFiles.push(file.filename);
-      continue;
-    }
-    await fs.writeFile(file.filePath, file.content, "utf-8");
-    createdFiles.push(file.filename);
-  }
 
   await appendMissingEnvEntries(
     dotEnvPath,
@@ -181,7 +144,6 @@ export async function initializeAgentProject(
     getDowncityAgentsRootDirPath(projectRoot),
     getDowncityPublicDirPath(projectRoot),
     getDowncityResourcesDirPath(projectRoot),
-    getDowncityConfigDirPath(projectRoot),
     path.join(projectRoot, ".agents", "skills"),
     getDowncityDebugDirPath(projectRoot),
   ];

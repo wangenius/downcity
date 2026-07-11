@@ -7,10 +7,8 @@
  * - 规则固定为：显式路径优先，其次当前目录已初始化，最后才进入交互选择。
  */
 
-import { existsSync } from "fs";
 import { resolve } from "path";
 import prompts from "@/city/tui/Prompts.js";
-import { getProfileMdPath } from "@/city/config/Paths.js";
 import { listManagedAgentEntries } from "@/city/process/registry/CityRegistry.js";
 import type { ManagedAgentRegistryEntry } from "@downcity/agent";
 import type {
@@ -30,7 +28,7 @@ import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
  * 判断一个目录是否已经满足最小 agent 初始化条件。
  */
 function isInitializedAgentProject(projectRoot: string): boolean {
-  return existsSync(getProfileMdPath(projectRoot)) && Boolean(readAgentConfig(projectRoot));
+  return Boolean(readAgentConfig(projectRoot));
 }
 
 /**

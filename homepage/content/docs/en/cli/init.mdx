@@ -1,50 +1,36 @@
 ---
 title: Project Init
-description: How to create and initialize a new Agent project with the CLI
+description: Create an Agent project and its global config with the CLI
 ---
 
 # Project Init
 
-The `city agent create` command creates a new Agent project with the minimum files needed to run and stores agent config in the CLI global DB.
-
-## Basic usage
+`city agent create` creates the runtime and Skills directories, then stores Agent config in the global database.
 
 ```bash
 city agent create my-project
 ```
 
-This creates:
+Generated structure:
 
 ```text
 my-project/
-├── PROFILE.md
-├── SOUL.md
-├── .downcity/
-└── .env
+├── .env
+├── .env.example
+├── .agents/
+│   └── skills/
+└── .downcity/
 ```
 
-## Generated files
-
-- `PROFILE.md` — the agent's visible role and response style. See [Profile](/en/docs/cli/profile).
-- `SOUL.md` — deeper, long-term operating principles. See [Profile](/en/docs/cli/profile).
-- `.downcity/` — runtime data directory (sessions, logs, cache).
-- `.env` — environment variables for the project.
-- Agent config in the CLI global DB — agent ID, model binding, startup options, and plugin options.
-
-## Options
+The global database stores the Agent ID, model binding, startup options, and Plugin config. Project `.env` overrides platform global env and the current CLI process env.
 
 ```bash
-# Allow overwriting existing Agent config
+# Allow replacing existing Agent config in the global database
 city agent create my-project --force
 ```
 
-## After init
-
-1. Edit `PROFILE.md` and `SOUL.md` to shape behavior.
-2. Use `city agent config` or the interactive `city agent` manager for model, port, and chat account binding.
-3. Run `city agent start` to start the agent.
+After initialization, add project Skills under `.agents/skills` and run `city agent start`.
 
 Continue with:
 
 - [Project Structure](/en/docs/cli/project)
-- [legacy downcity.json](/en/docs/cli/downcity-json)

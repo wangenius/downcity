@@ -101,7 +101,7 @@ export function resolveChannelAccountId(
  * 关键点（中文）
  * - 优先使用 ChatPlugin 实例上的显式解析逻辑。
  * - 若实例只提供 channelAccountId，再从默认全局账号池读取对应账号。
- * - 不再从 downcity.json 隐式推断运行时账号。
+ * - 不从项目文件隐式推断运行时账号。
  */
 export function resolveChannelAccount(
   context: AgentContext,

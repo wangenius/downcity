@@ -9,8 +9,6 @@
  */
 
 import path from "node:path";
-import fs from "node:fs";
-import { getProfileMdPath } from "@/city/config/Paths.js";
 import { listManagedAgentEntries } from "@/city/process/registry/CityRegistry.js";
 import type { JsonValue } from "@downcity/agent";
 import { resolveAgentId } from "@/shared/IndexSupport.js";
@@ -19,6 +17,7 @@ import type { ActionScheduleJobStatus } from "@downcity/agent";
 import type { PluginCliBaseOptions } from "@downcity/agent";
 import { checkShellSandboxPreflight } from "@downcity/shell/sandbox/SandboxPreflight.js";
 import { assertProjectExecutionModelReady } from "@/city/runtime/city-model/ExecutionModelBinding.js";
+import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
 
 /**
  * Agent 启动前预检选项。
@@ -57,7 +56,7 @@ export async function checkShellSandboxHostPreflight(): Promise<void> {
  *
  * 关键点（中文）
  * - 收敛 start/restart/status 等命令的前置校验逻辑。
- * - 按顺序检查，首个失败即抛 CliError（sandbox → PROFILE.md → DB config → binding）。
+ * - 按顺序检查，首个失败即抛 CliError（sandbox → DB config → binding）。
  *
  * @throws {CliError} 任一校验失败时抛出。
  */
@@ -69,11 +68,10 @@ export async function checkAgentPreflight(
     await checkShellSandboxHostPreflight();
   }
 
-  const profilePath = getProfileMdPath(projectRoot);
-  if (!fs.existsSync(profilePath)) {
+  if (!readAgentConfig(projectRoot)) {
     throw new CliError({
       title: "Project not initialized",
-      note: `PROFILE.md not found at ${projectRoot}`,
+      note: `Agent config not found in the global DB: ${projectRoot}`,
       fix: "city agent create",
     });
   }
@@ -225,13 +223,8 @@ export async function resolvePluginScheduleProjectRoot(options: PluginCliBaseOpt
  * 校验路径是否为有效 agent 项目目录。
  */
 export function validateAgentProjectRoot(projectRoot: string): string | null {
-  const missing: string[] = [];
-  if (!fs.existsSync(getProfileMdPath(projectRoot))) {
-    missing.push("PROFILE.md");
-  }
-
-  if (missing.length === 0) return null;
-  return `Invalid agent path: ${projectRoot}. Missing: ${missing.join(", ")}`;
+  if (readAgentConfig(projectRoot)) return null;
+  return `Invalid agent path: ${projectRoot}. Missing global DB agent config.`;
 }
 
 /**

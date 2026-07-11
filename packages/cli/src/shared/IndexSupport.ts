@@ -6,8 +6,7 @@
  * - 保持共享工具纯函数化，避免命令装配文件继续膨胀。
  */
 
-import { readFileSync, existsSync } from "fs";
-import { basename, dirname, join, resolve } from "path";
+import { basename, dirname, resolve } from "path";
 import { emitCliHeader, emitCliBlock, resetCliSectionFlow } from "@/shared/CliReporter.js";
 import { CliError } from "@/shared/CliError.js";
 import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
@@ -135,19 +134,6 @@ export function resolveAgentId(projectRoot: string): string {
     .trim() || basename(projectRoot);
   const stored = readAgentConfig(projectRoot);
   if (stored?.id) return stored.id;
-
-  const shipJsonPath = join(projectRoot, "downcity.json");
-  if (!existsSync(shipJsonPath)) return fallback;
-
-  try {
-    const raw = readFileSync(shipJsonPath, "utf-8");
-    const parsed = JSON.parse(raw) as { id?: unknown };
-    if (typeof parsed.id === "string" && parsed.id.trim()) {
-      return parsed.id.trim();
-    }
-  } catch {
-    // ignore parse errors and fallback to dirname
-  }
 
   return fallback;
 }

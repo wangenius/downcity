@@ -1,53 +1,48 @@
 ---
 title: 项目结构
-description: Agent 项目目录包含什么，以及文件之间的关系
+description: Agent 项目目录、全局配置和运行数据的边界
 ---
 
 # 项目结构
 
-Agent 项目是 CLI 能够识别和运行的目录。项目目录主要保存提示词、环境变量和运行时数据；Agent ID、模型绑定、启动参数和 plugin 参数由 CLI 全局 DB 管理。
+Agent 的管理配置统一保存在全局数据库。项目目录只保留项目环境、Skills 和运行数据，不保存配置副本。
 
 ## 目录布局
 
 ```text
 my-project/
-├── PROFILE.md         # Agent 角色定义
-├── SOUL.md            # 长期原则
-├── .env               # 环境变量
-├── .downcity/         # 运行时数据
-│   ├── sessions/      # 持久化的对话历史
-│   ├── logs/          # 运行时日志
-│   └── cache/         # 插件缓存和临时文件
-└── src/               # 你的代码（可选）
+├── .env                 # 项目环境变量
+├── .agents/
+│   └── skills/          # 用户管理、可进入版本控制的 Skills
+├── .downcity/           # Agent 与 Plugin 运行数据
+│   ├── agents/          # 会话与消息数据
+│   ├── chat/            # Chat Access、路由和历史数据
+│   ├── logs/            # 运行日志
+│   ├── memory/          # 记忆数据
+│   └── task/            # 任务运行数据
+└── src/                 # 业务代码（可选）
 ```
 
-## 关键文件
+## 全局配置
 
-### PROFILE.md
+默认保存在 `~/.downcity/downcity.db`，设置 `DC_PLATFORM_ROOT` 后改为 `$DC_PLATFORM_ROOT/downcity.db`。其中包含：
 
-定义 Agent 的可见角色。这包含在每个会话的系统上下文中。见 [Profile](/zh/docs/cli/profile)。
+- Agent ID、项目路径和启动参数
+- 模型绑定与 Plugin 配置
+- Chat channel account 和 Agent 渠道绑定
+- City 登录态、全局环境变量和其他平台管理状态
 
-### SOUL.md
+CLI、交互管理器和 Agent daemon 都读取同一份数据库，不维护项目配置副本。
 
-定义更深层的、更稳定的运行原则。也包含在系统上下文中。见 [Profile](/zh/docs/cli/profile)。
+## 项目资产
 
-### .env
+`.env` 的优先级高于平台全局环境和当前 CLI 进程环境。`.agents/skills` 是项目中唯一由用户管理并进入版本控制的 Agent 能力资产。
 
-项目专属环境变量。这些叠加在宿主环境之上。Agent SDK 会自动读取此文件。
+## 运行数据
 
-### .downcity/
-
-运行时数据目录。这里的一切由 Agent SDK 和插件管理。你不应该直接编辑里面的文件，但可以检查日志和会话以进行调试。
-
-## 多个项目
-
-你可以在同一个机器上有多个项目。每个项目都是独立的：自己的全局 DB 配置、自己的会话、自己的运行时。CLI 操作当前工作目录中的项目。
-
-## 配置存放在哪里
-
-`city agent create` 会把 Agent 配置写入 CLI 全局 DB，而不是项目目录中的 `downcity.json`。旧项目里的 `downcity.json` 仍可被读取一次用于迁移；迁移后新的写入都进入全局 DB。
+`.downcity/` 只保存会话、Chat Access、任务、记忆、日志和缓存等运行数据。不要把管理配置写入该目录。
 
 继续阅读：
 
-- [legacy downcity.json](/zh/docs/cli/downcity-json)
-- [Profile](/zh/docs/cli/profile)
+- [项目初始化](/zh/docs/cli/init)
+- [Agent SDK](/zh/docs/agent/sdk)

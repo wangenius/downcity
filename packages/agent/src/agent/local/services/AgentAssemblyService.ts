@@ -14,7 +14,7 @@ import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { AgentPlugins } from "@/types/plugin/PluginRuntime.js";
 import type { AgentOptions } from "@/types/agent/AgentOptions.js";
 import { Logger } from "@/utils/logger/Logger.js";
-import { loadDowncityConfig, resolveAgentEnv } from "@/config/Config.js";
+import { resolve_agent_env } from "@/config/AgentEnv.js";
 import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 import {
   createFallbackSdkConfig,
@@ -156,9 +156,9 @@ export class AgentAssemblyService {
     // 关键点（中文）
     // - 这里产出的 env 是 agent 全生命周期共享的 mutable 对象引用。
     // - context / shell 都持有同一引用；后续 `agent.setEnv()` 会原地修改它。
-    const env = resolveAgentEnv(path, this.options.env);
+    const env = resolve_agent_env(path, this.options.env);
     const instruction = normalizeInstructionInput(this.options.instruction);
-    const config = this.load_config(id, path);
+    const config = this.load_config(id);
     const plugin_instances = new Map<string, Plugin>();
 
     // 关键点（中文）
@@ -183,7 +183,7 @@ export class AgentAssemblyService {
     }
     const resolve_session_model = this.resolve_session_model;
     const paths = createAgentPathRuntime(path, id);
-    const pluginConfig = createAgentPluginConfigRuntime(path);
+    const pluginConfig = this.options.plugin_config || createAgentPluginConfigRuntime(path);
     agent_context = new AgentContext({
       cwd: path,
       rootPath: path,
@@ -239,7 +239,7 @@ export class AgentAssemblyService {
     };
   }
 
-  private load_config(agent_id: string, project_root: string): DowncityConfig {
+  private load_config(agent_id: string): DowncityConfig {
     if (this.options.config) {
       return {
         ...this.options.config,
@@ -247,11 +247,7 @@ export class AgentAssemblyService {
         version: String(this.options.config.version || "").trim() || "1.0.0",
       };
     }
-    try {
-      return loadDowncityConfig(project_root);
-    } catch {
-      return createFallbackSdkConfig(agent_id);
-    }
+    return createFallbackSdkConfig(agent_id);
   }
 
   /**

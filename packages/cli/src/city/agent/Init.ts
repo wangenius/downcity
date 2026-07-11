@@ -2,7 +2,7 @@
  * `city agent create`：在目标目录生成最小可用的 Downcity 工程骨架与配置文件。
  *
  * 目标
- * - 生成 `PROFILE.md` / `SOUL.md` / `.downcity/` 目录结构与 schema 文件
+ * - 生成 `.agents/skills` 与 `.downcity/` 运行目录
  * - 通过交互式问题收集必要配置（模型、channels 等）
  *
  * 设计要点
@@ -12,8 +12,6 @@
 
 import path from "path";
 import prompts from "@/city/tui/Prompts.js";
-import fs from "fs-extra";
-import { getProfileMdPath, getSoulMdPath } from "@/city/config/Paths.js";
 import {
   initializeAgentProject,
   normalizeDefaultAgentId,
@@ -76,9 +74,6 @@ export async function initCommand(
     ],
   });
 
-  // Check if core initialization files already exist
-  const existingProfileMd = fs.existsSync(getProfileMdPath(projectRoot));
-  const existingSoulMd = fs.existsSync(getSoulMdPath(projectRoot));
   const existingAgentConfig = readAgentConfig(projectRoot);
   const modelChoices = await listPlatformModelChoices();
   const modelChoiceIds = modelChoices.map((item) => item.value);
@@ -90,7 +85,7 @@ export async function initCommand(
     });
   }
 
-  // 关键点（中文）：已存在的 PROFILE.md 永远不覆盖，只在 DB 配置已存在时询问覆盖。
+  // 关键点（中文）：项目配置只保存在全局 DB，重复创建时只询问是否覆盖该记录。
   if (existingAgentConfig) {
     if (!allowOverwrite) {
       const confirmResponse = (await prompts({
@@ -141,7 +136,7 @@ export async function initCommand(
     },
   ])) as InitPromptResponse;
 
-  // 关键点（中文）：agent_id 同时用于 DB 配置与 init 模板变量渲染，避免两处来源不一致。
+  // 关键点（中文）：agent_id 只写入全局 DB，项目目录不再保存配置副本。
   const agent_id =
     String(response.id || "").trim() || default_agent_id;
   const primaryModelId =
@@ -183,17 +178,8 @@ export async function initCommand(
 
   const createdItems: string[] = [];
   const skippedItems: string[] = [];
-  if (!existingProfileMd && initResult.createdFiles.includes("PROFILE.md")) {
-    createdItems.push("PROFILE.md");
-  } else if (existingProfileMd) {
-    skippedItems.push("PROFILE.md");
-  }
-  if (!existingSoulMd && initResult.createdFiles.includes("SOUL.md")) {
-    createdItems.push("SOUL.md");
-  } else if (existingSoulMd) {
-    skippedItems.push("SOUL.md");
-  }
-  createdItems.push(".downcity/", "global DB agent config");
+  void initResult;
+  createdItems.push(".agents/skills/", ".downcity/", "global DB agent config");
   skippedItems.push(".env", ".env.example");
 
   emitCliBlock({
@@ -284,8 +270,7 @@ export async function initCommand(
   }
 
   const nextSteps: string[] = [
-    "Edit PROFILE.md to customize agent behavior",
-    "Edit SOUL.md to customize your core operating principles",
+    "Add reusable capabilities under .agents/skills",
     "Use city agent reset to adjust execution target",
   ];
   if (primaryModelId) {

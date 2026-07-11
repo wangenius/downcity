@@ -9,7 +9,7 @@
 
 import path from "node:path";
 import { logger as defaultLogger } from "@/utils/logger/Logger.js";
-import { resolveAgentEnv } from "@/config/Config.js";
+import { resolve_agent_env } from "@/config/AgentEnv.js";
 import { findPluginByName } from "@/plugin/core/PluginCatalog.js";
 import {
   createAgentPathRuntime,
@@ -39,7 +39,7 @@ export function createLocalPluginCommandContext(
 ): PluginCommandContext {
   const projectRoot = typeof input === "string" ? input : input.projectRoot;
   const rootPath = path.resolve(String(projectRoot || "").trim() || ".");
-  const env = resolveAgentEnv(rootPath);
+  const env = resolve_agent_env(rootPath);
   const config = typeof input === "string" || !input.config
     ? createFallbackSdkConfig(path.basename(rootPath) || "agent")
     : input.config;

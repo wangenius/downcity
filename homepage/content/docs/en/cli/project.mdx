@@ -1,53 +1,48 @@
 ---
 title: Project Structure
-description: What an Agent project directory contains and how the files relate
+description: Boundaries between Agent projects, global config, and runtime data
 ---
 
 # Project Structure
 
-An Agent project is a directory that the CLI recognizes and can run. The project directory mainly stores prompts, environment variables, and runtime data; agent ID, model binding, startup options, and plugin options live in the CLI global DB.
+Agent management config lives in one global database. A project directory only contains project env, Skills, and runtime data; it does not keep a second config copy.
 
 ## Directory layout
 
 ```text
 my-project/
-├── PROFILE.md         # agent role definition
-├── SOUL.md            # long-term principles
-├── .env               # environment variables
-├── .downcity/         # runtime data
-│   ├── sessions/      # persisted conversation history
-│   ├── logs/          # runtime logs
-│   └── cache/         # plugin cache and temp files
-└── src/               # your code (optional)
+├── .env                 # project environment variables
+├── .agents/
+│   └── skills/          # user-managed, versioned Skills
+├── .downcity/           # Agent and Plugin runtime data
+│   ├── agents/          # sessions and messages
+│   ├── chat/            # Chat Access, routing, and history
+│   ├── logs/            # runtime logs
+│   ├── memory/          # memory data
+│   └── task/            # task runtime data
+└── src/                 # application code (optional)
 ```
 
-## Key files
+## Global config
 
-### PROFILE.md
+The default database is `~/.downcity/downcity.db`. With `DC_PLATFORM_ROOT`, it becomes `$DC_PLATFORM_ROOT/downcity.db`. It stores:
 
-Defines the agent's visible role. This is included in the system context for every session. See [Profile](/en/docs/cli/profile).
+- Agent IDs, project paths, and startup options
+- Model bindings and Plugin config
+- Chat channel accounts and Agent channel bindings
+- City sessions, global env, and other platform management state
 
-### SOUL.md
+The CLI, interactive manager, and Agent daemon all read this database. There is no project config copy.
 
-Defines deeper, more stable operating principles. Also included in the system context. See [Profile](/en/docs/cli/profile).
+## Project assets
 
-### .env
+Project `.env` overrides platform global env and the current CLI process env. `.agents/skills` is the only user-managed Agent capability asset intended for version control.
 
-Project-specific environment variables. These overlay the host environment. The Agent SDK reads this file automatically.
+## Runtime data
 
-### .downcity/
-
-The runtime data directory. Everything here is managed by the Agent SDK and plugins. You should not edit files inside it directly, but you may inspect logs and sessions for debugging.
-
-## Multiple projects
-
-You can have multiple projects on the same machine. Each project is independent: its own global DB config, its own sessions, its own runtime. The CLI operates on the project in the current working directory.
-
-## Where Config Lives
-
-`city agent create` writes agent config to the CLI global DB, not to a project-local `downcity.json`. Existing `downcity.json` files can still be read once as a legacy migration source; new writes go to the global DB.
+`.downcity/` only contains sessions, Chat Access, tasks, memory, logs, and caches. Management config does not belong there.
 
 Continue with:
 
-- [legacy downcity.json](/en/docs/cli/downcity-json)
-- [Profile](/en/docs/cli/profile)
+- [Project Init](/en/docs/cli/init)
+- [Agent SDK](/en/docs/agent/sdk)

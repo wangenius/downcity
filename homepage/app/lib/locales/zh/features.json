@@ -68,7 +68,7 @@
     }
   },
   "codePreview": {
-    "agentMdDesc": "用自然语言定义人格与规则",
-    "shipJsonDesc": "配置权限与项目设置"
+    "skillDesc": "项目唯一可版本管理的 Agent 能力资产",
+    "configDesc": "Agent、模型与 Plugin 配置的全局唯一来源"
   }
 }

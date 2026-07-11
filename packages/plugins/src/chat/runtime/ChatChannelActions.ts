@@ -7,7 +7,11 @@
  * - 对外只暴露 action 级入口，供 ChatPluginActions 装配使用。
  */
 
-import type { AgentContext } from "@downcity/agent";
+import type {
+  AgentContext,
+  DowncityChatChannelConfig,
+  DowncityConfig,
+} from "@downcity/agent";
 import type { ChatChannelState } from "@/chat/types/ChatRuntime.js";
 import { getStoredChannelAccountSync } from "@/chat/accounts/Store.js";
 import type {
@@ -20,6 +24,7 @@ import type {
   ChatTestActionPayload,
 } from "@/chat/types/ChatPluginActionPayload.js";
 import type { ChatChannelTestResult } from "@/chat/types/ChannelStatus.js";
+import type { ChatChannelName } from "@/chat/types/ChannelStatus.js";
 import {
   describeChatChannelConfiguration,
   getChatChannelStatus,
@@ -47,6 +52,54 @@ function getChatRuntimeBindings(context: AgentContext): ChatRuntimeControlBindin
     throw new Error("ChatPlugin runtime instance is not available");
   }
   return plugin as ChatRuntimeControlBindings;
+}
+
+/**
+ * 将 channel patch 合并进完整 plugins 配置并交给宿主持久化。
+ *
+ * 关键点（中文）
+ * - 始终写回完整 plugins 对象，避免覆盖其他 plugin 配置。
+ * - 宿主持久化成功后才更新当前 context 快照，保证运行态与存储态一致。
+ */
+async function persist_chat_channel_patches(params: {
+  context: AgentContext;
+  patches: Array<{
+    channel: ChatChannelName;
+    enabled?: boolean;
+    channel_account_id?: string | null;
+  }>;
+}): Promise<DowncityConfig["plugins"]> {
+  const current_plugins = params.context.config.plugins || {};
+  const current_chat = current_plugins.chat || {};
+  const next_channels = { ...(current_chat.channels || {}) };
+
+  for (const patch of params.patches) {
+    const current_channel = next_channels[patch.channel] || {};
+    const next_channel: DowncityChatChannelConfig = { ...current_channel };
+    if (typeof patch.enabled === "boolean") {
+      next_channel.enabled = patch.enabled;
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, "channel_account_id")) {
+      const channel_account_id = String(patch.channel_account_id || "").trim();
+      if (channel_account_id) {
+        next_channel.channelAccountId = channel_account_id;
+      } else {
+        delete next_channel.channelAccountId;
+      }
+    }
+    next_channels[patch.channel] = next_channel;
+  }
+
+  const next_plugins: DowncityConfig["plugins"] = {
+    ...current_plugins,
+    chat: {
+      ...current_chat,
+      channels: next_channels,
+    },
+  };
+  await params.context.pluginConfig.persistProjectPlugins(next_plugins);
+  params.context.config.plugins = next_plugins;
+  return next_plugins;
 }
 
 /**
@@ -176,6 +229,10 @@ export async function executeChatOpenAction(params: {
 }) {
   const targets = resolveTargetChannels(params.payload.channel);
   const plugin = getChatRuntimeBindings(params.context);
+  await persist_chat_channel_patches({
+    context: params.context,
+    patches: targets.map((channel) => ({ channel, enabled: true })),
+  });
   for (const channel of targets) {
     plugin.applyChannelRuntimePatch({
       channel,
@@ -211,6 +268,10 @@ export async function executeChatCloseAction(params: {
 }) {
   const targets = resolveTargetChannels(params.payload.channel);
   const plugin = getChatRuntimeBindings(params.context);
+  await persist_chat_channel_patches({
+    context: params.context,
+    patches: targets.map((channel) => ({ channel, enabled: false })),
+  });
   for (const channel of targets) {
     await stopSingleChatChannel(params.state, channel);
     plugin.applyChannelRuntimePatch({
@@ -293,6 +354,16 @@ export async function executeChatConfigureAction(params: {
   }
 
   const plugin = getChatRuntimeBindings(params.context);
+  await persist_chat_channel_patches({
+    context: params.context,
+    patches: [{
+      channel,
+      ...(typeof patch.enabled === "boolean" ? { enabled: patch.enabled } : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, "channelAccountId")
+        ? { channel_account_id: String(patch.channelAccountId || "").trim() || null }
+        : {}),
+    }],
+  });
   plugin.applyChannelRuntimePatch({
     channel,
     ...(typeof patch.enabled === "boolean" ? { enabled: patch.enabled } : {}),

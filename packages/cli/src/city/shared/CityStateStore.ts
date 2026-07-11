@@ -8,9 +8,6 @@
  * - 向后兼容旧状态字段 `base_url` / `selected_base_url`，迁移时自动改写为 federation_url。
  */
 
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import {
   createCityPlatformStore,
   createFederationPlatformStore,
@@ -30,7 +27,6 @@ export const DEFAULT_FEDERATION_URL = "https://base.downcity.ai";
 /** 默认 City 标识。 */
 export const DEFAULT_CITY_ID = "city_downcity";
 
-const CITY_CONFIG_PATH = path.join(os.homedir(), ".downcity", "config.json");
 const CITY_STATE_KEY = "city.city.state";
 const FEDERATION_CONFIG_KEY = "federation.config";
 
@@ -250,23 +246,14 @@ function derive_federation_name(federation_url: string): string {
   }
 }
 
-function readJsonFile<T>(file_path: string): T | null {
-  try {
-    return JSON.parse(fs.readFileSync(file_path, "utf8")) as T;
-  } catch {
-    return null;
-  }
-}
-
 function readCityAdminConfig(): CityAdminConfig {
   const store = createFederationPlatformStore();
   try {
     const config = store.getSecureSettingJsonSync<CityAdminConfig>(FEDERATION_CONFIG_KEY);
-    if (config) return config;
+    return config ?? {};
   } finally {
     store.close();
   }
-  return readJsonFile<CityAdminConfig>(CITY_CONFIG_PATH) ?? {};
 }
 
 function read_admin_federation_url(item: {

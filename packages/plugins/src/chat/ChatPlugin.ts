@@ -176,7 +176,7 @@ export class ChatPlugin extends BasePlugin {
    * 更新当前实例的渠道运行态配置。
    *
    * 关键点（中文）
-   * - chat.open/close/configure 只修改当前 plugin 实例，不写 downcity.json。
+   * - chat.open/close/configure 由 action 先调用宿主持久化能力，再修改当前实例。
    * - 当前运行态只允许更新 `enabled` 与 `channelAccountId`，密钥仍来自 constructor 或账号池。
    */
   applyChannelRuntimePatch(params: {

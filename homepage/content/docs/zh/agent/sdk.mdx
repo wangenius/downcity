@@ -25,11 +25,13 @@ const agent = new Agent({
 ## 构造参数
 
 - `id` — 稳定的 Agent 标识符。用于会话存储和运行时目录归属。
-- `path` — 项目目录。Agent 会从这里读取 `PROFILE.md`、`SOUL.md` 和 `.env`。
+- `path` — 项目目录。Agent 从这里读取 `.env` 并保存 `.downcity` 运行数据。
 - `model` — 实时模型实例。直接传入，不从目录查询。
 - `tools` — 可供 Agent 使用的工具实例数组。
 - `plugins` — 启动时加载的插件实例数组。
 - `env` — 宿主提供的环境变量，与项目 `.env` 叠加。
+- `config` — 宿主显式传入的 Agent 配置；SDK 不读取项目配置文件。
+- `plugin_config` — 可选的宿主 Plugin 配置持久化接口。
 - `start` — 可选的 HTTP 服务器配置（端口、host）。
 - `execution` — 可选的执行绑定配置。
 

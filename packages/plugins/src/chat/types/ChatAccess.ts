@@ -210,8 +210,6 @@ export interface RevokeChatAccessGrantInput {
 export interface ChatAccessServiceOptions {
   /** 当前 Agent 项目根目录。 */
   project_root: string;
-  /** 当前 Agent 各 Chat 渠道使用的稳定 Issuer。 */
-  issuer_by_channel?: Partial<Record<ChatDispatchChannel, string>>;
 }
 
 /** 直接设置 Principal Grant 的输入。 */
@@ -334,48 +332,4 @@ export interface ChatAccessSnapshot {
   principals: ChatAccessPrincipalView[];
   /** 当前 Request 列表。 */
   requests: ChatAccessRequestView[];
-}
-
-/**
- * 旧 Chat Authorization 配置最小迁移结构。
- */
-export interface LegacyChatAuthorizationConfig {
-  /** 旧 Role 定义。 */
-  roles?: Record<string, {
-    /** 旧 Role 权限字符串。 */
-    permissions?: unknown[];
-  }>;
-  /** 旧渠道用户绑定。 */
-  channels?: Partial<Record<ChatDispatchChannel, {
-    /** 旧用户 ID 到 Role ID 的绑定。 */
-    userRoles?: Record<string, unknown>;
-  }>>;
-}
-
-/**
- * 旧 Chat Authorization 用户状态最小迁移结构。
- */
-export interface LegacyChatAuthorizationUser {
-  /** 旧渠道。 */
-  channel?: unknown;
-  /** 旧平台用户 ID。 */
-  userId?: unknown;
-  /** 旧展示名称。 */
-  username?: unknown;
-  /** 旧最近会话 ID。 */
-  lastChatId?: unknown;
-  /** 旧最近会话类型。 */
-  lastChatType?: unknown;
-  /** 旧首次观测时间戳。 */
-  firstSeenAt?: unknown;
-  /** 旧最近观测时间戳。 */
-  lastSeenAt?: unknown;
-}
-
-/**
- * 旧 Chat Authorization 状态最小迁移结构。
- */
-export interface LegacyChatAuthorizationState {
-  /** 旧用户索引。 */
-  usersByKey?: Record<string, LegacyChatAuthorizationUser>;
 }

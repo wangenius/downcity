@@ -55,7 +55,7 @@
     "cards": {
       "repo": {
         "title": "Repo-native boundary",
-        "description": "Every agent runs inside a real repository or folder. Rules, permissions, and artifacts live in PROFILE.md, SOUL.md, and .downcity/—version-controlled and auditable."
+        "description": "Every agent runs inside a real repository or folder. Skills are versioned, management config lives in one global DB, and runtime data stays in .downcity/."
       },
       "runtime": {
         "title": "Reusable runtime layer",

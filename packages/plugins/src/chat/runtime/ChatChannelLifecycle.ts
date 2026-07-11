@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 渠道 bot 的创建、启动、停止逻辑统一收敛在这里。
  * - 渠道 bot 状态归属于 chat plugin runtime 实例持有的 `ChatChannelState`。
- * - 本模块不处理 downcity.json 写入，也不负责 action 输入输出包装。
+ * - 本模块不处理配置持久化，也不负责 action 输入输出包装。
  */
 
 import type { AgentContext } from "@downcity/agent";

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 每个 channel 继承该基类，集中声明自己的配置字段。
- * - 统一提供“可写 ship 字段”提取逻辑，避免在 service 中重复硬编码。
+ * - 统一提供“可写 Agent 配置字段”提取逻辑，避免在 service 中重复硬编码。
  */
 
 import type {
@@ -29,7 +29,7 @@ export abstract class ChatChannelConfiguration {
   /**
    * 返回可通过 `chat.configure` 更新的运行态字段定义。
    */
-  getWritableShipFields(): ChatChannelConfigurationField[] {
-    return this.describe().fields.ship.filter((field) => field.writable);
+  get_writable_agent_config_fields(): ChatChannelConfigurationField[] {
+    return this.describe().fields.agent_config.filter((field) => field.writable);
   }
 }

@@ -13,8 +13,7 @@
 import path from "node:path";
 import {
   Agent,
-  loadStaticSystemPrompts,
-  StaticPromptCatalog,
+  resolve_agent_env,
 } from "@downcity/agent";
 import { Shell } from "@downcity/shell";
 import { AgentHTTP, AgentRPC } from "@downcity/server";
@@ -26,6 +25,7 @@ import { resolveAgentId } from "@/shared/IndexSupport.js";
 import { startAgentHttpGateway } from "@/city/agent/AgentHttpGateway.js";
 import { createCityBuiltinPlugins } from "@/city/runtime/plugins/CityBuiltinPlugins.js";
 import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
+import { createAgentPluginConfigRuntime } from "@/city/process/registry/AgentHostRuntime.js";
 
 /**
  * 前台启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
@@ -42,7 +42,10 @@ export async function runCommand(
   options: AgentStartOptions,
 ): Promise<void> {
   const projectRoot = path.resolve(cwd);
-  const hostEnv = mergeProcessEnvWithPlatformGlobalEnv();
+  const hostEnv = resolve_agent_env(
+    projectRoot,
+    mergeProcessEnvWithPlatformGlobalEnv(),
+  );
   // 端口解析（中文）：允许 number / string；空值返回 undefined 以便走配置回退链。
   const parsePort = (
     value: string | number | undefined,
@@ -88,36 +91,25 @@ export async function runCommand(
   const host = (options.host ?? config.start?.host ?? "0.0.0.0").trim();
   const rpc_host = "127.0.0.1";
   const agentId = config.id || resolveAgentId(projectRoot);
-  let currentSystems = loadStaticSystemPrompts(projectRoot);
   const model = await createRuntimeModel({
     config,
     env: hostEnv,
   });
   const plugins = await createCityBuiltinPlugins({
     env: hostEnv,
+    config,
   });
 
   const agent = new Agent({
     id: agentId,
     path: projectRoot,
-    instruction: currentSystems,
     shell: new Shell(),
     plugins,
     model,
     env: hostEnv,
     config,
+    plugin_config: createAgentPluginConfigRuntime(projectRoot),
   });
-
-  const promptCatalog = new StaticPromptCatalog({
-    rootPath: projectRoot,
-    logger: agent.getLogger(),
-    getCurrentSystems: () => currentSystems,
-    applySystems: (nextSystems) => {
-      currentSystems = nextSystems;
-      agent.setInstruction(nextSystems);
-    },
-  });
-  promptCatalog.start();
 
   process.env.DC_BAY_PORT = String(port);
   process.env.DC_BAY_HOST = host;
@@ -154,8 +146,6 @@ export async function runCommand(
     isShuttingDown = true;
 
     agentLogger.info(`Received ${signal} signal, shutting down...`);
-    promptCatalog.stop();
-
     await server.stop();
     await rpc.close();
     await agent.dispose();

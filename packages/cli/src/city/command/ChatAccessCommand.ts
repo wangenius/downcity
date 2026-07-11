@@ -30,7 +30,6 @@ import { printResult } from "@/city/utils/cli/CliOutput.js";
 import { createVersionBanner, parseBoolean } from "@/shared/IndexSupport.js";
 import { helpText, t } from "@/shared/CliLocale.js";
 
-const CHAT_CHANNELS = ["telegram", "feishu", "qq"] as const;
 const REQUEST_STATUSES: ChatAccessRequestStatus[] = [
   "pending",
   "approved",
@@ -156,16 +155,6 @@ export async function resolve_chat_access_target(
   });
 }
 
-function resolve_issuer_map(target: CliChatAccessTarget) {
-  const issuer_by_channel: Partial<Record<(typeof CHAT_CHANNELS)[number], string>> = {};
-  const channels = target.config.plugins?.chat?.channels;
-  for (const channel of CHAT_CHANNELS) {
-    const issuer = String(channels?.[channel]?.channelAccountId || "").trim();
-    if (issuer) issuer_by_channel[channel] = issuer;
-  }
-  return issuer_by_channel;
-}
-
 function parse_scope(value: string): "direct" | "group" | "all" {
   const scope = String(value || "").trim();
   if (scope === "direct" || scope === "group" || scope === "all") return scope;
@@ -184,7 +173,6 @@ export function create_chat_access_service_for_target(
 ): ChatAccessService {
   return new ChatAccessService({
     project_root: target.project_root,
-    issuer_by_channel: resolve_issuer_map(target),
   });
 }
 

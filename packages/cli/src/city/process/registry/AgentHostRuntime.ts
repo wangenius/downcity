@@ -5,7 +5,7 @@
  * - `main/agent/*` 负责创建这些宿主能力对象，再注入到 AgentRuntime。
  * - plugin runtimes / session / plugins 只消费这些对象，不再直接 import `main/*`。
  * - 当前由 City 在这里统一装配路径与 plugin 配置持久化两类宿主对象。
- * - plugin 配置写入 CLI 全局 DB，不再写项目 `downcity.json`。
+ * - plugin 配置统一写入 CLI 全局 DB。
  */
 import {
   getCacheDirPath,

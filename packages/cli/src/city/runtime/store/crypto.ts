@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 使用 AES-256-GCM 对敏感字段（apiKey）做加密落盘。
- * - 默认从 `~/.downcity/main/model-db.key` 加载或自动生成密钥。
+ * - 从 `DC_PLATFORM_ROOT/main/model-db.key` 加载或自动生成密钥。
  */
 import crypto from "node:crypto";
 import fs from "fs-extra";

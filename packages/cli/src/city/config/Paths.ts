@@ -8,36 +8,6 @@
  */
 import path from "path";
 
-/**
- * PROFILE.md 候选文件名（按优先级从高到低）。
- *
- * 关键点（中文）
- * - 统一使用大写文件名：`PROFILE.md`。
- * - 与 SOUL 一起作为静态 prompt 入口。
- */
-const PROFILE_MD_FILE_CANDIDATES = ["PROFILE.md"] as const;
-
-export function getProfileMdPath(cwd: string): string {
-  return path.join(cwd, PROFILE_MD_FILE_CANDIDATES[0]);
-}
-
-/**
- * SOUL.md 候选文件名（按优先级从高到低）。
- *
- * 关键点（中文）
- * - 统一使用大写文件名：`SOUL.md`。
- * - 统一由 Paths 模块暴露，避免调用方散落硬编码。
- */
-const SOUL_MD_FILE_CANDIDATES = ["SOUL.md"] as const;
-
-export function getSoulMdPath(cwd: string): string {
-  return path.join(cwd, SOUL_MD_FILE_CANDIDATES[0]);
-}
-
-export function getDowncityJsonPath(cwd: string): string {
-  return path.join(cwd, "downcity.json");
-}
-
 export function getDowncityDirPath(cwd: string): string {
   return path.join(cwd, ".downcity");
 }
@@ -47,10 +17,6 @@ export function getDowncityDirPath(cwd: string): string {
  */
 export function getLogsDirPath(cwd: string): string {
   return path.join(getDowncityDirPath(cwd), "logs");
-}
-
-export function getDowncitySchemaPath(cwd: string): string {
-  return path.join(getDowncityDirPath(cwd), "schema", "downcity.schema.json");
 }
 
 export function getCacheDirPath(cwd: string): string {

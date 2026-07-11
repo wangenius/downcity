@@ -116,7 +116,7 @@ const WHITEPAPER = {
         title: "Start from Existing Assets, Not from Zero",
         paragraphs: [
           "Downcity’s first principle is not building another platform. It is activating the project you already run. In real teams, the most valuable assets are not just source code: they are configuration habits, collaboration conventions, historical context, task trails, and quality standards.",
-          "`downcity.json`, `PROFILE.md`, and artifacts in `.downcity` are not merely files; they externalize how teams decide, divide work, and review outcomes. Downcity connects these assets into a sustainable execution surface, reducing rollout cost, cognitive burden, and migration friction.",
+          "Project Skills, global Agent configuration, and runtime artifacts in `.downcity` form a clear ownership boundary. Downcity connects these assets into a sustainable execution surface without maintaining competing configuration copies.",
         ],
       },
       {

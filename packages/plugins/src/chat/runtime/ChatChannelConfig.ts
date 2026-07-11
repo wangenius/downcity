@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 渠道配置摘要、状态快照、patch 归一化都收敛在这里。
- * - chat.configure 的运行态写入由 ChatPlugin 实例承载，不再落盘到 downcity.json。
+ * - chat.configure 的配置持久化由宿主能力承载，运行态更新由 ChatPlugin 实例承载。
  * - 该模块不直接负责 action 流程控制，只提供可复用的底层能力。
  */
 
@@ -37,7 +37,7 @@ function toJsonObject(input: unknown): JsonObject {
  *
  * 关键点（中文）
  * - 不返回明文密钥，只返回布尔“是否已配置”。
- * - 字段命名尽量贴近 `downcity.json`，便于前端直接映射编辑。
+ * - 字段命名与 Agent 全局配置保持一致，便于前端直接映射编辑。
  */
 export function buildChatChannelConfigSummary(
   context: AgentContext,
@@ -194,7 +194,7 @@ export function normalizeChatChannelConfigPatch(params: {
   config: Record<string, JsonValue>;
 }): Record<string, string | number | boolean | null> {
   const configDefinition = getChatChannelConfiguration(params.channel);
-  const writableFields = configDefinition.getWritableShipFields();
+  const writableFields = configDefinition.get_writable_agent_config_fields();
   const patch: Record<string, string | number | boolean | null> = {};
 
   for (const field of writableFields) {

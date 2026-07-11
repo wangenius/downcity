@@ -1,4 +1,4 @@
 {
   "title": "CLI",
-  "pages": ["overview", "commands", "init", "project", "downcity-json", "profile"]
+  "pages": ["overview", "commands", "init", "project"]
 }

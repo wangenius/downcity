@@ -6,14 +6,12 @@
  */
 
 import path from "path";
-import fs from "fs-extra";
 import {
   diagnoseDaemonStaleReasons,
   isProcessAlive,
   readDaemonMeta,
   readDaemonPid,
 } from "@/city/process/daemon/Manager.js";
-import { getProfileMdPath } from "@/city/config/Paths.js";
 import { emitCliBlock } from "@/shared/CliReporter.js";
 import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
 
@@ -29,9 +27,6 @@ export async function statusCommand(cwd: string = "."): Promise<void> {
   const projectRoot = path.resolve(cwd);
   const missingInitFiles: string[] = [];
 
-  if (!fs.existsSync(getProfileMdPath(projectRoot))) {
-    missingInitFiles.push("PROFILE.md");
-  }
   if (!readAgentConfig(projectRoot)) {
     missingInitFiles.push("global DB agent config");
   }

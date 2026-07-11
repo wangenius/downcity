@@ -12,11 +12,11 @@ await agent.plugins.register(new SkillPlugin());
 await agent.plugins.unregister("skill");
 ```
 
-`downcity.json` 不再提供 `plugins.<name>.enabled` 这类启用开关。
+项目配置文件不提供 `plugins.<name>.enabled` 这类启用开关。
 
 ## 参数配置
 
-宿主仍然可以保存 plugin 的运行参数，例如渠道账号、默认模型或路径选项：
+宿主仍然可以在自己的全局配置存储中保存 plugin 运行参数，例如渠道账号、默认模型或路径选项：
 
 ```json
 {

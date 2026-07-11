@@ -18,7 +18,7 @@ Split responsibilities across four layers:
 
 In Downcity integration mode:
 
-- the project stores a `modelId`
+- the CLI global database stores a `modelId`
 - not provider config
 - not API keys
 - not a local model instance
@@ -26,7 +26,7 @@ In Downcity integration mode:
 The right mental model is:
 
 ```text
-downcity.json.execution.modelId
+global downcity.db: agent.execution.modelId
   -> Downcity reads and validates it
   -> Federation AIService resolves the target model
   -> Agent runtime executes with that model

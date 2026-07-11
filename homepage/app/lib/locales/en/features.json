@@ -68,7 +68,7 @@
     }
   },
   "codePreview": {
-    "agentMdDesc": "Define personality & rules in plain English",
-    "shipJsonDesc": "Configure permissions and project settings"
+    "skillDesc": "The only versioned Agent capability asset in a project",
+    "configDesc": "The single global source for Agent, model, and Plugin config"
   }
 }

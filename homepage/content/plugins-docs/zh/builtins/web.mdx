@@ -129,7 +129,7 @@ await agent.plugins.runAction({
 
 ## 自然边界
 
-`web` 不关心项目配置，也不写 `downcity.json.plugins.web`。
+`web` 不读取或写入项目配置文件。
 
 如果你需要让 agent 拥有某个具体联网能力，应在 agent 环境中显式提供对应 tool、skill 或 plugin，而不是把它塞进 `web`。
 

@@ -69,10 +69,10 @@ new Agent({
 
 - `instruction` 是静态的，应该保持缓存友好
 - SDK 不会对它做动态变量渲染
-- SDK 不会自己读取 `PROFILE.md` 或 `SOUL.md`
+- SDK 不读取项目 prompt 配置文件
 - 如果省略 `instruction`，SDK 会使用包内最小 core instruction 作为 fallback
 
-如果 `city` 这类宿主希望项目 markdown 文件影响 agent，应由宿主自己读取文件，并把最终文本通过 `instruction` 传入。
+宿主需要额外基础指令时，应通过 `instruction` 显式传入。
 
 ## `model`
 

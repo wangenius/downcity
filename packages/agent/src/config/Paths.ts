@@ -13,99 +13,10 @@
 import path from "path";
 
 /**
- * PROFILE.md 候选文件名（按优先级从高到低）。
- *
- * 关键点（中文）
- * - 统一使用大写文件名：`PROFILE.md`。
- * - 与 SOUL 一起作为静态 prompt 入口。
- */
-export const PROFILE_MD_FILE_CANDIDATES = ["PROFILE.md"] as const;
-
-/**
- * 返回项目主 `PROFILE.md` 的标准路径。
- *
- * 关键点（中文）
- * - 当前始终返回候选列表中的第一优先级文件。
- * - 调用方可把该路径视为初始化时默认写入位置。
- */
-export function getProfileMdPath(cwd: string): string {
-  return path.join(cwd, PROFILE_MD_FILE_CANDIDATES[0]);
-}
-
-/**
- * 返回 `PROFILE.md` 的全部候选路径。
- *
- * 关键点（中文）
- * - 便于后续扩展多候选命名时保持调用方逻辑不变。
- * - 当前虽然只有一个候选值，仍统一暴露数组接口。
- */
-export function getProfileMdCandidatePaths(cwd: string): string[] {
-  return PROFILE_MD_FILE_CANDIDATES.map((filename) => path.join(cwd, filename));
-}
-
-/**
- * SOUL.md 候选文件名（按优先级从高到低）。
- *
- * 关键点（中文）
- * - 统一使用大写文件名：`SOUL.md`。
- * - 统一由 Paths 模块暴露，避免调用方散落硬编码。
- */
-export const SOUL_MD_FILE_CANDIDATES = ["SOUL.md"] as const;
-
-/**
- * 返回项目主 `SOUL.md` 的标准路径。
- *
- * 关键点（中文）
- * - 当前始终返回候选列表中的第一优先级文件。
- * - 与 `PROFILE.md` 一样，属于静态 system prompt 入口文件。
- */
-export function getSoulMdPath(cwd: string): string {
-  return path.join(cwd, SOUL_MD_FILE_CANDIDATES[0]);
-}
-
-/**
- * 返回 `SOUL.md` 的全部候选路径。
- *
- * 关键点（中文）
- * - 供探测逻辑统一遍历候选文件名。
- * - 保留数组形式便于后续新增兼容命名。
- */
-export function getSoulMdCandidatePaths(cwd: string): string[] {
-  return SOUL_MD_FILE_CANDIDATES.map((filename) => path.join(cwd, filename));
-}
-
-/**
- * 返回项目主配置文件 `downcity.json` 的路径。
- */
-export function getDowncityJsonPath(cwd: string): string {
-  return path.join(cwd, "downcity.json");
-}
-
-/**
  * 返回项目运行时状态根目录 `.downcity` 的路径。
  */
 export function getDowncityDirPath(cwd: string): string {
   return path.join(cwd, ".downcity");
-}
-
-/**
- * 返回项目内 schema 快照文件路径。
- *
- * 关键点（中文）
- * - 初始化流程会把本地 schema 副本写到这里，供编辑器联想与校验。
- */
-export function getDowncitySchemaPath(cwd: string): string {
-  return path.join(getDowncityDirPath(cwd), "schema", "downcity.schema.json");
-}
-
-/**
- * 返回 `.downcity/config` 目录路径。
- *
- * 关键点（中文）
- * - 用于存放项目级额外配置快照或未来扩展的辅助配置文件。
- */
-export function getDowncityConfigDirPath(cwd: string): string {
-  return path.join(getDowncityDirPath(cwd), "config");
 }
 
 /**

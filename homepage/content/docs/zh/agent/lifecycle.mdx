@@ -31,7 +31,7 @@ await agent.start();
 启动期间，Agent 会：
 
 - 验证项目目录（如果提供了 `path`）
-- 加载 `PROFILE.md` 和 `SOUL.md`（如果在项目目录中找到）
+- 合并宿主环境和项目 `.env`
 - 初始化所有插件（调用它们的 `init` 钩子）
 - 启动 HTTP 服务器（如果在 `start` 中配置了）
 

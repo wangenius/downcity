@@ -53,7 +53,7 @@ src/
 ├── agent/                 # Agent SDK 入口，按 local / remote 拆分本地与远程实现
 │   ├── local/             # 本地 Agent facade 与实例装配中心
 │   └── remote/            # RemoteAgent facade、RemoteSession 与 HTTP/RPC transport
-├── config/                # 配置与项目初始化，负责 downcity.json、默认配置、execution binding 与脚手架
+├── config/                # 项目环境、运行路径、execution binding 与初始化脚手架
 │   └── project/           # Agent 项目初始化与项目初始化类型
 ├── executor/              # 内部执行内核，负责历史、system、tool loop、增量输出与消息持久化
 ├── plugin/                # 插件系统，负责插件注册、hook、action、内建插件与插件类型
@@ -71,7 +71,7 @@ src/
 - `src/config/`
   - 项目配置、项目级路径解析与项目初始化
   - `project/` 收口 agent 项目脚手架与初始化结果类型
-  - 负责 `downcity.json`、项目 env、`.downcity/*` 路径规则与 execution binding
+  - 负责项目 `.env`、`.downcity/*` 路径规则与 execution binding
 
 - `src/agent/`
   - SDK facade 层
@@ -105,7 +105,7 @@ src/
 - `src/types/`
   - 跨模块、跨包共享协议类型
   - `common/` 放 JSON、模板等无领域依赖的基础类型
-  - `config/` 放 `downcity.json`、LLM、execution binding、plugin 配置、start options 等配置契约
+  - `config/` 放 LLM、execution binding、plugin 配置、start options 等宿主配置契约
   - `runtime/` 放 auth、agent、host、platform 等运行时与控制面共享协议
   - 领域内部类型仍保留在对应领域目录，例如 `plugin/types/`、`executor/types/`
 

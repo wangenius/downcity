@@ -3,7 +3,7 @@
  *
  * 职责说明（中文）
  * - 负责默认 chat account 存储中的敏感字段加解密。
- * - 默认复用平台级 `model-db.key`，保证和现有 `~/.downcity/downcity.db` 数据兼容。
+ * - 复用 `DC_PLATFORM_ROOT` 下的平台级 `model-db.key`。
  *
  * 边界说明（中文）
  * - 这里只处理“字符串 <-> 密文”的转换，不负责数据库读写。

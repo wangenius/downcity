@@ -3,7 +3,7 @@
  *
  * 职责说明（中文）
  * - 提供 `chat` plugin 默认使用的全局 chat account 读写能力。
- * - 默认直接操作 `~/.downcity/downcity.db` 里的 `channel_accounts` 表。
+ * - 直接操作 `DC_PLATFORM_ROOT` 下 `downcity.db` 的 `channel_accounts` 表。
  * - 对 `city` 而言，这里也是统一的默认账号池实现来源。
  *
  * 边界说明（中文）

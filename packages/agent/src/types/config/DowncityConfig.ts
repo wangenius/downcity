@@ -75,20 +75,6 @@ export interface DowncityChatPluginQueueConfig {
 }
 
 /**
- * 聊天插件出站控制配置。
- */
-export interface DowncityChatPluginEgressConfig {
-  /**
-   * 单次 agent run 内，`chat_send` 允许调用的最大次数。
-   */
-  chatSendMaxCallsPerRun?: number;
-  /**
-   * 是否启用 `chat_send` 幂等去重（基于 inbound messageId + 回复内容 hash）。
-   */
-  chatSendIdempotency?: boolean;
-}
-
-/**
  * 聊天插件配置。
  */
 export interface DowncityChatPluginConfig {
@@ -97,17 +83,13 @@ export interface DowncityChatPluginConfig {
    */
   queue?: DowncityChatPluginQueueConfig;
   /**
-   * 出站（egress）控制：用于限制工具发送、避免重复与无限循环刷屏。
-   */
-  egress?: DowncityChatPluginEgressConfig;
-  /**
    * 消息平台 channel 配置。
    */
   channels?: DowncityChatPluginChannelsConfig;
 }
 
 /**
- * downcity.json 中的插件配置映射。
+ * Agent 全局配置中的插件配置映射。
  */
 export interface DowncityPluginConfigMap {
   /**
@@ -124,7 +106,6 @@ export interface DowncityPluginConfigMap {
 }
 
 export interface DowncityConfig {
-  $schema?: string;
   /**
    * agent 唯一标识。
    *
@@ -147,7 +128,7 @@ export interface DowncityConfig {
    *
    * 关键点（中文）
    * - 所有可配置能力统一收敛到 `plugins`，不再保留独立 `services` 域。
-   * - 需要持久化到项目文件的 plugin 配置（例如 `plugins.chat.channels`）放在这里。
+   * - 需要持久化的 plugin 配置（例如 `plugins.chat.channels`）由宿主写入全局配置存储。
    * - key 为 plugin 名称，value 为对应插件的结构化配置对象。
    * - 当前阶段允许各 plugin 自定义字段，但必须保持 JSON 可序列化。
    */
@@ -166,7 +147,7 @@ export interface DowncityConfig {
    * 关键点（中文）
    * - `@downcity/agent` 本地 SDK 不直接消费该字段。
    * - 宿主侧（例如 `downcity`）可读取该字段控制模型工厂行为，例如 `llm.logMessages`。
-   * - 对于项目内 `downcity.json`，通常不需要显式写 provider/model 明细。
+   * - 该字段通常由宿主平台装配，不由 Agent SDK 解析。
    */
   llm?: LlmConfig;
 }

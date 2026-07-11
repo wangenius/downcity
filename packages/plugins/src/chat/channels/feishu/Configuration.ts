@@ -28,14 +28,14 @@ export class FeishuChannelConfiguration extends ChatChannelConfiguration {
         canConfigure: true,
       },
       fields: {
-        ship: [
+        agent_config: [
           {
             key: "enabled",
             label: "Enabled",
             description:
               "Whether feishu channel should be started by runtime.",
             type: "boolean",
-            source: "ship_json",
+            source: "agent_config",
             required: false,
             nullable: false,
             writable: true,
@@ -47,9 +47,9 @@ export class FeishuChannelConfiguration extends ChatChannelConfiguration {
             key: "channelAccountId",
             label: "Chat Account ID",
             description:
-              "Bind this chat platform to a chat account row in ~/.downcity/downcity.db channel_accounts.",
+              "Bind this chat platform to a channel_accounts row in the global downcity.db.",
             type: "string",
-            source: "ship_json",
+            source: "agent_config",
             required: false,
             nullable: true,
             writable: true,

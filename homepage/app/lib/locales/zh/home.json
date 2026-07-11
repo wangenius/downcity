@@ -55,7 +55,7 @@
     "cards": {
       "repo": {
         "title": "仓库原生边界",
-        "description": "每个 Agent 都在真实仓库或文件夹边界内运行。规则、权限与产物落在 PROFILE.md、SOUL.md 与 .downcity/ 中，可版本控制、可审计。"
+        "description": "每个 Agent 都在真实仓库或文件夹边界内运行。Skills 可进入版本控制，管理配置统一进入全局 DB，运行数据留在 .downcity/。"
       },
       "runtime": {
         "title": "可复用运行层",

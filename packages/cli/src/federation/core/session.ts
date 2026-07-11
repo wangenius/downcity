@@ -4,18 +4,13 @@
  * 关键说明（中文）
  * - downfed 的 server profile、admin key、Cloudflare account 与语言都写入 `federation.db`。
  * - 配置整体通过 PlatformStore secure setting 加密保存，避免明文 JSON 状态散落。
- * - 旧 `~/.downcity/config.json` 只做首次兼容读取，不再写回。
  * - user session 由 `city` 维护，本模块只负责 Federation admin 管理态。
  */
 
-import os from "node:os";
-import path from "node:path";
-import fs from "node:fs";
 import { createFederationPlatformStore } from "@/city/runtime/store/index.js";
 import { normalizeBaseUrl } from "@/federation/core/env.js";
 import type { CliLocale } from "@/shared/types/CliLocale.js";
 
-const LEGACY_CONFIG_FILE = path.join(os.homedir(), ".downcity", "config.json");
 const FEDERATION_CONFIG_KEY = "federation.config";
 
 // ============================================================
@@ -61,8 +56,7 @@ export interface ClientConfig {
  * 从磁盘读取 config。
  */
 export function readConfig(): ClientConfig {
-  const stored = readStoredConfig();
-  const raw = stored ?? readLegacyConfig();
+  const raw = readStoredConfig() ?? {};
   const servers = readServersFromConfig(raw);
   const active_server_url = readActiveServerURL(raw, servers);
 
@@ -75,10 +69,6 @@ export function readConfig(): ClientConfig {
     model: typeof raw.model === "string" ? raw.model : "",
     cli_locale: normalizeCliLocale(raw.cli_locale),
   };
-
-  if (!stored && Object.keys(raw).length > 0) {
-    writeConfig(config);
-  }
 
   return config;
 }
@@ -376,14 +366,6 @@ function deriveServerName(baseUrl: string): string {
   }
 }
 
-function readJSON<T>(filepath: string): T | undefined {
-  try {
-    return JSON.parse(fs.readFileSync(filepath, "utf8")) as T;
-  } catch {
-    return undefined;
-  }
-}
-
 function readStoredConfig(): Record<string, unknown> | undefined {
   const store = createFederationPlatformStore();
   try {
@@ -400,8 +382,4 @@ function writeStoredConfig(config: ClientConfig): void {
   } finally {
     store.close();
   }
-}
-
-function readLegacyConfig(): Record<string, unknown> {
-  return readJSON<Record<string, unknown>>(LEGACY_CONFIG_FILE) ?? {};
 }

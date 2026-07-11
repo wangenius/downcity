@@ -17,7 +17,7 @@ export interface PlatformAgentOption {
   id: string;
 
   /**
-   * agent 项目自身的稳定标识（优先 downcity.json.id，回退目录名推导）。
+   * Agent 全局配置中的稳定标识。
    */
   agentId: string;
 
@@ -90,7 +90,7 @@ export interface PlatformAgentOption {
   }>;
 
   /**
-   * 当前 agent 绑定的 console 模型 ID（downcity.json.execution.modelId）。
+   * 当前 Agent 全局配置绑定的模型 ID。
    */
   modelId?: string;
 }
@@ -153,16 +153,6 @@ export interface PlatformAgentDirectoryInspection {
    * 该目录是否已满足最小 agent 初始化条件。
    */
   initialized: boolean;
-
-  /**
-   * `downcity.json` 是否存在。
-   */
-  hasShipJson: boolean;
-
-  /**
-   * `PROFILE.md` 是否存在。
-   */
-  hasProfileMd: boolean;
 
   /** 该目录是否已出现在 managed agent registry 中。 */
   knownAgent: boolean;
@@ -266,7 +256,7 @@ export interface ControlPlaneRuntimeStatus {
  */
 export interface PlatformConfigFileStatusItem {
   /**
-   * 配置文件逻辑名称（例如 `ship_json`、`control_plane_pid`）。
+   * 配置状态逻辑名称（例如 `agent_config`、`control_plane_pid`）。
    */
   key: string;
 
@@ -336,7 +326,7 @@ export interface PlatformConfigStatusResponse {
   selectedAgentId: string;
 
   /**
-   * 当前选中的 agent 项目 id（即 `downcity.json.id`，可能为空）。
+   * 当前选中的 Agent 配置 id（可能为空）。
    */
   selectedAgentProjectId: string;
 

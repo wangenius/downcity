@@ -69,10 +69,10 @@ Key points:
 
 - `instruction` is static and cache-friendly
 - the SDK does not render dynamic variables inside it
-- the SDK does not read `PROFILE.md` or `SOUL.md` by itself
+- the SDK does not read project prompt config files
 - if you omit `instruction`, the SDK uses its minimal core instruction fallback
 
-If a host such as `city` wants project markdown files to affect the agent, that host should read those files and pass their final text through `instruction`.
+Hosts that need additional base instructions should pass them explicitly through `instruction`.
 
 ## `model`
 

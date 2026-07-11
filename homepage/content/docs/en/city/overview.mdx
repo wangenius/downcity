@@ -12,11 +12,11 @@ description: What City is and how it provides shared AI infrastructure to Agents
 - **Model catalog** — the Federation AIService lists available models and providers. Agents bind to models through IDs, not by embedding provider keys.
 - **Identity & auth** — global user accounts, API tokens, and permissions live in City, not in each project.
 - **Usage & balance** — every model call is metered and tracked. City handles billing, quotas, and payment (via Stripe).
-- **Channel accounts** — bot credentials for Telegram, Feishu, QQ, etc. are stored in `~/.downcity/downcity.db` and referenced by ID from the project.
+- **Agent and channel config** — Agent config and bot credentials for Telegram, Feishu, QQ, and other channels live in the global `downcity.db`; Agents bind channels by account ID.
 
 ## What City does not own
 
-- Project-specific prompts (`PROFILE.md`, `SOUL.md`)
+- Project `.env` and `.agents/skills`
 - Agent sessions and conversation state
 - Plugin behavior and tool implementations
 

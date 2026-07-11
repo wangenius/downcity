@@ -29,7 +29,6 @@ export function resolve_chat_access_issuer_map(
 export function create_chat_access_service(context: AgentContext): ChatAccessService {
   return new ChatAccessService({
     project_root: context.rootPath,
-    issuer_by_channel: resolve_chat_access_issuer_map(context),
   });
 }
 

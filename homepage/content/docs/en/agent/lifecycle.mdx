@@ -31,7 +31,7 @@ await agent.start();
 During startup, the Agent will:
 
 - validate the project directory (if `path` is provided)
-- load `PROFILE.md` and `SOUL.md` (if found in the project directory)
+- merge host env with project `.env`
 - initialize all plugins (call their `init` hooks)
 - start the HTTP server (if configured in `start`)
 

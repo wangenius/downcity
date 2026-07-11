@@ -7,8 +7,7 @@
  * - 静态 CLI catalog 使用同一套 City 装配入口，但不注入需要 City 登录态的 image/asr/tts。
  */
 
-import type { BasePlugin } from "@downcity/agent";
-import type { StoredChannelAccount } from "@downcity/agent";
+import type { BasePlugin, DowncityConfig } from "@downcity/agent";
 import {
   AsrPlugin,
   ChatPlugin,
@@ -28,11 +27,8 @@ import type { ImagePluginModel, ImagePluginResolvedInput } from "@downcity/plugi
 import type { AsrPluginInput } from "@downcity/plugins";
 import type { TtsPluginInput } from "@downcity/plugins";
 import { CityUserManager } from "@/city/shared/CityUserManager.js";
-import { PlatformStore } from "@/city/runtime/store/index.js";
 
 const city_user_manager = new CityUserManager();
-
-type ChatChannelAccountName = "telegram" | "feishu" | "qq";
 
 /**
  * 读取 AIService 调用必须显式提供的模型 ID。
@@ -49,73 +45,26 @@ function require_model_id(input: unknown, capability: string): string {
 }
 
 /**
- * 判断 chat account 是否具备对应渠道的完整凭据。
- */
-function isConfiguredChatAccount(account: StoredChannelAccount): boolean {
-  if (account.channel === "telegram") {
-    return !!String(account.botToken || "").trim();
-  }
-  return !!String(account.appId || "").trim() &&
-    !!String(account.appSecret || "").trim();
-}
-
-/**
- * 选出某个平台当前应注入给 agent 的 City 全局账号。
- *
- * 关键点（中文）：City 级账号没有项目内配置时，按 updatedAt 最新的完整账号作为默认运行绑定。
- */
-function pickChannelAccount(
-  accounts: StoredChannelAccount[],
-  channel: ChatChannelAccountName,
-): StoredChannelAccount | null {
-  const candidates = accounts
-    .filter((account) => account.channel === channel)
-    .filter(isConfiguredChatAccount)
-    .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
-  return candidates[0] || null;
-}
-
-/**
- * 读取 City 全局 chat accounts。
- */
-function listCityChannelAccounts(): StoredChannelAccount[] {
-  const store = new PlatformStore();
-  try {
-    return store.listChannelAccountsSync();
-  } finally {
-    store.close();
-  }
-}
-
-/**
  * 创建 City 注入给 ChatPlugin 的 channel 实例。
  */
-function createCityChatChannels(params: {
-  /**
-   * 是否读取 City 全局账号池。
-   */
-  includeAccounts: boolean;
-}) {
-  const accounts = params.includeAccounts ? listCityChannelAccounts() : [];
-  const telegram = pickChannelAccount(accounts, "telegram");
-  const feishu = pickChannelAccount(accounts, "feishu");
-  const qq = pickChannelAccount(accounts, "qq");
+function create_city_chat_channels(config?: DowncityConfig) {
+  const channels = config?.plugins?.chat?.channels;
+  const telegram = channels?.telegram;
+  const feishu = channels?.feishu;
+  const qq = channels?.qq;
 
   return [
     new TelegramChannel({
-      enabled: Boolean(telegram),
-      channelAccountId: telegram?.id,
-      name: telegram?.name,
+      enabled: telegram?.enabled === true,
+      channelAccountId: telegram?.channelAccountId,
     }),
     new FeishuChannel({
-      enabled: Boolean(feishu),
-      channelAccountId: feishu?.id,
-      name: feishu?.name,
+      enabled: feishu?.enabled === true,
+      channelAccountId: feishu?.channelAccountId,
     }),
     new QqChannel({
-      enabled: Boolean(qq),
-      channelAccountId: qq?.id,
-      name: qq?.name,
+      enabled: qq?.enabled === true,
+      channelAccountId: qq?.channelAccountId,
     }),
   ];
 }
@@ -127,18 +76,17 @@ function createCityChatChannels(params: {
  */
 export function createCityStaticBuiltinPlugins(input: {
   /**
-   * 是否读取 City 全局 chat accounts 并注入 chat channels。
+   * 当前 Agent 配置；未提供时所有 chat channel 保持禁用。
    */
-  includeChatAccounts?: boolean;
+  config?: DowncityConfig;
 } = {}): BasePlugin[] {
   return [
     new SkillPlugin(),
     new WebPlugin(),
     new WorkboardPlugin(),
     new ChatPlugin({
-      channels: createCityChatChannels({
-        includeAccounts: input.includeChatAccounts === true,
-      }),
+      queue: input.config?.plugins?.chat?.queue,
+      channels: create_city_chat_channels(input.config),
     }),
     new ContactPlugin(),
     new TaskPlugin(),
@@ -154,14 +102,18 @@ export async function createCityBuiltinPlugins(input: {
    * 宿主显式注入的 env，用于支持 DOWNCITY_CITY_* 覆盖项。
    */
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
-} = {}): Promise<BasePlugin[]> {
+  /**
+   * 当前运行 Agent 从全局 DB 读取的配置。
+   */
+  config: DowncityConfig;
+}): Promise<BasePlugin[]> {
   const { client } = await city_user_manager.createUserClient({
     env: input.env ?? process.env,
   });
 
   return [
     ...createCityStaticBuiltinPlugins({
-      includeChatAccounts: true,
+      config: input.config,
     }),
     new ImagePlugin({
       list_models: async () => {

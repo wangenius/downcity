@@ -11,6 +11,7 @@ import type { Shell } from "@downcity/shell";
 import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import type { AgentModel } from "@/model/CityModelAdapter.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
+import type { AgentPluginConfigRuntime } from "@/types/agent/AgentRuntimeAssembly.js";
 import type {
   AgentManagedSession,
   SessionOptions,
@@ -66,7 +67,7 @@ export interface AgentOptions {
    *
    * 关键点（中文）
    * - `instruction` 是稳定、缓存友好的 system 前缀，不做动态变量替换。
-   * - SDK 不主动读取 `PROFILE.md` / `SOUL.md`；这类项目文件应由 city 或调用方读取后传入。
+   * - 项目目录不再提供隐式 prompt 文件；调用方需要的指令必须显式传入。
    * - 未传入时，SDK 会使用包内最小 core instruction 作为 fallback。
    */
   instruction?: string | string[];
@@ -116,8 +117,17 @@ export interface AgentOptions {
    * 宿主显式传入的运行时配置。
    *
    * 关键点（中文）
-   * - SDK 不要求项目目录存在 `downcity.json`。
-   * - CLI / Console 可从自己的配置存储读取后传入这里。
+   * - SDK 不读取项目配置文件。
+   * - CLI / Console 从自己的全局配置存储读取后传入这里。
    */
   config?: DowncityConfig;
+
+  /**
+   * 宿主提供的 plugin 配置持久化能力。
+   *
+   * 关键点（中文）
+   * - SDK 默认不持久化配置；CLI 等宿主可在这里接入自己的全局数据库。
+   * - plugin 只依赖该稳定接口，不感知 SQLite、文件或远端服务等具体实现。
+   */
+  plugin_config?: AgentPluginConfigRuntime;
 }

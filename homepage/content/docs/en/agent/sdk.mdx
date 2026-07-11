@@ -25,11 +25,13 @@ const agent = new Agent({
 ## Constructor options
 
 - `id` — stable agent identifier. Used for session storage and runtime directories.
-- `path` — project directory. The Agent reads `PROFILE.md`, `SOUL.md`, and `.env` from here.
+- `path` — project directory. The Agent reads `.env` here and stores `.downcity` runtime data.
 - `model` — the live model instance. Passed directly, not looked up from a catalog.
 - `tools` — array of tool instances available to the agent.
 - `plugins` — array of plugin instances to load at startup.
 - `env` — host-provided environment variables, overlaid with project `.env`.
+- `config` — Agent config supplied explicitly by the host; the SDK does not read project config files.
+- `plugin_config` — optional host interface for persisting Plugin config.
 - `start` — optional HTTP server config (port, host).
 - `execution` — optional execution binding config.
 

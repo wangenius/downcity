@@ -3,7 +3,7 @@
   "description": "在几分钟内将您的代码仓库转换为 AI Agent",
   "step1": {
     "title": "初始化配置",
-    "description": "在仓库中创建/初始化 agent 项目。系统会生成 `PROFILE.md` 与配置文件，为你的代码仓库赋予独特的人格与边界。",
+    "description": "在仓库中初始化 Agent 项目。管理配置进入全局数据库，项目只保留 `.env`、Skills 与运行数据。",
     "command": "downcity agent create ."
   },
   "step2": {
@@ -23,8 +23,8 @@
       "windowTitle": "bash — 80x24",
       "step1": {
         "initializing": "正在初始化 Downcity...",
-        "agentMdCreated": "✔ 已生成 PROFILE.md",
-        "shipJsonCreated": "✔ 已生成 downcity.json",
+        "agentMdCreated": "✔ 已创建 .agents/skills",
+        "shipJsonCreated": "✔ 已写入全局 downcity.db",
         "ready": "准备起航。"
       },
       "step2": {

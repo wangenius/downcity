@@ -2,16 +2,13 @@
  * AgentConfigStore：CLI 全局 DB 中的 Agent 配置仓储。
  *
  * 关键点（中文）
- * - Agent 管理态不再写入项目 `downcity.json`。
+ * - Agent 管理态只写入全局数据库。
  * - 全局 DB 以 projectRoot 为主键保存 agent id、启动参数、execution 与 plugin usage 配置。
- * - 旧 `downcity.json` 仅作为迁移来源读取一次，后续新写入都进入 DB。
+ * - 项目目录不再承载配置文件，所有管理态配置只从全局 DB 读取。
  */
 
-import fs from "fs-extra";
 import path from "node:path";
-import type { DowncityConfig } from "@downcity/agent";
 import { createCityPlatformStore } from "@/city/runtime/store/index.js";
-import { getDowncityJsonPath } from "@/city/config/Paths.js";
 import { normalizeDefaultAgentId } from "@downcity/agent";
 import type {
   AgentConfigsState,
@@ -99,28 +96,6 @@ function write_state(state: AgentConfigsState): void {
   }
 }
 
-function read_legacy_downcity_config(projectRoot: string): StoredAgentConfig | null {
-  const downcityJsonPath = getDowncityJsonPath(projectRoot);
-  if (!fs.existsSync(downcityJsonPath)) return null;
-  try {
-    const raw = fs.readJsonSync(downcityJsonPath) as Partial<DowncityConfig>;
-    return normalize_config(
-      {
-        projectRoot,
-        id: raw.id,
-        version: raw.version,
-        start: raw.start,
-        execution: raw.execution,
-        plugins: raw.plugins,
-        llm: raw.llm,
-      },
-      projectRoot,
-    );
-  } catch {
-    return null;
-  }
-}
-
 /**
  * 读取指定项目的 Agent 配置。
  */
@@ -128,13 +103,7 @@ export function readAgentConfig(projectRootInput: string): StoredAgentConfig | n
   const projectRoot = normalize_project_root(projectRootInput);
   const state = read_state();
   const stored = state.configs.find((item) => item.projectRoot === projectRoot);
-  if (stored) return normalize_config(stored, projectRoot);
-
-  const legacy = read_legacy_downcity_config(projectRoot);
-  if (!legacy) return null;
-
-  upsertAgentConfig(legacy);
-  return legacy;
+  return stored ? normalize_config(stored, projectRoot) : null;
 }
 
 /**

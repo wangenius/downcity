@@ -12,11 +12,11 @@ description: City 是什么，以及如何为 Agent 提供共享 AI 基础设施
 - **模型目录** — Federation AIService 列出可用模型和提供商。Agent 通过 ID 绑定模型，无需在每个项目里嵌入提供商密钥。
 - **身份与认证** — 全局用户账号、API token 和权限属于 City，不属于每个项目。
 - **用量与余额** — 每次模型调用都会被计量和追踪。City 处理计费、配额和支付（通过 Stripe）。
-- **渠道账号** — Telegram、飞书、QQ 等机器人凭证存储在 `~/.downcity/downcity.db` 中，从项目里通过 ID 引用。
+- **Agent 与渠道配置** — Agent 配置和 Telegram、飞书、QQ 等机器人凭证统一存储在全局 `downcity.db`，Agent 通过账号 ID 绑定渠道。
 
 ## City 不负责什么
 
-- 项目专属提示词（`PROFILE.md`、`SOUL.md`）
+- 项目 `.env` 和 `.agents/skills`
 - Agent 会话和对话状态
 - 插件行为和工具实现
 

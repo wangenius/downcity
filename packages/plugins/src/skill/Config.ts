@@ -2,7 +2,7 @@
  * SkillPlugin 构造参数归一化工具。
  *
  * 关键点（中文）
- * - SkillPlugin 不再读取 `downcity.json.plugins.skill` 私有配置。
+ * - SkillPlugin 只读取 constructor 配置，不读取项目配置文件。
  * - constructor options 是唯一行为配置入口，便于 SDK 用户直接理解。
  * - 这里只做默认值与去重，不做文件系统扫描。
  */

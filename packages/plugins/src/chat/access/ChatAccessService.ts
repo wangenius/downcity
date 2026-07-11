@@ -9,7 +9,6 @@
 
 import path from "node:path";
 import { ChatAccessStore } from "@/chat/access/ChatAccessStore.js";
-import { migrate_legacy_chat_access } from "@/chat/access/ChatAccessMigration.js";
 import type {
   ApproveChatAccessRequestInput,
   ChatAccessDecision,
@@ -65,21 +64,13 @@ export function resolve_chat_access_scope(
  */
 export class ChatAccessService {
   private readonly project_root: string;
-  private readonly issuer_by_channel: Partial<Record<ChatDispatchChannel, string>>;
-
   constructor(options: ChatAccessServiceOptions) {
     this.project_root = path.resolve(normalize_text(options.project_root) || ".");
-    this.issuer_by_channel = { ...(options.issuer_by_channel || {}) };
   }
 
   private with_store<T>(operation: (store: ChatAccessStore) => T): T {
     const store = new ChatAccessStore(this.project_root);
     try {
-      migrate_legacy_chat_access({
-        project_root: this.project_root,
-        issuer_by_channel: this.issuer_by_channel,
-        store,
-      });
       return operation(store);
     } finally {
       store.close();

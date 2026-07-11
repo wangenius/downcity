@@ -146,11 +146,6 @@ export type {
   SessionComposerOptions,
 } from "./types/session/SessionComposerOptions.js";
 export { transformPromptsIntoSystemMessages } from "./executor/composer/system/default/PromptRenderer.js";
-export {
-  loadStaticSystemPrompts,
-  StaticPromptCatalog,
-} from "./executor/composer/system/default/StaticPromptCatalog.js";
-
 // 通用 plugin 宿主工具
 export {
   buildStaticPluginAvailability,
@@ -201,7 +196,10 @@ export {
   isAgentProjectInitialized,
   normalizeDefaultAgentId,
 } from "./config/AgentInitializer.js";
-export { loadDowncityConfig } from "./config/Config.js";
+export {
+  load_project_dotenv,
+  resolve_agent_env,
+} from "./config/AgentEnv.js";
 export {
   getDowncityChatHistoryPath,
   getDowncitySessionMessagesPath,
@@ -238,7 +236,14 @@ export type {
 export type { ExecutionBindingConfig } from "./types/config/ExecutionBinding.js";
 
 // 配置与模型类型
-export type { DowncityConfig } from "./types/config/DowncityConfig.js";
+export type {
+  DowncityChatChannelConfig,
+  DowncityChatPluginChannelsConfig,
+  DowncityChatPluginConfig,
+  DowncityChatPluginQueueConfig,
+  DowncityConfig,
+  DowncityPluginConfigMap,
+} from "./types/config/DowncityConfig.js";
 export type {
   LlmConfig,
   LlmModelConfig,
@@ -266,14 +271,6 @@ export type {
 
 export type {
   PlatformAgentChatChannelStatus,
-  PlatformAgentShipChatChannelsConfig,
-  PlatformAgentShipChatPluginConfig,
-  PlatformAgentShipExecutionAgentConfig,
-  PlatformAgentShipExecutionConfig,
-  PlatformAgentShipJson,
-  PlatformAgentShipPluginsConfig,
-  PlatformAgentShipSingleChannelConfig,
-  PlatformAgentShipStartConfig,
 } from "./types/runtime/platform/PlatformGateway.js";
 
 // Inline instant 协议类型

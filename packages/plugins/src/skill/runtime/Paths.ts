@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - roots 分三类：项目内（project）、用户目录（home），以及构造参数路径（custom）
- * - SkillPlugin constructor 是唯一配置入口，不再读取 downcity.json 的 skill 私有配置
+ * - SkillPlugin constructor 是唯一配置入口，不读取项目配置文件
  * - 兼容 `<any>/skills` 这种布局：如果 root basename 不是 `skills` 且其子目录 `skills/` 存在，则优先扫描 `<root>/skills`
  */
 

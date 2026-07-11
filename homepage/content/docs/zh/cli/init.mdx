@@ -1,50 +1,36 @@
 ---
 title: 项目初始化
-description: 如何使用 CLI 创建和初始化新 Agent 项目
+description: 使用 CLI 创建 Agent 项目和全局配置
 ---
 
 # 项目初始化
 
-`city agent create` 命令创建一个新 Agent 项目，包含运行所需的最小文件，并把 Agent 配置写入 CLI 全局 DB。
-
-## 基本用法
+`city agent create` 创建项目运行目录和 Skills 目录，并把 Agent 配置写入全局数据库。
 
 ```bash
 city agent create my-project
 ```
 
-这会创建：
+生成结构：
 
 ```text
 my-project/
-├── PROFILE.md
-├── SOUL.md
-├── .downcity/
-└── .env
+├── .env
+├── .env.example
+├── .agents/
+│   └── skills/
+└── .downcity/
 ```
 
-## 生成的文件
-
-- `PROFILE.md` — Agent 的可见角色和输出风格。见 [Profile](/zh/docs/cli/profile)。
-- `SOUL.md` — 更深层的长期运行原则。见 [Profile](/zh/docs/cli/profile)。
-- `.downcity/` — 运行时数据目录（会话、日志、缓存）。
-- `.env` — 项目环境变量。
-- CLI 全局 DB 中的 Agent 配置 — 包含 Agent ID、模型绑定、启动参数和 plugin 参数。
-
-## 选项
+全局数据库保存 Agent ID、模型绑定、启动参数和 Plugin 配置。项目 `.env` 会覆盖平台全局环境和当前 CLI 进程环境。
 
 ```bash
-# 允许覆盖已有 Agent 配置
+# 允许覆盖全局数据库中的现有 Agent 配置
 city agent create my-project --force
 ```
 
-## 初始化后
-
-1. 编辑 `PROFILE.md` 和 `SOUL.md` 塑造行为。
-2. 使用 `city agent config` 或交互式 `city agent` 管理模型、端口和 chat account 绑定。
-3. 运行 `city agent start` 启动 Agent。
+初始化后，可在 `.agents/skills` 添加项目 Skills，并运行 `city agent start` 启动 Agent。
 
 继续阅读：
 
 - [项目结构](/zh/docs/cli/project)
-- [legacy downcity.json](/zh/docs/cli/downcity-json)

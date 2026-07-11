@@ -65,3 +65,36 @@ test("RemoteSession reconnects the event pump after transport close", async () =
   });
   assert.equal((await second_turn.finished).text, "done");
 });
+
+test("RemoteSession switches models by stable id without local model instances", async () => {
+  const updates = [];
+  const transport = {
+    async set(_session_id, input) {
+      updates.push(input);
+      return {
+        agentId: "agent_test",
+        sessionId: "session_test",
+        messageCount: 0,
+        modelId: input.modelId,
+        modelLabel: input.modelId,
+      };
+    },
+  };
+  const session = new RemoteSession(transport, {
+    agentId: "agent_test",
+    sessionId: "session_test",
+    messageCount: 0,
+    modelId: "old-model",
+    modelLabel: "old-model",
+  });
+
+  await session.set({ modelId: "next-model" });
+
+  assert.deepEqual(updates, [{ modelId: "next-model" }]);
+  assert.equal(session.config.modelId, "next-model");
+  assert.equal(session.config.modelLabel, "next-model");
+  await assert.rejects(
+    session.set({ model: { modelId: "local-model", provider: "test" } }),
+    /does not accept a local model instance/,
+  );
+});

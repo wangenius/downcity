@@ -82,6 +82,18 @@ export interface AgentOptions {
    */
   model?: AgentModel;
 
+  /** 当前 Agent 默认模型对应的稳定 ID。 */
+  model_id?: string;
+
+  /**
+   * 按稳定 ID 解析 Session 运行时模型。
+   *
+   * 关键点（中文）
+   * - Session 热切换与进程重启后的恢复统一使用该 resolver。
+   * - SDK 不维护模型目录，具体目录与鉴权由宿主负责。
+   */
+  resolve_model?: (model_id: string) => Promise<AgentModel>;
+
   /**
    * 当前 agent 显式持有的插件实例集合。
    *

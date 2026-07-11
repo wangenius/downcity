@@ -20,6 +20,7 @@ import type {
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
+  AgentSessionSetInput,
 } from "@/types/agent/SessionTypes.js";
 import type {
   RemoteAgentPluginActionInput,
@@ -58,6 +59,13 @@ export class RpcRemoteAgentTransport implements RemoteAgentTransport {
 
   async get_info(session_id: string): Promise<AgentSessionInfo> {
     return await this.client.get_session(session_id);
+  }
+
+  async set(
+    session_id: string,
+    input: AgentSessionSetInput,
+  ): Promise<AgentSessionInfo> {
+    return await this.client.set_session({ session_id, input });
   }
 
   async prompt(

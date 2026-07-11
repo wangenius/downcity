@@ -259,17 +259,17 @@ export function registerAgentCommands(
   agent
     .command("model [path]")
     .description(t({
-      zh: "从当前 Federation 选择并配置 Agent 使用的模型",
-      en: "select and configure the agent model from the active Federation",
+      zh: "从当前 Federation 选择并切换 Session 使用的模型",
+      en: "select and switch a Session model from the active Federation",
     }))
     .option("--set <model-id>", t({
       zh: "直接设置 Federation model id（非交互模式必填）",
       en: "set a Federation model id directly (required in non-interactive mode)",
     }))
-    .option("--restart [enabled]", t({
-      zh: "模型更新后重启正在运行的 Agent",
-      en: "restart the running agent after updating its model",
-    }), parseBoolean)
+    .option("--session-id <session-id>", t({
+      zh: "目标 Session ID（省略时交互选择）",
+      en: "target Session ID (interactive selection when omitted)",
+    }))
     .helpOption("--help", helpText())
     .action(createVersionBanner(
       context.version,

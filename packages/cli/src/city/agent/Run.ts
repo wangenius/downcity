@@ -20,6 +20,7 @@ import { AgentHTTP, AgentRPC } from "@downcity/server";
 import type { AgentStartOptions } from "@/city/types/AgentStartOptions.js";
 import { CliError } from "@/shared/CliError.js";
 import { createRuntimeModel } from "@/city/runtime/city-model/CreateRuntimeModel.js";
+import { createCityAiAgentModel } from "@/city/runtime/city-model/CityAiServiceBinding.js";
 import { mergeProcessEnvWithPlatformGlobalEnv } from "@/city/env/ProcessEnv.js";
 import { resolveAgentId } from "@/shared/IndexSupport.js";
 import { startAgentHttpGateway } from "@/city/agent/AgentHttpGateway.js";
@@ -95,6 +96,9 @@ export async function runCommand(
     config,
     env: hostEnv,
   });
+  const model_id = String(
+    config.execution?.type === "api" ? config.execution.modelId || "" : "",
+  ).trim();
   const plugins = await createCityBuiltinPlugins({
     env: hostEnv,
     config,
@@ -106,6 +110,12 @@ export async function runCommand(
     shell: new Shell(),
     plugins,
     model,
+    model_id,
+    resolve_model: async (session_model_id) =>
+      await createCityAiAgentModel({
+        modelId: session_model_id,
+        env: hostEnv,
+      }),
     env: hostEnv,
     config,
     plugin_config: createAgentPluginConfigRuntime(projectRoot),

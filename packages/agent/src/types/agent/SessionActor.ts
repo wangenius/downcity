@@ -101,6 +101,9 @@ export interface AgentSession extends AgentSessionActor {
  * 远程 Agent 返回的公开 session 接口。
  */
 export interface RemoteAgentSession extends AgentSessionActor {
+  /** 按稳定模型 ID 更新远程 Session 模型。 */
+  set(input: AgentSessionSetInput): Promise<void>;
+
   /** 从当前远程 session 创建一个分叉会话。 */
   fork(input?: AgentSessionForkInput | string): Promise<RemoteAgentSession>;
 }

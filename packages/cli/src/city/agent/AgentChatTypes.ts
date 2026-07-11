@@ -108,6 +108,8 @@ export interface AgentChatSessionSummaryView {
   previewText?: string;
   /** 已落盘消息数。 */
   messageCount: number;
+  /** 当前 Session 绑定的稳定模型 ID。 */
+  modelId?: string;
   /** 最近更新时间（ms）。 */
   updatedAt?: number;
   /** 是否正在执行。 */

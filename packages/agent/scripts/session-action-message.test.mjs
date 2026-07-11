@@ -187,6 +187,56 @@ test("default model initialization does not persist model-switching actions", as
   }
 });
 
+test("session model id persists and restores through the host resolver", async () => {
+  const agent_path = await fs.mkdtemp(
+    path.join(os.tmpdir(), "downcity-agent-session-model-id-"),
+  );
+  const resolved_model_ids = [];
+  const resolve_model = async (model_id) => {
+    resolved_model_ids.push(model_id);
+    return {
+      modelId: model_id,
+      provider: "test",
+    };
+  };
+  const first_agent = new Agent({
+    id: "session_model_id_agent",
+    path: agent_path,
+    model: await resolve_model("default-model"),
+    model_id: "default-model",
+    resolve_model,
+  });
+  try {
+    const session = await first_agent.sessions.create({
+      sessionId: "persisted-model-session",
+    });
+    await session.set({ modelId: "session-model" });
+    const info = await session.get_info();
+    assert.equal(info.modelId, "session-model");
+    assert.equal(session.config.modelId, "session-model");
+  } finally {
+    await first_agent.dispose();
+  }
+
+  const restored_agent = new Agent({
+    id: "session_model_id_agent",
+    path: agent_path,
+    model: await resolve_model("other-default-model"),
+    model_id: "other-default-model",
+    resolve_model,
+  });
+  try {
+    const restored_session = await restored_agent.sessions.get(
+      "persisted-model-session",
+    );
+    assert.equal(restored_session.config.modelId, "session-model");
+    assert.equal(restored_session.config.model.modelId, "session-model");
+    assert.equal(resolved_model_ids.at(-1), "session-model");
+  } finally {
+    await restored_agent.dispose();
+  }
+});
+
 test("session.fork persists and publishes history-forking actions on source session", async () => {
   const agent_path = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-agent-history-forking-"),

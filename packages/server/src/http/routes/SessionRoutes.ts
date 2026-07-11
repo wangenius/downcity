@@ -15,6 +15,7 @@ import type {
   AgentArchiveSessionsInput,
 } from "@downcity/agent";
 import type { AgentSessionPromptInput } from "@downcity/agent";
+import type { SessionModelUpdateBody } from "@/types/SessionModelRoute.js";
 
 const NDJSON_CONTENT_TYPE = "application/x-ndjson; charset=utf-8";
 const SDK_EVENTS_READY_FRAME = {
@@ -82,6 +83,34 @@ export function registerSdkSessionRoutes(
         return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
       const session = await sessions.get(sessionId);
+      return c.json({
+        success: true,
+        session: await session.get_info(),
+      });
+    } catch (error) {
+      return c.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        500,
+      );
+    }
+  });
+
+  app.put("/api/sdk/sessions/:sessionId/model", async (c) => {
+    try {
+      const sessionId = String(c.req.param("sessionId") || "").trim();
+      if (!sessionId) {
+        return c.json({ success: false, error: "Missing sessionId" }, 400);
+      }
+      const body = (await c.req.json()) as SessionModelUpdateBody;
+      const modelId = String(body.modelId || "").trim();
+      if (!modelId) {
+        return c.json({ success: false, error: "Missing modelId" }, 400);
+      }
+      const session = await sessions.get(sessionId);
+      await session.set({ modelId });
       return c.json({
         success: true,
         session: await session.get_info(),

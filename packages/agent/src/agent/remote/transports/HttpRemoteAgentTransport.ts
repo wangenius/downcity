@@ -20,6 +20,7 @@ import type {
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
+  AgentSessionSetInput,
 } from "@/types/agent/SessionTypes.js";
 import type {
   RemoteAgentPluginActionInput,
@@ -96,6 +97,27 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
     });
     if (!payload.success || !payload.session?.sessionId) {
       throw new Error(String(payload.error || "Remote session info failed"));
+    }
+    return payload.session;
+  }
+
+  async set(
+    session_id: string,
+    input: AgentSessionSetInput,
+  ): Promise<AgentSessionInfo> {
+    const payload = await read_http_json<{
+      success?: boolean;
+      error?: string;
+      session?: AgentSessionInfo;
+    }>(`${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/model`, {
+      method: "PUT",
+      headers: this.headers({
+        "Content-Type": "application/json",
+      }),
+      body: JSON.stringify({ modelId: input.modelId }),
+    });
+    if (!payload.success || !payload.session?.sessionId) {
+      throw new Error(String(payload.error || "Remote session model update failed"));
     }
     return payload.session;
   }

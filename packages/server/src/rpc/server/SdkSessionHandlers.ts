@@ -47,6 +47,12 @@ export async function handleSdkSessionRpcRequest(params: {
       write_success(request.id, { session: await session.get_info() });
       return true;
     }
+    case "sdk.sessions.set": {
+      const session = await options.sessions.get(request.params.sessionId);
+      await session.set(request.params.input);
+      write_success(request.id, { session: await session.get_info() });
+      return true;
+    }
     case "sdk.sessions.prompt": {
       const session = await options.sessions.get(request.params.sessionId);
       const turn = await session.prompt(request.params.input);

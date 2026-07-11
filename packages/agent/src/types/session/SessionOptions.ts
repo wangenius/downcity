@@ -13,6 +13,7 @@ import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import type { AgentSessionSystemBlock } from "@/types/agent/SessionTypes.js";
 import type { SessionComposerOptions } from "@/types/session/SessionComposerOptions.js";
 import type { Logger } from "@/utils/logger/Logger.js";
+import type { AgentModel } from "@/model/CityModelAdapter.js";
 
 /**
  * Agent 可管理的本地 Session 实例。
@@ -82,6 +83,9 @@ export interface SessionOptions {
    * 在执行前确保当前 session 已完成宿主侧默认配置。
    */
   ensureConfigured?: (session: AgentManagedSession) => Promise<void>;
+
+  /** 按稳定模型 ID 解析当前 Session 的运行时模型。 */
+  resolve_model?: (model_id: string) => Promise<AgentModel>;
 
   /**
    * 当前 session 的 Composer 覆盖项。

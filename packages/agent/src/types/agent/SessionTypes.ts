@@ -67,9 +67,17 @@ export interface AgentSessionSetInput {
    *
    * 关键点（中文）
    * - 这里接受运行中的模型实例，而不是模型 ID。
-   * - 由于模型实例通常不可序列化，落盘只保留轻量可读标签用于展示。
+   * - 未同时提供 `modelId` 时，SDK 会从模型实例推导稳定 ID 并持久化。
    */
   model?: AgentModel;
+  /**
+   * 当前 session 使用的稳定模型 ID。
+   *
+   * 关键点（中文）
+   * - 由 Agent 宿主提供的模型 resolver 解析为运行时模型实例。
+   * - 该值会持久化到 session metadata，进程重启后可以恢复。
+   */
+  modelId?: string;
 }
 
 /**
@@ -80,6 +88,8 @@ export interface AgentSessionConfigSnapshot {
   model?: LanguageModel;
   /** 当前模型的轻量可读标签。 */
   modelLabel?: string;
+  /** 当前 session 绑定的稳定模型 ID。 */
+  modelId?: string;
 }
 
 /**
@@ -253,6 +263,8 @@ export interface AgentSessionSummary {
   messageCount: number;
   /** 当前 session 绑定模型的可读标签。 */
   modelLabel?: string;
+  /** 当前 session 绑定的稳定模型 ID。 */
+  modelId?: string;
   /** 当前 session 是否处于执行中。 */
   executing?: boolean;
 }

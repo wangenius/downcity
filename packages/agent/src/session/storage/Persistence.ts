@@ -93,6 +93,11 @@ export async function touchSessionMetadata(
           modelLabel: params.sessionConfig.modelLabel,
         }
       : {}),
+    ...(params.sessionConfig.modelId
+      ? {
+          modelId: params.sessionConfig.modelId,
+        }
+      : {}),
   };
   await writeSessionMetadata({
     projectRoot: params.projectRoot,

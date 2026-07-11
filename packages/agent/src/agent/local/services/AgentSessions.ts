@@ -92,6 +92,12 @@ type AgentSessionsOptions = {
    */
   default_model?: AgentModel;
 
+  /** 当前默认模型的稳定 ID。 */
+  default_model_id?: string;
+
+  /** 按稳定 ID 解析 Session 模型。 */
+  resolve_model?: (model_id: string) => Promise<AgentModel>;
+
   /**
    * 当前 agent 使用的本地 Session 类。
    */
@@ -110,6 +116,8 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
   private readonly get_instruction: AgentSessionsOptions["get_instruction"];
   private readonly ensure_agent_ready: AgentSessionsOptions["ensure_agent_ready"];
   private readonly default_model?: AgentModel;
+  private readonly default_model_id?: string;
+  private readonly resolve_model?: AgentSessionsOptions["resolve_model"];
   private readonly SessionClass: AgentSessionConstructor;
   private readonly sessions_by_id = new Map<string, AgentManagedSession>();
   private readonly configured_session_ids = new Set<string>();
@@ -123,6 +131,8 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
     this.get_instruction = options.get_instruction;
     this.ensure_agent_ready = options.ensure_agent_ready;
     this.default_model = options.default_model;
+    this.default_model_id = options.default_model_id;
+    this.resolve_model = options.resolve_model;
     this.SessionClass = options.SessionClass || Session;
   }
 
@@ -337,6 +347,7 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
         await this.ensure_agent_ready();
         await this.apply_session_defaults(session);
       },
+      ...(this.resolve_model ? { resolve_model: this.resolve_model } : {}),
     });
     this.sessions_by_id.set(resolved_session_id, created);
     return created;
@@ -346,9 +357,13 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
     session: AgentManagedSession,
   ): Promise<void> {
     if (this.configured_session_ids.has(session.id)) return;
-    if (this.default_model) {
+    const persisted_model_id = String(session.config.modelId || "").trim();
+    if (persisted_model_id && this.resolve_model) {
+      await session.set({ modelId: persisted_model_id });
+    } else if (this.default_model) {
       await session.set({
         model: this.default_model,
+        ...(this.default_model_id ? { modelId: this.default_model_id } : {}),
       });
     }
     this.configured_session_ids.add(session.id);

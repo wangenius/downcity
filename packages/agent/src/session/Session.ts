@@ -126,6 +126,7 @@ export class Session implements AgentSession {
             await this.ensureConfiguredHook?.(this);
           }
         : undefined,
+      ...(options.resolve_model ? { resolve_model: options.resolve_model } : {}),
       publish_event: (event) => {
         this.eventHub.publish(event);
       },

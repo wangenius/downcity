@@ -47,6 +47,8 @@ export class Agent {
   private readonly config: DowncityConfig;
   private readonly env: Record<string, string>;
   private readonly defaultModel?: AgentModel;
+  private readonly default_model_id?: string;
+  private readonly resolve_model?: AgentOptions["resolve_model"];
   private readonly SessionClass: AgentOptions["Session"];
   private readonly backgroundService: AgentBackgroundService;
   private readonly shell?: AgentOptions["shell"];
@@ -55,6 +57,8 @@ export class Agent {
 
   constructor(options: AgentOptions) {
     this.defaultModel = options.model;
+    this.default_model_id = String(options.model_id || "").trim() || undefined;
+    this.resolve_model = options.resolve_model;
     this.SessionClass = options.Session;
     let sessions_ref: LocalAgentSessions | null = null;
     const assembly_service = new AgentAssemblyService({
@@ -261,6 +265,8 @@ export class Agent {
         await this.backgroundService.ready();
       },
       default_model: this.defaultModel,
+      default_model_id: this.default_model_id,
+      resolve_model: this.resolve_model,
       SessionClass: this.SessionClass,
     });
   }

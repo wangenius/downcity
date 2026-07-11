@@ -36,14 +36,14 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
         command: "cd /path/to/your-repo\ndowncity agent create .",
       },
       {
-        title: "选择 Agent 模型",
-        description: "模型列表来自当前 Federation。选择结果保存在本机全局 downcity.db，项目目录只保留 Agent 运行数据。",
-        command: "downcity agent model .\n# SSH 或自动化环境\ndowncity agent model . --set <model-id>",
-      },
-      {
         title: "连接 City 并启动 Runtime",
         description: "先把当前 City 会话导入 downcity，再启动 runtime。默认后台运行，需要观察日志时再切前台模式。",
         command: "downcity federation use\ndowncity start\ndowncity agent start\n# 调试时\ndowncity agent start --foreground",
+      },
+      {
+        title: "选择 Session 模型",
+        description: "Agent 启动后可为当前 Session 选择 Federation 模型。选择结果随 Session 运行数据保存，下一轮立即生效，不需要重启 Agent。",
+        command: "downcity agent model .\n# SSH 或自动化环境\ndowncity agent model . --session-id <session-id> --set <model-id>",
       },
       {
         title: "做一次健康检查",
@@ -76,14 +76,14 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
         command: "cd /path/to/your-repo\ndowncity agent create .",
       },
       {
-        title: "Select the agent model",
-        description: "Models come from the active Federation. The selected model is stored in the global downcity.db while the project keeps runtime data only.",
-        command: "downcity agent model .\n# SSH or automation\ndowncity agent model . --set <model-id>",
-      },
-      {
         title: "Connect City and start runtime",
         description: "Import the active City session into downcity, then start the runtime. Use foreground mode only when you need live logs in the current shell.",
         command: "downcity federation use\ndowncity start\ndowncity agent start\n# for debugging\ndowncity agent start --foreground",
+      },
+      {
+        title: "Select the Session model",
+        description: "After the Agent starts, select a Federation model for the current Session. The choice is stored with Session runtime data and applies on the next turn without restarting the Agent.",
+        command: "downcity agent model .\n# SSH or automation\ndowncity agent model . --session-id <session-id> --set <model-id>",
       },
       {
         title: "Run a health check",

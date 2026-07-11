@@ -71,17 +71,25 @@ export class RemoteSession implements RemoteAgentSession {
     this.transport = transport;
     this.id = info.sessionId;
     this.agentId = info.agentId;
-    // 远程 session 不暴露服务端模型实例，config 返回空快照。
-    this.config = {} as AgentSessionConfigSnapshot;
+    // 远程 session 不暴露服务端模型实例，只保留可序列化配置。
+    this.config = {
+      ...(info.modelId ? { modelId: info.modelId } : {}),
+      ...(info.modelLabel ? { modelLabel: info.modelLabel } : {}),
+    };
   }
 
-  /**
-   * 远程 session 当前不支持直接注入本地模型实例。
-   */
-  async set(_input: AgentSessionSetInput): Promise<void> {
-    throw new Error(
-      "Remote session.set({ model }) is not supported in v1. Configure the model on the server-side local Agent session instead.",
-    );
+  /** 按稳定模型 ID 更新远程 Session 模型。 */
+  async set(input: AgentSessionSetInput): Promise<void> {
+    if (input.model) {
+      throw new Error("Remote session.set does not accept a local model instance.");
+    }
+    const model_id = String(input.modelId || "").trim();
+    if (!model_id) {
+      throw new Error("Remote session.set requires modelId.");
+    }
+    const info = await this.transport.set(this.id, { modelId: model_id });
+    this.config.modelId = info.modelId;
+    this.config.modelLabel = info.modelLabel;
   }
 
   /**

@@ -137,6 +137,7 @@ export function toSessionSummaryView(
     ...(summary.title ? { title: summary.title } : {}),
     ...(summary.previewText ? { previewText: summary.previewText } : {}),
     messageCount: summary.messageCount,
+    ...(summary.modelId ? { modelId: summary.modelId } : {}),
     ...(typeof summary.updatedAt === "number" ? { updatedAt: summary.updatedAt } : {}),
     ...(summary.executing ? { executing: true } : {}),
   };
@@ -148,6 +149,7 @@ export function toSessionSummaryView(
 export function buildSessionChoiceDescription(summary: AgentChatSessionSummaryView): string {
   const parts = [
     `${summary.messageCount} messages`,
+    summary.modelId || "",
     summary.previewText || "",
     summary.executing ? "running" : "",
   ].filter(Boolean);

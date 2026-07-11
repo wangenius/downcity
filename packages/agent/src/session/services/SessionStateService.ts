@@ -42,6 +42,7 @@ import { to_session_action_record } from "@/executor/types/SessionRecords.js";
 import type { SessionLocalState } from "@/types/session/SessionLocalState.js";
 import { generateId } from "@/utils/Id.js";
 import type { Logger } from "@/utils/logger/Logger.js";
+import type { AgentModel } from "@/model/CityModelAdapter.js";
 
 type SessionStateServiceOptions = {
   /**
@@ -84,6 +85,9 @@ type SessionStateServiceOptions = {
    */
   ensure_configured_hook?: () => Promise<void>;
 
+  /** 按稳定 ID 解析当前 Session 的运行时模型。 */
+  resolve_model?: (model_id: string) => Promise<AgentModel>;
+
   /**
    * 发布 session 事件。
    */
@@ -115,6 +119,7 @@ export class SessionStateService {
   private readonly state: SessionLocalState;
   private readonly logger: Logger;
   private readonly ensure_configured_hook?: SessionStateServiceOptions["ensure_configured_hook"];
+  private readonly resolve_model?: SessionStateServiceOptions["resolve_model"];
   private readonly publish_event: SessionStateServiceOptions["publish_event"];
 
   constructor(options: SessionStateServiceOptions) {
@@ -126,6 +131,7 @@ export class SessionStateService {
     this.state = options.state;
     this.logger = options.logger;
     this.ensure_configured_hook = options.ensure_configured_hook;
+    this.resolve_model = options.resolve_model;
     this.publish_event = options.publish_event;
   }
 
@@ -189,6 +195,7 @@ export class SessionStateService {
         ...(metadata.modelLabel
           ? { modelLabel: metadata.modelLabel }
           : {}),
+        ...(metadata.modelId ? { modelId: metadata.modelId } : {}),
       };
     })();
     await this.state.initializePromise;
@@ -199,6 +206,7 @@ export class SessionStateService {
    */
   async ensure_ready_for_execution(): Promise<void> {
     await this.initialize();
+    await this.restore_persisted_model();
     if (this.state.ensureConfiguredPromise) {
       await this.state.ensureConfiguredPromise;
       return;
@@ -231,11 +239,16 @@ export class SessionStateService {
   async set(input: AgentSessionSetInput, options?: SessionSetOptions): Promise<void> {
     const should_emit_action = options?.emit_action !== false;
     const previous_model_label = this.state.sessionConfig.modelLabel;
-    const next_model_label = input.model
-      ? inferAgentModelLabel(input.model)
+    const requested_model_id = String(input.modelId || "").trim();
+    const next_model = input.model || (requested_model_id
+      ? await this.resolve_model_by_id(requested_model_id)
+      : undefined);
+    const next_model_label = next_model
+      ? inferAgentModelLabel(next_model)
       : undefined;
+    const next_model_id = requested_model_id || next_model_label || "";
     const should_emit_model_switch_action = Boolean(
-      input.model &&
+      next_model &&
         should_emit_action &&
         this.state.sessionConfig.model &&
         previous_model_label &&
@@ -256,15 +269,19 @@ export class SessionStateService {
     }
 
     try {
-      if (input.model) {
-        this.state.sessionConfig.model = normalizeAgentModel(input.model);
+      if (next_model) {
+        this.state.sessionConfig.model = normalizeAgentModel(next_model);
         this.state.sessionConfig.modelLabel = next_model_label;
+      }
+      if (next_model_id) {
+        this.state.sessionConfig.modelId = next_model_id;
       }
       await patchSessionModelLabel({
         projectRoot: this.project_root,
         agentId: this.agent_id,
         sessionId: this.session_id,
         model: this.state.sessionConfig.model,
+        modelId: this.state.sessionConfig.modelId,
       });
     } catch (error) {
       if (should_emit_model_switch_action) {
@@ -288,6 +305,23 @@ export class SessionStateService {
         state: "completed",
       });
     }
+  }
+
+  /** 恢复 metadata 中持久化的模型覆盖。 */
+  private async restore_persisted_model(): Promise<void> {
+    const model_id = String(this.state.sessionConfig.modelId || "").trim();
+    if (!model_id || this.state.sessionConfig.model) return;
+    const model = await this.resolve_model_by_id(model_id);
+    this.state.sessionConfig.model = normalizeAgentModel(model);
+    this.state.sessionConfig.modelLabel = inferAgentModelLabel(model);
+  }
+
+  /** 使用宿主 resolver 解析稳定模型 ID。 */
+  private async resolve_model_by_id(model_id: string): Promise<AgentModel> {
+    if (!this.resolve_model) {
+      throw new Error("Session model resolver is not configured.");
+    }
+    return await this.resolve_model(model_id);
   }
 
   /**

@@ -26,6 +26,8 @@ import enCommunity from "./en/community.json";
 import zhCommunity from "./zh/community.json";
 import enPlatforms from "./en/platforms.json";
 import zhPlatforms from "./zh/platforms.json";
+import enHome from "./en/home.json";
+import zhHome from "./zh/home.json";
 
 // Resources configuration
 const resources = {
@@ -42,6 +44,7 @@ const resources = {
     resources: enResources,
     community: enCommunity,
     platforms: enPlatforms,
+    home: enHome,
   },
   zh: {
     common: zhCommon,
@@ -56,6 +59,7 @@ const resources = {
     resources: zhResources,
     community: zhCommunity,
     platforms: zhPlatforms,
+    home: zhHome,
   },
 } as const;
 
@@ -79,6 +83,7 @@ i18n.use(initReactI18next).init({
     "resources",
     "community",
     "platforms",
+    "home",
   ],
   interpolation: {
     escapeValue: false, // React already escapes values

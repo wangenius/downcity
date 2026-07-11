@@ -1,81 +1,164 @@
 import type { FC } from "react";
 import { Link } from "react-router";
-import { IconBrandGithub, IconBrandX, IconArrowUpRight } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { product } from "@/lib/product";
-import { COMMUNITY_LINKS } from "@/lib/community-links";
+
+const GITHUB_URL = "https://github.com/wangenius/downcity";
+const TWITTER_URL = "https://x.com/downcity_ai";
 
 /**
- * 全站页脚模块（Vibecape 风格）。
+ * 全站页脚模块（多列完整版）。
  * 说明：
- * 1. 两栏布局：左侧品牌与版权，右侧联系与导航链接。
- * 2. 链接卡片使用 1px 细线分隔，hover 箭头微移。
- * 3. 保持简洁低信息密度，作为页面收尾。
+ * 1. 左侧品牌、tagline 与版权。
+ * 2. 右侧多列导航：Product / Docs / Resources / Community。
+ * 3. 底部社交链接与法律链接。
  */
 export const Footer: FC = () => {
+  const { i18n, t } = useTranslation("home");
   const currentYear = new Date().getFullYear();
-  const { i18n, t } = useTranslation();
   const isZh = i18n.language.toLowerCase().startsWith("zh");
-  const docsPath = isZh ? "/zh/docs" : "/en/docs";
+
   const homePath = isZh ? "/zh" : "/";
+  const productPath = isZh ? "/zh/product" : "/product";
+  const featuresPath = isZh ? "/zh/features" : "/features";
+  const docsPath = isZh ? "/zh/docs" : "/en/docs";
+  const citySdkDocsPath = isZh ? "/zh/city-sdk-docs" : "/en/city-sdk-docs";
+  const agentSdkDocsPath = isZh ? "/zh/agent-sdk-docs" : "/en/agent-sdk-docs";
+  const pluginsDocsPath = isZh ? "/zh/plugins-docs" : "/en/plugins-docs";
+  const uiSdkDocsPath = isZh ? "/zh/ui-sdk-docs" : "/en/ui-sdk-docs";
+  const paymentsPath = isZh ? "/zh/payments" : "/en/payments";
+  const resourcesPath = isZh ? "/zh/resources" : "/resources";
+  const skillsPath = isZh ? "/zh/resources/skills" : "/resources/skills";
+  const marketplacePath = isZh ? "/zh/resources/marketplace" : "/resources/marketplace";
+  const hostingPath = isZh ? "/zh/resources/hosting" : "/resources/hosting";
+  const examplesPath = isZh ? "/zh/resources/examples" : "/resources/examples";
+  const communityPath = isZh ? "/zh/community" : "/community";
+  const faqPath = isZh ? "/zh/community/faq" : "/community/faq";
+  const roadmapPath = isZh ? "/zh/community/roadmap" : "/community/roadmap";
   const termsPath = "/terms";
   const privacyPath = "/privacy";
-  const twitterUrl = "https://x.com/downcity_ai";
-  const githubUrl = "https://github.com/wangenius/downcity";
-  const telegramUrl = COMMUNITY_LINKS.telegram;
 
-  const contactLinks = [
-    { label: "X", value: "x.com/downcity_ai", href: twitterUrl },
-    { label: "GitHub", value: "github.com/wangenius/downcity", href: githubUrl },
-    { label: "Telegram", value: "t.me/downcity", href: telegramUrl },
-    { label: t("footer.documentation"), value: isZh ? "downcity.ai/zh/docs" : "downcity.ai/en/docs", href: docsPath },
+  const columns = [
+    {
+      title: t("footer.columns.product"),
+      links: [
+        { label: t("footer.links.overview"), path: productPath },
+        { label: t("footer.links.features"), path: featuresPath },
+        { label: "City SDK", path: productPath },
+        { label: "Agent SDK", path: productPath },
+        { label: "UI SDK", path: productPath },
+      ],
+    },
+    {
+      title: t("footer.columns.docs"),
+      links: [
+        { label: t("footer.links.docs"), path: docsPath },
+        { label: t("footer.links.cityDocs"), path: citySdkDocsPath },
+        { label: t("footer.links.agentDocs"), path: agentSdkDocsPath },
+        { label: t("footer.links.plugins"), path: pluginsDocsPath },
+        { label: t("footer.links.payments"), path: paymentsPath },
+      ],
+    },
+    {
+      title: t("footer.columns.resources"),
+      links: [
+        { label: t("footer.links.skills"), path: skillsPath },
+        { label: t("footer.links.marketplace"), path: marketplacePath },
+        { label: t("footer.links.hosting"), path: hostingPath },
+        { label: t("footer.links.examples"), path: examplesPath },
+      ],
+    },
+    {
+      title: t("footer.columns.community"),
+      links: [
+        { label: t("footer.links.faq"), path: faqPath },
+        { label: t("footer.links.roadmap"), path: roadmapPath },
+        { label: "GitHub", href: GITHUB_URL, external: true },
+        { label: "X", href: TWITTER_URL, external: true },
+      ],
+    },
   ] as const;
 
   return (
     <footer className="border-t border-line bg-background">
-      <div className="mx-auto grid max-w-[1600px] gap-12 px-5 py-16 md:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:px-20 lg:py-24">
-        <div className="space-y-5">
-          <Link to={homePath} className="inline-flex items-center gap-2.5">
-            <img src="/icon.svg" alt="Downcity" className="brand-logo block h-6 w-6 object-contain" />
-            <span className="text-[0.9375rem] font-semibold text-foreground">{product.productName}</span>
-          </Link>
-          <p className="max-w-sm text-sm leading-relaxed text-text-soft">{t("hero:subtitle")}</p>
-          <p className="text-xs text-text-subtle">
-            © {currentYear} {product.productName}. {t("footer.madeWithIntent")}
-          </p>
-        </div>
-
-        <div className="space-y-5">
-          <div className="flex items-center justify-between gap-4 border-b border-line pb-3">
-            <span className="font-mono text-[0.7rem] font-medium uppercase tracking-[0.08em] text-text-subtle">
-              {t("common:contact")}
-            </span>
-            <div className="flex items-center gap-4">
-              <Link to={termsPath} className="font-mono text-[0.7rem] font-medium uppercase tracking-[0.08em] text-text-subtle transition-colors hover:text-foreground">
-                {t("footer.terms")}
-              </Link>
-              <Link to={privacyPath} className="font-mono text-[0.7rem] font-medium uppercase tracking-[0.08em] text-text-subtle transition-colors hover:text-foreground">
-                {t("footer.privacy")}
-              </Link>
-            </div>
+      <div className="mx-auto max-w-[1600px] px-5 py-16 md:px-8 lg:px-20 lg:py-24">
+        <div className="grid gap-12 lg:grid-cols-[1fr_2fr]">
+          {/* Brand column */}
+          <div className="space-y-5">
+            <Link to={homePath} className="inline-flex items-center gap-2.5">
+              <img src="/icon.svg" alt="Downcity" className="brand-logo block h-6 w-6 object-contain" />
+              <span className="text-[0.9375rem] font-semibold text-foreground">{product.productName}</span>
+            </Link>
+            <p className="max-w-sm text-sm leading-relaxed text-text-soft">{t("footer.tagline")}</p>
+            <p className="text-xs text-text-subtle">
+              {t("footer.copyright", { year: currentYear })}
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-px overflow-hidden rounded-[14px] bg-line sm:grid-cols-2">
-            {contactLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                target={link.href.startsWith("/") ? undefined : "_blank"}
-                rel={link.href.startsWith("/") ? undefined : "noopener noreferrer"}
-                className="group flex items-center justify-between gap-4 bg-background p-5 transition-colors hover:bg-card"
-              >
-                <div className="grid gap-1">
-                  <span className="text-sm font-semibold text-foreground">{link.label}</span>
-                  <span className="font-mono text-[0.72rem] text-text-subtle">{link.value}</span>
-                </div>
-                <IconArrowUpRight className="size-4 text-text-subtle transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground" />
-              </a>
+          {/* Links columns */}
+          <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
+            {columns.map((column) => (
+              <div key={column.title} className="space-y-3">
+                <h4 className="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-text-subtle">
+                  {column.title}
+                </h4>
+                <ul className="space-y-2">
+                  {column.links.map((link) =>
+                    "path" in link ? (
+                      <li key={link.path}>
+                        <Link
+                          to={link.path}
+                          className="text-sm text-text-soft transition-colors hover:text-foreground"
+                        >
+                          {link.label}
+                        </Link>
+                      </li>
+                    ) : (
+                      <li key={link.href}>
+                        <a
+                          href={link.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-text-soft transition-colors hover:text-foreground"
+                        >
+                          {link.label}
+                        </a>
+                      </li>
+                    )
+                  )}
+                </ul>
+              </div>
             ))}
+          </div>
+        </div>
+
+        {/* Bottom bar */}
+        <div className="mt-16 flex flex-col items-start justify-between gap-4 border-t border-line pt-8 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-6">
+            <a
+              href={TWITTER_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-text-soft transition-colors hover:text-foreground"
+            >
+              X
+            </a>
+            <a
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-text-soft transition-colors hover:text-foreground"
+            >
+              GitHub
+            </a>
+          </div>
+          <div className="flex items-center gap-6">
+            <Link to={termsPath} className="text-sm text-text-soft transition-colors hover:text-foreground">
+              {t("footer.legal.terms")}
+            </Link>
+            <Link to={privacyPath} className="text-sm text-text-soft transition-colors hover:text-foreground">
+              {t("footer.legal.privacy")}
+            </Link>
           </div>
         </div>
       </div>

@@ -1,0 +1,198 @@
+{
+  "hero": {
+    "title": "Downcity",
+    "headline": "Scalable Agent Harness & Agentic Product Infrastructure for Builders.",
+    "description": "One product is one City, where agents live and work. Every City is powered by shared models and services from the Federation.",
+    "start": "Quick Start",
+    "docs": "Read Docs",
+    "coverLabel": "An Agent ecosystem where residents live inside distinct product Cities that share capabilities through Federation.",
+    "ecosystem": {
+      "caption": "Agents live in product Cities connected through the same Federation",
+      "federationLabel": "Federation provides shared capabilities to multiple product Cities",
+      "federationCaption": "Shared models & services",
+      "cities": {
+        "build": {
+          "name": "Build City",
+          "activity": "Agents create, review, and ship together",
+          "label": "Build City, where agents create, review, and ship together"
+        },
+        "research": {
+          "name": "Research City",
+          "activity": "Agents explore, analyze, and share knowledge",
+          "label": "Research City, where agents explore, analyze, and share knowledge"
+        },
+        "operations": {
+          "name": "Operations City",
+          "activity": "Agents monitor, support, and coordinate work",
+          "label": "Operations City, where agents monitor, support, and coordinate work"
+        }
+      }
+    },
+    "community": {
+      "cities": {
+        "build": "Build City",
+        "research": "Research City",
+        "operations": "Operations City"
+      },
+      "agents": {
+        "builder": "Builder",
+        "reviewer": "Reviewer",
+        "release": "Release",
+        "crawler": "Crawler",
+        "analyst": "Analyst",
+        "writer": "Writer",
+        "monitor": "Monitor",
+        "support": "Support",
+        "scheduler": "Scheduler"
+      }
+    }
+  },
+  "features": {
+    "sectionLabel": "Capabilities",
+    "title": "Infrastructure for real",
+    "titleItalic": "agent products",
+    "description": "Everything you keep rebuilding for every new AI product, organized into one reusable runtime layer.",
+    "cards": {
+      "repo": {
+        "title": "Repo-native boundary",
+        "description": "Every agent runs inside a real repository or folder. Rules, permissions, and artifacts live in PROFILE.md, SOUL.md, and .downcity/—version-controlled and auditable."
+      },
+      "runtime": {
+        "title": "Reusable runtime layer",
+        "description": "Models, tools, tasks, memory, and services are configured once and reused across CLI, SDK, Console, and browser surfaces."
+      },
+      "plugins": {
+        "title": "Plugin-native capabilities",
+        "description": "Chat, Task, Memory, Shell, Web, Skill, Schedule, and Contact are all unified plugins that extend the agent without forking the core."
+      },
+      "city": {
+        "title": "City-shared backend",
+        "description": "Federation centralizes models, services, auth, and usage. Multiple Cities define product boundaries with distinct city IDs while their agents share the same runtime capabilities."
+      },
+      "ops": {
+        "title": "Operable agents",
+        "description": "Run agents as managed daemons. Inspect status, review history, schedule tasks, and approve sensitive actions through CLI or Console."
+      },
+      "surface": {
+        "title": "Multi-surface deployment",
+        "description": "Embed the same runtime into local CLI workflows, Node servers, Edge runtimes, or host applications with the Agent SDK and UI SDK."
+      }
+    }
+  },
+  "architecture": {
+    "sectionLabel": "Architecture",
+    "title": "Creators build Cities. Users run them. Federation powers them.",
+    "description": "A creator sets up shared services in Federation and ships a product as a City with its agents. The user runs that City locally and connects it back to Federation when shared capabilities are needed.",
+    "diagramLabel": "A creator sets up Federation and offers a City with agents to a user. The user runs the City on their computer and connects it to Federation for shared services.",
+    "creator": "Creator",
+    "creatorCaption": "Builds agent products",
+    "creatorLabel": "Creator who sets up Federation and offers a product City with agents",
+    "user": "User",
+    "userEnvironment": "User's Terminal / Computer",
+    "userEnvironmentLabel": "The user's computer contains a product City and its agents",
+    "productCity": "Product = City",
+    "productBoundary": "Product boundary",
+    "agentsInCity": "Agents live and work here",
+    "localRuntime": "Local runtime",
+    "memoryAndTools": "Memory and tools",
+    "userControl": "User control",
+    "federation": "Federation",
+    "federationCaption": "Shared service foundation",
+    "federationLabel": "Federation provides shared models, services, authentication, and usage",
+    "mobileCaption": "One product is one City. Its agents run with the user and connect to Federation.",
+    "paths": {
+      "setup": "sets up services",
+      "offer": "offers City + Agents",
+      "hold": "holds",
+      "connect": "connects to shared services"
+    },
+    "services": {
+      "models": "Models",
+      "services": "Services",
+      "auth": "Auth",
+      "usage": "Usage"
+    }
+  },
+  "philosophy": {
+    "sectionLabel": "Philosophy",
+    "title": "Runtime, not framework.",
+    "description": "Downcity does not replace your stack. It gives agents a stable place to run, remember, and act—while products, tools, and humans stay in control.",
+    "items": {
+      "runtime": {
+        "title": "Runtime as the reusable layer",
+        "description": "Stop rebuilding model routing, auth, usage, and billing for every product. Configure them once in City and ship many surfaces."
+      },
+      "repo": {
+        "title": "Repo as the execution boundary",
+        "description": "Agent behavior is grounded in the repository. Prompts, permissions, and artifacts travel with the code, not a distant platform."
+      },
+      "city": {
+        "title": "City pays for the boring backend",
+        "description": "Let City own accounts, balance, payment, model catalogs, and service routing so your product can focus on user experience."
+      }
+    }
+  },
+  "useCases": {
+    "sectionLabel": "Product shapes",
+    "title": "One runtime. Many surfaces.",
+    "description": "The same Downcity backend can power very different product experiences.",
+    "cases": {
+      "cli": {
+        "title": "CLI productivity tool",
+        "description": "A repo-local agent that summarizes code, runs tests, and manages tasks from the terminal."
+      },
+      "browser": {
+        "title": "Browser extension agent",
+        "description": "An agent that reads the current page, takes notes, and acts on behalf of the user through web tools."
+      },
+      "sdk": {
+        "title": "Embedded SDK workflow",
+        "description": "Drop the Agent SDK into an existing app to add long-running sessions, memory, and plugin-driven actions."
+      },
+      "backend": {
+        "title": "Multi-tenant product backend",
+        "description": "Use City to share auth, usage, and billing across customer-facing agents deployed on Node or Edge."
+      }
+    }
+  },
+  "cta": {
+    "title": "Start building with Downcity",
+    "description": "Install the CLI, create your first agent project, and connect to City in minutes.",
+    "install": "npm i -g downcity",
+    "start": "Quick Start",
+    "github": "Star on GitHub"
+  },
+  "footer": {
+    "tagline": "Agent infrastructure for AI builders shipping many agent-powered products and workflows.",
+    "columns": {
+      "product": "Product",
+      "docs": "Docs",
+      "resources": "Resources",
+      "community": "Community"
+    },
+    "links": {
+      "overview": "Overview",
+      "features": "Features",
+      "citySdk": "City SDK",
+      "agentSdk": "Agent SDK",
+      "uiSdk": "UI SDK",
+      "docs": "Documentation",
+      "cityDocs": "City SDK Docs",
+      "agentDocs": "Agent SDK Docs",
+      "plugins": "Plugins",
+      "payments": "Payments",
+      "skills": "Skills",
+      "marketplace": "Marketplace",
+      "hosting": "Hosting",
+      "examples": "Examples",
+      "faq": "FAQ",
+      "roadmap": "Roadmap",
+      "discussions": "Discussions"
+    },
+    "legal": {
+      "terms": "Terms",
+      "privacy": "Privacy"
+    },
+    "copyright": "© {{year}} Downcity. Open source under MIT License."
+  }
+}

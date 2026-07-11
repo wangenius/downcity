@@ -1,12 +1,18 @@
 import { HomeHeroSection } from "@/components/sections/HomeHeroSection";
+import { HomeFeaturesSection } from "@/components/sections/HomeFeaturesSection";
+import { HomeArchitectureDiagram } from "@/components/sections/HomeArchitectureDiagram";
+import { HomePhilosophySection } from "@/components/sections/HomePhilosophySection";
+import { HomeUseCasesSection } from "@/components/sections/HomeUseCasesSection";
+import { HomeCTASection } from "@/components/sections/HomeCTASection";
+import { Footer } from "@/components/sections/Footer";
 import { product } from "@/lib/product";
 
 /**
- * 首页营销落地页路由（极简版）。
+ * 首页营销落地页路由。
  * 说明：
- * 1. 去除顶部复杂导航，首页只保留一个入口：Hero + 产品演示。
- * 2. 所有行动路径收敛到安装命令、Quick Start 与 GitHub。
- * 3. 文案与元信息对齐当前命名与 quickstart 文档。
+ * 1. 完整首页：Hero / Features / Architecture / Philosophy / Use Cases / CTA / Footer。
+ * 2. 文案基于对 Downcity 的准确理解：Federation 连接多座 City，每座 City 组织多个 Agent。
+ * 3. 所有行动路径收敛到安装命令、Quick Start 与 GitHub。
  */
 export function meta() {
   const baseUrl = product.homepage || "https://downcity.ai";
@@ -50,7 +56,13 @@ export default function Home() {
     <div className="min-h-screen bg-background text-foreground">
       <main>
         <HomeHeroSection />
+        <HomeFeaturesSection />
+        <HomeArchitectureDiagram />
+        <HomePhilosophySection />
+        <HomeUseCasesSection />
+        <HomeCTASection />
       </main>
+      <Footer />
     </div>
   );
 }

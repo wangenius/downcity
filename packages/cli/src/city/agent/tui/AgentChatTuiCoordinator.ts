@@ -24,10 +24,12 @@ import {
 import { MessageListComponent } from "@/city/agent/tui/components/MessageList.js";
 import { SessionPickerComponent } from "@/city/agent/tui/dialogs/SessionPicker.js";
 import { ApprovalDialogComponent } from "@/city/agent/tui/dialogs/ApprovalDialog.js";
+import { ModelPickerComponent } from "@/city/agent/tui/dialogs/ModelPicker.js";
 import { PiTuiChatRenderer } from "@/city/agent/tui/PiTuiChatRenderer.js";
 import type { AgentChatSessionSummaryView } from "@/city/agent/AgentChatTypes.js";
 import type { AgentChatInteractiveRendererPort } from "@/city/types/AgentChatInteractive.js";
 import type { AppState, TranscriptEntry } from "@/city/agent/tui/types.js";
+import type { AgentChatModelChoice } from "@/city/agent/tui/types/ModelPicker.js";
 import {
   dispatchSlashCommand,
   resolveSlashCommandInput,
@@ -46,6 +48,10 @@ export interface AgentChatTuiCoordinatorOptions {
   list_sessions: () => Promise<AgentChatSessionSummaryView[]>;
   /** 创建新 session。 */
   create_session: () => Promise<{ session_id: string }>;
+  /** 列出 Federation 当前可用于对话的模型。 */
+  list_models: () => Promise<AgentChatModelChoice[]>;
+  /** 更新指定 Session 的模型。 */
+  update_session_model: (session_id: string, model_id: string) => Promise<void>;
   /**
    * 加载指定 session 的历史记录。
    *
@@ -55,6 +61,8 @@ export interface AgentChatTuiCoordinatorOptions {
    */
   load_session_history: (session_id: string) => Promise<{
     title: string;
+    model_id?: string;
+    model_name?: string;
     entries: TranscriptEntry[];
   }>;
   /** 执行一轮对话。 */
@@ -126,7 +134,7 @@ export class AgentChatTuiCoordinator {
         this.add_error_message(text);
       },
       show_help: () => {
-        this.add_status_message("/help · /session · /new · /clear · /quit");
+        this.add_status_message("/help · /session · /model · /new · /clear · /quit");
       },
       clear_transcript: () => {
         this.message_list.clear();
@@ -136,6 +144,9 @@ export class AgentChatTuiCoordinator {
       },
       show_session_picker: async () => {
         await this.show_session_picker();
+      },
+      show_model_picker: async () => {
+        await this.show_model_picker();
       },
       approve: async (approval_id) => {
         await this.approve(approval_id);
@@ -507,6 +518,77 @@ export class AgentChatTuiCoordinator {
     this.request_render();
   }
 
+  /** 显示当前 Session 的模型选择器。 */
+  private async show_model_picker(): Promise<void> {
+    if (this.overlay_handle) return;
+
+    let models: AgentChatModelChoice[];
+    try {
+      models = await this.options.list_models();
+    } catch (error) {
+      this.add_error_message(this.format_error(error));
+      this.request_render();
+      return;
+    }
+    if (models.length === 0) {
+      this.add_error_message("No models available in Federation.");
+      this.request_render();
+      return;
+    }
+
+    const picker = new ModelPickerComponent({
+      models,
+      current_model_id: this.app_state.session_model_id,
+      on_select: (model_id) => {
+        this.hide_model_picker();
+        void this.update_session_model(model_id, models);
+      },
+      on_cancel: () => {
+        this.hide_model_picker();
+      },
+    });
+    this.overlay_handle = this.tui.showOverlay(picker as Component, {
+      width: "80%",
+      maxHeight: "70%",
+      anchor: "center",
+    });
+    this.overlay_handle.focus();
+    this.request_render();
+  }
+
+  /** 隐藏模型选择器并恢复编辑器焦点。 */
+  private hide_model_picker(): void {
+    if (!this.overlay_handle) return;
+    this.overlay_handle.hide();
+    this.overlay_handle = null;
+    this.tui.setFocus(this.editor as Component);
+    this.request_render();
+  }
+
+  /** 更新当前 Session 模型，并立即同步 footer 状态。 */
+  private async update_session_model(
+    model_id: string,
+    models: AgentChatModelChoice[],
+  ): Promise<void> {
+    const previous_model_id = this.app_state.session_model_id;
+    if (model_id === previous_model_id) {
+      this.add_status_message(`Session model unchanged · ${this.resolve_model_name(model_id, models)}`);
+      this.request_render();
+      return;
+    }
+    try {
+      await this.options.update_session_model(this.current_session_id, model_id);
+      this.app_state.session_model_id = model_id;
+      this.app_state.session_model_name = this.resolve_model_name(model_id, models);
+      this.footer.set_state(this.app_state);
+      this.terminal.setTitle(this.build_title());
+      this.add_status_message(`Session model switched · ${this.app_state.session_model_name} · effective next turn`);
+    } catch (error) {
+      this.add_error_message(`Failed to switch model: ${this.format_error(error)}`);
+    }
+    this.request_render();
+  }
+
   /**
    * 创建新 session 并切换视图。
    */
@@ -532,6 +614,8 @@ export class AgentChatTuiCoordinator {
     this.current_session_id = session_id;
     this.app_state.session_id = session_id;
     this.app_state.session_title = undefined;
+    this.app_state.session_model_id = undefined;
+    this.app_state.session_model_name = undefined;
     this.footer.set_state(this.app_state);
     this.terminal.setTitle(this.build_title());
     this.message_list.clear();
@@ -549,8 +633,10 @@ export class AgentChatTuiCoordinator {
    */
   private async load_history(session_id: string): Promise<void> {
     try {
-      const { title, entries } = await this.options.load_session_history(session_id);
+      const { title, model_id, model_name, entries } = await this.options.load_session_history(session_id);
       this.app_state.session_title = title;
+      this.app_state.session_model_id = model_id;
+      this.app_state.session_model_name = model_name || model_id;
       this.footer.set_state(this.app_state);
       this.terminal.setTitle(this.build_title());
       for (const entry of entries) {
@@ -651,7 +737,15 @@ export class AgentChatTuiCoordinator {
    */
   private build_title(): string {
     const title = this.app_state.session_title?.trim() || "Untitled";
-    return `Agent chat · ${this.app_state.agent_id} · ${title} · ${this.current_session_id}`;
+    const model_name = this.app_state.session_model_name?.trim()
+      || this.app_state.session_model_id?.trim()
+      || "agent default";
+    return `Agent chat · ${this.app_state.agent_id} · ${title} · ${this.current_session_id} · ${model_name}`;
+  }
+
+  /** 根据模型 ID 解析 footer 使用的模型名称。 */
+  private resolve_model_name(model_id: string, models: AgentChatModelChoice[]): string {
+    return models.find((model) => model.model_id === model_id)?.model_name || model_id;
   }
 
   /**

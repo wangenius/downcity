@@ -25,6 +25,7 @@ import {
   runSdkPromptTurn,
 } from "@/city/agent/AgentChatHelpers.js";
 import { timeline_events_to_entries } from "@/city/agent/tui/history/HistoryLoader.js";
+import { listPlatformModelChoices } from "@/city/runtime/city-model/ExecutionModelBinding.js";
 import type { AgentSessionTimelineEvent } from "@downcity/agent";
 
 /**
@@ -92,6 +93,15 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
   }
 
   try {
+    const list_models = async () => {
+      const choices = await listPlatformModelChoices();
+      return choices.map((choice) => ({
+        model_id: choice.value,
+        model_name: choice.model.name || choice.value,
+        modalities: [...choice.model.modalities],
+      }));
+    };
+
     await run_agent_chat_tui({
       agent_id: agentId,
       session_id: interactive.target.sessionId,
@@ -103,6 +113,11 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
         await createRemoteChatSession({
           remote_agent: interactive.remote_agent,
         }),
+      list_models,
+      update_session_model: async (session_id, model_id) => {
+        const session = await interactive.remote_agent.sessions.get(session_id);
+        await session.set({ modelId: model_id });
+      },
       load_session_history: async (session_id) => {
         const session = await interactive.remote_agent.sessions.get(session_id);
         const records = await session.records({
@@ -111,10 +126,20 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
           limit: 200,
         });
         const title = records.session.title?.trim() || "Untitled";
+        const model_id = String(records.session.modelId || "").trim() || undefined;
+        let model_name = model_id;
+        if (model_id) {
+          try {
+            const models = await list_models();
+            model_name = models.find((model) => model.model_id === model_id)?.model_name || model_id;
+          } catch {
+            // 关键点（中文）：目录查询失败不阻塞历史加载，footer 回退展示稳定 model id。
+          }
+        }
         const entries = timeline_events_to_entries(
           records.items as AgentSessionTimelineEvent[],
         );
-        return { title, entries };
+        return { title, model_id, model_name, entries };
       },
       approve: async (approval_id) =>
         await interactive.remote_agent.approve({ approval_id }),

@@ -2,7 +2,7 @@
  * Agent Chat TUI 底部信息栏。
  *
  * 关键点（中文）
- * - 固定在输入框下方，常驻展示当前 session 标题与 sessionId。
+ * - 固定在输入框下方，常驻展示当前 session 标题、sessionId 与模型名称。
  * - 右侧根据状态切换：空闲时显示快捷键提示，执行中显示 braille 动画与状态文本。
  * - 自驱动 braille 动画，与 Kimi Code 的活动指示器视觉一致。
  */
@@ -16,7 +16,7 @@ import {
 import { current_theme } from "@/city/agent/tui/theme/index.js";
 import type { AppState } from "@/city/agent/tui/types.js";
 
-const FOOTER_RIGHT_IDLE = "Type /help for shortcuts · /session · /new · /clear · /quit";
+const FOOTER_RIGHT_IDLE = "Type /help · /session · /model · /new · /clear · /quit";
 const MIN_GAP = 2;
 
 /**
@@ -99,7 +99,10 @@ export class ChatFooterComponent implements Component {
    */
   private build_left(): string {
     const title = this.app_state.session_title?.trim() || "Untitled";
-    const raw = `${title} · ${this.app_state.session_id}`;
+    const model_name = this.app_state.session_model_name?.trim()
+      || this.app_state.session_model_id?.trim()
+      || "agent default";
+    const raw = `${title} · ${this.app_state.session_id} · ${model_name}`;
     return current_theme.dim_fg("textMuted", raw);
   }
 

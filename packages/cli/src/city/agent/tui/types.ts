@@ -143,6 +143,12 @@ export interface AppState {
    */
   session_title?: string;
 
+  /** 当前 Session 保存的 Federation 模型 ID。 */
+  session_model_id?: string;
+
+  /** 当前 Session 模型对应的 Federation 模型名称。 */
+  session_model_name?: string;
+
   /** 是否正在等待助手回复。 */
   is_executing: boolean;
 

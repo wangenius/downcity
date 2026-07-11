@@ -65,6 +65,7 @@ export class PlatformStore {
   constructor(dbPath: string = getPlatformStoreDbPath()) {
     fs.ensureDirSync(getPlatformRootDirPath());
     this.sqlite = new Database(dbPath);
+    this.sqlite.pragma("busy_timeout = 5000");
     this.sqlite.pragma("foreign_keys = ON");
     this.sqlite.pragma("journal_mode = WAL");
     ensurePlatformStoreSchema(this.context);
@@ -92,6 +93,7 @@ export class PlatformStore {
   clearAll(): void {
     this.sqlite.exec("DELETE FROM platform_secure_settings;");
     this.sqlite.exec("DELETE FROM env_entries;");
+    this.sqlite.exec("DELETE FROM agent_configs;");
     this.sqlite.exec("DELETE FROM channel_accounts;");
   }
 
@@ -327,6 +329,7 @@ export function withPlatformStore<T>(callback: (context: PlatformStoreContext) =
   const dbPath = getPlatformStoreDbPath();
   fs.ensureDirSync(dbPath.replace(/\/[^/]+$/, ""));
   const sqlite = new Database(dbPath);
+  sqlite.pragma("busy_timeout = 5000");
   sqlite.pragma("journal_mode = WAL");
   const context: PlatformStoreContext = {
     sqlite,

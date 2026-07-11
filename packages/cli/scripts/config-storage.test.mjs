@@ -6,6 +6,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import Database from "better-sqlite3";
 
 function create_temp_root() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "downcity-config-storage-"));
@@ -23,13 +24,84 @@ test("Agent 配置只从全局 DB 读取", async () => {
     const store = await import("../bin/city/process/registry/AgentConfigStore.js");
     assert.equal(store.readAgentConfig(project_root), null);
 
+    const { PlatformStore } = await import("../bin/city/runtime/store/index.js");
+    const platform_store = new PlatformStore();
+    platform_store.setSecureSettingJsonSync("city.agent.configs", {
+      v: 1,
+      configs: [{
+        projectRoot: project_root,
+        id: "migrated_agent",
+        version: "1.0.0",
+        execution: { type: "api", modelId: "model_a" },
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      }],
+    });
+    platform_store.close();
+
+    assert.equal(store.readAgentConfig(project_root).id, "migrated_agent");
+
     store.upsertAgentConfig({
       projectRoot: project_root,
       id: "db_agent",
-      version: "1.0.0",
+      plugins: { chat: { queue: { maxConcurrency: 3 } } },
     });
-    assert.equal(store.readAgentConfig(project_root).id, "db_agent");
+    const merged_config = store.readAgentConfig(project_root);
+    assert.equal(merged_config.id, "db_agent");
+    assert.equal(merged_config.execution.modelId, "model_a");
+    assert.equal(merged_config.plugins.chat.queue.maxConcurrency, 3);
     assert.equal(fs.existsSync(path.join(platform_root, "downcity.db")), true);
+
+    const second_project_root = path.join(platform_root, "second-agent");
+    store.upsertAgentConfig({
+      projectRoot: second_project_root,
+      id: "second_agent",
+      version: "1.0.0",
+      execution: { type: "api", modelId: "model_b" },
+    });
+    store.upsertAgentConfig({
+      projectRoot: project_root,
+      start: { port: 7001 },
+    });
+    assert.equal(store.readAgentConfig(second_project_root).execution.modelId, "model_b");
+    assert.equal(store.readAgentConfig(project_root).execution.modelId, "model_a");
+    assert.equal(store.readAgentConfig(project_root).start.port, 7001);
+
+    const rolling_upgrade_store = new PlatformStore();
+    rolling_upgrade_store.setSecureSettingJsonSync("city.agent.configs", {
+      v: 1,
+      configs: [
+        {
+          ...store.readAgentConfig(project_root),
+          id: "newer_legacy_daemon_update",
+          updatedAt: "2099-01-01T00:00:00.000Z",
+        },
+        {
+          ...store.readAgentConfig(second_project_root),
+          id: "stale_legacy_daemon_value",
+          updatedAt: "2000-01-01T00:00:00.000Z",
+        },
+      ],
+    });
+    rolling_upgrade_store.close();
+    assert.equal(
+      store.readAgentConfig(project_root).id,
+      "newer_legacy_daemon_update",
+    );
+    assert.equal(store.readAgentConfig(second_project_root).id, "second_agent");
+
+    const database = new Database(path.join(platform_root, "downcity.db"));
+    const row_count = database.prepare(
+      "SELECT COUNT(*) AS count FROM agent_configs;",
+    ).get().count;
+    const legacy_count = database.prepare(`
+      SELECT COUNT(*) AS count
+      FROM platform_secure_settings
+      WHERE key = 'city.agent.configs';
+    `).get().count;
+    database.close();
+    assert.equal(row_count, 2);
+    assert.equal(legacy_count, 0);
   } finally {
     fs.rmSync(platform_root, { recursive: true, force: true });
     fs.rmSync(project_root, { recursive: true, force: true });

@@ -176,11 +176,11 @@ export async function initCommand(
   });
   await upsertManagedAgentEntry({ projectRoot });
 
-  const createdItems: string[] = [];
-  const skippedItems: string[] = [];
-  void initResult;
-  createdItems.push(".agents/skills/", ".downcity/", "global DB agent config");
-  skippedItems.push(".env", ".env.example");
+  const createdItems = [
+    ...initResult.createdFiles,
+    "global DB agent config",
+  ];
+  const skippedItems = [...initResult.skippedFiles];
 
   emitCliBlock({
     tone: "success",

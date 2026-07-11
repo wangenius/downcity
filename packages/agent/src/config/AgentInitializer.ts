@@ -75,17 +75,6 @@ function normalizeChannels(input: AgentProjectChannel[] | undefined): AgentProje
 }
 
 /**
- * 判断项目是否已经具备最小初始化文件。
- *
- * 关键点（中文）
- * - Skills 是项目中唯一由用户管理并进入版本控制的 Agent 资产。
- */
-export async function isAgentProjectInitialized(projectRoot: string): Promise<boolean> {
-  const normalizedRoot = path.resolve(String(projectRoot || "").trim() || ".");
-  return await fs.pathExists(path.join(normalizedRoot, ".agents", "skills"));
-}
-
-/**
  * 初始化 agent 项目骨架。
  *
  * 关键点（中文）
@@ -104,7 +93,8 @@ export async function initializeAgentProject(
 
   const channels = normalizeChannels(input.channels);
   const dotEnvPath = path.join(projectRoot, ".env");
-  const dotEnvExamplePath = path.join(projectRoot, ".env.example");
+  const downcity_dir_path = getDowncityDirPath(projectRoot);
+  const skills_dir_path = path.join(projectRoot, ".agents", "skills");
   const createdFiles: string[] = [];
   const skippedFiles: string[] = [];
 
@@ -116,26 +106,29 @@ export async function initializeAgentProject(
 
   await ensureDir(projectRoot);
 
+  const dot_env_exists = await fs.pathExists(dotEnvPath);
   await appendMissingEnvEntries(
     dotEnvPath,
     "Downcity Create",
     [] satisfies EnvFileEntry[],
   );
-  await appendMissingEnvEntries(
-    dotEnvExamplePath,
-    "Downcity Create Example",
-    [] satisfies EnvFileEntry[],
-  );
+  (dot_env_exists ? skippedFiles : createdFiles).push(".env");
 
-  const gitignoreStatus = await ensureGitignoreEntry(projectRoot, ".downcity");
-  if (gitignoreStatus === "created" || gitignoreStatus === "updated") {
+  const downcity_gitignore_status = await ensureGitignoreEntry(projectRoot, ".downcity");
+  const dotenv_gitignore_status = await ensureGitignoreEntry(projectRoot, ".env");
+  if (
+    downcity_gitignore_status !== "unchanged" ||
+    dotenv_gitignore_status !== "unchanged"
+  ) {
     createdFiles.push(".gitignore");
   } else {
     skippedFiles.push(".gitignore");
   }
 
+  const downcity_dir_exists = await fs.pathExists(downcity_dir_path);
+  const skills_dir_exists = await fs.pathExists(skills_dir_path);
   const dirs = [
-    getDowncityDirPath(projectRoot),
+    downcity_dir_path,
     getDowncityTasksDirPath(projectRoot),
     getLogsDirPath(projectRoot),
     getCacheDirPath(projectRoot),
@@ -144,12 +137,14 @@ export async function initializeAgentProject(
     getDowncityAgentsRootDirPath(projectRoot),
     getDowncityPublicDirPath(projectRoot),
     getDowncityResourcesDirPath(projectRoot),
-    path.join(projectRoot, ".agents", "skills"),
+    skills_dir_path,
     getDowncityDebugDirPath(projectRoot),
   ];
   for (const dir of dirs) {
     await ensureDir(dir);
   }
+  (downcity_dir_exists ? skippedFiles : createdFiles).push(".downcity/");
+  (skills_dir_exists ? skippedFiles : createdFiles).push(".agents/skills/");
 
   try {
     await ensureDir(getDowncityProfileDirPath(projectRoot));

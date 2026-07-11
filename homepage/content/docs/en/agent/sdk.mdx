@@ -31,7 +31,7 @@ const agent = new Agent({
 - `plugins` — array of plugin instances to load at startup.
 - `env` — host-provided environment variables, overlaid with project `.env`.
 - `config` — Agent config supplied explicitly by the host; the SDK does not read project config files.
-- `plugin_config` — optional host interface for persisting Plugin config.
+- `plugin_config` — host interface for persisting Plugin config; persistence actions fail explicitly when it is absent.
 - `start` — optional HTTP server config (port, host).
 - `execution` — optional execution binding config.
 

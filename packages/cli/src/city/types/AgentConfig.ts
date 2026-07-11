@@ -33,9 +33,9 @@ export interface StoredAgentConfig {
 }
 
 /**
- * CLI 全局 DB 内的 Agent 配置集合。
+ * 旧版 DB 聚合配置结构，仅供内部 schema 迁移读取。
  */
-export interface AgentConfigsState {
+export interface LegacyAgentConfigsState {
   /** 状态版本。 */
   v: 1;
   /** 所有 agent 配置。 */

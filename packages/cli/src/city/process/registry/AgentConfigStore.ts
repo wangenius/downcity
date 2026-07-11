@@ -8,10 +8,16 @@
  */
 
 import path from "node:path";
-import { createCityPlatformStore } from "@/city/runtime/store/index.js";
+import { withPlatformStore } from "@/city/runtime/store/index.js";
+import {
+  get_agent_config_row,
+  list_agent_config_rows,
+  migrate_agent_config_rows,
+  remove_agent_config_row,
+  set_agent_config_row,
+} from "@/city/runtime/store/StoreAgentConfigRepository.js";
 import { normalizeDefaultAgentId } from "@downcity/agent";
 import type {
-  AgentConfigsState,
   StoredAgentConfig,
 } from "@/city/types/AgentConfig.js";
 export type { StoredAgentConfig } from "@/city/types/AgentConfig.js";
@@ -54,63 +60,28 @@ function normalize_config(
   };
 }
 
-function normalize_state(value: Partial<AgentConfigsState> | null | undefined): AgentConfigsState {
-  if (!value || typeof value !== "object") {
-    return {
-      v: 1,
-      configs: [],
-    };
-  }
-  const configs = Array.isArray(value.configs)
-    ? value.configs.map((item) => normalize_config(item))
-    : [];
-  const byProjectRoot = new Map<string, StoredAgentConfig>();
-  for (const config of configs) {
-    byProjectRoot.set(config.projectRoot, config);
-  }
-  return {
-    v: 1,
-    configs: [...byProjectRoot.values()].sort((left, right) =>
-      left.projectRoot.localeCompare(right.projectRoot),
-    ),
-  };
-}
-
-function read_state(): AgentConfigsState {
-  const store = createCityPlatformStore();
-  try {
-    return normalize_state(
-      store.getSecureSettingJsonSync<AgentConfigsState>(CITY_AGENT_CONFIGS_KEY),
-    );
-  } finally {
-    store.close();
-  }
-}
-
-function write_state(state: AgentConfigsState): void {
-  const store = createCityPlatformStore();
-  try {
-    store.setSecureSettingJsonSync(CITY_AGENT_CONFIGS_KEY, normalize_state(state));
-  } finally {
-    store.close();
-  }
-}
-
 /**
  * 读取指定项目的 Agent 配置。
  */
 export function readAgentConfig(projectRootInput: string): StoredAgentConfig | null {
   const projectRoot = normalize_project_root(projectRootInput);
-  const state = read_state();
-  const stored = state.configs.find((item) => item.projectRoot === projectRoot);
-  return stored ? normalize_config(stored, projectRoot) : null;
+  return withPlatformStore((context) => {
+    migrate_agent_config_rows(context, CITY_AGENT_CONFIGS_KEY);
+    const stored = get_agent_config_row(context, projectRoot);
+    return stored ? normalize_config(stored, projectRoot) : null;
+  });
 }
 
 /**
  * 列出全部 Agent 配置。
  */
 export function listAgentConfigs(): StoredAgentConfig[] {
-  return read_state().configs.map((item) => normalize_config(item));
+  return withPlatformStore((context) => {
+    migrate_agent_config_rows(context, CITY_AGENT_CONFIGS_KEY);
+    return list_agent_config_rows(context)
+      .map((item) => normalize_config(item))
+      .sort((left, right) => left.projectRoot.localeCompare(right.projectRoot));
+  });
 }
 
 /**
@@ -119,26 +90,23 @@ export function listAgentConfigs(): StoredAgentConfig[] {
 export function upsertAgentConfig(input: Partial<StoredAgentConfig> & {
   projectRoot: string;
 }): StoredAgentConfig {
-  const nextConfig = normalize_config({
-    ...input,
-    updatedAt: now_iso(),
+  const projectRoot = normalize_project_root(input.projectRoot);
+  return withPlatformStore((context) => {
+    migrate_agent_config_rows(context, CITY_AGENT_CONFIGS_KEY);
+    const write_config = context.sqlite.transaction(() => {
+      const existing = get_agent_config_row(context, projectRoot);
+      const next_config = normalize_config({
+        ...(existing || {}),
+        ...input,
+        projectRoot,
+        createdAt: existing?.createdAt || input.createdAt,
+        updatedAt: now_iso(),
+      });
+      set_agent_config_row(context, next_config);
+      return next_config;
+    });
+    return write_config.immediate();
   });
-  const state = read_state();
-  const existing = state.configs.find(
-    (item) => item.projectRoot === nextConfig.projectRoot,
-  );
-  if (existing) {
-    nextConfig.createdAt = existing.createdAt;
-  }
-  const nextState: AgentConfigsState = {
-    v: 1,
-    configs: [
-      ...state.configs.filter((item) => item.projectRoot !== nextConfig.projectRoot),
-      nextConfig,
-    ],
-  };
-  write_state(nextState);
-  return nextConfig;
 }
 
 /**
@@ -146,9 +114,8 @@ export function upsertAgentConfig(input: Partial<StoredAgentConfig> & {
  */
 export function removeAgentConfig(projectRootInput: string): void {
   const projectRoot = normalize_project_root(projectRootInput);
-  const state = read_state();
-  write_state({
-    v: 1,
-    configs: state.configs.filter((item) => item.projectRoot !== projectRoot),
+  withPlatformStore((context) => {
+    migrate_agent_config_rows(context, CITY_AGENT_CONFIGS_KEY);
+    remove_agent_config_row(context, projectRoot);
   });
 }

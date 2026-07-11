@@ -126,7 +126,7 @@ export interface AgentOptions {
    * 宿主提供的 plugin 配置持久化能力。
    *
    * 关键点（中文）
-   * - SDK 默认不持久化配置；CLI 等宿主可在这里接入自己的全局数据库。
+   * - SDK 默认会拒绝持久化操作；CLI 等宿主可在这里接入自己的全局数据库。
    * - plugin 只依赖该稳定接口，不感知 SQLite、文件或远端服务等具体实现。
    */
   plugin_config?: AgentPluginConfigRuntime;

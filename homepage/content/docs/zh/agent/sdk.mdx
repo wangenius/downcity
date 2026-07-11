@@ -31,7 +31,7 @@ const agent = new Agent({
 - `plugins` — 启动时加载的插件实例数组。
 - `env` — 宿主提供的环境变量，与项目 `.env` 叠加。
 - `config` — 宿主显式传入的 Agent 配置；SDK 不读取项目配置文件。
-- `plugin_config` — 可选的宿主 Plugin 配置持久化接口。
+- `plugin_config` — 宿主 Plugin 配置持久化接口；未提供时持久化类 action 会明确失败。
 - `start` — 可选的 HTTP 服务器配置（端口、host）。
 - `execution` — 可选的执行绑定配置。
 

@@ -6,7 +6,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { Agent, resolve_agent_env } from "../bin/index.js";
+import {
+  Agent,
+  initializeAgentProject,
+  resolve_agent_env,
+} from "../bin/index.js";
 
 function create_project_root() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "downcity-agent-env-"));
@@ -45,6 +49,52 @@ test("SDK 未传 config 时不读取 downcity.json", async () => {
     assert.equal(agent.getContext().config.version, "0.0.0");
     await agent.ready();
     await agent.dispose();
+  } finally {
+    fs.rmSync(project_root, { recursive: true, force: true });
+  }
+});
+
+test("SDK 未注入 plugin_config 时明确拒绝持久化", async () => {
+  const project_root = create_project_root();
+  try {
+    const agent = new Agent({ id: "sdk_id", path: project_root });
+    await assert.rejects(
+      agent.getContext().pluginConfig.persistProjectPlugins({}),
+      /Plugin config persistence is not configured/,
+    );
+    await agent.ready();
+    await agent.dispose();
+  } finally {
+    fs.rmSync(project_root, { recursive: true, force: true });
+  }
+});
+
+test("项目初始化只创建 .env、Skills 和运行目录并返回真实结果", async () => {
+  const project_root = create_project_root();
+  try {
+    const first = await initializeAgentProject({
+      projectRoot: project_root,
+      id: "init_agent",
+      execution: { type: "api", modelId: "model_a" },
+    });
+    assert.equal(fs.existsSync(path.join(project_root, ".env")), true);
+    assert.equal(fs.existsSync(path.join(project_root, ".env.example")), false);
+    assert.equal(fs.existsSync(path.join(project_root, ".agents", "skills")), true);
+    assert.equal(first.createdFiles.includes(".env"), true);
+    assert.equal(first.createdFiles.includes(".agents/skills/"), true);
+    assert.equal(first.createdFiles.includes(".downcity/"), true);
+    const gitignore = fs.readFileSync(path.join(project_root, ".gitignore"), "utf8");
+    assert.match(gitignore, /^\.env$/m);
+    assert.match(gitignore, /^\.downcity$/m);
+
+    const second = await initializeAgentProject({
+      projectRoot: project_root,
+      id: "init_agent",
+      execution: { type: "api", modelId: "model_a" },
+    });
+    assert.equal(second.skippedFiles.includes(".env"), true);
+    assert.equal(second.skippedFiles.includes(".agents/skills/"), true);
+    assert.equal(second.skippedFiles.includes(".downcity/"), true);
   } finally {
     fs.rmSync(project_root, { recursive: true, force: true });
   }

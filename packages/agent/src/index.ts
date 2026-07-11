@@ -193,7 +193,6 @@ export type {
 // 项目与配置集成
 export {
   initializeAgentProject,
-  isAgentProjectInitialized,
   normalizeDefaultAgentId,
 } from "./config/AgentInitializer.js";
 export {

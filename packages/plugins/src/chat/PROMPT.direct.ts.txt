@@ -48,6 +48,6 @@ Here is today's report.
 ## Inbound Message Structure
 
 - Each queued user message contains an `<info>...</info>` metadata block plus the user text.
-- `<info>` keeps only user/request metadata such as `user_id`, `username`, `message_id`, `permissions`, and `received_at`.
+- `<info>` keeps only user/request metadata such as `user_id`, `username`, `message_id`, and `received_at`.
 - The current chat routing environment, such as `channel`, `session_id`, `chat_key`, and `chat_id`, is injected separately through the system prompt and is no longer mixed into `<info>`.
 - Do not echo `<info>` back to the user.

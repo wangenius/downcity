@@ -2,7 +2,7 @@
  * QQ 入站消息处理器。
  *
  * 关键点（中文）
- * - 负责 group / c2c / channel 三类入站消息的授权、去重、审计与执行入队。
+ * - 负责 group / c2c / channel 三类入站消息的 Chat Access、去重、审计与执行入队。
  * - 不直接持有 `QQBot` 实例；所有副作用通过显式函数注入。
  * - `QQBot` 因此只保留渠道生命周期、dispatch 分流、发送与命令处理。
  */
@@ -11,8 +11,8 @@ import type { Logger } from "@downcity/agent";
 import type { AgentContext } from "@downcity/agent";
 import type {
   ChannelChatKeyParams,
-  IncomingAuthorizationParams,
-  IncomingAuthorizationResult,
+  IncomingChatAccessParams,
+  IncomingChatAccessResult,
 } from "@/chat/channels/BaseChatChannel.js";
 import type { ChannelUserMessageMeta } from "@/chat/channels/BaseChatChannelSupport.js";
 import {
@@ -69,34 +69,22 @@ export interface QQMessageHandlerOptions {
    * 计算 channel chatKey。
    */
   getChatKey(params: ChannelChatKeyParams): string;
+  /** 入站 Chat Access 判定。 */
+  evaluateIncomingAccess(
+    params: IncomingChatAccessParams,
+  ): Promise<IncomingChatAccessResult>;
   /**
-   * 入站主体观测。
+   * 发送 Chat Access 失败提示。
    */
-  observeIncomingAuthorization(
-    params: IncomingAuthorizationParams,
-  ): Promise<void>;
-  /**
-   * 入站授权判定。
-   */
-  evaluateIncomingAuthorization(
-    params: IncomingAuthorizationParams,
-  ): Promise<IncomingAuthorizationResult>;
-  /**
-   * 发送授权失败提示。
-   */
-  sendAuthorizationText(params: {
+  sendAccessText(params: {
     chatId: string;
     text: string;
     chatType?: string;
   }): Promise<void>;
   /**
-   * 构建授权失败提示文案。
+   * 构建 Chat Access 失败提示文案。
    */
-  buildUnauthorizedBlockedText(params?: {
-    userId?: string;
-    chatId?: string;
-    chatType?: string;
-  }): string;
+  buildAccessBlockedText(params: { result: IncomingChatAccessResult }): string;
   /**
    * 入站去重判断。
    */
@@ -234,22 +222,14 @@ export async function handleQqChannelMessage(
     actorName: actor.username,
   });
 
-  await options.observeIncomingAuthorization({
+  const access_result = await options.evaluateIncomingAccess({
     chatId: channelId,
     chatType,
     chatTitle,
     userId: actor.userId,
     username: actor.username,
   });
-
-  const authResult = await options.evaluateIncomingAuthorization({
-    chatId: channelId,
-    chatType,
-    chatTitle,
-    userId: actor.userId,
-    username: actor.username,
-  });
-  if (authResult.decision !== "allow") return;
+  if (!access_result.allowed) return;
 
   const botUserId = options.getBotUserId();
   if (actor.userId && botUserId && actor.userId === botUserId) {
@@ -347,31 +327,19 @@ async function handleQqInboundMessage(
     ? stripQqBotMention(rawContent, botUserId)
     : extractQqTextContent(rawContent);
 
-  await options.observeIncomingAuthorization({
+  const access_result = await options.evaluateIncomingAccess({
     chatId,
     chatType,
     chatTitle,
     userId: actor.userId,
     username: actor.username,
   });
-
-  const authResult = await options.evaluateIncomingAuthorization({
-    chatId,
-    chatType,
-    chatTitle,
-    userId: actor.userId,
-    username: actor.username,
-  });
-  if (authResult.decision !== "allow") {
+  if (!access_result.allowed) {
     if (!isGroup) {
-      await options.sendAuthorizationText({
+      await options.sendAccessText({
         chatId,
         chatType,
-        text: options.buildUnauthorizedBlockedText({
-          chatId,
-          chatType,
-          userId: actor.userId,
-        }),
+        text: options.buildAccessBlockedText({ result: access_result }),
       });
     }
     return;

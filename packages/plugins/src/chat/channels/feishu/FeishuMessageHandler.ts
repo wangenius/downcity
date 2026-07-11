@@ -2,7 +2,7 @@
  * Feishu 入站消息处理器。
  *
  * 关键点（中文）
- * - 负责单条飞书消息的去重、解析、授权、附件保存与执行入队。
+ * - 负责单条飞书消息的去重、解析、Chat Access、附件保存与执行入队。
  * - 不持有 `FeishuBot` 实例；所有副作用通过显式依赖注入。
  * - 解析失败/执行失败通过渠道门面提供的发送函数回写错误消息。
  */
@@ -11,8 +11,8 @@ import path from "path";
 import type { Logger } from "@downcity/agent";
 import type { AgentContext } from "@downcity/agent";
 import type {
-  IncomingAuthorizationParams,
-  IncomingAuthorizationResult,
+  IncomingChatAccessParams,
+  IncomingChatAccessResult,
 } from "@/chat/channels/BaseChatChannel.js";
 import type { JsonObject } from "@downcity/agent";
 import type { InboundReplyContext } from "@/chat/types/ReplyContext.js";
@@ -109,34 +109,22 @@ export interface FeishuMessageHandlerOptions {
     threadId: string,
     value: { chatId: string; chatType: string; chatTitle?: string },
   ): void;
+  /** 入站 Chat Access 判定。 */
+  evaluateIncomingAccess(
+    params: IncomingChatAccessParams,
+  ): Promise<IncomingChatAccessResult>;
   /**
-   * 入站主体观测。
+   * 发送 Chat Access 失败提示。
    */
-  observeIncomingAuthorization(
-    params: IncomingAuthorizationParams,
-  ): Promise<void>;
-  /**
-   * 入站授权判定。
-   */
-  evaluateIncomingAuthorization(
-    params: IncomingAuthorizationParams,
-  ): Promise<IncomingAuthorizationResult>;
-  /**
-   * 发送授权失败提示。
-   */
-  sendAuthorizationText(params: {
+  sendAccessText(params: {
     chatId: string;
     text: string;
     chatType?: string;
   }): Promise<void>;
   /**
-   * 构建授权失败提示文案。
+   * 构建 Chat Access 失败提示文案。
    */
-  buildUnauthorizedBlockedText(params?: {
-    userId?: string;
-    chatId?: string;
-    chatType?: string;
-  }): string;
+  buildAccessBlockedText(params: { result: IncomingChatAccessResult }): string;
   /**
    * 按 chatKey 串行执行。
    */
@@ -337,7 +325,7 @@ async function parseIncomingMessage(params: {
 }
 
 /**
- * 授权后处理消息内容。
+ * Chat Access 通过后处理消息内容。
  */
 async function handleAuthorizedMessage(params: {
   options: FeishuMessageHandlerOptions;
@@ -374,31 +362,19 @@ async function handleAuthorizedMessage(params: {
   const resolvedChatTitle = await options.resolveChatTitle(chatId);
   const chatTitle = resolvedChatTitle || (chatType === "p2p" ? actorName : undefined);
 
-  await options.observeIncomingAuthorization({
+  const access_result = await options.evaluateIncomingAccess({
     chatId,
     chatType,
     chatTitle,
     userId: actorId,
     username: actorName,
   });
-
-  const authResult = await options.evaluateIncomingAuthorization({
-    chatId,
-    chatType,
-    chatTitle,
-    userId: actorId,
-    username: actorName,
-  });
-  if (authResult.decision !== "allow") {
+  if (!access_result.allowed) {
     if (chatType === "p2p") {
-      await options.sendAuthorizationText({
+      await options.sendAccessText({
         chatId,
         chatType,
-        text: options.buildUnauthorizedBlockedText({
-          chatId,
-          chatType,
-          userId: actorId,
-        }),
+        text: options.buildAccessBlockedText({ result: access_result }),
       });
     }
     return true;

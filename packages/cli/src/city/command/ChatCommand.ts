@@ -8,14 +8,15 @@
  */
 
 import type { Command } from "commander";
-import { registerChatAuthCommands } from "@/city/command/ChatAuthCommand.js";
+import { register_chat_access_commands } from "@/city/command/ChatAccessCommand.js";
 import { runInteractiveChatManager } from "@/city/shared/ChatManager.js";
 import { helpText, t } from "@/shared/CliLocale.js";
+import { createVersionBanner } from "@/shared/IndexSupport.js";
 
 /**
  * 注册 `city chat` 交互式入口。
  */
-export function registerChatCommand(program: Command): void {
+export function registerChatCommand(program: Command, version: string): void {
   const chat = program
     .command("chat")
     .description(t({
@@ -23,13 +24,13 @@ export function registerChatCommand(program: Command): void {
       en: "manage chat plugin shared resources and conversation operations (opens the interactive manager when used without arguments)",
     }))
     .helpOption("--help", helpText())
-    .action(async () => {
+    .action(createVersionBanner(version, async () => {
       if (process.stdin.isTTY === true && process.stdout.isTTY === true) {
         await runInteractiveChatManager();
         return;
       }
       chat.outputHelp();
-    });
+    }));
 
-  registerChatAuthCommands(chat);
+  register_chat_access_commands(chat, version);
 }

@@ -72,6 +72,11 @@ export class TelegramBot extends BaseChatChannel {
     return buildTelegramChatKey(params.chatId, params.messageThreadId);
   }
 
+  /** SDK 直连时使用 Telegram Bot ID 作为 issuer。 */
+  protected getAccessIssuerFallback(): string {
+    return String(this.platform.getBotId() || "").trim();
+  }
+
   protected async sendTextToPlatform(
     params: ChannelSendTextParams,
   ): Promise<void> {
@@ -207,16 +212,13 @@ export class TelegramBot extends BaseChatChannel {
         logger: this.logger,
         inboundAckEmoji: TelegramBot.INBOUND_ACK_EMOJI,
         platform: this.platform,
-        observeIncomingAuthorization: async (params) => {
-          await this.observeIncomingAuthorization(params);
+        evaluateIncomingAccess: async (params) =>
+          await this.evaluateIncomingAccess(params),
+        sendAccessText: async (params) => {
+          await this.sendAccessText(params);
         },
-        evaluateIncomingAuthorization: async (params) =>
-          await this.evaluateIncomingAuthorization(params),
-        sendAuthorizationText: async (params) => {
-          await this.sendAuthorizationText(params);
-        },
-        buildUnauthorizedBlockedText: (params) =>
-          this.buildUnauthorizedBlockedText(params),
+        buildAccessBlockedText: (params) =>
+          this.buildAccessBlockedText(params),
         enqueueAuditMessage: async (params) => {
           await this.enqueueAuditMessage(params);
         },

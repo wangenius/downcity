@@ -99,8 +99,18 @@ downcity plugins schedule
 ```bash
 # Manage chat resources interactively
 downcity chat
-# Set chat authorization
-downcity chat auth set <platform>:<userId>
+# List pending requests for a specific Agent
+downcity chat access requests --agent <agentId> --status pending
+# Approve the request's direct or group scope
+downcity chat access approve <requestId> --agent <agentId>
+# Approve both direct and group messages
+downcity chat access approve <requestId> --agent <agentId> --scope all
+# List principals and grants
+downcity chat access list --agent <agentId>
+# Deny a request so later messages do not create another request
+downcity chat access deny <requestId> --agent <agentId>
+# Revoke grants so the user can request access again
+downcity chat access revoke <principalId> --agent <agentId> --scope all
 ```
 
 ## downfed

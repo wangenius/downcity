@@ -82,6 +82,11 @@ export class QQBot extends BaseChatChannel {
     return `qq-${chatType}-${params.chatId}`;
   }
 
+  /** SDK 直连时使用 QQ App ID 作为 issuer。 */
+  protected getAccessIssuerFallback(): string {
+    return String(this.appId || "").trim();
+  }
+
   protected async sendTextToPlatform(
     params: ChannelSendTextParams,
   ): Promise<void> {
@@ -266,16 +271,13 @@ export class QQBot extends BaseChatChannel {
       logger: this.logger,
       getBotUserId: () => this.botUserId,
       getChatKey: (params) => this.getChatKey(params),
-      observeIncomingAuthorization: async (params) => {
-        await this.observeIncomingAuthorization(params);
+      evaluateIncomingAccess: async (params) =>
+        await this.evaluateIncomingAccess(params),
+      sendAccessText: async (params) => {
+        await this.sendAccessText(params);
       },
-      evaluateIncomingAuthorization: async (params) =>
-        await this.evaluateIncomingAuthorization(params),
-      sendAuthorizationText: async (params) => {
-        await this.sendAuthorizationText(params);
-      },
-      buildUnauthorizedBlockedText: (params) =>
-        this.buildUnauthorizedBlockedText(params),
+      buildAccessBlockedText: (params) =>
+        this.buildAccessBlockedText(params),
       shouldSkipDuplicatedInboundMessage: async (eventType, messageId) =>
         await this.shouldSkipDuplicatedInboundMessage(eventType, messageId),
       enqueueAuditMessage: async (params) => {

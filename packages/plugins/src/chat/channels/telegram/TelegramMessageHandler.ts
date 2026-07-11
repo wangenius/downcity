@@ -2,7 +2,7 @@
  * Telegram 普通消息处理器。
  *
  * 关键点（中文）
- * - 负责单条 message 的授权、审计、附件保存、入队指令构造。
+ * - 负责单条 message 的 Chat Access、审计、附件保存、入队指令构造。
  * - 不持有 channel 实例；所有副作用通过显式依赖注入。
  * - `TelegramBot` 只保留平台生命周期与命令/callback 分发入口。
  */
@@ -12,8 +12,8 @@ import type { Logger } from "@downcity/agent";
 import type { AgentContext } from "@downcity/agent";
 import type { JsonObject } from "@downcity/agent";
 import type {
-  IncomingAuthorizationParams,
-  IncomingAuthorizationResult,
+  IncomingChatAccessParams,
+  IncomingChatAccessResult,
 } from "@/chat/channels/BaseChatChannel.js";
 import type { ChannelUserMessageMeta } from "@/chat/channels/BaseChatChannelSupport.js";
 import {
@@ -127,35 +127,23 @@ export interface TelegramMessageHandlerOptions {
    * Telegram 平台能力。
    */
   platform: TelegramMessagePlatform;
+  /** 入站 Chat Access 判定。 */
+  evaluateIncomingAccess(
+    params: IncomingChatAccessParams,
+  ): Promise<IncomingChatAccessResult>;
   /**
-   * 入站主体观测。
+   * 发送 Chat Access 失败提示。
    */
-  observeIncomingAuthorization(
-    params: IncomingAuthorizationParams,
-  ): Promise<void>;
-  /**
-   * 入站授权判定。
-   */
-  evaluateIncomingAuthorization(
-    params: IncomingAuthorizationParams,
-  ): Promise<IncomingAuthorizationResult>;
-  /**
-   * 发送授权失败提示。
-   */
-  sendAuthorizationText(params: {
+  sendAccessText(params: {
     chatId: string;
     text: string;
     chatType?: string;
     messageThreadId?: number;
   }): Promise<void>;
   /**
-   * 构建授权失败提示文案。
+   * 构建 Chat Access 失败提示文案。
    */
-  buildUnauthorizedBlockedText(params?: {
-    userId?: string;
-    chatId?: string;
-    chatType?: string;
-  }): string;
+  buildAccessBlockedText(params: { result: IncomingChatAccessResult }): string;
   /**
    * Audit 队列写入。
    */
@@ -223,32 +211,20 @@ export async function handleTelegramMessage(
     return;
   }
 
-  await options.observeIncomingAuthorization({
+  const access_result = await options.evaluateIncomingAccess({
     chatId,
     chatType: message.chat.type,
     chatTitle,
     userId: actorId,
     username: actorName,
   });
-
-  const authResult = await options.evaluateIncomingAuthorization({
-    chatId,
-    chatType: message.chat.type,
-    chatTitle,
-    userId: actorId,
-    username: actorName,
-  });
-  if (authResult.decision !== "allow") {
+  if (!access_result.allowed) {
     if (!isGroup) {
-      await options.sendAuthorizationText({
+      await options.sendAccessText({
         chatId,
         chatType: message.chat.type,
         messageThreadId,
-        text: options.buildUnauthorizedBlockedText({
-          chatId,
-          chatType: message.chat.type,
-          userId: actorId,
-        }),
+        text: options.buildAccessBlockedText({ result: access_result }),
       });
     }
     return;

@@ -19,7 +19,7 @@ import type {
   ChatAccountAction,
   ChatManagerListSelection,
 } from "@/city/shared/ChatManagerTypes.js";
-import { runInteractiveChatAuthSetFlow } from "@/city/command/ChatAuthCommand.js";
+import { run_interactive_chat_access_manager } from "@/city/shared/ChatAccessManager.js";
 import { t } from "@/shared/CliLocale.js";
 
 const CHAT_CHANNELS: StoredChannelAccountChannel[] = ["telegram", "feishu", "qq"];
@@ -128,8 +128,8 @@ async function promptChatListSelection(): Promise<ChatManagerListSelection | nul
           en: "Access control",
         }),
         description: t({
-          zh: "给 Chat 用户分配 access role，控制外部用户访问 Agent 的权限。",
-          en: "Assign access roles to chat users and control external access to agents.",
+          zh: "先选择 Agent，再处理 Chat 用户的准入请求。",
+          en: "Select an Agent, then manage Chat user access requests.",
         }),
         value: {
           type: "access" as const,
@@ -487,7 +487,7 @@ export async function runInteractiveChatManager(): Promise<void> {
         continue;
       }
       if (selection.type === "access") {
-        await runInteractiveChatAuthSetFlow();
+        await run_interactive_chat_access_manager();
         continue;
       }
       if (selection.type === "account") {

@@ -13,6 +13,7 @@ The Chat plugin connects your Agent to messaging channels like Telegram, Feishu,
 - Creates or reuses sessions per conversation
 - Routes user messages to the Agent
 - Sends Agent replies back to the channel
+- Applies per-Agent Chat Access before a message enters the Agent
 
 ## Configuration
 
@@ -40,6 +41,17 @@ Channels are configured under `plugins.chat.channels` in agent config. CLI-manag
 ## Channel accounts
 
 The actual bot credentials live in the CLI global DB (managed by City). Agent config only references them by `channelAccountId`.
+
+## Chat Access
+
+When an external user sends a first message, the Chat Plugin records a principal in the current Agent's `.downcity/chat/access.db`. Without a grant, it creates a pending request. Administrators approve or deny by request ID:
+
+```bash
+downcity chat access requests --agent <agentId> --status pending
+downcity chat access approve <requestId> --agent <agentId>
+```
+
+Identity combines the channel, current Chat account, and platform user ID. Approval applies only to the target Agent; it is neither a City-global permission nor propagated to other Plugins.
 
 ## Supported channels
 

@@ -7,7 +7,6 @@
  * - 所有字段均保持可序列化，便于 system prompt 与入站消息文本复用。
  */
 
-import type { ChatAuthorizationPermission } from "@/auth/types/AuthPlugin.js";
 import type { ChatDispatchChannel } from "@/chat/types/ChatDispatcher.js";
 
 /**
@@ -102,22 +101,6 @@ export interface QueuedUserInfoInput {
    * - 渠道适配器按 best-effort 提供。
    */
   username?: string;
-
-  /**
-   * 当前用户在授权系统中的角色 ID。
-   *
-   * 说明（中文）
-   * - 例如 `default`、`member`、`admin`。
-   */
-  roleId?: string;
-
-  /**
-   * 当前用户拥有的权限集合。
-   *
-   * 说明（中文）
-   * - 仅描述授权快照，不代表平台原生权限模型。
-   */
-  permissions?: ChatAuthorizationPermission[];
 
   /**
    * 当前消息接收时间。

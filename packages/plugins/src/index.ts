@@ -32,18 +32,13 @@ export { WorkboardPlugin } from "./workboard/Plugin.js";
 export { TaskPlugin } from "./task/TaskPlugin.js";
 export { MemoryPlugin } from "./memory/MemoryPlugin.js";
 export {
-  listChatAuthorizationRoles,
-  readChatAuthorizationConfigSync,
-  setChatAuthorizationUserRole,
-} from "./auth/runtime/AuthorizationConfig.js";
-export { resolveAuthorizedUserRole } from "./auth/runtime/AuthorizationPolicy.js";
-export {
-  CHAT_AUTHORIZATION_ACTIONS,
-  CHAT_AUTHORIZATION_CHANNELS,
-  CHAT_AUTHORIZATION_POINTS,
-  createDefaultChatAuthorizationRoles,
-  isChatAuthorizationChannel,
-} from "./auth/types/AuthPlugin.js";
+  ChatAccessService,
+  is_chat_access_channel,
+  resolve_chat_access_scope,
+  resolve_chat_access_scopes,
+} from "./chat/access/ChatAccessService.js";
+export { get_chat_access_db_path } from "./chat/access/ChatAccessStore.js";
+export { CHAT_ACCESS_ACTIONS } from "./chat/types/ChatAccess.js";
 
 export type {
   ChatChannelAccountListItem,
@@ -121,22 +116,23 @@ export type {
   ImagePluginTextContent,
 } from "./image/types/ImagePlugin.js";
 export type {
-  ChatAuthorizationCatalog,
-  ChatAuthorizationChannel,
-  ChatAuthorizationConfig,
-  ChatAuthorizationDecision,
-  ChatAuthorizationEvaluateInput,
-  ChatAuthorizationEvaluateResult,
-  ChatAuthorizationObservePrincipalPayload,
-  ChatAuthorizationObservedChat,
-  ChatAuthorizationObservedUser,
-  ChatAuthorizationPermission,
-  ChatAuthorizationPermissionMeta,
-  ChatAuthorizationResolveUserRolePayload,
-  ChatAuthorizationRole,
-  ChatAuthorizationSetUserRolePayload,
-  ChatAuthorizationSnapshot,
-  ChatAuthorizationStateFile,
-  ChatAuthorizationWriteConfigPayload,
-  ChatChannelAuthorizationConfig,
-} from "./auth/types/AuthPlugin.js";
+  ApproveChatAccessRequestInput,
+  ChatAccessDecision,
+  ChatAccessDecisionReason,
+  ChatAccessEffect,
+  ChatAccessGrant,
+  ChatAccessIdentityInput,
+  ChatAccessPrincipal,
+  ChatAccessPrincipalView,
+  ChatAccessRequest,
+  ChatAccessRequestStatus,
+  ChatAccessRequestView,
+  ChatAccessScope,
+  ChatAccessScopeInput,
+  ChatAccessServiceOptions,
+  ChatAccessSnapshot,
+  DenyChatAccessRequestInput,
+  ListChatAccessRequestsInput,
+  RevokeChatAccessGrantInput,
+  SetChatAccessPrincipalEffectInput,
+} from "./chat/types/ChatAccess.js";

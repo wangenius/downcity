@@ -18,7 +18,7 @@ export type ChatManagerListSelection =
       type: "add";
     }
   | {
-      /** 选择类型：进入全局访问控制。 */
+      /** 选择类型：进入 Agent Chat Access。 */
       type: "access";
     }
   | {

@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 通过 context 显式注入 runtime 依赖。
  * - 统一注册 dispatcher，暴露 sendText/sendAction 能力。
- * - 基类只保留授权、工具发送与入站编排；存储/队列细节已下沉到辅助模块。
+ * - 基类只保留 Chat Access、工具发送与入站编排；存储/队列细节已下沉到辅助模块。
  */
 
 import { registerChatSender } from "@/chat/runtime/ChatSendRegistry.js";
@@ -19,9 +19,10 @@ import type { AgentContext } from "@downcity/agent";
 import { resolveChatQueueStore } from "@/chat/runtime/ChatQueue.js";
 import { deleteChatSessionById } from "@/chat/runtime/ChatSessionDelete.js";
 import {
-  guardIncomingChat,
-  observeIncomingChatPrincipal,
-} from "@/chat/runtime/PluginDispatch.js";
+  create_chat_access_service,
+  resolve_chat_access_issuer,
+} from "@/chat/access/ChatAccessRuntime.js";
+import type { ChatAccessDecision } from "@/chat/types/ChatAccess.js";
 import {
   appendToolOutboundChannelHistory,
   resolveChannelSessionId,
@@ -108,9 +109,9 @@ export type IncomingChatMessage = {
 };
 
 /**
- * 入站授权判定输入。
+ * 入站 Chat Access 判定输入。
  */
-export type IncomingAuthorizationParams = {
+export type IncomingChatAccessParams = {
   chatId: string;
   chatType?: string;
   userId?: string;
@@ -119,12 +120,9 @@ export type IncomingAuthorizationParams = {
 };
 
 /**
- * 入站授权判定结果。
+ * 入站 Chat Access 判定结果。
  */
-export type IncomingAuthorizationResult = {
-  decision: "allow" | "block";
-  reason: string;
-};
+export type IncomingChatAccessResult = ChatAccessDecision;
 
 /**
  * Chat channel 基类。
@@ -134,6 +132,7 @@ export abstract class BaseChatChannel {
   protected readonly context: AgentContext;
   protected readonly rootPath: string;
   protected readonly logger: Logger;
+  private readonly access_notice_sent_at = new Map<string, number>();
 
   protected constructor(params: {
     channel: ChatDispatchChannel;
@@ -159,22 +158,35 @@ export abstract class BaseChatChannel {
     params: ChannelSendTextParams,
   ): Promise<void>;
 
+  /**
+   * SDK 未绑定 City Chat Account 时的平台稳定 issuer 回退值。
+   */
+  protected getAccessIssuerFallback(): string {
+    return "";
+  }
+
   protected sendActionToPlatform?(
     params: ChannelSendActionParams,
   ): Promise<void>;
 
   /**
-   * 发送授权提示文本。
+   * 发送 Chat Access 提示文本。
    *
    * 关键点（中文）
    * - 一律按普通消息发送，不挂 reply，避免把“权限提示”误挂到某条消息下面。
    */
-  protected async sendAuthorizationText(params: {
+  protected async sendAccessText(params: {
     chatId: string;
     text: string;
     chatType?: string;
     messageThreadId?: number;
   }): Promise<void> {
+    const notice_key = `${params.chatId}:${params.text}`;
+    const current_time = Date.now();
+    const last_sent_at = this.access_notice_sent_at.get(notice_key) || 0;
+    if (current_time - last_sent_at < 60_000) return;
+    if (this.access_notice_sent_at.size >= 1_000) this.access_notice_sent_at.clear();
+    this.access_notice_sent_at.set(notice_key, current_time);
     await this.sendTextToPlatform({
       chatId: params.chatId,
       text: params.text,
@@ -186,83 +198,50 @@ export abstract class BaseChatChannel {
   }
 
   /**
-   * 记录入站观测主体。
+   * 执行入站 Chat Access 判定。
    */
-  protected async observeIncomingAuthorization(
-    params: IncomingAuthorizationParams,
-  ): Promise<void> {
-    await observeIncomingChatPrincipal({
-      context: this.context,
+  protected async evaluateIncomingAccess(
+    params: IncomingChatAccessParams,
+  ): Promise<IncomingChatAccessResult> {
+    const issuer =
+      resolve_chat_access_issuer(this.context, this.channel) ||
+      String(this.getAccessIssuerFallback() || "").trim();
+    return create_chat_access_service(this.context).evaluate({
       channel: this.channel,
-      chatId: params.chatId,
-      chatType: params.chatType,
-      chatTitle: params.chatTitle,
-      userId: params.userId,
-      username: params.username,
+      issuer,
+      subject_id: String(params.userId || "").trim(),
+      display_name: String(params.username || "").trim() || undefined,
+      chat_id: String(params.chatId || "").trim(),
+      chat_type: String(params.chatType || "").trim() || undefined,
+      chat_title: String(params.chatTitle || "").trim() || undefined,
     });
   }
 
   /**
-   * 执行入站授权判定。
+   * 生成 Chat Access 拒绝提示文案。
    */
-  protected async evaluateIncomingAuthorization(
-    params: IncomingAuthorizationParams,
-  ): Promise<IncomingAuthorizationResult> {
-    try {
-      await guardIncomingChat({
-        context: this.context,
-        channel: this.channel,
-        input: {
-          channel: this.channel,
-          chatId: params.chatId,
-          chatType: params.chatType,
-          userId: params.userId,
-          username: params.username,
-          chatTitle: params.chatTitle,
-        },
-      });
-      return {
-        decision: "allow",
-        reason: "allow",
-      };
-    } catch (error) {
-      return {
-        decision: "block",
-        reason: String(error || "blocked"),
-      };
-    }
-  }
-
-  /**
-   * 生成未授权提示文案。
-   */
-  protected buildUnauthorizedBlockedText(params?: {
-    userId?: string;
-    chatId?: string;
-    chatType?: string;
+  protected buildAccessBlockedText(params: {
+    result: IncomingChatAccessResult;
   }): string {
-    const userId = String(params?.userId || "").trim();
-    const chatId = String(params?.chatId || "").trim();
-    const chatType = String(params?.chatType || "").trim();
-    const lines = [
-      "当前会话权限不足，已拒绝处理。请联系管理员调整你的角色。",
-    ];
-
-    if (userId) {
-      lines.push(
-        "",
-        "请把下面命令发给管理员：",
-        `downcity chat auth set ${this.channel}:${userId}`,
-      );
+    const agent_id = String(this.context.config.id || "agent").trim() || "agent";
+    if (params.result.reason === "identity_missing") {
+      return "当前平台身份无法识别，请联系管理员检查 Chat 账号配置。";
     }
-
-    if (chatId || chatType) {
-      lines.push("", "来源信息：");
-      if (chatId) lines.push(`chatId: ${chatId}`);
-      if (chatType) lines.push(`chatType: ${chatType}`);
+    if (params.result.reason === "grant_denied") {
+      return `当前账号未获准访问 Agent "${agent_id}"。`;
     }
-
-    return lines.join("\n");
+    const request_id = String(params.result.request_id || "").trim();
+    if (!request_id) {
+      return `当前账号尚未获准访问 Agent "${agent_id}"。`;
+    }
+    return [
+      `当前账号尚未获准访问 Agent "${agent_id}"。`,
+      "",
+      `访问请求：${request_id}`,
+      "",
+      "请将下面命令发送给管理员：",
+      `downcity chat access approve ${request_id} --agent ${agent_id}`,
+    ].join("\n");
   }
 
   /**

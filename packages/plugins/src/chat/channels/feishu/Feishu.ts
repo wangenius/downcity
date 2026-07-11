@@ -81,6 +81,11 @@ export class FeishuBot extends BaseChatChannel {
     return this.buildChatKey(params.chatId);
   }
 
+  /** SDK 直连时使用飞书 App ID 作为 issuer。 */
+  protected getAccessIssuerFallback(): string {
+    return String(this.appId || "").trim();
+  }
+
   protected async sendTextToPlatform(
     params: ChannelSendTextParams,
   ): Promise<void> {
@@ -209,16 +214,13 @@ export class FeishuBot extends BaseChatChannel {
       rememberChat: (threadId, value) => {
         this.knownChats.set(threadId, value);
       },
-      observeIncomingAuthorization: async (params) => {
-        await this.observeIncomingAuthorization(params);
+      evaluateIncomingAccess: async (params) =>
+        await this.evaluateIncomingAccess(params),
+      sendAccessText: async (params) => {
+        await this.sendAccessText(params);
       },
-      evaluateIncomingAuthorization: async (params) =>
-        await this.evaluateIncomingAuthorization(params),
-      sendAuthorizationText: async (params) => {
-        await this.sendAuthorizationText(params);
-      },
-      buildUnauthorizedBlockedText: (params) =>
-        this.buildUnauthorizedBlockedText(params),
+      buildAccessBlockedText: (params) =>
+        this.buildAccessBlockedText(params),
       runInChat: async (chatKey, fn) => {
         await this.runInChat(chatKey, fn);
       },

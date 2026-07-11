@@ -3,13 +3,12 @@
  *
  * 关键点（中文）
  * - audit / exec 入队都需要走同一套 prepare + emit 流程。
- * - 这些逻辑抽离后，`BaseChatChannel` 只负责渠道层输入整理与授权判断。
+ * - 这些逻辑抽离后，`BaseChatChannel` 只负责渠道层输入整理与 Chat Access 判断。
  */
 
 import { resolveChatQueueStore } from "@/chat/runtime/ChatQueue.js";
 import { buildQueuedUserMessageWithInfo } from "@/chat/runtime/QueuedUserMessage.js";
 import { appendExecIngress } from "@/chat/runtime/ChatIngressStore.js";
-import { resolveIncomingChatUserRole } from "@/chat/runtime/PluginDispatch.js";
 import {
   emitChatEnqueueEffect,
   prepareChatEnqueue,
@@ -190,18 +189,9 @@ export async function enqueueExecChannelMessage(
   params: EnqueueExecChannelMessageParams,
 ): Promise<{ chatKey: string; position: number }> {
   const msg = params.message;
-  const userRole = await resolveIncomingChatUserRole({
-    context: params.context,
-    channel: params.channel,
-    userId: msg.userId,
-  });
   const inboundExtra =
     msg.extra && typeof msg.extra === "object" ? stripUndefinedMeta(msg.extra) : {};
-  const mergedExtra: JsonObject = {
-    ...inboundExtra,
-    roleId: userRole?.roleId || "unknown",
-    permissions: userRole?.permissions || [],
-  };
+  const mergedExtra: JsonObject = { ...inboundExtra };
 
   const chatKey = await resolveOrCreateChannelSessionId({
     context: params.context,
@@ -218,8 +208,6 @@ export async function enqueueExecChannelMessage(
     messageId: msg.messageId,
     userId: msg.userId,
     username: msg.username,
-    roleId: userRole?.roleId,
-    permissions: userRole?.permissions,
     receivedAt: msg.receivedAt,
     userTimezone: msg.userTimezone,
     text: msg.text,

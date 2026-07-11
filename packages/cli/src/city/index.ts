@@ -105,7 +105,7 @@ export function registerCityCommands(program: Command): void {
     agentVersion: installedAgentVersion,
     hiddenPortOption: Option,
   });
-  registerChatCommand(program);
+  registerChatCommand(program, packageJson.version);
   registerPluginsCommand(program);
 
   // 关键点（中文）：受 agent 托管的 plugin 命令统一注册（chat / task / memory / shell / future managed plugins）。

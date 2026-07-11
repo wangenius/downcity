@@ -9,11 +9,7 @@
  */
 
 import { BasePlugin } from "@downcity/agent";
-import type {
-  PluginActions,
-  PluginHooks,
-  PluginResolves,
-} from "@downcity/agent";
+import type { PluginActions } from "@downcity/agent";
 import type { AgentContext } from "@downcity/agent";
 import type { ChatChannelState } from "@/chat/types/ChatRuntime.js";
 import type { ChatQueueWorkerConfig } from "@/chat/types/ChatQueueWorker.js";
@@ -33,11 +29,7 @@ import {
   stopChatChannels,
 } from "./runtime/ChatChannelFacade.js";
 import { createChatPluginActions } from "./runtime/ChatPluginActions.js";
-import {
-  createChatAuthorizationActions,
-  createChatAuthorizationHooks,
-  createChatAuthorizationResolves,
-} from "./runtime/ChatAuthorizationRuntime.js";
+import { create_chat_access_actions } from "./access/ChatAccessActions.js";
 import { ChatQueueWorker } from "./runtime/ChatQueueWorker.js";
 import { buildChatPluginSystem } from "./runtime/ChatPluginSystem.js";
 import { ChatQueueStore } from "./runtime/ChatQueueStore.js";
@@ -105,16 +97,6 @@ export class ChatPlugin extends BasePlugin {
   readonly actions: PluginActions;
 
   /**
-   * 当前 plugin 的 hook 定义表。
-   */
-  readonly hooks: PluginHooks;
-
-  /**
-   * 当前 plugin 的 resolve 定义表。
-   */
-  readonly resolves: PluginResolves;
-
-  /**
    * 启动当前实例的 queue worker。
    */
   private startQueueWorker(context: AgentContext): void {
@@ -149,10 +131,8 @@ export class ChatPlugin extends BasePlugin {
       ...createChatPluginActions({
         channelState: this.channelState,
       }),
-      ...createChatAuthorizationActions(),
+      ...create_chat_access_actions(),
     };
-    this.hooks = createChatAuthorizationHooks();
-    this.resolves = createChatAuthorizationResolves();
     this.lifecycle = {
       start: async (context) => {
         this.startQueueWorker(context);

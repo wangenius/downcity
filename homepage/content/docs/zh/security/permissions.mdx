@@ -1,83 +1,54 @@
 ---
-title: 权限
-description: "了解 Ship 当前的聊天用户权限模型"
+title: Chat Access
+description: "了解 Chat 用户进入 Agent 前的准入模型"
 ---
 
-# 权限
+# Chat Access
 
-当前版本面向用户暴露的权限系统，是 `聊天用户权限`。
+Chat Access 是 Chat Plugin 的准入能力，只回答一个问题：某个外部 Chat 用户的私聊或群聊消息，是否可以进入指定 Agent。
 
-Agent 配置不提供单独的 `permissions` 配置块。
+它不是 Agent Core 权限，也不是通用 Role/Permission 系统。用户通过准入后，Chat Plugin 只把消息交给 Agent，不会向 Session 或其他 Plugin 传播角色和权限。
 
-运行时执行边界由当前版本的内建行为负责；而“谁可以和 Agent 说话，以及能做什么”则由聊天授权控制。
+## 核心规则
 
-## 聊天用户权限
+- 默认拒绝：没有明确 `allow` Grant 时，消息不会进入 Agent。
+- 按 Agent 隔离：访问 Agent A 的批准不会自动允许访问 Agent B。
+- 按 Chat 账号隔离：身份键由 `channel + issuer + subject_id` 组成，同一用户通过两个 Bot 访问时是两个 Principal。
+- 范围明确：持久化 Grant 只有 `direct` 和 `group`；管理命令中的 `all` 会展开为两条 Grant。
+- `deny` 和 `revoke` 不同：拒绝后不再生成请求；撤销后用户可以再次请求。
 
-这一层决定“谁可以和 Agent 说话，以及能做什么”。
+## 批准流程
 
-当前聊天权限采用的是纯权限组模型：
+未批准用户发送私聊消息时，Chat Plugin 会创建或复用一个 pending Request，并返回类似命令：
 
-- 每个用户属于一个权限组
-- 每个权限组拥有一组权限
-- 收到消息时，系统只根据“发消息的用户”来判断是否允许
+```bash
+downcity chat access approve req_xxx --agent assistant
+```
 
-这里没有 `master`、`owner` 一类的特殊身份概念，统一都是权限组。
+管理员也可以先查看请求：
 
-### 核心规则
+```bash
+downcity chat access requests --agent assistant --status pending
+```
 
-- 新用户进入系统后，会先落到默认权限组。
-- 私聊消息是否允许，取决于该用户是否拥有对应私聊权限。
-- 群聊、频道里的消息，也只看“当前发消息的用户”的权限。
-- 群本身不是权限主体，不单独配置群权限。
-- 用户来自哪个平台需要区分，例如 Telegram 用户、飞书用户、QQ 用户会分别识别。
+群聊中的未批准消息默认静默拒绝，pending Request 仍会进入同一个管理列表。
 
-### 配置保存在哪里
+## 数据保存位置
 
-聊天用户权限不会写进 Agent 项目目录。
+每个 Agent 独立保存：
 
-这部分统一保存在 city 全局 `~/.downcity/downcity.db` 中，便于集中管理，也不会把用户权限明文散落到项目配置里。同一个 `telegram:12345678`、`feishu:ou_xxx` 或 `qq:123456` 角色会对所有连接该平台的 agent 生效。
+```text
+<agent_project>/.downcity/chat/access.db
+```
 
-底层不是 key-value JSON blob，而是结构化表：
+数据库包含 Principal、Request、Allow/Deny Grant 和审计事件，不包含 Bot Token、App Secret 或消息正文。Chat 账号和密钥仍保存在 City 全局数据库 `~/.downcity/downcity.db`，Agent 配置只保存绑定的 `channelAccountId`。
 
-- `chat_auth_roles`：角色
-- `chat_auth_role_permissions`：角色拥有的权限
-- `chat_auth_channel_defaults`：各平台默认角色
-- `chat_auth_user_roles`：平台用户到角色的绑定
+## 与 City Auth 的区别
 
-### 在哪里管理
-
-在 Downcity chat 产品表层管理聊天授权。常用管理动作包括：
-
-- 查看当前权限组
-- 配置某个组拥有哪些权限
-- 设置默认权限组
-- 把具体用户分配到指定权限组
-
-聊天用户被拒绝时，返回消息会包含目标用户身份，管理员可以据此把用户分配到合适的权限组。
-
-### 一个常见的分组方式
-
-- `default`：新用户默认组，权限最低
-- `member`：允许正常私聊、群聊使用
-- `admin`：在 `member` 的基础上增加管理类权限
-
-你不需要配置审批流，也不需要做额外 pairing。大多数场景下，把用户放进合适的权限组就够了。
-
-## 一条消息是怎么判断的
-
-当一条聊天消息进入系统时，判断顺序可以理解为：
-
-1. 识别消息来自哪个平台，以及是谁发的。
-2. 根据平台用户标识，查到这个用户绑定的权限组。
-3. 如果没有显式绑定，就使用该平台的默认权限组。
-4. 根据消息类型判断需要哪类权限，例如私聊权限或群聊权限。
-5. 只有发消息用户具备对应权限时，这条消息才会继续进入 Agent。
-
-所以即使消息来自群聊，真正决定是否放行的仍然是“发消息的人”。
+City Auth 负责 HTTP/Console 控制面的登录认证和路由权限，例如谁能调用管理 API。Chat Access 负责外部 Telegram、飞书或 QQ 用户能否向某个 Agent 发送消息。两者数据、身份和判定路径互不混用。
 
 ## 相关文档
 
-- [Console](/zh/docs/reference/cli)
-- [Downcity chat 文档](/zh/docs/reference/cli)
-- [Agent Plugins Docs / chat](/zh/plugins-docs/builtins/chat)
-- [配置总览](/zh/docs/configuration/overview)
+- [CLI 命令](/zh/docs/cli/commands)
+- [Chat 插件](/zh/docs/plugin/chat)
+- [`.downcity` 目录](/zh/docs/reference/dot-downcity)

@@ -99,8 +99,18 @@ downcity plugins schedule
 ```bash
 # 交互式管理 chat 资源
 downcity chat
-# 设置 chat 授权
-downcity chat auth set <platform>:<userId>
+# 查看指定 Agent 的待批准请求
+downcity chat access requests --agent <agentId> --status pending
+# 批准请求自身对应的私聊或群聊范围
+downcity chat access approve <requestId> --agent <agentId>
+# 同时批准私聊和群聊
+downcity chat access approve <requestId> --agent <agentId> --scope all
+# 查看 Principal 和 Grant
+downcity chat access list --agent <agentId>
+# 拒绝请求，后续消息不会重复创建请求
+downcity chat access deny <requestId> --agent <agentId>
+# 撤销 Grant，用户可以再次发起请求
+downcity chat access revoke <principalId> --agent <agentId> --scope all
 ```
 
 ## downfed

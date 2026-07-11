@@ -8,6 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { ChatAccessService } from "../bin/index.js";
+import { TelegramBot } from "../bin/chat/channels/telegram/Bot.js";
 
 function create_project_root() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "downcity-chat-access-"));
@@ -41,6 +42,41 @@ test("Chat Access 按 issuer 隔离并复用 pending request", () => {
     assert.notEqual(other_issuer.principal_id, first.principal_id);
     assert.notEqual(other_issuer.request_id, first.request_id);
     assert.equal(service.list_requests("pending").length, 2);
+  } finally {
+    remove_project_root(project_root);
+  }
+});
+
+test("Telegram 授权命令使用代码格式并保留完整标识符", () => {
+  const project_root = create_project_root();
+  try {
+    const bot = new TelegramBot(
+      {
+        rootPath: project_root,
+        config: { id: "lucas_whitman" },
+        logger: {
+          debug() {},
+          info() {},
+          warn() {},
+          error() {},
+        },
+      },
+      "test-token",
+    );
+    const text = bot.buildAccessBlockedText({
+      result: {
+        allowed: false,
+        reason: "request_pending",
+        request_id: "req_dFij9rOzsDnDPOVJ",
+      },
+    });
+
+    assert.match(text, /Agent "`lucas_whitman`"/);
+    assert.match(text, /访问请求：`req_dFij9rOzsDnDPOVJ`/);
+    assert.match(
+      text,
+      /```bash\ndowncity chat access approve req_dFij9rOzsDnDPOVJ --agent lucas_whitman\n```/,
+    );
   } finally {
     remove_project_root(project_root);
   }

@@ -77,6 +77,24 @@ export class TelegramBot extends BaseChatChannel {
     return String(this.platform.getBotId() || "").trim();
   }
 
+  /**
+   * 使用 Telegram 行内代码展示授权值。
+   *
+   * 说明（中文）
+   * - Telegram 的 Markdown 会把普通文本中的成对下划线解析为强调标记。
+   * - 行内代码可以原样保留 request ID 和 Agent ID，便于管理员直接复制执行。
+   */
+  protected format_access_code(value: string): string {
+    const escaped_value = value.replace(/([\\`])/g, "\\$1");
+    return `\`${escaped_value}\``;
+  }
+
+  /** 使用带语言标记的代码块展示可直接执行的管理命令。 */
+  protected format_access_command(command: string): string {
+    const escaped_command = command.replace(/([\\`])/g, "\\$1");
+    return `\`\`\`bash\n${escaped_command}\n\`\`\``;
+  }
+
   protected async sendTextToPlatform(
     params: ChannelSendTextParams,
   ): Promise<void> {

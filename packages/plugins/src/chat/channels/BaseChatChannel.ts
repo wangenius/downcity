@@ -165,6 +165,28 @@ export abstract class BaseChatChannel {
     return "";
   }
 
+  /**
+   * 格式化 Chat Access 中需要原样展示的值。
+   *
+   * 说明（中文）
+   * - 默认返回纯文本，避免通用层绑定具体平台的富文本语法。
+   * - 支持富文本的平台可覆写此方法，确保标识符和命令可被准确展示、复制。
+   */
+  protected format_access_code(value: string): string {
+    return value;
+  }
+
+  /**
+   * 格式化 Chat Access 管理命令。
+   *
+   * 说明（中文）
+   * - 默认复用平台的原样值格式，避免通用层引入具体富文本语法。
+   * - 平台可单独覆写为块级代码，改善长命令的阅读和复制体验。
+   */
+  protected format_access_command(command: string): string {
+    return this.format_access_code(command);
+  }
+
   protected sendActionToPlatform?(
     params: ChannelSendActionParams,
   ): Promise<void>;
@@ -224,23 +246,28 @@ export abstract class BaseChatChannel {
     result: IncomingChatAccessResult;
   }): string {
     const agent_id = String(this.context.config.id || "agent").trim() || "agent";
+    const displayed_agent_id = this.format_access_code(agent_id);
     if (params.result.reason === "identity_missing") {
       return "当前平台身份无法识别，请联系管理员检查 Chat 账号配置。";
     }
     if (params.result.reason === "grant_denied") {
-      return `当前账号未获准访问 Agent "${agent_id}"。`;
+      return `当前账号未获准访问 Agent "${displayed_agent_id}"。`;
     }
     const request_id = String(params.result.request_id || "").trim();
     if (!request_id) {
-      return `当前账号尚未获准访问 Agent "${agent_id}"。`;
+      return `当前账号尚未获准访问 Agent "${displayed_agent_id}"。`;
     }
+    const displayed_request_id = this.format_access_code(request_id);
+    const approval_command = this.format_access_command(
+      `downcity chat access approve ${request_id} --agent ${agent_id}`,
+    );
     return [
-      `当前账号尚未获准访问 Agent "${agent_id}"。`,
+      `当前账号尚未获准访问 Agent "${displayed_agent_id}"。`,
       "",
-      `访问请求：${request_id}`,
+      `访问请求：${displayed_request_id}`,
       "",
       "请将下面命令发送给管理员：",
-      `downcity chat access approve ${request_id} --agent ${agent_id}`,
+      approval_command,
     ].join("\n");
   }
 

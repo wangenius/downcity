@@ -64,9 +64,13 @@ export async function listRegisteredAgentsForCli(): Promise<CliRegisteredAgentVi
         status: runningProjectRoots.has(view.projectRoot) ? "running" : "stopped",
       } satisfies CliRegisteredAgentView;
     })
-    .sort((left, right) =>
-      left.id.localeCompare(right.id) || left.projectRoot.localeCompare(right.projectRoot),
-    );
+    .sort((left, right) => {
+      // 关键点（中文）：运行中的 Agent 固定置顶，同状态内保持原有稳定排序。
+      const status_priority = Number(right.status === "running") - Number(left.status === "running");
+      return status_priority
+        || left.id.localeCompare(right.id)
+        || left.projectRoot.localeCompare(right.projectRoot);
+    });
 }
 
 /**

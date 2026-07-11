@@ -32,6 +32,7 @@ export type AgentManagerAgentAction =
 
 export type AgentManagerConfigAction =
   | "configureId"
+  | "configureModel"
   | "connectChatAccounts"
   | "back";
 

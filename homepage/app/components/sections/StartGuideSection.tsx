@@ -23,7 +23,7 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
     badge: "Quick Start",
     title: "用一条最短路径，把第一个项目接入 Downcity。",
     intro:
-      "不要先搭复杂控制面，也不要先重构流程。直接从你已经在运行的仓库开始，四步就能把目录变成可持续运行的 Agent 工作域。",
+      "不要先搭复杂控制面，也不要先重构流程。直接从你已经在运行的仓库开始，五步就能把目录变成可持续运行的 Agent 工作域。",
     steps: [
       {
         title: "安装 CLI",
@@ -34,6 +34,11 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
         title: "在仓库里创建 Agent",
         description: "进入真实项目目录后初始化，让规则、权限和产物落在仓库本身，而不是外部平台。",
         command: "cd /path/to/your-repo\ndowncity agent create .",
+      },
+      {
+        title: "选择 Agent 模型",
+        description: "模型列表来自当前 Federation。选择结果保存在本机全局 downcity.db，项目目录只保留 Agent 运行数据。",
+        command: "downcity agent model .\n# SSH 或自动化环境\ndowncity agent model . --set <model-id>",
       },
       {
         title: "连接 City 并启动 Runtime",
@@ -52,13 +57,13 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
       "如果团队多人协作，先确定目录边界，再讨论角色分工。",
     ],
     nextTitle: "继续进入文档",
-    nextDescription: "如果这四步已经跑通，下一步就进入完整快速开始文档，把配置、技能与任务自动化接上。",
+    nextDescription: "如果这五步已经跑通，下一步就进入完整快速开始文档，把配置、技能与任务自动化接上。",
   },
   en: {
     badge: "Quick Start",
     title: "Connect your first project to Downcity through one shortest path.",
     intro:
-      "Do not build a control plane first and do not rewrite workflow first. Start from the repo you already run. In four steps, the folder becomes a durable agent operating block.",
+      "Do not build a control plane first and do not rewrite workflow first. Start from the repo you already run. In five steps, the folder becomes a durable agent operating block.",
     steps: [
       {
         title: "Install the CLI",
@@ -69,6 +74,11 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
         title: "Create the agent inside your repo",
         description: "Initialize inside a real project so rules, permissions, and artifacts stay in the repo instead of a separate platform.",
         command: "cd /path/to/your-repo\ndowncity agent create .",
+      },
+      {
+        title: "Select the agent model",
+        description: "Models come from the active Federation. The selected model is stored in the global downcity.db while the project keeps runtime data only.",
+        command: "downcity agent model .\n# SSH or automation\ndowncity agent model . --set <model-id>",
       },
       {
         title: "Connect City and start runtime",
@@ -87,7 +97,7 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
       "If multiple people operate the system, define folder boundaries before role split.",
     ],
     nextTitle: "Continue in the docs",
-    nextDescription: "Once the four steps are working, move into the full quick-start guide and connect configuration, skills, and automation.",
+    nextDescription: "Once the five steps are working, move into the full quick-start guide and connect configuration, skills, and automation.",
   },
 };
 

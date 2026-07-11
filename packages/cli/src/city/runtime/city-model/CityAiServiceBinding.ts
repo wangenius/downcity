@@ -13,6 +13,7 @@ import type { CityModelDescriptor } from "@downcity/type";
 import { CityUserManager } from "@/city/shared/CityUserManager.js";
 
 const cityUserManager = new CityUserManager();
+const agent_execution_modalities = new Set(["text", "stream", "openai"]);
 
 /**
  * City AIService 模型选项。
@@ -77,7 +78,7 @@ export async function listCityAiServiceModelsForUser(
  * 构建 City AIService 模型选择项。
  */
 export function toCityAiModelChoices(models: CityModelDescriptor[]): CityAiModelChoice[] {
-  return models.map((model) => ({
+  return models.filter(is_city_ai_execution_model).map((model) => ({
     title: [
       model.id,
       model.name && model.name !== model.id ? `· ${model.name}` : "",
@@ -86,6 +87,13 @@ export function toCityAiModelChoices(models: CityModelDescriptor[]): CityAiModel
     value: model.id,
     model,
   }));
+}
+
+/** 判断 Federation 模型是否能作为 Agent 的对话执行模型。 */
+export function is_city_ai_execution_model(model: CityModelDescriptor): boolean {
+  return model.modalities.some((modality) =>
+    agent_execution_modalities.has(String(modality || "").trim()),
+  );
 }
 
 /**
@@ -108,8 +116,8 @@ export async function assertCityAiModelReady(
   const id = String(modelId || "").trim();
   if (!id) throw new Error("execution.modelId is required");
   const models = await listCityAiServiceModelsForUser(env);
-  if (!models.some((model) => model.id === id)) {
-    throw new Error(`Model not found in City AIService: ${id}`);
+  if (!models.some((model) => model.id === id && is_city_ai_execution_model(model))) {
+    throw new Error(`Agent execution model not found in Federation: ${id}`);
   }
 }
 
@@ -134,8 +142,8 @@ export async function createCityAiAgentModel(input: {
   });
   const catalog = await client.ai.listModels();
   const model = catalog.get(modelId);
-  if (!model) {
-    throw new Error(`Model not found in City AIService: ${modelId}`);
+  if (!model || !is_city_ai_execution_model(model)) {
+    throw new Error(`Agent execution model not found in Federation: ${modelId}`);
   }
   return model;
 }

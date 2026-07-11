@@ -20,7 +20,9 @@ import { stopCommand } from "@/city/agent/Stop.js";
 import { runCommand } from "@/city/agent/Run.js";
 import { startCommand } from "@/city/agent/Start.js";
 import { statusCommand } from "@/city/agent/Status.js";
+import { configure_agent_model } from "@/city/agent/AgentModel.js";
 import type { AgentStartOptions } from "@/city/types/AgentStartOptions.js";
+import type { AgentModelCommandOptions } from "@/city/types/AgentModel.js";
 import { createVersionBanner, injectAgentContext, parseBoolean, parsePort } from "@/shared/IndexSupport.js";
 import { runWithSpinner } from "@/city/utils/cli/Spinner.js";
 import { emitCliBlock } from "@/shared/CliReporter.js";
@@ -251,6 +253,29 @@ export function registerAgentCommands(
       ) => {
         const projectRoot = await ensureRegisteredAgentProjectRoot(cwd);
         await agentHistoryCleanCommand(projectRoot, options);
+      },
+    ));
+
+  agent
+    .command("model [path]")
+    .description(t({
+      zh: "从当前 Federation 选择并配置 Agent 使用的模型",
+      en: "select and configure the agent model from the active Federation",
+    }))
+    .option("--set <model-id>", t({
+      zh: "直接设置 Federation model id（非交互模式必填）",
+      en: "set a Federation model id directly (required in non-interactive mode)",
+    }))
+    .option("--restart [enabled]", t({
+      zh: "模型更新后重启正在运行的 Agent",
+      en: "restart the running agent after updating its model",
+    }), parseBoolean)
+    .helpOption("--help", helpText())
+    .action(createVersionBanner(
+      context.version,
+      async (cwd: string = ".", options: AgentModelCommandOptions) => {
+        const project_root = await ensureRegisteredAgentProjectRoot(cwd);
+        await configure_agent_model(project_root, options);
       },
     ));
 

@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import Database from "better-sqlite3";
+import { spawnSync } from "node:child_process";
 
 function create_temp_root() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "downcity-config-storage-"));
@@ -67,12 +68,28 @@ test("Agent 配置只从全局 DB 读取", async () => {
     assert.equal(store.readAgentConfig(project_root).execution.modelId, "model_a");
     assert.equal(store.readAgentConfig(project_root).start.port, 7001);
 
+    const model_config = await import(
+      "../bin/city/agent/AgentModel.js"
+    );
+    const model_result = model_config.persist_agent_model_id(
+      project_root,
+      "model_c",
+    );
+    const model_updated_config = store.readAgentConfig(project_root);
+    assert.equal(model_result.previous_model_id, "model_a");
+    assert.equal(model_result.current_model_id, "model_c");
+    assert.equal(model_result.changed, true);
+    assert.equal(model_updated_config.execution.modelId, "model_c");
+    assert.equal(model_updated_config.id, "db_agent");
+    assert.equal(model_updated_config.start.port, 7001);
+    assert.equal(model_updated_config.plugins.chat.queue.maxConcurrency, 3);
+
     const rolling_upgrade_store = new PlatformStore();
     rolling_upgrade_store.setSecureSettingJsonSync("city.agent.configs", {
       v: 1,
       configs: [
         {
-          ...store.readAgentConfig(project_root),
+          ...model_updated_config,
           id: "newer_legacy_daemon_update",
           updatedAt: "2099-01-01T00:00:00.000Z",
         },
@@ -106,6 +123,40 @@ test("Agent 配置只从全局 DB 读取", async () => {
     fs.rmSync(platform_root, { recursive: true, force: true });
     fs.rmSync(project_root, { recursive: true, force: true });
   }
+});
+
+test("Agent model 命令已注册到 CLI", () => {
+  const cli_path = path.resolve("bin/downcity.js");
+  const result = spawnSync(
+    process.execPath,
+    [cli_path, "agent", "model", "--help"],
+    { encoding: "utf8" },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Usage: \S+ agent model/);
+  assert.match(result.stdout, /--set <model-id>/);
+  assert.match(result.stdout, /--restart \[enabled\]/);
+});
+
+test("Agent 模型选择只接受对话执行模型", async () => {
+  const binding = await import(
+    "../bin/city/runtime/city-model/CityAiServiceBinding.js"
+  );
+  const descriptor = (id, modalities) => ({
+    id,
+    name: id,
+    description: "",
+    modalities,
+    tags: [],
+    meta: {},
+  });
+  const choices = binding.toCityAiModelChoices([
+    descriptor("chat", ["text", "stream"]),
+    descriptor("compatible", ["openai"]),
+    descriptor("image", ["image"]),
+    descriptor("speech", ["tts", "asr"]),
+  ]);
+  assert.deepEqual(choices.map((choice) => choice.value), ["chat", "compatible"]);
 });
 
 test("Chat 装配严格使用当前 Agent 绑定与 queue 配置", async () => {

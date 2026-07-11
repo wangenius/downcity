@@ -271,10 +271,10 @@ export async function initCommand(
 
   const nextSteps: string[] = [
     "Add reusable capabilities under .agents/skills",
-    "Use city agent reset to adjust execution target",
+    "Use downcity agent model to adjust the execution model",
   ];
   if (primaryModelId) {
-    nextSteps.push("Use city agent reset to bind another City AIService model id");
+    nextSteps.push("Use downcity agent model to bind another Federation model id");
     nextSteps.push('Use "city agent start" to confirm the Agent can reach its configured model');
   }
 

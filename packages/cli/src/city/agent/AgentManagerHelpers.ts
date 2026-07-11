@@ -13,6 +13,7 @@ import { startCommand } from "@/city/agent/Start.js";
 import { stopCommand } from "@/city/agent/Stop.js";
 import { restartCommand } from "@/city/agent/Restart.js";
 import { chatCommand } from "@/city/agent/AgentChat.js";
+import { configure_agent_model } from "@/city/agent/AgentModel.js";
 import { listRegisteredAgentsForCli } from "@/city/agent/AgentSelection.js";
 import { emitCliBlock, emitCliList } from "@/shared/CliReporter.js";
 import { injectAgentContext } from "@/shared/IndexSupport.js";
@@ -272,12 +273,12 @@ export async function promptAgentAction(
 export function formatAgentConfigPanelDescription(agent: AgentManagerAgentSummary): string {
   return t({
     zh: [
-      `Agent ${agent.id} · Chat ${agent.channels.length > 0 ? agent.channels.length : "未连接"}`,
-      "配置 Agent ID 或连接 City 全局 Chat 账号。",
+      `Agent ${agent.id} · 模型 ${agent.execution_binding || "未配置"} · Chat ${agent.channels.length > 0 ? agent.channels.length : "未连接"}`,
+      "配置 Agent ID、当前模型或连接 City 全局 Chat 账号。",
     ].join("\n"),
     en: [
-      `Agent ${agent.id} · Chat ${agent.channels.length > 0 ? agent.channels.length : "not connected"}`,
-      "Configure the Agent ID or bind City-level Chat accounts.",
+      `Agent ${agent.id} · Model ${agent.execution_binding || "not configured"} · Chat ${agent.channels.length > 0 ? agent.channels.length : "not connected"}`,
+      "Configure the Agent ID, current model, or City-level Chat accounts.",
     ].join("\n"),
   });
 }
@@ -364,6 +365,14 @@ export async function promptAgentConfigAction(
           en: `Current: ${agent.id}. Changes are written to the CLI global DB.`,
         }),
         value: "configureId",
+      },
+      {
+        title: t({ zh: "配置模型", en: "Configure model" }),
+        description: t({
+          zh: `当前：${agent.execution_binding || "未配置"}。从当前 Federation 的 AI models 中选择。`,
+          en: `Current: ${agent.execution_binding || "not configured"}. Select from the active Federation AI models.`,
+        }),
+        value: "configureModel",
       },
       {
         title: t({ zh: "连接 Chat 账号", en: "Connect chat accounts" }),
@@ -706,6 +715,17 @@ export async function runSelectedAgentManager(agent_input: AgentManagerAgentSumm
             zh: `配置已更新：${agent.id}`,
             en: `Config updated: ${agent.id}`,
           });
+          continue;
+        }
+        if (config_action === "configureModel") {
+          const result = await configure_agent_model(agent.projectRoot);
+          agent = await reloadAgentSummary(agent.projectRoot, agent);
+          last_message = result?.changed
+            ? t({
+                zh: `模型已更新：${result.current_model_id}`,
+                en: `Model updated: ${result.current_model_id}`,
+              })
+            : t({ zh: "模型未修改", en: "Model unchanged" });
           continue;
         }
         if (config_action === "connectChatAccounts") {

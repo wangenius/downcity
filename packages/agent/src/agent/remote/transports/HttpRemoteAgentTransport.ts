@@ -15,13 +15,19 @@ import type {
   AgentArchiveSessionsResult,
   AgentCleanArchiveResult,
   AgentSessionForkInput,
-  AgentSessionRecordsInput,
-  AgentSessionRecordsPage,
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
   AgentSessionSetInput,
 } from "@/types/agent/SessionTypes.js";
+import type {
+  ListSessionMessagesInput,
+  SessionMessagePage,
+} from "@/types/session/SessionMessage.js";
+import type {
+  ListSessionMessageChangesInput,
+  SessionMessageMutationPage,
+} from "@/types/session/SessionMessageMutation.js";
 import type {
   RemoteAgentPluginActionInput,
   RemoteAgentPluginActionResult,
@@ -213,32 +219,58 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
     };
   }
 
-  async records(
+  async messages(
     session_id: string,
-    input?: AgentSessionRecordsInput,
-  ): Promise<AgentSessionRecordsPage> {
+    input?: ListSessionMessagesInput,
+  ): Promise<SessionMessagePage> {
     const query = new URLSearchParams();
     if (input?.limit !== undefined) query.set("limit", String(input.limit));
     if (input?.cursor) query.set("cursor", input.cursor);
-    if (input?.archive_id) query.set("archive_id", input.archive_id);
-    if (input?.order) query.set("order", input.order);
-    if (input?.view) query.set("view", input.view);
+    if (input?.before_sequence !== undefined) {
+      query.set("before_sequence", String(input.before_sequence));
+    }
+    if (input?.include_internal) query.set("include_internal", "true");
+    if (input?.through_sequence !== undefined) {
+      query.set("through_sequence", String(input.through_sequence));
+    }
     const payload = await read_http_json<{
       success?: boolean;
       error?: string;
-      records?: AgentSessionRecordsPage;
+      messages?: SessionMessagePage;
     }>(
-      `${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/records${
+      `${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/messages${
         query.size > 0 ? `?${query.toString()}` : ""
       }`,
       {
         headers: this.headers(),
       },
     );
-    if (!payload.success || !payload.records || !Array.isArray(payload.records.items)) {
-      throw new Error(String(payload.error || "Remote session records failed"));
+    if (!payload.success || !payload.messages || !Array.isArray(payload.messages.items)) {
+      throw new Error(String(payload.error || "Remote session messages failed"));
     }
-    return payload.records;
+    return payload.messages;
+  }
+
+  async message_changes(
+    session_id: string,
+    input: ListSessionMessageChangesInput,
+  ): Promise<SessionMessageMutationPage> {
+    const query = new URLSearchParams({
+      after_commit_sequence: String(input.after_commit_sequence),
+    });
+    if (input.limit !== undefined) query.set("limit", String(input.limit));
+    const payload = await read_http_json<{
+      success?: boolean;
+      error?: string;
+      changes?: SessionMessageMutationPage;
+    }>(
+      `${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/message-changes?${query.toString()}`,
+      { headers: this.headers() },
+    );
+    if (!payload.success || !payload.changes) {
+      throw new Error(String(payload.error || "Remote session message changes failed"));
+    }
+    return payload.changes;
   }
 
   async system(session_id: string): Promise<AgentSessionSystemSnapshot> {

@@ -12,7 +12,7 @@
 import prompts from "@/city/tui/Prompts.js";
 import {
   RemoteAgent,
-  type AgentSessionEvent,
+  type SessionMessageMutation,
 } from "@downcity/agent";
 import { emitCliBlock } from "@/shared/CliReporter.js";
 import { printResult } from "@/city/utils/cli/CliOutput.js";
@@ -437,48 +437,19 @@ export async function runSdkPromptTurn(params: {
   let emitted_visible_text = false;
   let final_text = "";
   let target_turn_id = "";
-  const pending_events: AgentSessionEvent[] = [];
+  const pending_events: SessionMessageMutation[] = [];
 
-  const renderEvent = (event: AgentSessionEvent): void => {
+  const renderEvent = (event: SessionMessageMutation): void => {
     if (params.interactiveRenderer) {
       params.interactiveRenderer.render_event(event);
       return;
     }
-    if (event.type === "tool-approval-request") {
-      const operation = event.operation || (event.toolName === "shell_write" ? "write" : "exec");
-      const command_label = operation === "write" ? "input_preview" : "cmd";
-      const command_value = operation === "write" ? event.inputPreview || event.cmd : event.cmd;
-      emitCliBlock({
-        tone: "info",
-        title: "Unrestricted sandbox approval requested",
-        facts: [
-          { label: "approval_id", value: event.approvalId },
-          { label: "tool", value: event.toolName },
-          { label: "operation", value: operation },
-          ...(event.shellId ? [{ label: "shell_id", value: event.shellId }] : []),
-          { label: command_label, value: command_value },
-          ...(typeof event.inputChars === "number"
-            ? [{ label: "input_chars", value: String(event.inputChars) }]
-            : []),
-          { label: "cwd", value: event.cwd },
-          { label: "reason", value: event.reason },
-        ],
-        note: "Approve or deny this request from a client that calls agent.approve({ approval_id }) or agent.deny({ approval_id }).",
-      });
-      return;
-    }
-    if (event.type === "tool-approval-result") {
-      emitCliBlock({
-        tone: event.decision === "approved" ? "success" : "error",
-        title: "Unrestricted sandbox approval resolved",
-        facts: [
-          { label: "approval_id", value: event.approvalId },
-          { label: "decision", value: event.decision },
-        ],
-      });
-      return;
-    }
-    if (event.type !== "text-delta" || event.turnId !== target_turn_id || !event.text) {
+    if (
+      event.type !== "assistant-part-delta" ||
+      event.part_type !== "text" ||
+      event.turn_id !== target_turn_id ||
+      !event.delta
+    ) {
       return;
     }
     if (params.renderText === false) return;
@@ -486,7 +457,7 @@ export async function runSdkPromptTurn(params: {
       process.stdout.write("\n");
       printed_leading_newline = true;
     }
-    process.stdout.write(event.text);
+    process.stdout.write(event.delta);
     emitted_visible_text = true;
   };
 
@@ -495,13 +466,8 @@ export async function runSdkPromptTurn(params: {
       pending_events.push(event);
       return;
     }
-    const is_approval_event =
-      event.type === "tool-approval-request" || event.type === "tool-approval-result";
-    if (!is_approval_event && "turnId" in event && event.turnId && event.turnId !== target_turn_id) return;
+    if (event.turn_id && event.turn_id !== target_turn_id) return;
     renderEvent(event);
-    if (event.type === "turn-finish") {
-      final_text = event.text;
-    }
   });
 
   try {
@@ -511,13 +477,8 @@ export async function runSdkPromptTurn(params: {
     params.interactiveRenderer?.attach_turn_id(target_turn_id);
 
     for (const event of pending_events) {
-      const is_approval_event =
-        event.type === "tool-approval-request" || event.type === "tool-approval-result";
-      if (!is_approval_event && "turnId" in event && event.turnId && event.turnId !== target_turn_id) continue;
+      if (event.turn_id && event.turn_id !== target_turn_id) continue;
       renderEvent(event);
-      if (event.type === "turn-finish") {
-        final_text = event.text;
-      }
     }
 
     const result = await turn.finished;

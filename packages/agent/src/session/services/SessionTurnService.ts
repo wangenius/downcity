@@ -23,11 +23,15 @@ import type {
   SessionMessageRecordV1,
   SessionUserMessageV1,
 } from "@/executor/types/SessionRecords.js";
-import { mapAgentEventToSessionEvent, mapUiMessageChunkToAgentEvent } from "@/session/SessionEventMapper.js";
 import { SessionEventHub } from "@/session/runtime/SessionEventHub.js";
 import { SessionPromptRuntime } from "@/session/runtime/SessionPromptRuntime.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 import { SessionStateService } from "@/session/services/SessionStateService.js";
+import {
+  SessionAssistantMessageWriter,
+  SessionRecorder,
+} from "@/session/recorder/SessionRecorder.js";
+import { from_ui_assistant_parts } from "@/session/recorder/SessionMessageCodec.js";
 
 type SessionTurnServiceOptions = {
   /**
@@ -54,6 +58,9 @@ type SessionTurnServiceOptions = {
    * 当前 session 共享事件总线。
    */
   event_hub: SessionEventHub;
+
+  /** 当前 Session Message Recorder。 */
+  recorder: SessionRecorder;
 };
 
 /**
@@ -65,6 +72,7 @@ export class SessionTurnService {
   private readonly executor: Executor;
   private readonly state_service: SessionStateService;
   private readonly event_hub: SessionEventHub;
+  private readonly recorder: SessionRecorder;
   private readonly prompt_runtime: SessionPromptRuntime;
 
   constructor(options: SessionTurnServiceOptions) {
@@ -73,23 +81,26 @@ export class SessionTurnService {
     this.executor = options.executor;
     this.state_service = options.state_service;
     this.event_hub = options.event_hub;
+    this.recorder = options.recorder;
     this.prompt_runtime = new SessionPromptRuntime({
       sessionId: this.session_id,
       publish: (event) => {
         this.publish_event(event);
       },
-      createAndPersistUserMessage: async (input) => {
+      createAndPersistUserMessage: async (input, turn_id, input_type) => {
         return await this.state_service.create_and_persist_user_prompt_message(
           input,
+          turn_id,
+          input_type,
         );
       },
-      emit_steer_action: async ({ turn_id, message }) => {
-        await this.state_service.emit_action_event({
-          id: `steer-message:${message.id}`,
-          title: "Session steer message sent",
-          description: "Merged a new user message into the active turn.",
-          state: "completed",
-          turnId: turn_id,
+      appendErrorMessage: async ({ turn_id, message }) => {
+        await this.recorder.append_error_message({
+          scope: "turn",
+          turn_id,
+          code: "turn_execution_failed",
+          message,
+          recoverable: true,
         });
       },
       executeTurn: async ({ turnId, promptInput, onStepMerge, abortSignal }) => {
@@ -157,64 +168,38 @@ export class SessionTurnService {
     assistantMessage?: SessionMessageRecordV1 | null;
     error?: string;
   }> {
-    const tool_name_by_call_id = new Map<string, string>();
+    const assistant_writer_ref: {
+      current: SessionAssistantMessageWriter | null;
+    } = { current: null };
+    let assistant_segment_index = 0;
+    const ensure_assistant_writer = async (): Promise<SessionAssistantMessageWriter> => {
+      if (assistant_writer_ref.current) return assistant_writer_ref.current;
+      assistant_segment_index += 1;
+      assistant_writer_ref.current = await this.recorder.open_assistant_message({
+        turn_id: input.turnId,
+        segment_index: assistant_segment_index,
+      });
+      return assistant_writer_ref.current;
+    };
     const run_context: SessionRunContext = {
       turnId: input.turnId,
       sessionId: this.session_id,
       projectRoot: this.project_root,
-      onStepCallback: input.onStepMerge,
-      onAssistantStepCallback: async (step) => {
-        this.publish_event({
-          type: "assistant-step",
-          turnId: input.turnId,
-          text: step.text,
-          stepIndex: step.stepIndex,
-          ...(step.visibility ? { visibility: step.visibility } : {}),
-        });
+      onStepCallback: async () => {
+        const merged = await input.onStepMerge();
+        if (merged.length > 0 && assistant_writer_ref.current) {
+          await assistant_writer_ref.current.complete();
+          assistant_writer_ref.current = null;
+        }
+        return merged;
       },
       onUiMessageChunkCallback: async (chunk) => {
-        if (chunk.type === "tool-input-start") {
-          tool_name_by_call_id.set(chunk.toolCallId, chunk.toolName);
-          return;
-        }
-        const event = mapUiMessageChunkToAgentEvent(chunk);
-        if (!event) return;
-        const resolved_event =
-          (
-            event.type === "tool-result" ||
-            event.type === "tool-error"
-          ) &&
-          event.toolName === "unknown"
-            ? {
-                ...event,
-                toolName:
-                  tool_name_by_call_id.get(event.toolCallId) || event.toolName,
-              }
-            : event;
-        if (
-          resolved_event.type === "tool-call" ||
-          resolved_event.type === "tool-error"
-        ) {
-          tool_name_by_call_id.set(
-            resolved_event.toolCallId,
-            resolved_event.toolName,
-          );
-        }
-        const session_event = mapAgentEventToSessionEvent({
-          event: resolved_event,
-          turnId: input.turnId,
-        });
-        if (session_event) {
-          this.publish_event(session_event);
-        }
+        if (!is_assistant_content_chunk(chunk.type)) return;
+        const writer = await ensure_assistant_writer();
+        await writer.apply_chunk(chunk);
       },
       onActionCallback: async (event) => {
-        try {
-          await this.state_service.persist_action_event(event);
-        } catch {
-          // action 持久化失败不应阻断当前 turn。
-        }
-        this.publish_event(event);
+        await this.state_service.persist_action_event(event);
       },
       injectedUserMessages: [],
       deferredPersistedUserMessages: [],
@@ -227,6 +212,37 @@ export class SessionTurnService {
       query: executor_query,
       runContext: run_context,
     });
+    const final_assistant_writer = assistant_writer_ref.current;
+    if (final_assistant_writer) {
+      if (input.abortSignal?.aborted) {
+        await final_assistant_writer.stop();
+      } else if (result.success) {
+        await final_assistant_writer.complete();
+      } else {
+        await final_assistant_writer.fail(result.error);
+      }
+    } else if (result.assistantMessage) {
+      const parts = from_ui_assistant_parts(result.assistantMessage.parts);
+      if (parts.length > 0) {
+        assistant_segment_index += 1;
+        const fallback_writer = await this.recorder.open_assistant_message({
+          turn_id: input.turnId,
+          segment_index: assistant_segment_index,
+        });
+        for (const part of parts) await fallback_writer.upsert_part(part);
+        if (result.success) await fallback_writer.complete();
+        else await fallback_writer.fail(result.error);
+      }
+    }
+    if (!result.success && !input.abortSignal?.aborted && result.error) {
+      await this.recorder.append_error_message({
+        scope: "turn",
+        turn_id: input.turnId,
+        code: "turn_execution_failed",
+        message: result.error,
+        recoverable: true,
+      });
+    }
     await this.state_service.persist_assistant_result(result.assistantMessage);
     await this.state_service.persist_deferred_user_messages(
       result.deferredPersistedUserMessages,
@@ -242,4 +258,17 @@ export class SessionTurnService {
       ...(result.error ? { error: result.error } : {}),
     };
   }
+}
+
+function is_assistant_content_chunk(type: string): boolean {
+  return (
+    type === "text-start" ||
+    type === "text-delta" ||
+    type === "text-end" ||
+    type === "reasoning-start" ||
+    type === "reasoning-delta" ||
+    type === "reasoning-end" ||
+    type.startsWith("tool-") ||
+    type === "file"
+  );
 }

@@ -12,9 +12,11 @@ import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js"
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type {
   AgentSessionEvent,
-  AgentSessionSubscriber,
-  AgentSessionUnsubscribe,
 } from "@/types/sdk/AgentSessionEvent.js";
+import type {
+  SessionMessageMutationSubscriber,
+  SessionMessageMutationUnsubscribe,
+} from "@/types/session/SessionMessageMutation.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 
 /**
@@ -41,8 +43,8 @@ export interface CreateRuntimeSessionPortParams {
    * 订阅当前 session 的 future 事件。
    */
   subscribe: (
-    subscriber: AgentSessionSubscriber,
-  ) => AgentSessionUnsubscribe;
+    subscriber: SessionMessageMutationSubscriber,
+  ) => SessionMessageMutationUnsubscribe;
   /**
    * 发布一条 session runtime 事件。
    */

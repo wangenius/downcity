@@ -141,7 +141,7 @@ test("list_sessions returns persisted title from active session metadata", async
   }
 });
 
-test("list_sessions rebuilds stale metadata after external history changes", async () => {
+test("list_sessions reflects canonical Recorder history changes", async () => {
   const { agent, collection, session } = await create_agent_with_titled_session({
     tmp_prefix: "downcity-agent-session-summary-repair-",
     agent_id: "summary_repair_agent",
@@ -162,31 +162,18 @@ test("list_sessions rebuilds stale metadata after external history changes", asy
   const meta_path = path.join(messages_dir, "meta.json");
 
   try {
-    await fs.appendFile(
-      messages_path,
-      `${JSON.stringify({
-        id: "external_assistant",
-        role: "assistant",
-        metadata: {
-          v: 1,
-          ts: Date.now(),
-          sessionId: session.id,
-          source: "egress",
-          kind: "normal",
-        },
-        parts: [{ type: "text", text: "Externally appended history" }],
-      })}\n`,
-      "utf8",
-    );
+    await session.append_assistant_message({
+      text: "Recorder appended history",
+    });
 
     const page = await collection.list();
     const repaired_meta = JSON.parse(await fs.readFile(meta_path, "utf8"));
     const history_stat = await fs.stat(messages_path);
 
     assert.equal(page.items[0].messageCount, 2);
-    assert.equal(page.items[0].previewText, "Externally appended history");
+    assert.equal(page.items[0].previewText, "Recorder appended history");
     assert.equal(repaired_meta.messageCount, 2);
-    assert.equal(repaired_meta.previewText, "Externally appended history");
+    assert.equal(repaired_meta.previewText, "Recorder appended history");
     assert.equal(repaired_meta.historyBytes, history_stat.size);
   } finally {
     await agent.dispose();

@@ -24,9 +24,8 @@ import {
   runOneShotChat,
   runSdkPromptTurn,
 } from "@/city/agent/AgentChatHelpers.js";
-import { timeline_events_to_entries } from "@/city/agent/tui/history/HistoryLoader.js";
+import { session_messages_to_entries } from "@/city/agent/tui/history/HistoryLoader.js";
 import { listPlatformModelChoices } from "@/city/runtime/city-model/ExecutionModelBinding.js";
-import type { AgentSessionTimelineEvent } from "@downcity/agent";
 
 /**
  * `city agent chat` 统一入口。
@@ -120,13 +119,14 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
       },
       load_session_history: async (session_id) => {
         const session = await interactive.remote_agent.sessions.get(session_id);
-        const records = await session.records({
-          view: "timeline",
-          order: "asc",
+        const [info, messages] = await Promise.all([
+          session.get_info(),
+          session.messages({
           limit: 200,
-        });
-        const title = records.session.title?.trim() || "Untitled";
-        const model_id = String(records.session.modelId || "").trim() || undefined;
+          }),
+        ]);
+        const title = info.title?.trim() || "Untitled";
+        const model_id = String(info.modelId || "").trim() || undefined;
         let model_name = model_id;
         if (model_id) {
           try {
@@ -136,9 +136,7 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
             // 关键点（中文）：目录查询失败不阻塞历史加载，footer 回退展示稳定 model id。
           }
         }
-        const entries = timeline_events_to_entries(
-          records.items as AgentSessionTimelineEvent[],
-        );
+        const entries = session_messages_to_entries(messages.items);
         return { title, model_id, model_name, entries };
       },
       approve: async (approval_id) =>

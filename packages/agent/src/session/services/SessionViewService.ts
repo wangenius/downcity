@@ -17,7 +17,7 @@ import { getSdkAgentSessionArchiveFilePath } from "@/session/storage/Paths.js";
 import { ensureSessionTitle } from "@/session/SessionTitle.js";
 import { readSessionMetadata } from "@/session/storage/Metadata.js";
 import { buildSessionSystemBlocks } from "@/session/SessionSystemBuilder.js";
-import type { JsonlSessionHistoryStore } from "@/executor/store/history/jsonl/JsonlSessionHistoryStore.js";
+import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
 import type { SessionSystemComposer } from "@/executor/composer/system/SessionSystemComposer.js";
 import type {
   AgentSessionForkInput,
@@ -32,6 +32,8 @@ import type { SessionRecordV1 } from "@/executor/types/SessionRecords.js";
 import { SessionStateService } from "@/session/services/SessionStateService.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 import type { Logger } from "@/utils/logger/Logger.js";
+import { SessionRecorder } from "@/session/recorder/SessionRecorder.js";
+import type { SessionMessage } from "@/types/session/SessionMessage.js";
 
 type SessionViewServiceOptions<TSession extends Pick<AgentSession, "set">> = {
   /**
@@ -52,7 +54,10 @@ type SessionViewServiceOptions<TSession extends Pick<AgentSession, "set">> = {
   /**
    * 当前 session 历史事实源。
    */
-  history_store: JsonlSessionHistoryStore;
+  history_store: SessionHistoryStore;
+
+  /** 当前 Session Message Recorder。 */
+  recorder: SessionRecorder;
 
   /**
    * 当前 session 状态服务。
@@ -98,7 +103,8 @@ type SessionViewServiceOptions<TSession extends Pick<AgentSession, "set">> = {
    */
   create_fork_session: (session_id: string) => Promise<{
     session: TSession;
-    history_store: JsonlSessionHistoryStore;
+    history_store: SessionHistoryStore;
+    recorder: SessionRecorder;
     state_service: SessionStateService;
   }>;
 };
@@ -110,7 +116,8 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
   private readonly agent_id: string;
   private readonly project_root: string;
   private readonly session_id: string;
-  private readonly history_store: JsonlSessionHistoryStore;
+  private readonly history_store: SessionHistoryStore;
+  private readonly recorder: SessionRecorder;
   private readonly state_service: SessionStateService;
   private readonly logger: Logger;
   private readonly is_executing: SessionViewServiceOptions<TSession>["is_executing"];
@@ -125,6 +132,7 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
     this.project_root = options.project_root;
     this.session_id = options.session_id;
     this.history_store = options.history_store;
+    this.recorder = options.recorder;
     this.state_service = options.state_service;
     this.logger = options.logger;
     this.is_executing = options.is_executing;
@@ -282,11 +290,14 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
       typeof input === "string"
         ? String(input || "").trim() || undefined
         : String(input?.messageId || "").trim() || undefined;
-    const messages = await this.history_store.list_records();
+    const message_page = await this.recorder.list_messages({
+      limit: 500,
+      include_internal: true,
+    });
     const fork_messages =
       !message_id
-        ? messages
-        : this.resolve_fork_messages(messages, message_id);
+        ? message_page.items
+        : this.resolve_fork_messages(message_page.items, message_id);
     const action_id = `history-forking:${this.session_id}:${Date.now()}:${nanoid(8)}`;
 
     await this.state_service.emit_action_event({
@@ -333,11 +344,11 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
   }
 
   private resolve_fork_messages(
-    messages: SessionRecordV1[],
+    messages: SessionMessage[],
     message_id: string,
-  ): SessionRecordV1[] {
+  ): SessionMessage[] {
     const target_index = messages.findIndex(
-      (message) => String(message.id || "").trim() === message_id,
+      (message) => message.message_id === message_id,
     );
     if (target_index < 0) {
       throw new Error(
@@ -349,12 +360,13 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
 
   private async append_fork_messages(
     forked_bundle: {
-      history_store: JsonlSessionHistoryStore;
+      history_store: SessionHistoryStore;
+      recorder: SessionRecorder;
       state_service: SessionStateService;
     },
-    messages: SessionRecordV1[],
+    messages: SessionMessage[],
   ): Promise<void> {
-    await forked_bundle.history_store.write_records(messages);
+    await forked_bundle.recorder.import_messages(messages);
   }
 
   private stringify_system_content(content: unknown): string {

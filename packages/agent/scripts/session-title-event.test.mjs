@@ -110,11 +110,8 @@ test("Session keeps title empty when no model is available", async () => {
       text: "Use shell tools to inspect the current workspace",
     });
 
-    const title_event = events.find((event) => event.type === "session-title");
-    assert.equal(title_event, undefined);
-
-    const records = await session.records();
-    assert.equal(records.session.title, undefined);
+    assert.equal(events.some((event) => event.type === "message-created"), true);
+    assert.equal((await session.get_info()).title, undefined);
   } finally {
     unsubscribe();
     await agent.dispose();
@@ -137,8 +134,7 @@ test("Session logs title generation failure without blocking the session", async
       text: "Diagnose why session title generation is flaky",
     });
 
-    const records = await session.records();
-    assert.equal(records.session.title, undefined);
+    assert.equal((await session.get_info()).title, undefined);
 
     await agent.getLogger().saveAllLogs();
     const log_lines = await read_log_lines(agent_path);
@@ -185,8 +181,7 @@ test("Session retries title generation after model becomes available", async () 
       text: "Investigate flaky session title generation in the SDK",
     });
 
-    const history_before_model = await session.records();
-    assert.equal(history_before_model.session.title, undefined);
+    assert.equal((await session.get_info()).title, undefined);
 
     await session.set({
       model: create_mock_title_model("排查 session 标题"),
@@ -195,15 +190,7 @@ test("Session retries title generation after model becomes available", async () 
       text: "Need another prompt to trigger the retry path",
     });
 
-    const title_event = events.find((event) => event.type === "session-title");
-    assert.deepEqual(title_event, {
-      type: "session-title",
-      sessionId: session.id,
-      title: "排查 session 标题",
-    });
-
-    const records = await session.records();
-    assert.equal(records.session.title, "排查 session 标题");
+    assert.equal((await session.get_info()).title, "排查 session 标题");
   } finally {
     unsubscribe();
     await agent.dispose();

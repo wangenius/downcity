@@ -96,21 +96,16 @@ export interface SessionPromptRuntimeOptions {
    */
   createAndPersistUserMessage: (
     input: AgentSessionPromptInput,
+    turn_id: string,
+    input_type: "prompt" | "steer",
   ) => Promise<SessionUserMessageV1>;
 
-  /**
-   * 在 steer message 成功持久化后发送对应 action。
-   */
-  emit_steer_action: (input: {
-    /**
-     * steer message 所属的当前 turn 标识。
-     */
+  /** 持久化一条用户可见的 turn 错误 Message。 */
+  appendErrorMessage: (input: {
+    /** 错误所属 turn。 */
     turn_id: string;
-
-    /**
-     * 已成功持久化的 steer message。
-     */
-    message: SessionUserMessageV1;
+    /** 用户可见错误文本。 */
+    message: string;
   }) => Promise<void>;
 
   /**
@@ -141,7 +136,7 @@ export class SessionPromptRuntime {
   private readonly sessionId: string;
   private readonly publish: SessionPromptRuntimeOptions["publish"];
   private readonly createAndPersistUserMessage: SessionPromptRuntimeOptions["createAndPersistUserMessage"];
-  private readonly emit_steer_action: SessionPromptRuntimeOptions["emit_steer_action"];
+  private readonly appendErrorMessage: SessionPromptRuntimeOptions["appendErrorMessage"];
   private readonly executeTurn: SessionPromptRuntimeOptions["executeTurn"];
   private readonly stopTurn: SessionPromptRuntimeOptions["stopTurn"];
   private readonly queue: QueuedPrompt[] = [];
@@ -152,7 +147,7 @@ export class SessionPromptRuntime {
     this.sessionId = String(options.sessionId || "").trim();
     this.publish = options.publish;
     this.createAndPersistUserMessage = options.createAndPersistUserMessage;
-    this.emit_steer_action = options.emit_steer_action;
+    this.appendErrorMessage = options.appendErrorMessage;
     this.executeTurn = options.executeTurn;
     this.stopTurn = options.stopTurn;
     if (!this.sessionId) {
@@ -237,7 +232,7 @@ export class SessionPromptRuntime {
       current.deferredHandle.resolve(createTurnHandle(activeTurn));
 
       try {
-        await this.createAndPersistUserMessage(current.input);
+        await this.createAndPersistUserMessage(current.input, turnId, "prompt");
         const result = await this.executeTurn({
           turnId,
           promptInput: current.input,
@@ -283,6 +278,14 @@ export class SessionPromptRuntime {
         };
         activeTurn.result = finalResult;
         if (message !== TURN_STOPPED_MESSAGE) {
+          try {
+            await this.appendErrorMessage({
+              turn_id: turnId,
+              message,
+            });
+          } catch {
+            // Error Message 写入失败不能阻止 turn handle 收口。
+          }
           this.publish({
             type: "error",
             message,
@@ -348,17 +351,13 @@ export class SessionPromptRuntime {
     for (let index = 0; index < drained.length; index += 1) {
       const item = drained[index];
       try {
-        const message = await this.createAndPersistUserMessage(item.input);
+        const message = await this.createAndPersistUserMessage(
+          item.input,
+          activeTurn.turnId,
+          "steer",
+        );
         item.deferredHandle.resolve(createTurnHandle(activeTurn));
         merged.push(message);
-        try {
-          await this.emit_steer_action({
-            turn_id: activeTurn.turnId,
-            message,
-          });
-        } catch {
-          // action 发送失败不应阻断已经持久化的 steer message。
-        }
       } catch {
         // 关键点（中文）：若某条消息持久化失败，把未处理部分重新放回队列头部，避免静默丢失。
         const remaining = drained.slice(index);

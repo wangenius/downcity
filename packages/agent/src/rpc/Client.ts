@@ -16,13 +16,19 @@ import type {
   AgentArchiveSessionResult,
   AgentArchiveSessionsResult,
   AgentCleanArchiveResult,
-  AgentSessionRecordsInput,
-  AgentSessionRecordsPage,
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
   AgentSessionSetInput,
 } from "@/types/agent/SessionTypes.js";
+import type {
+  ListSessionMessagesInput,
+  SessionMessagePage,
+} from "@/types/session/SessionMessage.js";
+import type {
+  ListSessionMessageChangesInput,
+  SessionMessageMutationPage,
+} from "@/types/session/SessionMessageMutation.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
@@ -219,18 +225,33 @@ export class RpcClient {
   /**
    * 读取 session records。
    */
-  async get_session_records(params: {
+  async get_session_messages(params: {
     session_id: string;
-    input?: AgentSessionRecordsInput;
-  }): Promise<AgentSessionRecordsPage> {
-    const data = await this.request<{ records: AgentSessionRecordsPage }>({
-      method: "sdk.sessions.records",
+    input?: ListSessionMessagesInput;
+  }): Promise<SessionMessagePage> {
+    const data = await this.request<{ messages: SessionMessagePage }>({
+      method: "sdk.sessions.messages",
       params: {
         sessionId: params.session_id,
         input: params.input,
       },
     });
-    return data.records;
+    return data.messages;
+  }
+
+  /** 读取指定 cursor 后的 Session Message Mutation。 */
+  async get_session_message_changes(params: {
+    session_id: string;
+    input: ListSessionMessageChangesInput;
+  }): Promise<SessionMessageMutationPage> {
+    const data = await this.request<{ changes: SessionMessageMutationPage }>({
+      method: "sdk.sessions.message_changes",
+      params: {
+        sessionId: params.session_id,
+        input: params.input,
+      },
+    });
+    return data.changes;
   }
 
   /**

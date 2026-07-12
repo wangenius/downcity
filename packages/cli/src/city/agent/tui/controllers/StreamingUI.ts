@@ -8,7 +8,7 @@
  * - flush 节拍合并高频 text-delta，降低终端重绘开销。
  */
 
-import type { AgentSessionEvent } from "@downcity/agent";
+import type { SessionMessageMutation } from "@downcity/agent";
 
 import { AssistantMessageComponent } from "@/city/agent/tui/components/AssistantMessage.js";
 import type { MessageListComponent } from "@/city/agent/tui/components/MessageList.js";
@@ -46,6 +46,7 @@ export class StreamingUIController {
   private flush_timer: ReturnType<typeof setTimeout> | null = null;
   private last_flush_at = 0;
   private pending_render = false;
+  private readonly tool_call_ids = new Set<string>();
 
   /**
    * @param options 构造选项。
@@ -81,48 +82,47 @@ export class StreamingUIController {
    *
    * @param event AgentSessionEvent。
    */
-  handle_event(event: AgentSessionEvent): void {
-    const event_turn_id = this.extract_event_turn_id(event);
+  handle_event(event: SessionMessageMutation): void {
+    const event_turn_id = event.turn_id || "";
     if (event_turn_id && this.active_turn_id && event_turn_id !== this.active_turn_id) {
       return;
     }
 
     switch (event.type) {
-      case "turn-start":
-        this.attach_turn_id(event.turnId);
-        // 对齐 Kimi Code：不在 turn-start 预创建 assistant entry，
-        // 第一个 text-delta 到达时才创建，保证 entry 位置与文本实际出现位置一致。
+      case "assistant-part-delta":
+        if (event.part_type === "text") this.append_assistant_delta(event.delta);
         break;
-      case "text-delta":
-        this.append_assistant_delta(event.text || "");
-        break;
-      case "tool-call":
+      case "assistant-part-updated":
+        if (event.part.type !== "tool") break;
         this.finalize_assistant();
-        this.add_tool_call(event.toolName, event.toolCallId, event.args);
+        if (!this.tool_call_ids.has(event.part.tool_call_id)) {
+          this.tool_call_ids.add(event.part.tool_call_id);
+          this.add_tool_call(
+            event.part.tool_name,
+            event.part.tool_call_id,
+            event.part.input || {},
+          );
+        }
+        if (event.part.state === "completed") {
+          this.message_list.update_tool_result(
+            event.part.tool_call_id,
+            event.part.output,
+          );
+        }
+        if (event.part.state === "failed") {
+          this.message_list.update_tool_result(
+            event.part.tool_call_id,
+            event.part.error || "Tool failed",
+          );
+        }
         break;
-      case "tool-result":
-        this.message_list.update_tool_result(event.toolCallId, event.result);
+      case "message-created":
+        if (event.message.type === "error") this.add_error(event.message.message);
         break;
-      case "tool-approval-request":
+      case "message-completed":
         this.finalize_assistant();
-        this.add_approval_request(event);
         break;
-      case "tool-approval-result":
-        this.add_approval_result(event);
-        break;
-      case "reasoning-delta":
-        // reasoning 不在 TUI 中直接展示。
-        break;
-      case "error":
-        this.add_error(event.message || "unknown error");
-        break;
-      case "turn-finish":
-        this.finalize_assistant();
-        break;
-      case "assistant-step":
-        // 不拆分 assistant 文本块；step 边界对当前 TUI 渲染无影响。
-        break;
-      case "session-title":
+      case "message-updated":
       default:
         break;
     }
@@ -230,42 +230,6 @@ export class StreamingUIController {
     this.schedule_render();
   }
 
-  private add_approval_request(
-    event: Extract<AgentSessionEvent, { type: "tool-approval-request" }>,
-  ): void {
-    const operation = event.operation || (event.toolName === "shell_write" ? "write" : "exec");
-    const command_value =
-      operation === "write" ? event.inputPreview || event.cmd : event.cmd;
-    const entry: TranscriptEntry = {
-      id: generateTuiId(),
-      kind: "tool-approval-request",
-      approval_id: event.approvalId,
-      tool_name: event.toolName,
-      operation,
-      command_value,
-      cwd: event.cwd,
-      reason: event.reason,
-      created_at: Date.now(),
-    };
-    this.message_list.add_entry(entry);
-    this.schedule_render();
-  }
-
-  private add_approval_result(
-    event: Extract<AgentSessionEvent, { type: "tool-approval-result" }>,
-  ): void {
-    const entry: TranscriptEntry = {
-      id: generateTuiId(),
-      kind: "tool-approval-result",
-      approval_id: event.approvalId,
-      tool_name: event.toolName,
-      decision: event.decision,
-      created_at: Date.now(),
-    };
-    this.message_list.add_entry(entry);
-    this.schedule_render();
-  }
-
   private add_error(text: string): void {
     const entry: TranscriptEntry = {
       id: generateTuiId(),
@@ -275,16 +239,6 @@ export class StreamingUIController {
     };
     this.message_list.add_entry(entry);
     this.schedule_render();
-  }
-
-  private extract_event_turn_id(event: AgentSessionEvent): string {
-    if (event.type === "tool-approval-request" || event.type === "tool-approval-result") {
-      return "";
-    }
-    if ("turnId" in event && typeof event.turnId === "string") {
-      return event.turnId;
-    }
-    return "";
   }
 
   /**

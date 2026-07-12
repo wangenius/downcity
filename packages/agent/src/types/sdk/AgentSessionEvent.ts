@@ -9,6 +9,7 @@
 import type { JsonValue } from "@/types/common/Json.js";
 import type { SessionAssistantStepVisibility } from "@/executor/types/SessionRun.js";
 import type { AgentSessionActionEvent } from "@/types/sdk/AgentSessionAction.js";
+import type { SessionMessageMutation } from "@/types/session/SessionMessageMutation.js";
 
 /**
  * 单个 turn 开始事件。
@@ -346,6 +347,7 @@ export interface AgentSessionErrorEvent {
  * Session 订阅可见事件联合类型。
  */
 export type AgentSessionEvent =
+  | SessionMessageMutation
   | AgentSessionTurnStartEvent
   | AgentSessionTextDeltaEvent
   | AgentSessionReasoningDeltaEvent

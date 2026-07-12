@@ -15,8 +15,6 @@ import type {
   AgentArchiveSessionsResult,
   AgentCleanArchiveResult,
   AgentSessionForkInput,
-  AgentSessionRecordsInput,
-  AgentSessionRecordsPage,
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
@@ -29,6 +27,14 @@ import type {
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
+import type {
+  ListSessionMessagesInput,
+  SessionMessagePage,
+} from "@/types/session/SessionMessage.js";
+import type {
+  ListSessionMessageChangesInput,
+  SessionMessageMutationPage,
+} from "@/types/session/SessionMessageMutation.js";
 import type {
   ShellApprovalMode,
   ShellApprovalDecisionResult,
@@ -69,11 +75,16 @@ export type RemoteSessionTransport = {
     /** 底层事件连接结束后的通知；主动关闭不触发。 */
     on_close: (error?: unknown) => void;
   }): Promise<TransportSubscription>;
-  /** 读取 history。 */
-  records(
+  /** 读取 Session Message。 */
+  messages(
     session_id: string,
-    input?: AgentSessionRecordsInput,
-  ): Promise<AgentSessionRecordsPage>;
+    input?: ListSessionMessagesInput,
+  ): Promise<SessionMessagePage>;
+  /** 读取增量 Message Mutation。 */
+  message_changes(
+    session_id: string,
+    input: ListSessionMessageChangesInput,
+  ): Promise<SessionMessageMutationPage>;
   /** 读取 system snapshot。 */
   system(session_id: string): Promise<AgentSessionSystemSnapshot>;
   /** 分叉 session。 */

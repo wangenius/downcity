@@ -76,7 +76,6 @@ async function isSettled(promise) {
 test("SessionPromptRuntime merges queued prompts at the next step boundary", async () => {
   const events = [];
   const persisted = [];
-  const steer_actions = [];
   const merge_lifecycle = [];
   const executionFinished = createDeferred();
   let stepMerge = null;
@@ -92,10 +91,7 @@ test("SessionPromptRuntime merges queued prompts at the next step boundary", asy
       merge_lifecycle.push(`message:${input.query}`);
       return message;
     },
-    emit_steer_action: async (input) => {
-      steer_actions.push(input);
-      merge_lifecycle.push(`action:${input.message.parts[0]?.text}`);
-    },
+    appendErrorMessage: async () => {},
     executeTurn: async (input) => {
       stepMerge = input.onStepMerge;
       await executionFinished.promise;
@@ -126,17 +122,9 @@ test("SessionPromptRuntime merges queued prompts at the next step boundary", asy
     persisted.map((message) => message.parts[0]?.text),
     ["first", "second"],
   );
-  assert.deepEqual(
-    steer_actions.map((action) => ({
-      turn_id: action.turn_id,
-      text: action.message.parts[0]?.text,
-    })),
-    [{ turn_id: firstTurn.id, text: "second" }],
-  );
   assert.deepEqual(merge_lifecycle, [
     "message:first",
     "message:second",
-    "action:second",
   ]);
 
   executionFinished.resolve();
@@ -163,7 +151,7 @@ test("SessionPromptRuntime moves unmerged prompts into the next turn", async () 
     createAndPersistUserMessage: async (input) => {
       return createUserMessage(input.query, events.length + 1);
     },
-    emit_steer_action: async () => {},
+    appendErrorMessage: async () => {},
     executeTurn: async (input) => {
       const deferred = createDeferred();
       finishQueue.push({
@@ -221,7 +209,7 @@ test("SessionPromptRuntime stops current turn and cancels unmerged queued prompt
     createAndPersistUserMessage: async (input) => {
       return createUserMessage(input.query, events.length + 1);
     },
-    emit_steer_action: async () => {},
+    appendErrorMessage: async () => {},
     executeTurn: async (input) => {
       await new Promise((resolve) => {
         input.abortSignal.addEventListener("abort", resolve, { once: true });
@@ -278,7 +266,7 @@ test("SessionPromptRuntime does not synthesize assistant text when stopped befor
     createAndPersistUserMessage: async (input) => {
       return createUserMessage(input.query, 1);
     },
-    emit_steer_action: async () => {},
+    appendErrorMessage: async () => {},
     executeTurn: async (input) => {
       await new Promise((resolve) => {
         input.abortSignal.addEventListener("abort", resolve, { once: true });

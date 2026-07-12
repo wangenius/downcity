@@ -65,10 +65,16 @@ export async function handleSdkSessionRpcRequest(params: {
       write_success(request.id, { result });
       return true;
     }
-    case "sdk.sessions.records": {
+    case "sdk.sessions.messages": {
       const session = await options.sessions.get(request.params.sessionId);
-      const records = await session.records(request.params.input);
-      write_success(request.id, { records });
+      const messages = await session.messages(request.params.input);
+      write_success(request.id, { messages });
+      return true;
+    }
+    case "sdk.sessions.message_changes": {
+      const session = await options.sessions.get(request.params.sessionId);
+      const changes = await session.message_changes(request.params.input);
+      write_success(request.id, { changes });
       return true;
     }
     case "sdk.sessions.system": {
@@ -89,7 +95,7 @@ export async function handleSdkSessionRpcRequest(params: {
         Date.now(),
         Math.random().toString(36).slice(2, 10),
       ].join(":");
-      const unsubscribe = session.subscribe((event) => {
+      const unsubscribe = session.subscribe_transport((event) => {
         write_event({
           type: "event",
           subscriptionId: subscription_id,

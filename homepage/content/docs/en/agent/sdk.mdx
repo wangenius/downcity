@@ -88,6 +88,57 @@ await agent.stop();
 
 This gracefully shuts down plugins, persists state, and cleans up resources.
 
+## Session messages and streaming
+
+A Session exposes one linear Message sequence. The only top-level types are `user`, `assistant`, `action`, and `error`; text, reasoning, tool calls, and files remain ordered parts of an assistant Message.
+
+```ts
+const session = await agent.sessions.get("main");
+
+const unsubscribe = session.subscribe((mutation) => {
+  if (
+    mutation.type === "assistant-part-delta" &&
+    mutation.part_type === "text"
+  ) {
+    process.stdout.write(mutation.delta);
+  }
+});
+
+const turn = await session.prompt({ query: "Inspect this project" });
+const result = await turn.finished;
+unsubscribe();
+```
+
+Every Mutation delivered by `subscribe()` has already been committed to the Session's `messages.jsonl`. Use `message_id`, `sequence`, and `revision` to apply live changes to the same Message. Use `commit_sequence` to detect gaps and resume after a disconnect.
+
+Read the current Message snapshot:
+
+```ts
+const page = await session.messages({ limit: 100 });
+
+for (const message of page.items) {
+  console.log(message.sequence, message.type);
+}
+```
+
+Resume from the last observed commit:
+
+```ts
+const changes = await session.message_changes({
+  after_commit_sequence: last_commit_sequence,
+  limit: 200,
+});
+
+last_commit_sequence = changes.next_commit_sequence;
+```
+
+The same reducer can consume live `subscribe()` Mutations and values returned by `message_changes()`. Apply Mutations by `commit_sequence`, locate Messages by `message_id`, and render Messages by `sequence`. Do not match streaming output by role counts or array positions.
+
+The HTTP API uses the same protocol:
+
+- `GET /api/sdk/sessions/:sessionId/messages`
+- `GET /api/sdk/sessions/:sessionId/message-changes?after_commit_sequence=0`
+
 Continue with:
 
 - [Agent Lifecycle](/en/docs/agent/lifecycle)

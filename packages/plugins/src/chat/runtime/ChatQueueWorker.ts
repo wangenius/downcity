@@ -11,7 +11,7 @@ import type { Logger } from "@downcity/agent";
 import type { AgentContext } from "@downcity/agent";
 import type { ChatQueueWorkerConfig } from "@/chat/types/ChatQueueWorker.js";
 import type { ChatQueueItem } from "@/chat/types/ChatQueue.js";
-import type { AgentSessionEvent } from "@downcity/agent";
+import type { SessionMessageMutation } from "@downcity/agent";
 import type { AgentSessionTurnResult } from "@downcity/agent";
 import {
   getSharedChatQueueStore,
@@ -37,6 +37,7 @@ type LaneState = {
   key: string;
   running: boolean;
   turnObservers: Map<string, TurnObservation>;
+  assistantTextByMessageId: Map<string, string>;
   unsubscribeSessionEvents?: () => void;
 };
 
@@ -107,6 +108,7 @@ export class ChatQueueWorker {
       key,
       running: false,
       turnObservers: new Map(),
+      assistantTextByMessageId: new Map(),
     };
     this.lanes.set(key, lane);
     return lane;
@@ -330,21 +332,30 @@ export class ChatQueueWorker {
 
   private async handleLaneSessionEvent(
     lane: LaneState,
-    event: AgentSessionEvent,
+    event: SessionMessageMutation,
   ): Promise<void> {
-    if (event.type !== "assistant-step") return;
-    const turnId = String(event.turnId || "").trim();
-    if (!turnId) return;
-    const observation = lane.turnObservers.get(turnId);
+    const turn_id = String(event.turn_id || "").trim();
+    if (!turn_id) return;
+    const observation = lane.turnObservers.get(turn_id);
     if (!observation) return;
-    if (event.visibility === "internal") return;
-    const stepText = String(event.text || "").trim();
-    if (!stepText) return;
+    if (event.type === "assistant-part-delta" && event.part_type === "text") {
+      lane.assistantTextByMessageId.set(
+        event.message_id,
+        `${lane.assistantTextByMessageId.get(event.message_id) || ""}${event.delta}`,
+      );
+      return;
+    }
+    if (event.type !== "message-completed") return;
+    const segment_text = String(
+      lane.assistantTextByMessageId.get(event.message_id) || "",
+    ).trim();
+    lane.assistantTextByMessageId.delete(event.message_id);
+    if (!segment_text || event.status !== "completed") return;
 
     try {
       await this.dispatchAssistantStepMessage({
         sessionId: observation.sessionId,
-        text: stepText,
+        text: segment_text,
         messageId: observation.messageId,
       });
     } catch (error) {
@@ -382,6 +393,9 @@ export class ChatQueueWorker {
         .finally(() => {
           observation.typing.stop();
           params.lane.turnObservers.delete(turn.id);
+          if (params.lane.turnObservers.size === 0) {
+            params.lane.assistantTextByMessageId.clear();
+          }
           if (
             params.lane.turnObservers.size === 0 &&
             this.queueStore.getLaneSize(params.lane.key) === 0 &&

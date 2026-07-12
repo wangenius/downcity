@@ -88,6 +88,57 @@ await agent.stop();
 
 这会优雅地关闭插件、持久化状态并清理资源。
 
+## Session 消息与流式订阅
+
+Session 使用一条线性 Message 序列。顶层类型只有 `user`、`assistant`、`action` 和 `error`；文本、推理、工具调用与文件都保存在 `assistant.parts` 中。
+
+```ts
+const session = await agent.sessions.get("main");
+
+const unsubscribe = session.subscribe((mutation) => {
+  if (
+    mutation.type === "assistant-part-delta" &&
+    mutation.part_type === "text"
+  ) {
+    process.stdout.write(mutation.delta);
+  }
+});
+
+const turn = await session.prompt({ query: "检查这个项目" });
+const result = await turn.finished;
+unsubscribe();
+```
+
+`subscribe()` 中的每条 Mutation 都已经成功写入当前 Session 的 `messages.jsonl`。`message_id`、`sequence` 和 `revision` 可用于把实时变化稳定地应用到同一条 Message；`commit_sequence` 用于检测遗漏和断线续传。
+
+读取当前 Message 快照：
+
+```ts
+const page = await session.messages({ limit: 100 });
+
+for (const message of page.items) {
+  console.log(message.sequence, message.type);
+}
+```
+
+断线后从最后一次提交继续读取：
+
+```ts
+const changes = await session.message_changes({
+  after_commit_sequence: last_commit_sequence,
+  limit: 200,
+});
+
+last_commit_sequence = changes.next_commit_sequence;
+```
+
+同一个 reducer 可以处理实时 `subscribe()` Mutation 与 `message_changes()` 返回值。调用方应按 `commit_sequence` 应用 Mutation，按 `message_id` 定位 Message，并按 Message `sequence` 展示；不要根据 role 数量或数组位置匹配流式消息。
+
+HTTP 端点使用相同协议：
+
+- `GET /api/sdk/sessions/:sessionId/messages`
+- `GET /api/sdk/sessions/:sessionId/message-changes?after_commit_sequence=0`
+
 继续阅读：
 
 - [Agent 生命周期](/zh/docs/agent/lifecycle)

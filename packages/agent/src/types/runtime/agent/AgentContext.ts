@@ -33,6 +33,10 @@ import type {
   AgentSessionSubscriber,
   AgentSessionUnsubscribe,
 } from "@/types/sdk/AgentSessionEvent.js";
+import type {
+  SessionMessageMutationSubscriber,
+  SessionMessageMutationUnsubscribe,
+} from "@/types/session/SessionMessageMutation.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 
 /**
@@ -133,9 +137,11 @@ export interface SessionPort {
    *
    * 关键点（中文）
    * - 只广播订阅之后产生的事件。
-   * - session records 仍通过 `getHistoryStore()` / SDK `records()` 读取。
+   * - 当前 Message snapshot 通过公开 SDK `session.messages()` 读取。
    */
-  subscribe(subscriber: AgentSessionSubscriber): AgentSessionUnsubscribe;
+  subscribe(
+    subscriber: SessionMessageMutationSubscriber,
+  ): SessionMessageMutationUnsubscribe;
   /**
    * 发布一条 session runtime 事件。
    *

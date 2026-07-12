@@ -8,7 +8,7 @@
  */
 
 import chalk from "chalk";
-import type { AgentSessionEvent } from "@downcity/agent";
+import type { SessionMessageMutation } from "@downcity/agent";
 import type {
   AgentChatInteractiveRenderSnapshot,
   AgentChatInteractiveRendererPort,
@@ -23,52 +23,6 @@ import {
   format_tool_result_block,
 } from "@/city/agent/AgentChatToolFormatter.js";
 
-function format_approval_request_block(event: Extract<AgentSessionEvent, { type: "tool-approval-request" }>): {
-  title: string;
-  detail_lines: string[];
-} {
-  const operation = event.operation || (event.toolName === "shell_write" ? "write" : "exec");
-  const command_label = operation === "write" ? "input_preview" : "cmd";
-  const command_value = operation === "write" ? event.inputPreview || event.cmd : event.cmd;
-  return {
-    title: `[approval] ${event.toolName} requests unrestricted sandbox`,
-    detail_lines: [
-      `approval_id: ${event.approvalId}`,
-      `operation: ${operation}`,
-      ...(event.shellId ? [`shell_id: ${event.shellId}`] : []),
-      `${command_label}: ${command_value}`,
-      ...(typeof event.inputChars === "number" ? [`input_chars: ${event.inputChars}`] : []),
-      `cwd: ${event.cwd}`,
-      `reason: ${event.reason}`,
-      "approve: call agent.approve({ approval_id })",
-      "deny: call agent.deny({ approval_id })",
-    ],
-  };
-}
-
-function format_approval_result_block(event: Extract<AgentSessionEvent, { type: "tool-approval-result" }>): {
-  title: string;
-  detail_lines: string[];
-} {
-  return {
-    title: `[approval] ${event.decision}`,
-    detail_lines: [
-      `approval_id: ${event.approvalId}`,
-      `tool: ${event.toolName}`,
-    ],
-  };
-}
-
-function extract_event_turn_id(event: AgentSessionEvent): string {
-  if (event.type === "tool-approval-request" || event.type === "tool-approval-result") {
-    return "";
-  }
-  if ("turnId" in event && typeof event.turnId === "string") {
-    return event.turnId;
-  }
-  return "";
-}
-
 /**
  * 交互式单轮渲染器。
  */
@@ -79,6 +33,7 @@ export class AgentChatInteractiveRenderer implements AgentChatInteractiveRendere
   private text_stream_open = false;
   private has_block_output = false;
   private active_turn_id = "";
+  private readonly tool_call_ids = new Set<string>();
   private readonly spinner_enabled: boolean;
 
   constructor() {
@@ -106,58 +61,52 @@ export class AgentChatInteractiveRenderer implements AgentChatInteractiveRendere
   /**
    * 渲染单个 session 事件。
    */
-  render_event(event: AgentSessionEvent): void {
-    const event_turn_id = extract_event_turn_id(event);
+  render_event(event: SessionMessageMutation): void {
+    const event_turn_id = event.turn_id || "";
     if (event_turn_id && this.active_turn_id && event_turn_id !== this.active_turn_id) {
       return;
     }
 
     switch (event.type) {
-      case "turn-start":
-        this.attach_turn_id(event.turnId);
-        this.set_spinner_text("Thinking...");
-        return;
-      case "tool-call":
-        this.print_tool_block(
-          format_tool_call_block({
-            tool_name: event.toolName,
-            args: event.args,
-          }),
+      case "assistant-part-updated": {
+        const part = event.part;
+        if (part.type !== "tool") return;
+        if (!this.tool_call_ids.has(part.tool_call_id)) {
+          this.tool_call_ids.add(part.tool_call_id);
+          this.print_tool_block(format_tool_call_block({
+            tool_name: part.tool_name,
+            args: part.input || {},
+          }));
+        }
+        if (part.state === "completed" || part.state === "failed") {
+          this.print_tool_block(format_tool_result_block({
+            tool_name: part.tool_name,
+            result:
+              part.state === "completed"
+                ? part.output ?? null
+                : part.error || "Tool failed",
+          }));
+        }
+        this.set_spinner_text(
+          part.state === "approval-required"
+            ? "Waiting for approval..."
+            : part.state === "completed" || part.state === "failed"
+              ? "Thinking..."
+              : `Running ${part.tool_name}...`,
         );
-        this.set_spinner_text(`Running ${event.toolName}...`);
         return;
-      case "tool-result":
-        this.print_tool_block(
-          format_tool_result_block({
-            tool_name: event.toolName,
-            result: event.result,
-          }),
-        );
-        this.set_spinner_text("Thinking...");
-        return;
-      case "tool-approval-request":
-        this.print_tool_block(format_approval_request_block(event));
-        this.set_spinner_text("Waiting for approval...");
-        return;
-      case "tool-approval-result":
-        this.print_tool_block(format_approval_result_block(event));
-        this.set_spinner_text("Thinking...");
-        return;
-      case "error":
+      }
+      case "message-completed":
         this.stop_spinner();
         return;
-      case "turn-finish":
-        this.stop_spinner();
+      case "message-created":
+        if (event.message.type === "error") this.stop_spinner();
         return;
-      case "assistant-step":
-      case "session-title":
+      case "assistant-part-delta":
+        if (event.part_type === "text") this.print_text_delta(event.delta);
+        else this.set_spinner_text("Thinking...");
         return;
-      case "reasoning-delta":
-        this.set_spinner_text("Thinking...");
-        return;
-      case "text-delta":
-        this.print_text_delta(event.text);
-        return;
+      case "message-updated":
       default:
         return;
     }

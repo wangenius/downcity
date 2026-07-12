@@ -6,7 +6,7 @@
  * - 把 SDK 事件转交给 StreamingUIController，驱动消息流更新。
  */
 
-import type { AgentSessionEvent } from "@downcity/agent";
+import type { SessionMessageMutation } from "@downcity/agent";
 
 import type {
   AgentChatInteractiveRenderSnapshot,
@@ -62,18 +62,27 @@ export class PiTuiChatRenderer implements AgentChatInteractiveRendererPort {
    *
    * @param event AgentSessionEvent。
    */
-  render_event(event: AgentSessionEvent): void {
+  render_event(event: SessionMessageMutation): void {
     this.streaming_ui.handle_event(event);
-    if (event.type === "text-delta" && (event.text || "").trim()) {
+    if (
+      event.type === "assistant-part-delta" &&
+      event.part_type === "text" &&
+      event.delta.trim()
+    ) {
       this.emitted_visible_text = true;
     }
-    if (event.type === "tool-approval-request") {
+    if (
+      event.type === "assistant-part-updated" &&
+      event.part.type === "tool" &&
+      event.part.state === "approval-required" &&
+      event.part.approval_id
+    ) {
       this.on_approval_request?.({
-        approval_id: event.approvalId,
-        tool_name: event.toolName,
-        cmd: event.cmd,
-        cwd: event.cwd,
-        reason: event.reason,
+        approval_id: event.part.approval_id,
+        tool_name: event.part.tool_name,
+        cmd: "",
+        cwd: "",
+        reason: "Tool execution requires approval.",
       });
     }
   }

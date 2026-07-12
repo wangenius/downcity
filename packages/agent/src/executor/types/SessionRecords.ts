@@ -65,6 +65,8 @@ export type SessionMetadataV1 = {
   ts: number;
   /** 当前消息所属的 session ID。 */
   sessionId: string;
+  /** 当前消息所属 turn。 */
+  turnId?: string;
   /** 当前消息是普通消息还是摘要消息。 */
   kind?: SessionMessageKind;
   /** 当前消息来自入站、出站还是 compact。 */

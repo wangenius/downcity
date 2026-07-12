@@ -243,29 +243,29 @@ export function registerSdkSessionRoutes(
     }
   });
 
-  app.get("/api/sdk/sessions/:sessionId/records", async (c) => {
+  app.get("/api/sdk/sessions/:sessionId/messages", async (c) => {
     try {
       const sessionId = String(c.req.param("sessionId") || "").trim();
       if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
       const session = await sessions.get(sessionId);
-      const records = await session.records({
+      const messages = await session.messages({
         ...(c.req.query("limit") ? { limit: Number(c.req.query("limit")) } : {}),
         ...(c.req.query("cursor") ? { cursor: c.req.query("cursor") } : {}),
-        ...(c.req.query("archive_id")
-          ? { archive_id: c.req.query("archive_id") }
+        ...(c.req.query("before_sequence")
+          ? { before_sequence: Number(c.req.query("before_sequence")) }
           : {}),
-        ...(c.req.query("order")
-          ? { order: c.req.query("order") as "asc" | "desc" }
+        ...(c.req.query("include_internal") === "true"
+          ? { include_internal: true }
           : {}),
-        ...(c.req.query("view")
-          ? { view: c.req.query("view") as "message" | "timeline" }
+        ...(c.req.query("through_sequence")
+          ? { through_sequence: Number(c.req.query("through_sequence")) }
           : {}),
       });
       return c.json({
         success: true,
-        records,
+        messages,
       });
     } catch (error) {
       return c.json(
@@ -278,20 +278,22 @@ export function registerSdkSessionRoutes(
     }
   });
 
-  app.get("/api/sdk/sessions/:sessionId/messages", async (c) => {
+  app.get("/api/sdk/sessions/:sessionId/message-changes", async (c) => {
     try {
       const sessionId = String(c.req.param("sessionId") || "").trim();
       if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
       const session = await sessions.get(sessionId);
-      const records = await session.records({
-        view: "message",
+      const changes = await session.message_changes({
+        after_commit_sequence: Number(
+          c.req.query("after_commit_sequence") || 0,
+        ),
+        ...(c.req.query("limit") ? { limit: Number(c.req.query("limit")) } : {}),
       });
       return c.json({
         success: true,
-        messages: records.items,
-        records,
+        changes,
       });
     } catch (error) {
       return c.json(

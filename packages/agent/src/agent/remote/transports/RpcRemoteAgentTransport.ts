@@ -15,13 +15,19 @@ import type {
   AgentArchiveSessionsResult,
   AgentCleanArchiveResult,
   AgentSessionForkInput,
-  AgentSessionRecordsInput,
-  AgentSessionRecordsPage,
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
   AgentSessionSetInput,
 } from "@/types/agent/SessionTypes.js";
+import type {
+  ListSessionMessagesInput,
+  SessionMessagePage,
+} from "@/types/session/SessionMessage.js";
+import type {
+  ListSessionMessageChangesInput,
+  SessionMessageMutationPage,
+} from "@/types/session/SessionMessageMutation.js";
 import type {
   RemoteAgentPluginActionInput,
   RemoteAgentPluginActionResult,
@@ -101,14 +107,21 @@ export class RpcRemoteAgentTransport implements RemoteAgentTransport {
     };
   }
 
-  async records(
+  async messages(
     session_id: string,
-    input?: AgentSessionRecordsInput,
-  ): Promise<AgentSessionRecordsPage> {
-    return await this.client.get_session_records({
+    input?: ListSessionMessagesInput,
+  ): Promise<SessionMessagePage> {
+    return await this.client.get_session_messages({
       session_id,
       input,
     });
+  }
+
+  async message_changes(
+    session_id: string,
+    input: ListSessionMessageChangesInput,
+  ): Promise<SessionMessageMutationPage> {
+    return await this.client.get_session_message_changes({ session_id, input });
   }
 
   async system(session_id: string): Promise<AgentSessionSystemSnapshot> {

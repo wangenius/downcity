@@ -10,12 +10,12 @@
 import { Executor } from "@executor/Executor.js";
 import type { Tool } from "ai";
 import { JsonlSessionHistoryComposer } from "@executor/composer/history/jsonl/JsonlSessionHistoryComposer.js";
-import { JsonlSessionHistoryStore } from "@/executor/store/history/jsonl/JsonlSessionHistoryStore.js";
+import { SessionRecorderHistoryStore } from "@/session/recorder/SessionRecorderHistoryStore.js";
+import { JsonlSessionMessageStore } from "@/session/recorder/JsonlSessionMessageStore.js";
+import { SessionRecorder } from "@/session/recorder/SessionRecorder.js";
 import type {
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
-  AgentSessionRecordsInput,
-  AgentSessionRecordsPage,
   AgentSessionInfo,
   AgentSessionSetInput,
   AgentSessionSystemBlock,
@@ -23,9 +23,7 @@ import type {
 } from "@/types/agent/SessionTypes.js";
 import type { AgentSession } from "@/types/agent/SessionActor.js";
 import {
-  getSdkAgentSessionArchiveDirPath,
   getSdkAgentSessionDirPath,
-  getSdkAgentSessionInflightPath,
 } from "@/session/storage/Paths.js";
 import { resolveSystemTimezone } from "@/session/storage/Metadata.js";
 import { createRuntimeSessionPort } from "@/session/storage/RuntimeSessionPort.js";
@@ -35,10 +33,21 @@ import type {
   AgentSessionSubscriber,
   AgentSessionUnsubscribe,
 } from "@/types/sdk/AgentSessionEvent.js";
+import type {
+  ListSessionMessageChangesInput,
+  SessionMessageMutationPage,
+  SessionMessageMutationSubscriber,
+  SessionMessageMutationUnsubscribe,
+} from "@/types/session/SessionMessageMutation.js";
+import type {
+  ListSessionMessagesInput,
+  SessionMessagePage,
+} from "@/types/session/SessionMessage.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 import { SessionEventHub } from "@/session/runtime/SessionEventHub.js";
+import { SessionMessageEventHub } from "@/session/runtime/SessionMessageEventHub.js";
 import { SessionStateService } from "@/session/services/SessionStateService.js";
 import { SessionTurnService } from "@/session/services/SessionTurnService.js";
 import { SessionViewService } from "@/session/services/SessionViewService.js";
@@ -69,10 +78,13 @@ export class Session implements AgentSession {
   private readonly getPluginSystemBlocks: SessionOptions["getPluginSystemBlocks"];
   private readonly ensureConfiguredHook?: SessionOptions["ensureConfigured"];
   private readonly composers?: SessionComposerOptions;
-  private readonly historyStore: JsonlSessionHistoryStore;
+  private readonly historyStore: SessionRecorderHistoryStore;
+  private readonly messageStore: JsonlSessionMessageStore;
+  private readonly recorder: SessionRecorder;
   private readonly historyComposer: SessionHistoryComposer;
   private readonly executor: Executor;
   private readonly eventHub = new SessionEventHub();
+  private readonly messageEventHub = new SessionMessageEventHub();
   private readonly localState: SessionLocalState;
   private readonly stateService: SessionStateService;
   private readonly turnService: SessionTurnService;
@@ -100,6 +112,14 @@ export class Session implements AgentSession {
       throw new Error("Session requires a non-empty projectRoot");
     }
 
+    this.messageStore = this.create_message_store();
+    this.recorder = new SessionRecorder({
+      session_id: this.id,
+      store: this.messageStore,
+      publish: (mutation) => {
+        this.messageEventHub.publish(mutation);
+      },
+    });
     this.historyStore = this.create_history_store();
     this.localState = this.create_local_state();
     const composer_context = this.create_composer_context();
@@ -118,6 +138,7 @@ export class Session implements AgentSession {
       project_root: this.projectRoot,
       session_id: this.id,
       history_store: this.historyStore,
+      recorder: this.recorder,
       executor: this.executor,
       state: this.localState,
       logger: this.logger,
@@ -137,12 +158,14 @@ export class Session implements AgentSession {
       executor: this.executor,
       state_service: this.stateService,
       event_hub: this.eventHub,
+      recorder: this.recorder,
     });
     this.viewService = new SessionViewService<this>({
       agent_id: this.agentId,
       project_root: this.projectRoot,
       session_id: this.id,
       history_store: this.historyStore,
+      recorder: this.recorder,
       state_service: this.stateService,
       logger: this.logger,
       is_executing: () => this.isExecuting(),
@@ -158,6 +181,7 @@ export class Session implements AgentSession {
         return {
           session,
           history_store: session.historyStore,
+          recorder: session.recorder,
           state_service: session.stateService,
         };
       },
@@ -168,6 +192,7 @@ export class Session implements AgentSession {
    * 初始化当前 session。
    */
   async initialize(): Promise<this> {
+    await this.recorder.initialize();
     await this.stateService.initialize();
     return this;
   }
@@ -203,8 +228,20 @@ export class Session implements AgentSession {
   /**
    * 订阅当前 Session 的未来事件。
    */
-  subscribe(subscriber: AgentSessionSubscriber): AgentSessionUnsubscribe {
-    return this.turnService.subscribe(subscriber);
+  subscribe(
+    subscriber: SessionMessageMutationSubscriber,
+  ): SessionMessageMutationUnsubscribe {
+    return this.messageEventHub.subscribe(subscriber);
+  }
+
+  /** 订阅远程 transport 所需的 Message 与 lifecycle 事件。 */
+  subscribe_transport(subscriber: AgentSessionSubscriber): AgentSessionUnsubscribe {
+    const unsubscribe_message = this.messageEventHub.subscribe(subscriber);
+    const unsubscribe_lifecycle = this.turnService.subscribe(subscriber);
+    return () => {
+      unsubscribe_message();
+      unsubscribe_lifecycle();
+    };
   }
 
   /**
@@ -239,8 +276,15 @@ export class Session implements AgentSession {
   /**
    * 读取当前 session records 分页。
    */
-  async records(input?: AgentSessionRecordsInput): Promise<AgentSessionRecordsPage> {
-    return await this.viewService.records(input);
+  async messages(input?: ListSessionMessagesInput): Promise<SessionMessagePage> {
+    return await this.recorder.list_messages(input);
+  }
+
+  /** 读取当前 Session 的增量 Message Mutation。 */
+  async message_changes(
+    input: ListSessionMessageChangesInput,
+  ): Promise<SessionMessageMutationPage> {
+    return await this.recorder.list_message_changes(input);
   }
 
   /**
@@ -329,33 +373,23 @@ export class Session implements AgentSession {
     return new SessionClass(options) as this;
   }
 
-  private create_history_store(): JsonlSessionHistoryStore {
+  private create_message_store(): JsonlSessionMessageStore {
     const session_dir_path = getSdkAgentSessionDirPath(
       this.projectRoot,
       this.agentId,
       this.id,
     );
     const messages_dir_path = `${session_dir_path}/messages`;
-    return new JsonlSessionHistoryStore({
-      rootPath: this.projectRoot,
-      agentId: this.agentId,
-      sessionId: this.id,
-      paths: {
-        sessionDirPath: session_dir_path,
-        messagesDirPath: messages_dir_path,
-        messagesFilePath: `${messages_dir_path}/messages.jsonl`,
-        metaFilePath: `${messages_dir_path}/meta.json`,
-        archiveDirPath: getSdkAgentSessionArchiveDirPath(
-          this.projectRoot,
-          this.agentId,
-          this.id,
-        ),
-        inflightFilePath: getSdkAgentSessionInflightPath(
-          this.projectRoot,
-          this.agentId,
-          this.id,
-        ),
-      },
+    return new JsonlSessionMessageStore({
+      session_id: this.id,
+      file_path: `${messages_dir_path}/messages.jsonl`,
+    });
+  }
+
+  private create_history_store(): SessionRecorderHistoryStore {
+    return new SessionRecorderHistoryStore({
+      session_id: this.id,
+      recorder: this.recorder,
     });
   }
 

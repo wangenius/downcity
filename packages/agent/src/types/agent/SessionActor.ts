@@ -16,8 +16,6 @@ import type {
   AgentListSessionsInput,
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
-  AgentSessionRecordsInput,
-  AgentSessionRecordsPage,
   AgentSessionInfo,
   AgentSessionSetInput,
   AgentSessionSummaryPage,
@@ -27,6 +25,16 @@ import type {
   AgentSessionSubscriber,
   AgentSessionUnsubscribe,
 } from "@/types/sdk/AgentSessionEvent.js";
+import type {
+  ListSessionMessageChangesInput,
+  SessionMessageMutationPage,
+  SessionMessageMutationSubscriber,
+  SessionMessageMutationUnsubscribe,
+} from "@/types/session/SessionMessageMutation.js";
+import type {
+  ListSessionMessagesInput,
+  SessionMessagePage,
+} from "@/types/session/SessionMessage.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
@@ -71,10 +79,22 @@ export interface AgentSessionActor {
   stop(): Promise<AgentSessionStopResult>;
 
   /** 订阅当前 session 的未来事件。 */
-  subscribe(subscriber: AgentSessionSubscriber): AgentSessionUnsubscribe;
+  subscribe(
+    subscriber: SessionMessageMutationSubscriber,
+  ): SessionMessageMutationUnsubscribe;
 
-  /** 读取当前 session records 分页。 */
-  records(input?: AgentSessionRecordsInput): Promise<AgentSessionRecordsPage>;
+  /** 订阅远程 transport 使用的 Message 与 turn lifecycle 事件。 */
+  subscribe_transport(
+    subscriber: AgentSessionSubscriber,
+  ): AgentSessionUnsubscribe;
+
+  /** 读取当前 session messages 分页。 */
+  messages(input?: ListSessionMessagesInput): Promise<SessionMessagePage>;
+
+  /** 读取指定 cursor 后的 Message Mutation。 */
+  message_changes(
+    input: ListSessionMessageChangesInput,
+  ): Promise<SessionMessageMutationPage>;
 
   /** 读取当前 session 生效的 system 快照。 */
   system(): Promise<AgentSessionSystemSnapshot>;

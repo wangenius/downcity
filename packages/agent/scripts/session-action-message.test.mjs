@@ -113,7 +113,10 @@ test("session.set only persists and publishes model-switching actions when model
     });
     const events = [];
     const unsubscribe = session.subscribe((event) => {
-      if (event.type === "action") events.push(event);
+      if (
+        event.type === "message-created" && event.message.type === "action" ||
+        event.type === "message-updated" && event.message.type === "action"
+      ) events.push(event.message);
     });
 
     await session.set({
@@ -146,20 +149,20 @@ test("session.set only persists and publishes model-switching actions when model
     unsubscribe();
 
     assert.deepEqual(
-      events.map((event) => `${event.title}:${event.state}`),
+      events.map((event) => `${event.title}:${event.status}`),
       [
         "Switching session model from test-model-label-v2 to next-test-model-label:running",
         "Session model switched from test-model-label-v2 to next-test-model-label:completed",
       ],
     );
-    assert.equal(new Set(events.map((event) => event.id)).size, 1);
+    assert.equal(new Set(events.map((event) => event.message_id)).size, 1);
 
-    const records = await session.records({ view: "timeline" });
-    const action_events = records.items.filter(
-      (item) => item.role === "action",
+    const messages = await session.messages();
+    const action_events = messages.items.filter(
+      (item) => item.type === "action",
     );
     assert.deepEqual(
-      action_events.map((event) => `${event.actionTitle}:${event.actionState}`),
+      action_events.map((event) => `${event.title}:${event.status}`),
       [
         "Session model switched from test-model-label-v2 to next-test-model-label:completed",
       ],
@@ -185,9 +188,9 @@ test("default model initialization does not persist model-switching actions", as
     const session = await agent.sessions.create({
       sessionId: "model_init_action_session",
     });
-    const records = await session.records({ view: "timeline" });
-    const action_events = records.items.filter(
-      (item) => item.role === "action",
+    const messages = await session.messages();
+    const action_events = messages.items.filter(
+      (item) => item.type === "action",
     );
     assert.deepEqual(action_events, []);
   } finally {
@@ -328,32 +331,33 @@ test("session.fork persists and publishes history-forking actions on source sess
 
     const events = [];
     const unsubscribe = session.subscribe((event) => {
-      if (event.type === "action") {
-        events.push(event);
-      }
+      if (
+        event.type === "message-created" && event.message.type === "action" ||
+        event.type === "message-updated" && event.message.type === "action"
+      ) events.push(event.message);
     });
     const forked = await session.fork();
     unsubscribe();
 
     assert.deepEqual(
-      events.map((event) => `${event.title}:${event.state}`),
+      events.map((event) => `${event.title}:${event.status}`),
       ["Forking session records:running", "Session records forked:completed"],
     );
-    assert.equal(new Set(events.map((event) => event.id)).size, 1);
+    assert.equal(new Set(events.map((event) => event.message_id)).size, 1);
     assert.notEqual(forked.id, session.id);
 
-    const source_records = await session.records({ view: "timeline" });
-    const source_fork_actions = source_records.items.filter(
-      (item) => item.role === "action" && item.actionTitle === "Session records forked",
+    const source_messages = await session.messages();
+    const source_fork_actions = source_messages.items.filter(
+      (item) => item.type === "action" && item.title === "Session records forked",
     );
     assert.deepEqual(
-      source_fork_actions.map((event) => event.actionState),
+      source_fork_actions.map((event) => event.status),
       ["completed"],
     );
 
-    const forked_records = await forked.records({ view: "timeline" });
-    const forked_model_actions = forked_records.items.filter(
-      (item) => item.role === "action" && item.actionTitle.startsWith("Session model switched from "),
+    const forked_messages = await forked.messages();
+    const forked_model_actions = forked_messages.items.filter(
+      (item) => item.type === "action" && item.title.startsWith("Session model switched from "),
     );
     assert.equal(forked_model_actions.length, 0);
   } finally {

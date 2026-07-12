@@ -1,4 +1,4 @@
-import type { AgentSessionEvent } from "@downcity/agent";
+import type { SessionMessageMutation } from "@downcity/agent";
 
 /**
  * `city agent chat` 交互式渲染相关类型。
@@ -20,7 +20,7 @@ export interface AgentChatInteractiveRenderSnapshot {
  * 交互式 chat 渲染器协议。
  *
  * 关键点（中文）
- * - 统一约束 stdout 版与 TUI 版渲染器，便于复用同一套 SDK 事件消费逻辑。
+ * - 统一约束 stdout 版与 TUI 版渲染器，直接消费 canonical Mutation。
  */
 export interface AgentChatInteractiveRendererPort {
   /** 启动一轮新渲染。 */
@@ -30,7 +30,7 @@ export interface AgentChatInteractiveRendererPort {
   attach_turn_id: (turn_id: string) => void;
 
   /** 渲染单个 session 事件。 */
-  render_event: (event: AgentSessionEvent) => void;
+  render_event: (event: SessionMessageMutation) => void;
 
   /**
    * 当 unrestricted sandbox 审批请求到达时触发。

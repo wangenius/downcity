@@ -9,8 +9,6 @@
 import type {
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
-  AgentSessionRecordsInput,
-  AgentSessionRecordsPage,
   AgentSessionInfo,
   AgentSessionSetInput,
   AgentSessionSystemSnapshot,
@@ -28,6 +26,17 @@ import type {
   AgentSessionTurnHandle,
   AgentSessionTurnResult,
 } from "@/types/sdk/AgentSessionTurn.js";
+import type {
+  ListSessionMessagesInput,
+  SessionMessagePage,
+} from "@/types/session/SessionMessage.js";
+import {
+  is_session_message_mutation,
+  type ListSessionMessageChangesInput,
+  type SessionMessageMutationPage,
+  type SessionMessageMutationSubscriber,
+  type SessionMessageMutationUnsubscribe,
+} from "@/types/session/SessionMessageMutation.js";
 import { SessionEventHub } from "@/session/runtime/SessionEventHub.js";
 import type {
   RemoteSessionTransport,
@@ -124,7 +133,9 @@ export class RemoteSession implements RemoteAgentSession {
   /**
    * 订阅当前远程 session 的 future 事件。
    */
-  subscribe(subscriber: AgentSessionSubscriber): AgentSessionUnsubscribe {
+  subscribe(
+    subscriber: SessionMessageMutationSubscriber,
+  ): SessionMessageMutationUnsubscribe {
     this.event_subscriber_count += 1;
     void this.ensure_event_pump().catch((error) => {
       this.event_hub.publish({
@@ -132,7 +143,9 @@ export class RemoteSession implements RemoteAgentSession {
         message: error instanceof Error ? error.message : String(error),
       });
     });
-    const unsubscribe = this.event_hub.subscribe(subscriber);
+    const unsubscribe = this.event_hub.subscribe((event) => {
+      if (is_session_message_mutation(event)) subscriber(event);
+    });
     return () => {
       unsubscribe();
       this.event_subscriber_count = Math.max(0, this.event_subscriber_count - 1);
@@ -140,11 +153,23 @@ export class RemoteSession implements RemoteAgentSession {
     };
   }
 
+  /** 订阅 transport 使用的 Message 与 lifecycle 事件。 */
+  subscribe_transport(subscriber: AgentSessionSubscriber): AgentSessionUnsubscribe {
+    return this.event_hub.subscribe(subscriber);
+  }
+
   /**
    * 读取远程消息历史。
    */
-  async records(input?: AgentSessionRecordsInput): Promise<AgentSessionRecordsPage> {
-    return await this.transport.records(this.id, input);
+  async messages(input?: ListSessionMessagesInput): Promise<SessionMessagePage> {
+    return await this.transport.messages(this.id, input);
+  }
+
+  /** 读取远程增量 Message Mutation。 */
+  async message_changes(
+    input: ListSessionMessageChangesInput,
+  ): Promise<SessionMessageMutationPage> {
+    return await this.transport.message_changes(this.id, input);
   }
 
   /**

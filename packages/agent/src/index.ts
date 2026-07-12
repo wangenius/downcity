@@ -27,9 +27,6 @@ export type {
   AgentListSessionsInput,
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
-  AgentSessionRecordsInput,
-  AgentSessionRecordsPage,
-  AgentSessionRecordsView,
   AgentSessionInfo,
   AgentSessionSetInput,
   AgentSessionSummary,
@@ -38,8 +35,29 @@ export type {
   AgentSessionSystemBlockSource,
   AgentSessionSystemSessionInfo,
   AgentSessionSystemSnapshot,
-  AgentSessionTimelineEvent,
 } from "./types/agent/SessionTypes.js";
+export type {
+  ListSessionMessagesInput,
+  SessionActionMessage,
+  SessionAssistantMessage,
+  SessionAssistantMessagePart,
+  SessionAssistantToolPart,
+  SessionErrorMessage,
+  SessionMessage,
+  SessionMessagePage,
+  SessionUserMessage,
+  SessionUserMessagePart,
+} from "./types/session/SessionMessage.js";
+export {
+  is_session_message_mutation,
+} from "./types/session/SessionMessageMutation.js";
+export type {
+  ListSessionMessageChangesInput,
+  SessionMessageMutation,
+  SessionMessageMutationPage,
+  SessionMessageMutationSubscriber,
+  SessionMessageMutationUnsubscribe,
+} from "./types/session/SessionMessageMutation.js";
 export type {
   AgentOptions,
   AgentSessionConstructor,
@@ -67,7 +85,7 @@ export type {
   AgentSessionActionRecord,
   AgentSessionActionState,
 } from "./types/sdk/AgentSessionAction.js";
-export type { AgentSessionPromptInput, SessionUserMessagePart } from "./types/sdk/AgentSessionPrompt.js";
+export type { AgentSessionPromptInput } from "./types/sdk/AgentSessionPrompt.js";
 export type { AgentSessionStopResult } from "./types/sdk/AgentSessionStop.js";
 export type {
   AgentSessionTurnHandle,

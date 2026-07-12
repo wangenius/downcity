@@ -15,13 +15,14 @@ import type {
   AgentArchiveSessionResult,
   AgentArchiveSessionsResult,
   AgentCleanArchiveResult,
-  AgentSessionRecordsInput,
   AgentSessionSystemSnapshot,
   AgentSessionSetInput,
 } from "@/types/agent/SessionTypes.js";
 import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
+import type { ListSessionMessagesInput } from "@/types/session/SessionMessage.js";
+import type { ListSessionMessageChangesInput } from "@/types/session/SessionMessageMutation.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { PluginControlAction } from "@/types/plugin/PluginState.js";
 import type { ShellApprovalMode } from "@downcity/shell";
@@ -126,14 +127,27 @@ export type RpcRequest =
   | {
       /** 请求 id，用于匹配响应。 */
       id: string;
-      /** 读取 session records。 */
-      method: "sdk.sessions.records";
-      /** records 查询参数。 */
+      /** 读取 session messages。 */
+      method: "sdk.sessions.messages";
+      /** messages 查询参数。 */
       params: {
         /** 目标 session id。 */
         sessionId: string;
-        /** records 分页与视图参数。 */
-        input?: AgentSessionRecordsInput;
+        /** messages 分页参数。 */
+        input?: ListSessionMessagesInput;
+      };
+    }
+  | {
+      /** 请求 id，用于匹配响应。 */
+      id: string;
+      /** 读取 session message mutations。 */
+      method: "sdk.sessions.message_changes";
+      /** changes 查询参数。 */
+      params: {
+        /** 目标 session id。 */
+        sessionId: string;
+        /** Mutation 增量参数。 */
+        input: ListSessionMessageChangesInput;
       };
     }
   | {

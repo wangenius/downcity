@@ -39,6 +39,12 @@ export interface TouchSessionMetadataParams {
    * 当前 session 内存配置快照。
    */
   sessionConfig: AgentSessionConfigSnapshot;
+  /** 当前 canonical Message 总数。 */
+  message_count?: number;
+  /** 当前 Message 日志文件字节数。 */
+  history_bytes?: number;
+  /** 最近一条用户可见 Message 的文本摘要。 */
+  preview_text?: string;
 }
 
 /**
@@ -98,6 +104,13 @@ export async function touchSessionMetadata(
           modelId: params.sessionConfig.modelId,
         }
       : {}),
+    ...(typeof params.message_count === "number"
+      ? { messageCount: params.message_count }
+      : {}),
+    ...(typeof params.history_bytes === "number"
+      ? { historyBytes: params.history_bytes }
+      : {}),
+    ...(params.preview_text ? { previewText: params.preview_text } : {}),
   };
   await writeSessionMetadata({
     projectRoot: params.projectRoot,

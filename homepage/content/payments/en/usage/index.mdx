@@ -1,0 +1,71 @@
+---
+title: "Usage Service"
+description: "Automatically records service-call facts for analytics, metering, and billing input data."
+---
+
+`@downcity/services` records which service calls happened inside City. It records facts only. It does not decide your prices, plans, or charging logic.
+
+Its value is that you can persist "what happened" first, then decide later whether those facts should feed reports, quotas, or billing.
+
+## How to read this section
+
+The recommended order is:
+
+1. Start with [Event model](/en/payments/usage/event-model) to understand what a usage event records.
+2. Continue with [Querying and summary](/en/payments/usage/querying-and-summary) to understand how trusted-side readers fetch raw events and aggregates.
+3. Finish with [Billing integration](/en/payments/usage/billing-integration) to understand the boundary between usage facts and payment logic.
+
+## What it records
+
+- downcity
+- user
+- service
+- model
+- call status
+
+## What it does not do for you
+
+- It does not charge users by itself.
+- It does not define your pricing or plan system.
+- It does not automatically decide which calls should become billable.
+
+## Use it when
+
+- you need usage analytics
+- you want to feed usage into billing logic
+- you want call facts first and pricing logic later
+
+## Install
+
+```bash
+pnpm add @downcity/services
+```
+
+## Enable it
+
+```ts
+import { UsageService } from "@downcity/services";
+
+base.use(new UsageService({
+  record_errors: true,
+}));
+```
+
+## Common queries
+
+```ts
+const events = await admin.service("usage").get("events");
+const summary = await admin.service("usage").get("summary");
+```
+
+## Most common combinations
+
+- Use it with [@downcity/city](/en/city-sdk-docs/packages/city/federation) for trusted-side usage reads
+- Use it with [@downcity/services](/en/payments) when you want usage to inform entitlement or billing logic
+- Use it with your own downcity database or BI system for richer reporting
+
+## Related docs
+
+- For step-by-step detail, continue with the three subpages in this section
+- For the full usage capability, continue in [Usage Service](/en/payments/usage)
+- For trusted-side access patterns, read [@downcity/city](/en/city-sdk-docs/packages/city/federation)

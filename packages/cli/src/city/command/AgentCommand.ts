@@ -259,16 +259,16 @@ export function registerAgentCommands(
   agent
     .command("model [path]")
     .description(t({
-      zh: "从当前 Federation 选择并切换 Session 使用的模型",
-      en: "select and switch a Session model from the active Federation",
+      zh: "配置 Agent 默认模型或运行中 Session 的覆盖模型",
+      en: "configure the Agent default model or a running Session override",
     }))
     .option("--set <model-id>", t({
-      zh: "直接设置 Federation model id（非交互模式必填）",
-      en: "set a Federation model id directly (required in non-interactive mode)",
+      zh: "直接设置 Federation model id；未指定 Session 时更新 Agent 默认模型",
+      en: "set a Federation model id; updates the Agent default when no Session is specified",
     }))
     .option("--session-id <session-id>", t({
-      zh: "目标 Session ID（省略时交互选择）",
-      en: "target Session ID (interactive selection when omitted)",
+      zh: "更新指定运行中 Session 的覆盖模型",
+      en: "update the override model for a running Session",
     }))
     .helpOption("--help", helpText())
     .action(createVersionBanner(

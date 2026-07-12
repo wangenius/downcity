@@ -722,8 +722,8 @@ export async function runSelectedAgentManager(agent_input: AgentManagerAgentSumm
           agent = await reloadAgentSummary(agent.projectRoot, agent);
           last_message = result?.changed
             ? t({
-                zh: `模型已更新：${result.current_model_id}`,
-                en: `Model updated: ${result.current_model_id}`,
+                zh: `${result.target === "session" ? "Session" : "Agent 默认"}模型已更新：${result.current_model_id}`,
+                en: `${result.target === "session" ? "Session" : "Agent default"} model updated: ${result.current_model_id}`,
               })
             : t({ zh: "模型未修改", en: "Model unchanged" });
           continue;

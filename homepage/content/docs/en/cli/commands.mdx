@@ -54,6 +54,8 @@ downcity agent chat -m "hello"
 
 `downcity agent list` shows running Agents first, then sorts Agents with the same status by Agent ID.
 
+`downcity agent model <path> --set <model-id>` updates the Agent default model and takes effect after the next start or restart. Add `--session-id <id>` to override only that running Session, effective from its next turn. Interactive mode first selects the Agent default or a running Session, then selects a Federation model.
+
 The interactive Agent Chat footer shows the model name used by the current session. Enter `/model` to search and switch among the conversation models currently available from Federation. The selected model is stored on the current session and takes effect on the next turn.
 
 ### Agent history

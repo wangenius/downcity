@@ -117,8 +117,9 @@ test("session.set only persists and publishes model-switching actions when model
     });
 
     await session.set({
+      modelId: "test-model",
       model: {
-        modelId: "test-model",
+        modelId: "test-model-label-v1",
         provider: "test",
       },
     });
@@ -126,8 +127,9 @@ test("session.set only persists and publishes model-switching actions when model
     assert.deepEqual(events, []);
 
     await session.set({
+      modelId: "test-model",
       model: {
-        modelId: "test-model",
+        modelId: "test-model-label-v2",
         provider: "test",
       },
     });
@@ -135,8 +137,9 @@ test("session.set only persists and publishes model-switching actions when model
     assert.deepEqual(events, []);
 
     await session.set({
+      modelId: "next-test-model",
       model: {
-        modelId: "next-test-model",
+        modelId: "next-test-model-label",
         provider: "test",
       },
     });
@@ -144,7 +147,10 @@ test("session.set only persists and publishes model-switching actions when model
 
     assert.deepEqual(
       events.map((event) => `${event.title}:${event.state}`),
-      ["Switching session model:running", "Session model switched:completed"],
+      [
+        "Switching session model from test-model-label-v2 to next-test-model-label:running",
+        "Session model switched from test-model-label-v2 to next-test-model-label:completed",
+      ],
     );
     assert.equal(new Set(events.map((event) => event.id)).size, 1);
 
@@ -154,7 +160,9 @@ test("session.set only persists and publishes model-switching actions when model
     );
     assert.deepEqual(
       action_events.map((event) => `${event.actionTitle}:${event.actionState}`),
-      ["Session model switched:completed"],
+      [
+        "Session model switched from test-model-label-v2 to next-test-model-label:completed",
+      ],
     );
   } finally {
     await agent.dispose();
@@ -237,6 +245,67 @@ test("session model id persists and restores through the host resolver", async (
   }
 });
 
+test("runtime restoration does not publish a model switch when model id is unchanged", async () => {
+  const agent_path = await fs.mkdtemp(
+    path.join(os.tmpdir(), "downcity-agent-session-model-runtime-restore-"),
+  );
+  const first_agent = new Agent({
+    id: "session_model_runtime_restore_agent",
+    path: agent_path,
+    model: {
+      modelId: "default-model",
+      provider: "test",
+    },
+    model_id: "default-model",
+    resolve_model: async (model_id) => ({
+      modelId: model_id,
+      provider: "test",
+    }),
+  });
+  try {
+    const session = await first_agent.sessions.create({
+      sessionId: "runtime-restored-model-session",
+    });
+    await session.set({ modelId: "session-model" });
+  } finally {
+    await first_agent.dispose();
+  }
+
+  let resolve_count = 0;
+  const restored_agent = new Agent({
+    id: "session_model_runtime_restore_agent",
+    path: agent_path,
+    model: {
+      modelId: "other-default-model",
+      provider: "test",
+    },
+    model_id: "other-default-model",
+    resolve_model: async (model_id) => {
+      resolve_count += 1;
+      return {
+        modelId: model_id,
+        provider: "test",
+      };
+    },
+  });
+  try {
+    const session_port = restored_agent
+      .getContext()
+      .session.get("runtime-restored-model-session");
+    const events = [];
+    const unsubscribe = session_port.subscribe((event) => {
+      if (event.type === "action") events.push(event);
+    });
+    await session_port.stop();
+    unsubscribe();
+
+    assert.equal(resolve_count, 1);
+    assert.deepEqual(events, []);
+  } finally {
+    await restored_agent.dispose();
+  }
+});
+
 test("session.fork persists and publishes history-forking actions on source session", async () => {
   const agent_path = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-agent-history-forking-"),
@@ -284,7 +353,7 @@ test("session.fork persists and publishes history-forking actions on source sess
 
     const forked_records = await forked.records({ view: "timeline" });
     const forked_model_actions = forked_records.items.filter(
-      (item) => item.role === "action" && item.actionTitle === "Session model switched",
+      (item) => item.role === "action" && item.actionTitle.startsWith("Session model switched from "),
     );
     assert.equal(forked_model_actions.length, 0);
   } finally {

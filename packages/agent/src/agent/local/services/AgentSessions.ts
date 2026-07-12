@@ -358,9 +358,7 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
   ): Promise<void> {
     if (this.configured_session_ids.has(session.id)) return;
     const persisted_model_id = String(session.config.modelId || "").trim();
-    if (persisted_model_id && this.resolve_model) {
-      await session.set({ modelId: persisted_model_id });
-    } else if (this.default_model) {
+    if (!persisted_model_id && this.default_model) {
       await session.set({
         model: this.default_model,
         ...(this.default_model_id ? { modelId: this.default_model_id } : {}),

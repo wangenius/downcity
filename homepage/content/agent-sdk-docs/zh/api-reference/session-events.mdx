@@ -43,6 +43,8 @@ if (event.type === "text-delta") {
 
 `action` 表示 Session 内部辅助工作，例如上下文压缩、模型切换和历史分叉。它不是 assistant 正文。
 
+模型切换 action 的 `title` 会直接包含原模型与新模型名称，例如 `Session model switched from GPT-5 to Claude Sonnet`，UI 可以直接展示标题，不需要自行拼接模型名称。
+
 Action event 同时会作为 `type: "action"` record 持久化到 Session JSONL。同一个 action 复用同一个 `id`，并随着生命周期把 `state` 更新为 `running`、`completed` 或 `failed`。Action record 会出现在 UI history/timeline 中，但 Agent 在构建 LLM 输入前会过滤掉它。
 
 Agent 当前内置的辅助 action 包括：

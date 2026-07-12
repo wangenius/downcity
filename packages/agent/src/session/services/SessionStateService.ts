@@ -197,6 +197,7 @@ export class SessionStateService {
           : {}),
         ...(metadata.modelId ? { modelId: metadata.modelId } : {}),
       };
+      await this.restore_persisted_model();
     })();
     await this.state.initializePromise;
   }
@@ -206,7 +207,6 @@ export class SessionStateService {
    */
   async ensure_ready_for_execution(): Promise<void> {
     await this.initialize();
-    await this.restore_persisted_model();
     if (this.state.ensureConfiguredPromise) {
       await this.state.ensureConfiguredPromise;
       return;
@@ -239,6 +239,9 @@ export class SessionStateService {
   async set(input: AgentSessionSetInput, options?: SessionSetOptions): Promise<void> {
     const should_emit_action = options?.emit_action !== false;
     const previous_model_label = this.state.sessionConfig.modelLabel;
+    const previous_model_id = String(
+      this.state.sessionConfig.modelId || previous_model_label || "",
+    ).trim();
     const requested_model_id = String(input.modelId || "").trim();
     const next_model = input.model || (requested_model_id
       ? await this.resolve_model_by_id(requested_model_id)
@@ -251,19 +254,18 @@ export class SessionStateService {
       next_model &&
         should_emit_action &&
         this.state.sessionConfig.model &&
-        previous_model_label &&
-        next_model_label &&
-        previous_model_label !== next_model_label,
+        previous_model_id &&
+        next_model_id &&
+        previous_model_id !== next_model_id,
     );
+    const previous_model_name = previous_model_label || previous_model_id;
+    const next_model_name = next_model_label || next_model_id;
     const action_id = `model-switching:${this.session_id}:${Date.now()}:${generateId()}`;
 
     if (should_emit_model_switch_action) {
       await this.emit_action_event({
         id: action_id,
-        title: "Switching session model",
-        description: next_model_label
-          ? `Switching to ${next_model_label}.`
-          : undefined,
+        title: `Switching session model from ${previous_model_name} to ${next_model_name}`,
         state: "running",
       });
     }
@@ -287,7 +289,7 @@ export class SessionStateService {
       if (should_emit_model_switch_action) {
         await this.emit_action_event({
           id: action_id,
-          title: "Session model switch failed",
+          title: `Session model switch from ${previous_model_name} to ${next_model_name} failed`,
           description: error instanceof Error ? error.message : String(error),
           state: "failed",
         });
@@ -298,10 +300,7 @@ export class SessionStateService {
     if (should_emit_model_switch_action) {
       await this.emit_action_event({
         id: action_id,
-        title: "Session model switched",
-        description: this.state.sessionConfig.modelLabel
-          ? `Using ${this.state.sessionConfig.modelLabel}.`
-          : undefined,
+        title: `Session model switched from ${previous_model_name} to ${next_model_name}`,
         state: "completed",
       });
     }

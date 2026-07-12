@@ -43,6 +43,8 @@ If you want a fuller experience, you will usually also handle:
 
 `action` represents auxiliary Session work such as context compaction, model switching, and history forking. It is not assistant text.
 
+The `title` of a model-switch action includes the previous and next model names directly, for example `Session model switched from GPT-5 to Claude Sonnet`, so a UI can display it without composing a separate label.
+
 Action events are also persisted as `type: "action"` records in the Session JSONL file. The same action keeps one record and updates its `state` as it moves through `running`, `completed`, or `failed`. Action records remain visible to UI history/timeline readers, but the Agent filters them out before building LLM input.
 
 The built-in auxiliary actions currently emitted by Agent are:

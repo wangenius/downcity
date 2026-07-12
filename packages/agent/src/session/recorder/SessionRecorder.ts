@@ -27,6 +27,8 @@ import type {
   SessionMessageMutationPage,
   SessionMessageMutationSubscriber,
   SessionMessageMutationUnsubscribe,
+  SessionMessageSnapshotMutation,
+  SessionPartSnapshotMutation,
 } from "@/types/session/SessionMessageMutation.js";
 
 /** SessionRecorder 构造参数。 */
@@ -60,7 +62,7 @@ export interface OpenSessionAssistantMessageInput {
   /** 当前 assistant 在 turn 内的 segment 序号。 */
   segment_index: number;
   /** 普通 assistant 或 compact summary。 */
-  message_type?: "normal" | "summary";
+  kind?: "normal" | "summary";
   /** 默认展示范围。 */
   visibility?: "visible" | "internal";
   /** 可选指定 Message ID。 */
@@ -76,7 +78,7 @@ export interface AppendCompletedAssistantMessageInput {
   /** Assistant 完整 parts。 */
   parts: SessionAssistantMessagePart[];
   /** 普通 assistant 或 compact summary。 */
-  message_type?: "normal" | "summary";
+  kind?: "normal" | "summary";
   /** 默认展示范围。 */
   visibility?: "visible" | "internal";
   /** Summary 已覆盖到的来源 Message。 */
@@ -193,7 +195,7 @@ export class SessionRecorder {
       created_at,
       updated_at: created_at,
       type: "assistant",
-      message_type: input.message_type || "normal",
+      kind: input.kind || "normal",
       segment_index: input.segment_index,
       status: "streaming",
       parts: [],
@@ -212,7 +214,7 @@ export class SessionRecorder {
     const writer = await this.open_assistant_message({
       turn_id,
       segment_index: 1,
-      message_type: input.message_type || "normal",
+      kind: input.kind || "normal",
       visibility: input.visibility || "visible",
       ...(input.summary_through_message_id
         ? { summary_through_message_id: input.summary_through_message_id }
@@ -268,10 +270,7 @@ export class SessionRecorder {
         revision: current.revision + 1,
         updated_at: created_at,
       };
-      return this.build_mutation(state.commit_sequence, message, {
-        type: "message-updated",
-        message,
-      });
+      return this.build_message_mutation(state.commit_sequence, message);
     });
     this.accept_mutation(mutation);
     return this.get_message(message_id) as SessionActionMessage;
@@ -397,7 +396,7 @@ export class SessionRecorder {
   async append_assistant_delta(
     message_id: string,
     part_id: string,
-    part_type: "text" | "reasoning",
+    type: "text" | "reasoning",
     delta: string,
   ): Promise<void> {
     if (!delta) return;
@@ -405,18 +404,17 @@ export class SessionRecorder {
       const current = require_message(state.messages, message_id, "assistant");
       return {
         mutation_id: generateId(),
-        type: "assistant-part-delta",
+        variant: "delta",
+        type,
         commit_sequence: state.commit_sequence,
         message_id,
-        sequence: current.sequence,
         revision: current.revision + 1,
         session_id: this.session_id,
         turn_id: current.turn_id,
         created_at: Date.now(),
         part_id,
-        part_type,
         delta,
-      };
+      } satisfies SessionMessageMutation;
     });
     this.accept_mutation(mutation);
   }
@@ -430,16 +428,17 @@ export class SessionRecorder {
       const current = require_message(state.messages, message_id, "assistant");
       return {
         mutation_id: generateId(),
-        type: "assistant-part-updated",
+        variant: "part",
+        type: part.type,
         commit_sequence: state.commit_sequence,
         message_id,
-        sequence: current.sequence,
         revision: current.revision + 1,
         session_id: this.session_id,
         turn_id: current.turn_id,
         created_at: Date.now(),
+        part_id: part.part_id,
         part: structuredClone(part),
-      };
+      } as SessionPartSnapshotMutation;
     });
     this.accept_mutation(mutation);
   }
@@ -451,18 +450,19 @@ export class SessionRecorder {
   ): Promise<void> {
     const mutation = await this.store.commit((state) => {
       const current = require_message(state.messages, message_id, "assistant");
-      return {
-        mutation_id: generateId(),
-        type: "message-completed",
-        commit_sequence: state.commit_sequence,
-        message_id,
-        sequence: current.sequence,
+      const created_at = Date.now();
+      const message: SessionAssistantMessage = {
+        ...current,
         revision: current.revision + 1,
-        session_id: this.session_id,
-        turn_id: current.turn_id,
-        created_at: Date.now(),
         status,
+        updated_at: created_at,
+        parts: current.parts.map((part) =>
+          part.type === "text" || part.type === "reasoning"
+            ? { ...part, state: "done" as const }
+            : part,
+        ),
       };
+      return this.build_message_mutation(state.commit_sequence, message);
     });
     this.accept_mutation(mutation);
   }
@@ -472,22 +472,20 @@ export class SessionRecorder {
   ): Promise<SessionMessage> {
     const mutation = await this.store.commit((state) => {
       const message = factory(state.message_sequence, Date.now());
-      return this.build_mutation(state.commit_sequence, message, {
-        type: "message-created",
-        message,
-      });
+      return this.build_message_mutation(state.commit_sequence, message);
     });
     this.accept_mutation(mutation);
-    return (mutation as Extract<SessionMessageMutation, { type: "message-created" }>).message;
+    return (mutation as SessionMessageSnapshotMutation).message;
   }
 
-  private build_mutation<TPayload extends object>(
+  private build_message_mutation(
     commit_sequence: number,
     message: SessionMessage,
-    payload: TPayload,
-  ): SessionMessageMutation {
+  ): SessionMessageSnapshotMutation {
     return {
       mutation_id: generateId(),
+      variant: "message",
+      type: message.type,
       commit_sequence,
       message_id: message.message_id,
       sequence: message.sequence,
@@ -495,8 +493,8 @@ export class SessionRecorder {
       session_id: this.session_id,
       ...(message.turn_id ? { turn_id: message.turn_id } : {}),
       created_at: message.updated_at,
-      ...payload,
-    } as unknown as SessionMessageMutation;
+      message,
+    } as SessionMessageSnapshotMutation;
   }
 
   private accept_mutation(mutation: SessionMessageMutation): void {

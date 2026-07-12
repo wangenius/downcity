@@ -338,19 +338,23 @@ export class ChatQueueWorker {
     if (!turn_id) return;
     const observation = lane.turnObservers.get(turn_id);
     if (!observation) return;
-    if (event.type === "assistant-part-delta" && event.part_type === "text") {
+    if (event.variant === "delta" && event.type === "text") {
       lane.assistantTextByMessageId.set(
         event.message_id,
         `${lane.assistantTextByMessageId.get(event.message_id) || ""}${event.delta}`,
       );
       return;
     }
-    if (event.type !== "message-completed") return;
+    if (
+      event.variant !== "message" ||
+      event.type !== "assistant" ||
+      event.message.status === "streaming"
+    ) return;
     const segment_text = String(
       lane.assistantTextByMessageId.get(event.message_id) || "",
     ).trim();
     lane.assistantTextByMessageId.delete(event.message_id);
-    if (!segment_text || event.status !== "completed") return;
+    if (!segment_text || event.message.status !== "completed") return;
 
     try {
       await this.dispatchAssistantStepMessage({

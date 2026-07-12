@@ -1,7 +1,7 @@
 /**
  * Session Message Mutation reducer。
  *
- * 历史重放与实时消费者必须共享这里定义的归并语义。
+ * 历史重放与实时消费者共享 message、part、delta 三种归并语义。
  */
 
 import type { SessionAssistantMessage, SessionMessage } from "@/types/session/SessionMessage.js";
@@ -12,60 +12,29 @@ export function reduce_session_message(
   current_message: SessionMessage | undefined,
   mutation: SessionMessageMutation,
 ): SessionMessage {
-  if (mutation.type === "message-created") {
-    if (current_message) {
-      throw new Error(`Session Message already exists: ${mutation.message_id}`);
-    }
+  if (mutation.variant === "message") {
+    validate_message_snapshot(current_message, mutation);
     return structuredClone(mutation.message);
   }
   if (!current_message) {
     throw new Error(`Session Message does not exist: ${mutation.message_id}`);
   }
-  if (mutation.revision !== current_message.revision + 1) {
-    throw new Error(
-      `Invalid Message revision for ${mutation.message_id}: expected ${String(current_message.revision + 1)}, received ${String(mutation.revision)}`,
-    );
-  }
+  validate_next_revision(current_message, mutation);
+  const assistant = require_streaming_assistant(current_message);
 
-  if (mutation.type === "assistant-part-delta") {
-    const assistant = require_assistant(current_message);
-    if (assistant.status !== "streaming") {
-      throw new Error(`Cannot append delta to closed Assistant Message: ${assistant.message_id}`);
+  if (mutation.variant === "part") {
+    if (mutation.part.part_id !== mutation.part_id) {
+      throw new Error(`Part Mutation identity mismatch: ${mutation.part_id}`);
     }
-    const existing_part = assistant.parts.find(
-      (part) => part.part_id === mutation.part_id,
-    );
-    const parts = existing_part
-      ? assistant.parts.map((part) => {
-          if (part.part_id !== mutation.part_id) return part;
-          if (part.type !== mutation.part_type) {
-            throw new Error(`Assistant part type changed: ${part.part_id}`);
-          }
-          return { ...part, text: part.text + mutation.delta };
-        })
-      : [
-          ...assistant.parts,
-          {
-            part_id: mutation.part_id,
-            type: mutation.part_type,
-            text: mutation.delta,
-            state: "streaming" as const,
-          },
-        ];
-    return with_revision(assistant, mutation, { parts });
-  }
-
-  if (mutation.type === "assistant-part-updated") {
-    const assistant = require_assistant(current_message);
-    if (assistant.status !== "streaming") {
-      throw new Error(`Cannot update part on closed Assistant Message: ${assistant.message_id}`);
+    if (mutation.part.type !== mutation.type) {
+      throw new Error(`Part Mutation type mismatch: ${mutation.part_id}`);
     }
     const exists = assistant.parts.some(
-      (part) => part.part_id === mutation.part.part_id,
+      (part) => part.part_id === mutation.part_id,
     );
     const parts = exists
       ? assistant.parts.map((part) =>
-          part.part_id === mutation.part.part_id
+          part.part_id === mutation.part_id
             ? structuredClone(mutation.part)
             : part,
         )
@@ -73,22 +42,25 @@ export function reduce_session_message(
     return with_revision(assistant, mutation, { parts });
   }
 
-  if (mutation.type === "message-updated") {
-    if (mutation.message.message_id !== current_message.message_id) {
-      throw new Error("Message update changed message_id");
-    }
-    return structuredClone(mutation.message);
+  const existing_part = assistant.parts.find(
+    (part) => part.part_id === mutation.part_id,
+  );
+  if (
+    !existing_part ||
+    (existing_part.type !== "text" && existing_part.type !== "reasoning")
+  ) {
+    throw new Error(`Delta target Part does not exist: ${mutation.part_id}`);
   }
-
-  const assistant = require_assistant(current_message);
-  return with_revision(assistant, mutation, {
-    status: mutation.status,
-    parts: assistant.parts.map((part) =>
-      part.type === "text" || part.type === "reasoning"
-        ? { ...part, state: "done" as const }
-        : part,
-    ),
-  });
+  if (existing_part.type !== mutation.type) {
+    throw new Error(`Delta type changed for Part: ${mutation.part_id}`);
+  }
+  const parts = assistant.parts.map((part) =>
+    part.part_id === mutation.part_id &&
+    (part.type === "text" || part.type === "reasoning")
+      ? { ...part, text: part.text + mutation.delta }
+      : part,
+  );
+  return with_revision(assistant, mutation, { parts });
 }
 
 /** 按 commit_sequence 重放 Mutation，恢复线性 Message snapshot。 */
@@ -115,16 +87,63 @@ export function reduce_session_messages(
   );
 }
 
-function require_assistant(message: SessionMessage): SessionAssistantMessage {
+function validate_message_snapshot(
+  current_message: SessionMessage | undefined,
+  mutation: Extract<SessionMessageMutation, { variant: "message" }>,
+): void {
+  if (mutation.message.message_id !== mutation.message_id) {
+    throw new Error(`Message Mutation identity mismatch: ${mutation.message_id}`);
+  }
+  if (mutation.message.type !== mutation.type) {
+    throw new Error(`Message Mutation type mismatch: ${mutation.message_id}`);
+  }
+  if (mutation.message.sequence !== mutation.sequence) {
+    throw new Error(`Message Mutation sequence mismatch: ${mutation.message_id}`);
+  }
+  if (mutation.message.revision !== mutation.revision) {
+    throw new Error(`Message Mutation revision mismatch: ${mutation.message_id}`);
+  }
+  if (!current_message) {
+    if (mutation.revision !== 1) {
+      throw new Error(`New Message revision must be 1: ${mutation.message_id}`);
+    }
+    return;
+  }
+  validate_next_revision(current_message, mutation);
+  if (current_message.type !== mutation.type) {
+    throw new Error(`Message type changed: ${mutation.message_id}`);
+  }
+  if (current_message.sequence !== mutation.sequence) {
+    throw new Error(`Message sequence changed: ${mutation.message_id}`);
+  }
+}
+
+function validate_next_revision(
+  current_message: SessionMessage,
+  mutation: SessionMessageMutation,
+): void {
+  if (mutation.revision !== current_message.revision + 1) {
+    throw new Error(
+      `Invalid Message revision for ${mutation.message_id}: expected ${String(current_message.revision + 1)}, received ${String(mutation.revision)}`,
+    );
+  }
+}
+
+function require_streaming_assistant(
+  message: SessionMessage,
+): SessionAssistantMessage {
   if (message.type !== "assistant") {
     throw new Error(`Session Message is not assistant: ${message.message_id}`);
+  }
+  if (message.status !== "streaming") {
+    throw new Error(`Assistant Message is already closed: ${message.message_id}`);
   }
   return message;
 }
 
 function with_revision<TMessage extends SessionMessage>(
   message: TMessage,
-  mutation: Exclude<SessionMessageMutation, { type: "message-created" }>,
+  mutation: SessionMessageMutation,
   changes: object,
 ): TMessage {
   return {

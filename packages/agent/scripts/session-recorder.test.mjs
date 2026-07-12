@@ -62,8 +62,20 @@ test("每个 assistant delta 都先持久化为独立 Mutation 再发布", async
     events.map((item) => item.commit_sequence),
   );
   assert.deepEqual(
+    changes.items.map((item) => `${item.variant}:${item.type}`),
+    [
+      "message:user",
+      "message:assistant",
+      "part:text",
+      "delta:text",
+      "delta:text",
+      "part:text",
+      "message:assistant",
+    ],
+  );
+  assert.deepEqual(
     changes.items
-      .filter((item) => item.type === "assistant-part-delta")
+      .filter((item) => item.variant === "delta")
       .map((item) => item.delta),
     ["你", "好"],
   );
@@ -158,8 +170,8 @@ test("snapshot、changes 分页和重启恢复保持单调顺序", async () => {
   assert.equal(messages[1].status, "stopped");
   assert.equal(messages[2].status, "failed");
   assert.deepEqual(
-    recovered_events.map((item) => item.type),
-    ["message-completed", "message-updated"],
+    recovered_events.map((item) => `${item.variant}:${item.type}`),
+    ["message:assistant", "message:action"],
   );
 
   const first_changes = await recovered.list_message_changes({
@@ -225,7 +237,7 @@ test("compact 追加 internal summary 且不重写 Mutation 日志", async () =>
     include_internal: true,
   });
   const summary = all.items.find(
-    (message) => message.type === "assistant" && message.message_type === "summary",
+    (message) => message.type === "assistant" && message.kind === "summary",
   );
   assert.equal(summary.visibility, "internal");
   assert.equal(summary.summary_through_message_id, all.items[2].message_id);

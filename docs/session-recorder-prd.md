@@ -94,11 +94,9 @@ Assistant = 创建后持续应用 delta，最后完成
 Mutation 描述 Message 的一次变化。
 
 ```text
-message-created
-assistant-part-delta
-assistant-part-updated
-message-updated
-message-completed
+message
+part
+delta
 ```
 
 Mutation 既写入 JSONL，也作为 EventHub 的实时 payload。
@@ -201,7 +199,7 @@ type SessionAssistantMessage = SessionMessageBase & {
   type: "assistant";
 
   /** 普通 assistant segment 或仅供 Context Composer 使用的 compact summary。 */
-  message_type: "normal" | "summary";
+  kind: "normal" | "summary";
 
   /** 当前 assistant 在所属 turn 内的 segment 序号，从 1 开始。 */
   segment_index: number;
@@ -341,9 +339,6 @@ type SessionMessageMutationBase = {
   /** Mutation 目标 Message。 */
   message_id: string;
 
-  /** 目标 Message 的逻辑位置。 */
-  sequence: number;
-
   /** 应用 Mutation 后的 Message revision。 */
   revision: number;
 
@@ -367,14 +362,20 @@ type SessionMessageMutationBase = {
 
 它不用于 UI 排序。UI 排序只使用 Message `sequence`。
 
-### 7.2 Message Created
+### 7.2 Message
 
 ```ts
-type SessionMessageCreatedMutation = SessionMessageMutationBase & {
-  /** Mutation 类型固定为 message-created。 */
-  type: "message-created";
+type SessionMessageSnapshotMutation = SessionMessageMutationBase & {
+  /** Mutation 层级固定为 message。 */
+  variant: "message";
 
-  /** 新创建的完整 Message。 */
+  /** 当前 Message 的业务类型。 */
+  type: "user" | "assistant" | "action" | "error";
+
+  /** Message 的固定线性位置。 */
+  sequence: number;
+
+  /** 创建或更新后的完整 Message。 */
   message: SessionMessage;
 };
 ```
@@ -383,76 +384,52 @@ type SessionMessageCreatedMutation = SessionMessageMutationBase & {
 
 - user 创建。
 - assistant segment 创建。
+- assistant completed/stopped/failed。
 - action 创建。
+- action running -> completed/failed。
 - error 创建。
 
-### 7.3 Assistant Part Delta
+收到后按 `message_id` upsert 完整 Message，不需要区分 created、updated、completed。
+
+### 7.3 Part
 
 ```ts
-type SessionAssistantPartDeltaMutation = SessionMessageMutationBase & {
-  /** Mutation 类型固定为 assistant-part-delta。 */
-  type: "assistant-part-delta";
+type SessionPartSnapshotMutation = SessionMessageMutationBase & {
+  /** Mutation 层级固定为 part。 */
+  variant: "part";
 
-  /** delta 所属 assistant part。 */
+  /** 当前 Part 的业务类型。 */
+  type: "text" | "reasoning" | "tool" | "file" | "data";
+
+  /** 被创建或更新的 Part。 */
   part_id: string;
 
-  /** delta 对应 text 或 reasoning。 */
-  part_type: "text" | "reasoning";
-
-  /** 本次新增文本，不是累计全文。 */
-  delta: string;
-};
-```
-
-每个模型 delta 对应一个 Mutation。Recorder 可以批量写入多行 JSONL，但不能合并或丢弃对外 delta 语义。
-
-### 7.4 Assistant Part Updated
-
-```ts
-type SessionAssistantPartUpdatedMutation = SessionMessageMutationBase & {
-  /** Mutation 类型固定为 assistant-part-updated。 */
-  type: "assistant-part-updated";
-
-  /** 被创建或更新的完整 part。 */
+  /** 创建或更新后的完整 Part。 */
   part: SessionAssistantPart;
 };
 ```
 
-适用于：
+适用于 text/reasoning start/end、tool 状态、file 和 data 更新。收到后按 `message_id + part_id` upsert 完整 Part。
 
-- tool-call 创建。
-- tool input 更新。
-- approval 状态更新。
-- tool-result 完成。
-- file part 写入。
-
-### 7.5 Message Updated
+### 7.4 Delta
 
 ```ts
-type SessionMessageUpdatedMutation = SessionMessageMutationBase & {
-  /** Mutation 类型固定为 message-updated。 */
-  type: "message-updated";
+type SessionDeltaMutation = SessionMessageMutationBase & {
+  /** Mutation 层级固定为 delta。 */
+  variant: "delta";
 
-  /** 更新后的完整 Action 或其他非 delta Message。 */
-  message: SessionMessage;
+  /** Delta 只允许可见文本或推理文本。 */
+  type: "text" | "reasoning";
+
+  /** Delta 所属 Part。 */
+  part_id: string;
+
+  /** 本次模型新增文本，不是累计全文。 */
+  delta: string;
 };
 ```
 
-主要用于 action running -> completed/failed。
-
-### 7.6 Message Completed
-
-```ts
-type SessionMessageCompletedMutation = SessionMessageMutationBase & {
-  /** Mutation 类型固定为 message-completed。 */
-  type: "message-completed";
-
-  /** assistant 最终状态。 */
-  status: "completed" | "stopped" | "failed";
-};
-```
-
-该 Mutation 关闭 assistant segment。关闭后的 Assistant Message 不再接受 delta。
+每个模型 delta 对应一条 Mutation。Tool input streaming 使用完整 `part` 快照，不属于 delta。
 
 ## 8. JSONL 存储模型
 
@@ -465,11 +442,12 @@ type SessionMessageCompletedMutation = SessionMessageMutationBase & {
 JSONL 每行保存一条完整 Mutation：
 
 ```json
-{"type":"message-created","commit_sequence":1,"message_id":"user_1","message":{"type":"user"}}
-{"type":"message-created","commit_sequence":2,"message_id":"assistant_1","message":{"type":"assistant","status":"streaming"}}
-{"type":"assistant-part-delta","commit_sequence":3,"message_id":"assistant_1","part_id":"text_1","delta":"你"}
-{"type":"assistant-part-delta","commit_sequence":4,"message_id":"assistant_1","part_id":"text_1","delta":"好"}
-{"type":"message-completed","commit_sequence":5,"message_id":"assistant_1","status":"completed"}
+{"variant":"message","type":"user","commit_sequence":1,"message_id":"user_1","message":{"type":"user"}}
+{"variant":"message","type":"assistant","commit_sequence":2,"message_id":"assistant_1","message":{"type":"assistant","status":"streaming"}}
+{"variant":"part","type":"text","commit_sequence":3,"message_id":"assistant_1","part_id":"text_1","part":{"type":"text","text":""}}
+{"variant":"delta","type":"text","commit_sequence":4,"message_id":"assistant_1","part_id":"text_1","delta":"你"}
+{"variant":"delta","type":"text","commit_sequence":5,"message_id":"assistant_1","part_id":"text_1","delta":"好"}
+{"variant":"message","type":"assistant","commit_sequence":6,"message_id":"assistant_1","message":{"type":"assistant","status":"completed"}}
 ```
 
 Recorder 初始化时按 `commit_sequence` 重放 Mutation，生成内存 Message Map：
@@ -642,8 +620,8 @@ const user_message = await recorder.append_user_message({
 ```text
 创建 User Message
 -> 分配 sequence/revision
--> 持久化 message-created
--> EventHub 发布 message-created
+-> 持久化 variant=message, type=user
+-> EventHub 发布同一条 Mutation
 ```
 
 User 成功持久化后，turn 才允许进入模型执行。
@@ -673,8 +651,8 @@ await assistant_writer.complete();
 ```text
 模型产生 delta
 -> writer.apply_chunk(delta)
--> 持久化 assistant-part-delta
--> EventHub 发布 assistant-part-delta
+-> 持久化 variant=delta, type=text
+-> EventHub 发布同一条 Mutation
 -> 前端立即追加 delta
 ```
 
@@ -699,8 +677,8 @@ await assistant_writer.apply_chunk({
 Recorder 为 reasoning part 分配稳定 `part_id`，并发布：
 
 ```text
-assistant-part-delta
-part_type=reasoning
+variant=delta
+type=reasoning
 ```
 
 Reasoning 不创建顶层 Message，不进入 LLM history projection。
@@ -733,7 +711,7 @@ tool-result -> 更新同一个 tool part 为 completed
 tool-error  -> 更新同一个 tool part 为 failed
 ```
 
-EventHub 发布 `assistant-part-updated`，不发布独立 Tool Message。
+EventHub 发布 `variant=part, type=tool`，不发布独立 Tool Message。
 
 Shell、Plugin 等工具运行时不直接调用 Recorder。它们把 tool 结果返回 Executor，由 assistant writer 统一记录。
 
@@ -869,7 +847,7 @@ const action = await recorder.open_action_message({
 try {
   const summary = await compaction_service.compact();
   await recorder.append_internal_assistant_message({
-    message_type: "summary",
+    kind: "summary",
     parts: summary.parts,
   });
   await action.complete();
@@ -883,7 +861,7 @@ Compact summary 仍然是：
 ```text
 type=assistant
 visibility=internal
-message_type=summary
+kind=summary
 ```
 
 它供 Context Composer 使用，但 UI 默认过滤。Compact 不删除用户可见 Message，不改变原 Message sequence。
@@ -948,21 +926,15 @@ Vibecape 使用一个 Message reducer 同时处理 live 与 history replay：
 
 ```ts
 function reduce_session_message(state, mutation) {
-  switch (mutation.type) {
-    case "message-created":
-      return create_message(state, mutation.message);
+  switch (mutation.variant) {
+    case "message":
+      return upsert_message(state, mutation.message);
 
-    case "assistant-part-delta":
+    case "part":
+      return upsert_assistant_part(state, mutation.message_id, mutation.part);
+
+    case "delta":
       return append_part_delta(state, mutation);
-
-    case "assistant-part-updated":
-      return upsert_assistant_part(state, mutation);
-
-    case "message-updated":
-      return replace_newer_revision(state, mutation.message);
-
-    case "message-completed":
-      return complete_message(state, mutation);
   }
 }
 ```

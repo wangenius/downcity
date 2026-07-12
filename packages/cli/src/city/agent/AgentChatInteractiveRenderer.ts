@@ -67,49 +67,43 @@ export class AgentChatInteractiveRenderer implements AgentChatInteractiveRendere
       return;
     }
 
-    switch (event.type) {
-      case "assistant-part-updated": {
-        const part = event.part;
-        if (part.type !== "tool") return;
-        if (!this.tool_call_ids.has(part.tool_call_id)) {
-          this.tool_call_ids.add(part.tool_call_id);
-          this.print_tool_block(format_tool_call_block({
-            tool_name: part.tool_name,
-            args: part.input || {},
-          }));
-        }
-        if (part.state === "completed" || part.state === "failed") {
-          this.print_tool_block(format_tool_result_block({
-            tool_name: part.tool_name,
-            result:
-              part.state === "completed"
-                ? part.output ?? null
-                : part.error || "Tool failed",
-          }));
-        }
-        this.set_spinner_text(
-          part.state === "approval-required"
-            ? "Waiting for approval..."
-            : part.state === "completed" || part.state === "failed"
-              ? "Thinking..."
-              : `Running ${part.tool_name}...`,
-        );
-        return;
-      }
-      case "message-completed":
-        this.stop_spinner();
-        return;
-      case "message-created":
-        if (event.message.type === "error") this.stop_spinner();
-        return;
-      case "assistant-part-delta":
-        if (event.part_type === "text") this.print_text_delta(event.delta);
-        else this.set_spinner_text("Thinking...");
-        return;
-      case "message-updated":
-      default:
-        return;
+    if (event.variant === "delta") {
+      if (event.type === "text") this.print_text_delta(event.delta);
+      else this.set_spinner_text("Thinking...");
+      return;
     }
+    if (event.variant === "message") {
+      if (
+        event.type === "error" ||
+        event.type === "assistant" && event.message.status !== "streaming"
+      ) this.stop_spinner();
+      return;
+    }
+    if (event.type !== "tool") return;
+    const part = event.part;
+    if (!this.tool_call_ids.has(part.tool_call_id)) {
+      this.tool_call_ids.add(part.tool_call_id);
+      this.print_tool_block(format_tool_call_block({
+        tool_name: part.tool_name,
+        args: part.input || {},
+      }));
+    }
+    if (part.state === "completed" || part.state === "failed") {
+      this.print_tool_block(format_tool_result_block({
+        tool_name: part.tool_name,
+        result:
+          part.state === "completed"
+            ? part.output ?? null
+            : part.error || "Tool failed",
+      }));
+    }
+    this.set_spinner_text(
+      part.state === "approval-required"
+        ? "Waiting for approval..."
+        : part.state === "completed" || part.state === "failed"
+          ? "Thinking..."
+          : `Running ${part.tool_name}...`,
+    );
   }
 
   /**

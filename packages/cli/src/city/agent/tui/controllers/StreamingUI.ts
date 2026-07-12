@@ -88,43 +88,37 @@ export class StreamingUIController {
       return;
     }
 
-    switch (event.type) {
-      case "assistant-part-delta":
-        if (event.part_type === "text") this.append_assistant_delta(event.delta);
-        break;
-      case "assistant-part-updated":
-        if (event.part.type !== "tool") break;
-        this.finalize_assistant();
-        if (!this.tool_call_ids.has(event.part.tool_call_id)) {
-          this.tool_call_ids.add(event.part.tool_call_id);
-          this.add_tool_call(
-            event.part.tool_name,
-            event.part.tool_call_id,
-            event.part.input || {},
-          );
-        }
-        if (event.part.state === "completed") {
-          this.message_list.update_tool_result(
-            event.part.tool_call_id,
-            event.part.output,
-          );
-        }
-        if (event.part.state === "failed") {
-          this.message_list.update_tool_result(
-            event.part.tool_call_id,
-            event.part.error || "Tool failed",
-          );
-        }
-        break;
-      case "message-created":
-        if (event.message.type === "error") this.add_error(event.message.message);
-        break;
-      case "message-completed":
-        this.finalize_assistant();
-        break;
-      case "message-updated":
-      default:
-        break;
+    if (event.variant === "delta") {
+      if (event.type === "text") this.append_assistant_delta(event.delta);
+      return;
+    }
+    if (event.variant === "message") {
+      if (event.type === "error") this.add_error(event.message.message);
+      if (
+        event.type === "assistant" &&
+        event.message.status !== "streaming"
+      ) this.finalize_assistant();
+      return;
+    }
+    if (event.type !== "tool") return;
+    const part = event.part;
+    this.finalize_assistant();
+    if (!this.tool_call_ids.has(part.tool_call_id)) {
+      this.tool_call_ids.add(part.tool_call_id);
+      this.add_tool_call(
+        part.tool_name,
+        part.tool_call_id,
+        part.input || {},
+      );
+    }
+    if (part.state === "completed") {
+      this.message_list.update_tool_result(part.tool_call_id, part.output);
+    }
+    if (part.state === "failed") {
+      this.message_list.update_tool_result(
+        part.tool_call_id,
+        part.error || "Tool failed",
+      );
     }
   }
 

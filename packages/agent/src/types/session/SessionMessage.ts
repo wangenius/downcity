@@ -170,7 +170,7 @@ export interface SessionAssistantMessage extends SessionMessageBase {
   /** Message 类型固定为 assistant。 */
   type: "assistant";
   /** 普通 assistant segment 或内部 compact summary。 */
-  message_type: "normal" | "summary";
+  kind: "normal" | "summary";
   /** Assistant 在所属 turn 内的 segment 序号，从一开始。 */
   segment_index: number;
   /** Assistant 当前执行状态。 */

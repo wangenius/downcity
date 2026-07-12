@@ -65,14 +65,14 @@ export class PiTuiChatRenderer implements AgentChatInteractiveRendererPort {
   render_event(event: SessionMessageMutation): void {
     this.streaming_ui.handle_event(event);
     if (
-      event.type === "assistant-part-delta" &&
-      event.part_type === "text" &&
+      event.variant === "delta" &&
+      event.type === "text" &&
       event.delta.trim()
     ) {
       this.emitted_visible_text = true;
     }
     if (
-      event.type === "assistant-part-updated" &&
+      event.variant === "part" &&
       event.part.type === "tool" &&
       event.part.state === "approval-required" &&
       event.part.approval_id

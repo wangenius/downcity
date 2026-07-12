@@ -97,8 +97,8 @@ const session = await agent.sessions.get("main");
 
 const unsubscribe = session.subscribe((mutation) => {
   if (
-    mutation.type === "assistant-part-delta" &&
-    mutation.part_type === "text"
+    mutation.variant === "delta" &&
+    mutation.type === "text"
   ) {
     process.stdout.write(mutation.delta);
   }

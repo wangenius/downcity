@@ -33,11 +33,11 @@ export function to_executor_ui_message(
     source:
       message.type === "user"
         ? "ingress"
-        : message.message_type === "summary"
+        : message.kind === "summary"
           ? "compact"
           : "egress",
     kind:
-      message.type === "assistant" && message.message_type === "summary"
+      message.type === "assistant" && message.kind === "summary"
         ? "summary"
         : "normal",
     extra: {

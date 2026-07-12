@@ -445,8 +445,8 @@ export async function runSdkPromptTurn(params: {
       return;
     }
     if (
-      event.type !== "assistant-part-delta" ||
-      event.part_type !== "text" ||
+      event.variant !== "delta" ||
+      event.type !== "text" ||
       event.turn_id !== target_turn_id ||
       !event.delta
     ) {

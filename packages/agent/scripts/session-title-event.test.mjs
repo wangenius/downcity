@@ -110,7 +110,12 @@ test("Session keeps title empty when no model is available", async () => {
       text: "Use shell tools to inspect the current workspace",
     });
 
-    assert.equal(events.some((event) => event.type === "message-created"), true);
+    assert.equal(
+      events.some(
+        (event) => event.variant === "message" && event.type === "user",
+      ),
+      true,
+    );
     assert.equal((await session.get_info()).title, undefined);
   } finally {
     unsubscribe();

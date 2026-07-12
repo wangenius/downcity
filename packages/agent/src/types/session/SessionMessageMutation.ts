@@ -1,7 +1,8 @@
 /**
  * Session Message Mutation 与增量读取类型。
  *
- * Mutation 同时是 messages.jsonl 的持久化单元和 subscribe 的实时事件 payload。
+ * Mutation 只按变化层级分成 message、part、delta 三种 variant；`type` 在各 variant
+ * 内直接表达对应的 Message 或 Part 类型。
  */
 
 import type { SessionAssistantMessagePart, SessionMessage } from "@/types/session/SessionMessage.js";
@@ -14,8 +15,6 @@ export interface SessionMessageMutationBase {
   commit_sequence: number;
   /** Mutation 目标 Message。 */
   message_id: string;
-  /** 目标 Message 的逻辑位置。 */
-  sequence: number;
   /** 应用 Mutation 后的 Message revision。 */
   revision: number;
   /** Mutation 所属 Session。 */
@@ -26,57 +25,51 @@ export interface SessionMessageMutationBase {
   created_at: number;
 }
 
-/** 创建完整 Message 的 Mutation。 */
-export interface SessionMessageCreatedMutation extends SessionMessageMutationBase {
-  /** Mutation 类型固定为 message-created。 */
-  type: "message-created";
-  /** 新创建的完整 Message。 */
-  message: SessionMessage;
-}
+/** 顶层 Message 创建或状态更新 Mutation。 */
+export type SessionMessageSnapshotMutation = {
+  [TType in SessionMessage["type"]]: SessionMessageMutationBase & {
+    /** Mutation 层级固定为 message。 */
+    variant: "message";
+    /** 当前完整 Message 类型。 */
+    type: TType;
+    /** Message 在线性 Session 中的固定位置。 */
+    sequence: number;
+    /** 创建或更新后的完整 Message 快照。 */
+    message: Extract<SessionMessage, { type: TType }>;
+  };
+}[SessionMessage["type"]];
 
-/** Assistant 文本增量 Mutation。 */
-export interface SessionAssistantPartDeltaMutation extends SessionMessageMutationBase {
-  /** Mutation 类型固定为 assistant-part-delta。 */
-  type: "assistant-part-delta";
-  /** Delta 所属 part。 */
+/** Assistant Part 创建或状态更新 Mutation。 */
+export type SessionPartSnapshotMutation = {
+  [TType in SessionAssistantMessagePart["type"]]: SessionMessageMutationBase & {
+    /** Mutation 层级固定为 part。 */
+    variant: "part";
+    /** 当前完整 Part 类型。 */
+    type: TType;
+    /** 被创建或更新的 Part 标识。 */
+    part_id: string;
+    /** 创建或更新后的完整 Part 快照。 */
+    part: SessionAssistantMessagePart & { type: TType };
+  };
+}[SessionAssistantMessagePart["type"]];
+
+/** Assistant 文本或推理原始增量 Mutation。 */
+export interface SessionDeltaMutation extends SessionMessageMutationBase {
+  /** Mutation 层级固定为 delta。 */
+  variant: "delta";
+  /** Delta 类型只允许 text 或 reasoning。 */
+  type: "text" | "reasoning";
+  /** Delta 所属 Part 标识。 */
   part_id: string;
-  /** Delta 对应可见文本或推理文本。 */
-  part_type: "text" | "reasoning";
-  /** 本次新增文本，不是累计全文。 */
+  /** 本次模型新增的原始文本，不是累计全文。 */
   delta: string;
-}
-
-/** Assistant part 完整更新 Mutation。 */
-export interface SessionAssistantPartUpdatedMutation extends SessionMessageMutationBase {
-  /** Mutation 类型固定为 assistant-part-updated。 */
-  type: "assistant-part-updated";
-  /** 被创建或更新的完整 part。 */
-  part: SessionAssistantMessagePart;
-}
-
-/** 非 delta Message 完整更新 Mutation。 */
-export interface SessionMessageUpdatedMutation extends SessionMessageMutationBase {
-  /** Mutation 类型固定为 message-updated。 */
-  type: "message-updated";
-  /** 更新后的完整 Message。 */
-  message: SessionMessage;
-}
-
-/** Assistant 收口 Mutation。 */
-export interface SessionMessageCompletedMutation extends SessionMessageMutationBase {
-  /** Mutation 类型固定为 message-completed。 */
-  type: "message-completed";
-  /** Assistant 最终状态。 */
-  status: "completed" | "stopped" | "failed";
 }
 
 /** 全部合法 Session Message Mutation。 */
 export type SessionMessageMutation =
-  | SessionMessageCreatedMutation
-  | SessionAssistantPartDeltaMutation
-  | SessionAssistantPartUpdatedMutation
-  | SessionMessageUpdatedMutation
-  | SessionMessageCompletedMutation;
+  | SessionMessageSnapshotMutation
+  | SessionPartSnapshotMutation
+  | SessionDeltaMutation;
 
 /** 从 commit cursor 增量读取 Mutation 的输入。 */
 export interface ListSessionMessageChangesInput {
@@ -107,14 +100,22 @@ export type SessionMessageMutationUnsubscribe = () => void;
 /** 判断未知事件是否为 Session Message Mutation。 */
 export function is_session_message_mutation(input: unknown): input is SessionMessageMutation {
   if (!input || typeof input !== "object") return false;
-  const candidate = input as { type?: unknown; mutation_id?: unknown; commit_sequence?: unknown };
+  const candidate = input as {
+    variant?: unknown;
+    type?: unknown;
+    mutation_id?: unknown;
+    commit_sequence?: unknown;
+  };
+  if (
+    typeof candidate.mutation_id !== "string" ||
+    typeof candidate.commit_sequence !== "number" ||
+    typeof candidate.type !== "string"
+  ) {
+    return false;
+  }
   return (
-    typeof candidate.mutation_id === "string" &&
-    typeof candidate.commit_sequence === "number" &&
-    (candidate.type === "message-created" ||
-      candidate.type === "assistant-part-delta" ||
-      candidate.type === "assistant-part-updated" ||
-      candidate.type === "message-updated" ||
-      candidate.type === "message-completed")
+    candidate.variant === "message" ||
+    candidate.variant === "part" ||
+    candidate.variant === "delta"
   );
 }

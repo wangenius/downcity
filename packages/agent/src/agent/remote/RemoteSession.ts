@@ -222,7 +222,7 @@ export class RemoteSession implements RemoteAgentSession {
   }
 
   private handle_event(event: AgentSessionEvent): void {
-    if (event.type === "error") {
+    if (!is_session_message_mutation(event) && event.type === "error") {
       this.fail_pending_turns(event.message);
     }
     const turn_id = extract_turn_id(event);
@@ -339,6 +339,9 @@ function create_turn_handle(
 }
 
 function extract_turn_id(event: AgentSessionEvent): string | null {
+  if (is_session_message_mutation(event)) {
+    return event.turn_id || null;
+  }
   switch (event.type) {
     case "turn-start":
     case "text-delta":

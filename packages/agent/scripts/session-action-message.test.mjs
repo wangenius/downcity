@@ -114,8 +114,7 @@ test("session.set only persists and publishes model-switching actions when model
     const events = [];
     const unsubscribe = session.subscribe((event) => {
       if (
-        event.type === "message-created" && event.message.type === "action" ||
-        event.type === "message-updated" && event.message.type === "action"
+        event.variant === "message" && event.type === "action"
       ) events.push(event.message);
     });
 
@@ -332,8 +331,7 @@ test("session.fork persists and publishes history-forking actions on source sess
     const events = [];
     const unsubscribe = session.subscribe((event) => {
       if (
-        event.type === "message-created" && event.message.type === "action" ||
-        event.type === "message-updated" && event.message.type === "action"
+        event.variant === "message" && event.type === "action"
       ) events.push(event.message);
     });
     const forked = await session.fork();

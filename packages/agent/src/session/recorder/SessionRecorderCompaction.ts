@@ -50,7 +50,7 @@ export async function compact_session_recorder_messages(input: {
   const older = context_messages.slice(0, compact_count);
   const boundary = [...older]
     .reverse()
-    .find((message) => message.type !== "assistant" || message.message_type !== "summary");
+    .find((message) => message.type !== "assistant" || message.kind !== "summary");
   if (!boundary) return { compacted: false, reason: "nothing_to_compact" };
 
   const action_id = `compacting:${input.recorder.session_id}:${generateId()}`;
@@ -63,7 +63,7 @@ export async function compact_session_recorder_messages(input: {
 
   const previous_summary = older.find(
     (message): message is SessionAssistantMessage =>
-      message.type === "assistant" && message.message_type === "summary",
+      message.type === "assistant" && message.kind === "summary",
   );
   const conversation_text = older
     .filter((message) => message !== previous_summary)
@@ -97,7 +97,7 @@ export async function compact_session_recorder_messages(input: {
 
   await input.recorder.append_completed_assistant_message({
     turn_id: `compact:${input.recorder.session_id}:${generateId()}`,
-    message_type: "summary",
+    kind: "summary",
     visibility: "internal",
     summary_through_message_id: boundary.message_id,
     parts: [{
@@ -121,7 +121,7 @@ function project_current_context(messages: SessionMessage[]): SessionMessage[] {
   const latest_summary = [...messages].reverse().find(
     (message): message is SessionAssistantMessage =>
       message.type === "assistant" &&
-      message.message_type === "summary" &&
+      message.kind === "summary" &&
       message.visibility === "internal",
   );
   if (!latest_summary?.summary_through_message_id) {
@@ -138,7 +138,7 @@ function project_current_context(messages: SessionMessage[]): SessionMessage[] {
       (message) =>
         message !== latest_summary &&
         (message.type === "user" ||
-          message.type === "assistant" && message.message_type !== "summary"),
+          message.type === "assistant" && message.kind !== "summary"),
     ),
   ];
 }

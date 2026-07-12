@@ -105,7 +105,7 @@ export class SessionRecorderHistoryStore implements SessionHistoryStore {
         metadata.extra?.visibility === "internal"
           ? "internal"
           : "visible",
-      message_type: metadata.kind === "summary" ? "summary" : "normal",
+      kind: metadata.kind === "summary" ? "summary" : "normal",
     });
   }
 
@@ -243,7 +243,7 @@ function project_context_messages(messages: import("@/types/session/SessionMessa
     .find(
       (message) =>
         message.type === "assistant" &&
-        message.message_type === "summary" &&
+        message.kind === "summary" &&
         message.visibility === "internal",
     );
   if (
@@ -266,7 +266,7 @@ function project_context_messages(messages: import("@/types/session/SessionMessa
         (message) =>
           message !== latest_summary &&
           message.type === "user" ||
-          (message.type === "assistant" && message.message_type !== "summary"),
+          (message.type === "assistant" && message.kind !== "summary"),
       ),
   ];
 }

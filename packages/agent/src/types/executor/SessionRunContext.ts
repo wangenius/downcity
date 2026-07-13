@@ -18,6 +18,7 @@ import type {
 } from "@/executor/types/SessionRun.js";
 import type { SessionUserMessageV1 } from "@/executor/types/SessionRecords.js";
 import type { FileUIPart } from "ai";
+import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.js";
 
 /**
  * 单次 session run 的运行上下文。
@@ -54,6 +55,30 @@ export interface SessionRunContext {
    * - 用于把运行中追加的 user 消息并入下一 step。
    */
   onStepCallback?: () => Promise<SessionUserMessageV1[]>;
+
+  /**
+   * 判断是否仍有等待并入下一模型 turn 的 steer prompt。
+   *
+   * 关键点（中文）
+   * - 只检查 prompt，不把单独的配置 mutation 当成继续调用模型的理由。
+   * - 真正的队列消费统一发生在 `onStepCallback`。
+   */
+  hasPendingStepInput?: () => boolean;
+
+  /**
+   * 当前模型 turn 实际使用的 Agent env。
+   *
+   * 关键点（中文）
+   * - 由 Session 配置队列在模型 turn 开始前更新。
+   * - tool/plugin 深层调用通过 run scope 读取，避免看到刚写入但尚未生效的 env。
+   */
+  agentEnv?: Readonly<Record<string, string>>;
+
+  /** 当前模型 turn 已提交生效的 Agent instruction 文本。 */
+  agentSystems?: readonly string[];
+
+  /** 当前模型 turn 捕获的 Plugin 执行视图。 */
+  agentPlugins?: AgentPluginExecutionRuntime;
 
   /**
    * assistant step 完成回调。

@@ -13,6 +13,17 @@ await session.set({
 });
 ```
 
+## When a runtime switch takes effect
+
+A successful `session.set()` means the configured value was written and queued for the Session. It does not replace an in-flight provider request.
+
+- the current stream and active tool execution keep using the previous model
+- the new model becomes effective before the next model turn, meaning the next `streamText()` call
+- config changes and steer prompts are committed in queue order
+- the Session timeline emits a completed action message when the switch becomes effective
+
+The config API reports whether the change succeeded. The action message reports when it became effective for model execution.
+
 ## When you need it
 
 This is useful when:

@@ -125,6 +125,18 @@ interface CoreEngineRunInput {
    * 当前显式运行上下文。
    */
   run_context: SessionRunContext;
+
+  /**
+   * 在统一输入队列提交后解析当前模型 turn 的 effective 配置。
+   */
+  resolve_model_turn: () => Promise<{
+    /** 当前模型 turn 使用的模型。 */
+    model: LanguageModel;
+    /** 当前模型 turn 使用的 system messages。 */
+    system: SessionExecuteInput["system"];
+    /** 当前模型 turn 使用的工具集合。 */
+    tools: SessionExecuteInput["tools"];
+  }>;
 }
 
 /**
@@ -149,10 +161,10 @@ export class CoreEngineRunner {
   async run(input: CoreEngineRunInput): Promise<SessionRunResult> {
     const start_time = Date.now();
     const session_id = String(this.history_store.sessionId || "").trim();
-    const system = Array.isArray(input.execute_input.system)
+    let system = Array.isArray(input.execute_input.system)
       ? input.execute_input.system
       : [];
-    const tools = input.execute_input.tools;
+    let tools = input.execute_input.tools;
     let last_observed_stream_error: unknown = undefined;
     let final_assistant_ui_message: SessionMessageRecordV1 | null = null;
 
@@ -188,7 +200,7 @@ export class CoreEngineRunner {
         await context_composer_on_step_finish(step_result);
       };
 
-      const prepare_step = this.context_composer.createPrepareStepHandler({
+      const prepare_model_turn_inputs = this.context_composer.createPrepareStepHandler({
         system,
         appendMergedUserMessages: append_merged_user_messages,
         runContext: input.run_context,
@@ -198,11 +210,16 @@ export class CoreEngineRunner {
       let incomplete_response_recovery_count = 0;
 
       while (step_count < MAX_TOOL_LOOP_STEPS) {
+        // 关键点（中文）：steer 与配置 mutation 必须在选择 model/system/tools 前提交。
+        // 这样运行中写入的配置只影响下一次 provider 请求，不会改变当前流或 tool callback。
+        await prepare_model_turn_inputs({ messages: [] });
+        const model_turn = await input.resolve_model_turn();
+        system = Array.isArray(model_turn.system) ? model_turn.system : [];
+        tools = model_turn.tools;
         const result = streamText({
-          model: input.model,
+          model: model_turn.model,
           system,
           onStepFinish: on_step_finish,
-          prepareStep: prepare_step,
           messages: message_state.modelMessages,
           tools,
           abortSignal: input.run_context.abortSignal,
@@ -350,9 +367,8 @@ export class CoreEngineRunner {
         }
 
         // 关键点（中文）：stop 前做 tail merge，覆盖最后一个 step 后才入队的新 user 消息。
-        const tail_prepared = await prepare_step({ messages: [] });
-        const tail_merged_message_count = Array.isArray(tail_prepared.messages)
-          ? tail_prepared.messages.length
+        const tail_merged_message_count = input.run_context.hasPendingStepInput?.()
+          ? 1
           : 0;
         if (
           shouldContinueForTailMergedUserMessages({

@@ -25,6 +25,8 @@ import {
 } from "@/agent/local/services/AgentAssemblyService.js";
 import { AgentSessions as LocalAgentSessions } from "@/agent/local/services/AgentSessions.js";
 import { AgentBackgroundService } from "@/agent/local/services/AgentBackgroundService.js";
+import { generateId } from "@/utils/Id.js";
+import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 
 /**
  * SDK 本地 Agent。
@@ -46,6 +48,7 @@ export class Agent {
   private readonly SessionClass: AgentOptions["Session"];
   private readonly backgroundService: AgentBackgroundService;
   private readonly shell?: AgentOptions["shell"];
+  private readonly local_sessions: LocalAgentSessions;
 
   private instruction: string[];
 
@@ -91,7 +94,19 @@ export class Agent {
     });
     const sessions = this.create_sessions(assembly);
     this.sessions = sessions;
+    this.local_sessions = sessions;
     sessions_ref = sessions;
+    if (this.plugins instanceof PluginRegistry) {
+      const plugin_registry = this.plugins;
+      plugin_registry.set_change_listener(({ type, plugin_name }) => {
+        const verb = type === "register" ? "registered" : "unregistered";
+        this.local_sessions.broadcast_plugins({
+          mutation_id: generateId(),
+          title: `Agent plugin ${plugin_name} ${verb}`,
+          plugins: plugin_registry.execution_view(),
+        });
+      });
+    }
   }
 
   /**
@@ -120,7 +135,9 @@ export class Agent {
    * 更新当前 SDK Agent 的静态基础指令。
    */
   setInstruction(input: string | string[]): void {
-    this.instruction = normalizeInstructionInput(input);
+    const next_instruction = normalizeInstructionInput(input);
+    this.instruction.splice(0, this.instruction.length, ...next_instruction);
+    this.local_sessions.broadcast_instruction(this.instruction, generateId());
   }
 
   /**
@@ -145,7 +162,8 @@ export class Agent {
     for (const key of Object.keys(this.env)) {
       delete this.env[key];
     }
-    this.patchEnv(next);
+    this.apply_env_patch(next);
+    this.local_sessions.broadcast_env(this.env, generateId());
   }
 
   /**
@@ -153,9 +171,19 @@ export class Agent {
    *
    * 关键点（中文）
    * - `null` / `undefined` 表示删除该 key；其他值会强制转字符串后写入。
-   * - 修改原地生效，所有持有 `context.env` 引用的模块立即可见。
+   * - configured env 原地更新；已有 Session 在下一模型 turn 提交 effective env。
    */
   patchEnv(patch: Record<string, string | null | undefined>): void {
+    this.apply_env_patch(patch);
+    this.local_sessions.broadcast_env(this.env, generateId());
+  }
+
+  /**
+   * 原地应用一次 env patch，不触发重复广播。
+   */
+  private apply_env_patch(
+    patch: Record<string, string | null | undefined>,
+  ): void {
     if (!patch || typeof patch !== "object") return;
     for (const [raw_key, raw_value] of Object.entries(patch)) {
       const key = String(raw_key || "").trim();
@@ -207,6 +235,9 @@ export class Agent {
       get_agent_context: () => this.agentContext ?? assembly.agent_context,
       get_shell: () => this.shell,
       get_instruction: () => this.instruction,
+      get_agent_env: () => this.getEnv(),
+      get_agent_plugins: () =>
+        (this.plugins as PluginRegistry).execution_view(),
       ensure_agent_ready: async () => {
         await this.backgroundService.ready();
       },

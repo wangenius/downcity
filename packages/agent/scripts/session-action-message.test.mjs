@@ -17,6 +17,48 @@ import { JsonlSessionHistoryStore } from "../bin/executor/store/history/jsonl/Js
 import { JsonlSessionHistoryComposer } from "../bin/executor/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 import { toSessionTimelineEvents } from "../bin/session/browse/Browse.js";
 import { Agent } from "../bin/index.js";
+import { MockLanguageModelV3 } from "ai/test";
+
+function create_stream_text_result(text) {
+  return {
+    stream: new ReadableStream({
+      start(controller) {
+        controller.enqueue({ type: "stream-start", warnings: [] });
+        controller.enqueue({ type: "text-start", id: "text_1" });
+        controller.enqueue({ type: "text-delta", id: "text_1", delta: text });
+        controller.enqueue({ type: "text-end", id: "text_1" });
+        controller.enqueue({
+          type: "finish",
+          finishReason: { unified: "stop", raw: "stop" },
+          usage: {
+            inputTokens: {
+              total: 0,
+              noCache: 0,
+              cacheRead: 0,
+              cacheWrite: 0,
+            },
+            outputTokens: {
+              total: 0,
+              text: 0,
+              reasoning: 0,
+            },
+          },
+        });
+        controller.close();
+      },
+    }),
+  };
+}
+
+function create_model(model_id, calls) {
+  return new MockLanguageModelV3({
+    modelId: model_id,
+    doStream: async () => {
+      calls.push(model_id);
+      return create_stream_text_result("done");
+    },
+  });
+}
 
 test("action record is upserted but filtered from LLM history", async () => {
   const root_path = await fs.mkdtemp(
@@ -107,6 +149,7 @@ test("session.set only persists and publishes model-switching actions when model
     id: "model_switching_agent",
     path: agent_path,
   });
+  const model_calls = [];
   try {
     const session = await agent.sessions.create({
       sessionId: "model_switching_session",
@@ -120,37 +163,40 @@ test("session.set only persists and publishes model-switching actions when model
 
     await session.set({
       modelId: "test-model",
-      model: {
-        modelId: "test-model-label-v1",
-        provider: "test",
-      },
+      model: create_model("test-model-label-v1", model_calls),
     });
 
     assert.deepEqual(events, []);
 
     await session.set({
       modelId: "test-model",
-      model: {
-        modelId: "test-model-label-v2",
-        provider: "test",
-      },
+      model: create_model("test-model-label-v2", model_calls),
     });
 
     assert.deepEqual(events, []);
 
     await session.set({
       modelId: "next-test-model",
-      model: {
-        modelId: "next-test-model-label",
-        provider: "test",
-      },
+      model: create_model("next-test-model-label", model_calls),
     });
+
+    assert.deepEqual(events, []);
+    assert.deepEqual(model_calls, []);
+
+    const turn = await session.prompt({ query: "apply queued config" });
+    const result = await turn.finished;
     unsubscribe();
+
+    assert.equal(result.success, true);
+    assert.deepEqual(model_calls, [
+      "next-test-model-label",
+      "next-test-model-label",
+    ]);
 
     assert.deepEqual(
       events.map((event) => `${event.title}:${event.status}`),
       [
-        "Switching session model from test-model-label-v2 to next-test-model-label:running",
+        "Session model switched from test-model-label-v2 to next-test-model-label:running",
         "Session model switched from test-model-label-v2 to next-test-model-label:completed",
       ],
     );

@@ -138,7 +138,8 @@ export async function invokePluginCallTool(
   }
 
   try {
-    const result = await params.plugins.runAction({
+    const plugins = getSessionRunContext()?.agentPlugins || params.plugins;
+    const result = await plugins.runAction({
       plugin,
       action,
       payload,
@@ -191,7 +192,8 @@ export async function invokePluginReadTool(
 ): Promise<PluginReadToolResult> {
   const input: PluginReadInput = params.input;
   try {
-    const data = params.plugins.read({
+    const plugins = getSessionRunContext()?.agentPlugins || params.plugins;
+    const data = plugins.read({
       plugin: typeof input.plugin === "string" ? input.plugin : undefined,
       action: typeof input.action === "string" ? input.action : undefined,
     });

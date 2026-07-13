@@ -13,6 +13,17 @@ await session.set({
 });
 ```
 
+## 运行中切换何时生效
+
+`session.set()` 成功返回表示新配置已经写入并进入当前 Session 的有序输入队列，不表示正在进行的 provider 请求会被替换。
+
+- 当前流式响应和正在执行的工具继续使用原模型
+- 新模型在下一次模型 turn，也就是下一次 `streamText()` 开始前生效
+- 配置修改与运行中追加的 steer prompt 按入队顺序一起提交
+- 模型切换生效时，Session timeline 会产生 completed action message
+
+因此，配置 API 的返回值表达“修改是否成功”，action message 表达“修改在哪个模型 turn 生效”。
+
 ## 什么时候需要它
 
 适用于这些场景：

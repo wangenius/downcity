@@ -248,12 +248,14 @@ export class Shell {
       return {
         ownerContextId: String(explicit.ownerContextId || "").trim() || undefined,
         turnId: String(explicit.turnId || "").trim() || undefined,
+        ...(explicit.env ? { env: explicit.env } : {}),
       };
     }
     const from_scope = getShellRunContext();
     return {
       ownerContextId: String(from_scope?.session_id || "").trim() || undefined,
       turnId: String(from_scope?.turn_id || "").trim() || undefined,
+      ...(from_scope?.env ? { env: from_scope.env } : {}),
     };
   }
 
@@ -268,7 +270,7 @@ export class Shell {
     const turn_id = run_context.turnId || "";
     return {
       rootPath: root_path,
-      env: this.host_options.env,
+      env: run_context.env || this.host_options.env,
       config: {
         ...(this.host_options.agent_id ? { id: this.host_options.agent_id } : {}),
       },

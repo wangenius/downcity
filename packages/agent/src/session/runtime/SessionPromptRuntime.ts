@@ -16,6 +16,7 @@ import type {
 import type { SessionMutation } from "@/types/session/SessionMutation.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
+import type { SessionRuntimeConfigMutation } from "@/types/session/SessionConfigMutation.js";
 import type {
   AgentSessionTurnHandle,
   AgentSessionTurnResult,
@@ -26,6 +27,9 @@ const QUEUED_PROMPT_CANCELLED_MESSAGE =
   "Prompt cancelled because session was stopped";
 
 type QueuedPrompt = {
+  /** 当前队列项固定为 prompt。 */
+  type: "prompt";
+
   /**
    * 当前排队中的 prompt 输入。
    */
@@ -36,6 +40,22 @@ type QueuedPrompt = {
    */
   deferredHandle: Deferred<AgentSessionTurnHandle>;
 };
+
+/**
+ * 等待在模型 turn 边界提交的配置队列项。
+ */
+type QueuedConfigMutation = {
+  /** 当前队列项固定为配置 mutation。 */
+  type: "config";
+
+  /** 当前待提交的配置 mutation。 */
+  mutation: SessionRuntimeConfigMutation;
+};
+
+/**
+ * Session actor 的统一有序输入。
+ */
+type QueuedSessionInput = QueuedPrompt | QueuedConfigMutation;
 
 /**
  * Promise 延迟控制器。
@@ -75,6 +95,9 @@ interface ActiveTurnState {
    * 当前 turn 的取消控制器。
    */
   abortController: AbortController;
+
+  /** 当前公开 turn 已开始的模型 turn 数量。 */
+  model_turn_index: number;
 }
 
 /**
@@ -139,7 +162,7 @@ export class SessionPromptRuntime {
   private readonly appendErrorMessage: SessionPromptRuntimeOptions["appendErrorMessage"];
   private readonly executeTurn: SessionPromptRuntimeOptions["executeTurn"];
   private readonly stopTurn: SessionPromptRuntimeOptions["stopTurn"];
-  private readonly queue: QueuedPrompt[] = [];
+  private readonly queue: QueuedSessionInput[] = [];
   private processingPromise: Promise<void> | null = null;
   private activeTurn: ActiveTurnState | null = null;
 
@@ -161,11 +184,29 @@ export class SessionPromptRuntime {
   prompt(input: AgentSessionPromptInput): Promise<AgentSessionTurnHandle> {
     const deferredHandle = createDeferred<AgentSessionTurnHandle>();
     this.queue.push({
+      type: "prompt",
       input,
       deferredHandle,
     });
     this.ensureProcessing();
     return deferredHandle.promise;
+  }
+
+  /**
+   * 把一次已成功写入 configured state 的配置修改加入统一输入队列。
+   */
+  enqueue_config(mutation: SessionRuntimeConfigMutation): void {
+    this.queue.push({
+      type: "config",
+      mutation,
+    });
+  }
+
+  /**
+   * 判断是否存在等待并入模型 turn 的 prompt。
+   */
+  has_pending_prompt(): boolean {
+    return this.queue.some((item) => item.type === "prompt");
   }
 
   /**
@@ -176,7 +217,7 @@ export class SessionPromptRuntime {
    * - Session 会用它阻止内部 direct execution 与 actor 模式并发混用。
    */
   isActive(): boolean {
-    return this.processingPromise !== null || this.queue.length > 0;
+    return this.processingPromise !== null || this.has_pending_prompt();
   }
 
   /**
@@ -211,16 +252,19 @@ export class SessionPromptRuntime {
     if (this.processingPromise) return;
     this.processingPromise = this.processLoop().finally(() => {
       this.processingPromise = null;
-      if (this.queue.length > 0) {
+      if (this.has_pending_prompt()) {
         this.ensureProcessing();
       }
     });
   }
 
   private async processLoop(): Promise<void> {
-    while (this.queue.length > 0) {
+    while (this.has_pending_prompt()) {
+      const prompt_index = this.queue.findIndex((item) => item.type === "prompt");
+      if (prompt_index < 0) break;
+      const queued_before_prompt = this.queue.splice(0, prompt_index);
       const current = this.queue.shift();
-      if (!current) break;
+      if (!current || current.type !== "prompt") break;
 
       const turnId = `turn:${this.sessionId}:${Date.now()}:${nanoid(6)}`;
       const activeTurn = createActiveTurnState(turnId);
@@ -237,12 +281,18 @@ export class SessionPromptRuntime {
       current.deferredHandle.resolve(createTurnHandle(activeTurn));
 
       try {
+        await this.apply_config_mutations(
+          queued_before_prompt.filter(
+            (item): item is QueuedConfigMutation => item.type === "config",
+          ),
+          activeTurn,
+        );
         await this.createAndPersistUserMessage(current.input, turnId, "prompt");
         const result = await this.executeTurn({
           turnId,
           promptInput: current.input,
           onStepMerge: async () => {
-            return await this.drainQueuedPromptsAsMessages(activeTurn);
+            return await this.drain_queued_inputs(activeTurn);
           },
           abortSignal: activeTurn.abortController.signal,
         });
@@ -317,8 +367,12 @@ export class SessionPromptRuntime {
   }
 
   private cancelQueuedPrompts(): number {
-    if (this.queue.length <= 0) return 0;
-    const cancelled = this.queue.splice(0, this.queue.length);
+    const cancelled = this.queue.filter(
+      (item): item is QueuedPrompt => item.type === "prompt",
+    );
+    if (cancelled.length <= 0) return 0;
+    const retained = this.queue.filter((item) => item.type === "config");
+    this.queue.splice(0, this.queue.length, ...retained);
     for (const item of cancelled) {
       const turnId = `turn:${this.sessionId}:cancelled:${Date.now()}:${nanoid(6)}`;
       const cancelledTurn = createActiveTurnState(turnId);
@@ -359,15 +413,30 @@ export class SessionPromptRuntime {
     return cancelled.length;
   }
 
-  private async drainQueuedPromptsAsMessages(
+  /**
+   * 在下一模型 turn 开始前按入队顺序提交配置并持久化 steer。
+   */
+  private async drain_queued_inputs(
     activeTurn: ActiveTurnState,
   ): Promise<SessionUserMessageV1[]> {
+    activeTurn.model_turn_index += 1;
     if (this.queue.length <= 0) return [];
     const drained = this.queue.splice(0, this.queue.length);
     const merged: SessionUserMessageV1[] = [];
 
     for (let index = 0; index < drained.length; index += 1) {
       const item = drained[index];
+      if (item.type === "config") {
+        try {
+          await item.mutation.apply({
+            turn_id: activeTurn.turnId,
+            model_turn_index: activeTurn.model_turn_index,
+          });
+        } catch {
+          // 配置实现负责写 failed action；单条失败不能吞掉后续 steer 或配置。
+        }
+        continue;
+      }
       try {
         const message = await this.createAndPersistUserMessage(
           item.input,
@@ -385,6 +454,27 @@ export class SessionPromptRuntime {
     }
 
     return merged;
+  }
+
+  /**
+   * 提交一组已经从统一队列截取的配置 mutation。
+   */
+  private async apply_config_mutations(
+    mutations: QueuedConfigMutation[],
+    active_turn: ActiveTurnState,
+  ): Promise<void> {
+    if (mutations.length <= 0) return;
+    active_turn.model_turn_index += 1;
+    for (const item of mutations) {
+      try {
+        await item.mutation.apply({
+          turn_id: active_turn.turnId,
+          model_turn_index: active_turn.model_turn_index,
+        });
+      } catch {
+        // 配置实现负责写 failed action；单条失败不能阻断当前 prompt。
+      }
+    }
   }
 }
 
@@ -426,6 +516,7 @@ function createActiveTurnState(turnId: string): ActiveTurnState {
     result: null,
     deferredFinished: createDeferred<AgentSessionTurnResult>(),
     abortController: new AbortController(),
+    model_turn_index: 0,
   };
 }
 

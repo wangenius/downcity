@@ -19,6 +19,15 @@ export interface SessionLocalState {
   sessionConfig: AgentSessionConfigSnapshot;
 
   /**
+   * 当前模型 turn 实际使用的 Session 配置。
+   *
+   * 关键点（中文）
+   * - `sessionConfig` 是配置 API 最近一次成功写入的 configured state。
+   * - 该字段只在模型 turn 开始前由队列 mutation 更新。
+   */
+  effective_session_config: AgentSessionConfigSnapshot;
+
+  /**
    * 当前 session 创建时间（毫秒时间戳）。
    */
   createdAt: number;

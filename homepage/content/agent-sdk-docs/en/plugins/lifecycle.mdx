@@ -9,8 +9,10 @@ Plugins belong to an Agent.
 
 The lifecycle can be simplified to two operations:
 
-- register: the plugin enters `agent.plugins` and immediately participates in actions, system text, hooks, and resolves
-- unregister: the plugin is removed from `agent.plugins` and becomes invisible
+- register: the plugin successfully enters `agent.plugins`
+- unregister: the plugin is successfully removed from `agent.plugins`
+
+Direct host calls through `agent.plugins` immediately observe the configured registry. Existing Sessions switch their model execution view before the next model turn. An in-flight provider request keeps the action metadata and system view captured for its current turn, and the Session timeline emits a completed action message when the new view becomes effective.
 
 You no longer need a separate start, stop, restart, or project-level enabled switch.
 

@@ -142,6 +142,33 @@ export interface AgentPlugins {
     pointName: string,
     value: TInput,
   ): Promise<TOutput>;
+
+}
+
+/**
+ * 单次模型 turn 可使用的 Plugin 能力视图。
+ */
+export interface AgentPluginExecutionRuntime {
+  /** 读取当前视图中的 plugin/action metadata。 */
+  read(params: {
+    /** Plugin 名称（可选）。 */
+    plugin?: string;
+    /** Action 名称（可选）。 */
+    action?: string;
+  }): PluginReadView | { plugins: PluginView[] };
+
+  /** 运行当前视图中捕获的 plugin action。 */
+  runAction(params: {
+    /** Plugin 名称。 */
+    plugin: string;
+    /** Action 名称。 */
+    action: string;
+    /** Action Payload（可选）。 */
+    payload?: JsonValue;
+  }): Promise<PluginActionResult<JsonValue>>;
+
+  /** 解析当前视图中捕获的 plugin system blocks。 */
+  systemBlocks(): Promise<AgentSessionSystemBlock[]>;
 }
 
 /**

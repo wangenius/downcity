@@ -44,6 +44,9 @@ export interface ShellToolRunContext {
    * 当前 tool 调用所属的 turn id。
    */
   turnId?: string;
+
+  /** 当前模型 turn 已提交生效的 Agent env。 */
+  env?: Readonly<Record<string, string>>;
 }
 
 /**

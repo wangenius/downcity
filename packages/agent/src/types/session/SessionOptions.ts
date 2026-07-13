@@ -11,6 +11,8 @@ import type { Tool } from "ai";
 import type { AgentSession } from "@/types/agent/SessionActor.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import type { AgentSessionSystemBlock } from "@/types/agent/SessionTypes.js";
+import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.js";
+import type { AgentSessionConfigMutation } from "@/types/session/SessionConfigMutation.js";
 import type { SessionComposerOptions } from "@/types/session/SessionComposerOptions.js";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { AgentModel } from "@/model/CityModelAdapter.js";
@@ -40,6 +42,13 @@ export interface AgentManagedSession extends AgentSession {
    * 返回当前 session 是否正在执行。
    */
   isExecuting(): boolean;
+
+  /**
+   * 把 Agent configured state 修改加入当前 Session 的统一输入队列。
+   */
+  enqueue_agent_config(
+    mutation: AgentSessionConfigMutation,
+  ): void;
 }
 
 /**
@@ -75,6 +84,18 @@ export interface SessionOptions {
    * 读取当前 SDK 调用方传入的 instruction system blocks。
    */
   getInstructionSystemBlocks: () => AgentSessionSystemBlock[];
+
+  /**
+   * 读取当前 Agent configured env。
+   *
+   * 关键点（中文）
+   * - Session 创建时用它建立初始 effective env。
+   * - 后续 Agent env 修改通过 Session 配置 mutation 在模型 turn 边界提交。
+   */
+  getAgentEnv: () => Record<string, string>;
+
+  /** 创建当前 Agent configured plugin 的模型 turn 执行视图。 */
+  get_agent_plugins: () => AgentPluginExecutionRuntime;
 
   /**
    * 读取当前 agent 显式注入的受托管 plugin system blocks。

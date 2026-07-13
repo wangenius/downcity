@@ -116,7 +116,7 @@ new Agent({
 
 ### 运行时更新 env
 
-构造 agent 之后，你也可以在运行期增量更新或整体替换它的环境变量。所有 plugin、session、shell 共享同一份 env 引用，调用以下方法会立即生效：
+构造 agent 之后，你也可以在运行期增量更新或整体替换 configured env：
 
 ```ts
 const agent = new Agent({ id, path, env: { FOO: "1" } });
@@ -132,6 +132,9 @@ agent.setEnv({ ONLY: "ok" });  // 整体覆盖
 - `getEnv()` 返回的是浅拷贝快照，修改它不会影响 agent 真实状态
 - `patchEnv()` 中 `null` / `undefined` 表示删除该 key，其余值会强制转字符串
 - `setEnv()` 会先清空当前 env，再写入新值，仍然保持原引用不变
+- 已有 Session 会在下一模型 turn 开始前统一提交 Agent instruction、env 与 plugin 修改
+- 正在进行的 provider 请求及其工具调用继续使用本模型 turn 已生效的 env
+- 配置真正生效时，Session timeline 会写入 completed action message
 - 运行时变更只活在内存，不会回写项目 `.env` 或系统环境变量
 
 ## `tools`

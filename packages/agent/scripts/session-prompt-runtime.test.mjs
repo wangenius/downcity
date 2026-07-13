@@ -139,6 +139,91 @@ test("SessionPromptRuntime merges queued prompts at the next step boundary", asy
   );
 });
 
+test("SessionPromptRuntime applies config and steer in queue order before the next model turn", async () => {
+  const lifecycle = [];
+  const execution_finished = createDeferred();
+  let step_merge = null;
+
+  const runtime = new SessionPromptRuntime({
+    sessionId: "test",
+    publish: () => {},
+    createAndPersistUserMessage: async (input, _turn_id, input_type) => {
+      lifecycle.push(`${input_type}:${input.query}`);
+      return createUserMessage(input.query, lifecycle.length);
+    },
+    appendErrorMessage: async () => {},
+    executeTurn: async (input) => {
+      step_merge = input.onStepMerge;
+      await execution_finished.promise;
+      return {
+        text: "done",
+        success: true,
+        assistantMessage: createAssistantMessage("done", 1),
+      };
+    },
+    stopTurn: () => false,
+  });
+
+  runtime.enqueue_config({
+    mutation_id: "config-1",
+    scope: "agent",
+    apply: async ({ model_turn_index }) => {
+      lifecycle.push(`config:1:${String(model_turn_index)}`);
+    },
+  });
+  const first_turn = await runtime.prompt({ query: "first" });
+  const merge = await waitUntil(() => step_merge);
+  runtime.enqueue_config({
+    mutation_id: "config-2",
+    scope: "session",
+    apply: async ({ model_turn_index }) => {
+      lifecycle.push(`config:2:${String(model_turn_index)}`);
+    },
+  });
+  const second_turn_promise = runtime.prompt({ query: "second" });
+
+  const messages = await merge();
+  const second_turn = await second_turn_promise;
+
+  assert.equal(second_turn.id, first_turn.id);
+  assert.deepEqual(
+    messages.map((message) => message.parts[0]?.text),
+    ["second"],
+  );
+  assert.deepEqual(lifecycle, [
+    "config:1:1",
+    "prompt:first",
+    "config:2:2",
+    "steer:second",
+  ]);
+
+  execution_finished.resolve();
+  await first_turn.finished;
+});
+
+test("SessionPromptRuntime keeps config queued without starting a turn", async () => {
+  let apply_count = 0;
+  const runtime = new SessionPromptRuntime({
+    sessionId: "test",
+    publish: () => {},
+    createAndPersistUserMessage: async (input) => createUserMessage(input.query, 1),
+    appendErrorMessage: async () => {},
+    executeTurn: async () => ({ text: "done", success: true }),
+    stopTurn: () => false,
+  });
+
+  runtime.enqueue_config({
+    mutation_id: "config-only",
+    scope: "agent",
+    apply: async () => {
+      apply_count += 1;
+    },
+  });
+
+  assert.equal(runtime.isActive(), false);
+  assert.equal(apply_count, 0);
+});
+
 test("SessionPromptRuntime moves unmerged prompts into the next turn", async () => {
   const events = [];
   const finishQueue = [];

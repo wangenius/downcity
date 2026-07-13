@@ -58,7 +58,7 @@ SDK 内部的沙箱运行器负责 shell 子进程创建、平台后端调用和
 
 ### Env
 
-`shell_exec` 和 `shell_session` 使用当前 Agent env 构造子进程环境。宿主可以通过 `agent.setEnv(next)` 或 `agent.patchEnv(patch)` 在 Agent 创建后动态更新 env，后续 shell 调用会读取最新值。
+`shell_exec` 和 `shell_session` 使用当前模型 turn 已生效的 Agent env 构造子进程环境。宿主可以通过 `agent.setEnv(next)` 或 `agent.patchEnv(patch)` 动态更新 configured env；已有 Session 会在下一模型 turn 开始前提交该修改，当前 provider 请求及其工具调用继续使用原 env。
 
 safe sandbox 只会导出两类环境变量：
 

@@ -116,7 +116,7 @@ Key points:
 
 ### Updating env at runtime
 
-After constructing the agent, you can also update or replace its environment variables at runtime. All plugins, sessions, and the shell share the same env reference, so the following methods take effect immediately:
+After constructing the agent, you can update or replace its configured environment variables at runtime:
 
 ```ts
 const agent = new Agent({ id, path, env: { FOO: "1" } });
@@ -132,6 +132,9 @@ Key points:
 - `getEnv()` returns a shallow snapshot, so mutating it does not affect the agent
 - `patchEnv()` treats `null` / `undefined` as delete; other values are coerced to string
 - `setEnv()` clears the current env first and then writes the new values, keeping the same underlying reference
+- existing Sessions commit Agent instruction, env, and plugin changes before their next model turn
+- an in-flight provider request and its tool calls keep the env that was effective when that model turn began
+- the Session timeline emits a completed action message when the change becomes effective
 - Runtime changes live in memory only; they are not written back to the project `.env` or to the system environment
 
 ## `tools`

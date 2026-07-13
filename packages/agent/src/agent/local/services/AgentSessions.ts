@@ -41,6 +41,7 @@ import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import { createInstructionSystemBlocks } from "@/agent/local/AgentInstructions.js";
 import type { Shell } from "@downcity/shell";
 import type { SessionApproval } from "@/types/session/SessionApproval.js";
+import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.js";
 
 function decodeMaybe(input: string): string {
   try {
@@ -87,6 +88,12 @@ type AgentSessionsOptions = {
    */
   get_instruction: () => string[];
 
+  /** 延迟读取当前 Agent configured env。 */
+  get_agent_env: () => Record<string, string>;
+
+  /** 创建当前 configured Plugin registry 的模型 turn 执行视图。 */
+  get_agent_plugins: () => AgentPluginExecutionRuntime;
+
   /**
    * 等待当前 Agent 后台能力启动完成。
    */
@@ -120,6 +127,8 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
   private readonly get_agent_context: AgentSessionsOptions["get_agent_context"];
   private readonly get_shell: AgentSessionsOptions["get_shell"];
   private readonly get_instruction: AgentSessionsOptions["get_instruction"];
+  private readonly get_agent_env: AgentSessionsOptions["get_agent_env"];
+  private readonly get_agent_plugins: AgentSessionsOptions["get_agent_plugins"];
   private readonly ensure_agent_ready: AgentSessionsOptions["ensure_agent_ready"];
   private readonly default_model?: AgentModel;
   private readonly default_model_id?: string;
@@ -136,6 +145,8 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
     this.get_agent_context = options.get_agent_context;
     this.get_shell = options.get_shell;
     this.get_instruction = options.get_instruction;
+    this.get_agent_env = options.get_agent_env;
+    this.get_agent_plugins = options.get_agent_plugins;
     this.ensure_agent_ready = options.ensure_agent_ready;
     this.default_model = options.default_model;
     this.default_model_id = options.default_model_id;
@@ -148,6 +159,54 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
    */
   list_cached_sessions(): AgentManagedSession[] {
     return [...this.sessions_by_id.values()];
+  }
+
+  /**
+   * 把 Agent instruction 修改广播到已有 Session 的统一输入队列。
+   */
+  broadcast_instruction(instruction: string[], mutation_id: string): void {
+    const instruction_blocks = createInstructionSystemBlocks(
+      instruction,
+      this.project_root,
+    );
+    for (const session of this.sessions_by_id.values()) {
+      session.enqueue_agent_config({
+        type: "instruction",
+        mutation_id,
+        instruction_blocks,
+      });
+    }
+  }
+
+  /**
+   * 把 Agent env 修改广播到已有 Session 的统一输入队列。
+   */
+  broadcast_env(env: Record<string, string>, mutation_id: string): void {
+    for (const session of this.sessions_by_id.values()) {
+      session.enqueue_agent_config({
+        type: "env",
+        mutation_id,
+        env: { ...env },
+      });
+    }
+  }
+
+  /**
+   * 把 Plugin registry 修改广播到已有 Session 的统一输入队列。
+   */
+  broadcast_plugins(input: {
+    mutation_id: string;
+    title: string;
+    plugins: AgentPluginExecutionRuntime;
+  }): void {
+    for (const session of this.sessions_by_id.values()) {
+      session.enqueue_agent_config({
+        type: "plugins",
+        mutation_id: input.mutation_id,
+        title: input.title,
+        plugins: input.plugins,
+      });
+    }
   }
 
   /**
@@ -348,6 +407,8 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
       tools: this.tools,
       logger: this.logger,
       getInstructionSystemBlocks: () => this.load_instruction_system_blocks(),
+      getAgentEnv: () => this.get_agent_env(),
+      get_agent_plugins: () => this.get_agent_plugins(),
       getManagedPluginSystemBlocks: async () => [],
       getPluginSystemBlocks: async () => await this.load_plugin_system_blocks(),
       ensureConfigured: async (session) => {

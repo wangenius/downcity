@@ -22,6 +22,7 @@ import type {
 import { SessionEventHub } from "@/session/runtime/SessionEventHub.js";
 import { SessionPromptRuntime } from "@/session/runtime/SessionPromptRuntime.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
+import type { SessionRuntimeConfigMutation } from "@/types/session/SessionConfigMutation.js";
 import { SessionStateService } from "@/session/services/SessionStateService.js";
 import {
   SessionAssistantMessageWriter,
@@ -137,6 +138,13 @@ export class SessionTurnService {
   }
 
   /**
+   * 把 configured state 修改加入当前 Session 的统一输入队列。
+   */
+  enqueue_config(mutation: SessionRuntimeConfigMutation): void {
+    this.prompt_runtime.enqueue_config(mutation);
+  }
+
+  /**
    * 停止当前 turn，并取消尚未被吸收的排队 prompt。
    */
   async stop(): Promise<AgentSessionStopResult> {
@@ -182,6 +190,7 @@ export class SessionTurnService {
         }
         return merged;
       },
+      hasPendingStepInput: () => this.prompt_runtime.has_pending_prompt(),
       onUiMessageChunkCallback: async (chunk) => {
         if (!is_assistant_content_chunk(chunk.type)) return;
         const writer = await ensure_assistant_writer();

@@ -32,6 +32,7 @@ import type {
 import { to_session_action_record } from "@/executor/types/SessionRecords.js";
 import type { SessionExecutor } from "@/executor/types/SessionExecutor.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
+import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.js";
 import type {
   SessionExecuteInput,
   SessionRunResult,
@@ -87,6 +88,17 @@ type ExecutorOptions = {
   getTools: () => Record<string, Tool>;
 
   /**
+   * 读取当前 Session effective Agent env。
+   */
+  getEnv: () => Record<string, string>;
+
+  /** 读取当前 Session effective Agent instruction 文本。 */
+  get_systems?: () => string[];
+
+  /** 创建当前 Session effective Plugin 执行视图。 */
+  get_plugins?: () => AgentPluginExecutionRuntime;
+
+  /**
    * 可选自定义 context Composer。
    */
   contextComposer?: SessionContextComposer;
@@ -105,6 +117,9 @@ export class Executor implements SessionExecutor {
   private readonly historyComposer: SessionHistoryComposer;
   private readonly historyStore: SessionHistoryStore;
   private readonly getModel: ExecutorOptions["getModel"];
+  private readonly getEnv: ExecutorOptions["getEnv"];
+  private readonly get_systems: ExecutorOptions["get_systems"];
+  private readonly get_plugins: ExecutorOptions["get_plugins"];
   private readonly get_model_context_window?: ExecutorOptions["get_model_context_window"];
   private readonly logger: Logger;
   private readonly compactionComposer: SessionCompactionComposer;
@@ -128,6 +143,9 @@ export class Executor implements SessionExecutor {
     this.historyStore = options.historyStore;
     this.historyComposer = options.historyComposer;
     this.getModel = options.getModel;
+    this.getEnv = options.getEnv;
+    this.get_systems = options.get_systems;
+    this.get_plugins = options.get_plugins;
     this.get_model_context_window = options.get_model_context_window;
     this.logger = options.logger;
     this.compactionComposer =
@@ -422,7 +440,39 @@ export class Executor implements SessionExecutor {
       execute_input: input,
       model,
       run_context,
+      resolve_model_turn: async () =>
+        await this.resolve_model_turn(run_context),
     });
+  }
+
+  /**
+   * 解析下一次 provider 请求实际使用的运行配置。
+   *
+   * 关键点（中文）
+   * - 调用方必须先提交 Session 统一输入队列，再调用本方法。
+   * - 每次调用只读取一次 model、system 与 tools，并把它们传给同一个 `streamText()`。
+   */
+  private async resolve_model_turn(run_context: SessionRunContext): Promise<{
+    model: LanguageModel;
+    system: SessionExecuteInput["system"];
+    tools: SessionExecuteInput["tools"];
+  }> {
+    run_context.agentEnv = Object.freeze({ ...this.getEnv() });
+    if (this.get_systems) {
+      run_context.agentSystems = Object.freeze([...this.get_systems()]);
+    }
+    if (this.get_plugins) {
+      run_context.agentPlugins = this.get_plugins();
+    }
+    const composed_context = await this.contextComposer.compose(run_context);
+    return {
+      model: this.resolveModelOrThrow(),
+      system: await this.systemComposer.resolve(run_context),
+      tools: this.bind_run_scope_to_tools(
+        composed_context.tools,
+        run_context,
+      ),
+    };
   }
 
   /**
@@ -455,6 +505,9 @@ export class Executor implements SessionExecutor {
               run_context: {
                 ...(session_id ? { session_id } : {}),
                 ...(turn_id ? { turn_id } : {}),
+                ...(run_context.agentEnv
+                  ? { env: run_context.agentEnv }
+                  : {}),
               },
             },
             async () => await original_execute(args, options),

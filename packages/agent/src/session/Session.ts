@@ -55,6 +55,7 @@ import { SessionStateService } from "@/session/services/SessionStateService.js";
 import { SessionTurnService } from "@/session/services/SessionTurnService.js";
 import { SessionViewService } from "@/session/services/SessionViewService.js";
 import type { SessionLocalState } from "@/types/session/SessionLocalState.js";
+import type { AgentSessionConfigMutation } from "@/types/session/SessionConfigMutation.js";
 import type {
   SessionComposerFactoryContext,
   SessionComposerInput,
@@ -65,6 +66,7 @@ import type { SessionContextComposer } from "@/executor/composer/context/Session
 import type { SessionHistoryComposer } from "@/executor/composer/history/SessionHistoryComposer.js";
 import type { SessionSystemComposer } from "@/executor/composer/system/SessionSystemComposer.js";
 import type { SessionOptions } from "@/types/session/SessionOptions.js";
+import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.js";
 
 /**
  * SDK 本地 Session。
@@ -92,6 +94,11 @@ export class Session implements AgentSession {
   private readonly set_approval_mode_hook: SessionOptions["set_approval_mode"];
   private readonly resolve_approval_hook: SessionOptions["resolve_approval"];
   private readonly localState: SessionLocalState;
+  private readonly getAgentEnv: SessionOptions["getAgentEnv"];
+  private readonly get_agent_plugins: SessionOptions["get_agent_plugins"];
+  private effective_instruction_system_blocks: AgentSessionSystemBlock[];
+  private effective_agent_env: Record<string, string>;
+  private effective_agent_plugins: AgentPluginExecutionRuntime;
   private readonly stateService: SessionStateService;
   private readonly turnService: SessionTurnService;
   private readonly viewService: SessionViewService<this>;
@@ -104,6 +111,13 @@ export class Session implements AgentSession {
     this.tools = options.tools;
     this.logger = options.logger;
     this.getInstructionSystemBlocks = options.getInstructionSystemBlocks;
+    this.getAgentEnv = options.getAgentEnv;
+    this.get_agent_plugins = options.get_agent_plugins;
+    this.effective_instruction_system_blocks = options
+      .getInstructionSystemBlocks()
+      .map((block) => ({ ...block }));
+    this.effective_agent_env = { ...options.getAgentEnv() };
+    this.effective_agent_plugins = options.get_agent_plugins();
     this.getManagedPluginSystemBlocks = options.getManagedPluginSystemBlocks;
     this.getPluginSystemBlocks = options.getPluginSystemBlocks;
     this.ensureConfiguredHook = options.ensureConfigured;
@@ -187,9 +201,11 @@ export class Session implements AgentSession {
       state_service: this.stateService,
       logger: this.logger,
       is_executing: () => this.isExecuting(),
-      get_instruction_system_blocks: this.getInstructionSystemBlocks,
+      get_instruction_system_blocks: () =>
+        this.effective_instruction_system_blocks.map((block) => ({ ...block })),
       get_managed_plugin_system_blocks: this.getManagedPluginSystemBlocks,
-      get_plugin_system_blocks: this.getPluginSystemBlocks,
+      get_plugin_system_blocks: async () =>
+        await this.effective_agent_plugins.systemBlocks(),
       ...(this.composers?.systemComposer
         ? { custom_system_composer: system_composer }
         : {}),
@@ -226,7 +242,10 @@ export class Session implements AgentSession {
    * 写入当前 session 默认配置。
    */
   async set(input: AgentSessionSetInput): Promise<void> {
-    await this.stateService.set(input);
+    const configured = await this.stateService.set(input);
+    if (configured.mutation) {
+      this.turnService.enqueue_config(configured.mutation);
+    }
   }
 
   /**
@@ -241,6 +260,47 @@ export class Session implements AgentSession {
    */
   async stop(): Promise<AgentSessionStopResult> {
     return await this.turnService.stop();
+  }
+
+  /**
+   * 把 Agent configured state 修改加入当前 Session 的统一输入队列。
+   */
+  enqueue_agent_config(mutation: AgentSessionConfigMutation): void {
+    this.turnService.enqueue_config({
+      mutation_id: mutation.mutation_id,
+      scope: "agent",
+      apply: async ({ turn_id }) => {
+        if (mutation.type === "instruction") {
+          this.effective_instruction_system_blocks = mutation
+            .instruction_blocks
+            .map((block) => ({ ...block }));
+          await this.stateService.emit_action_event({
+            id: `agent-instruction:${this.id}:${mutation.mutation_id}`,
+            title: "Agent instruction updated",
+            state: "completed",
+            turnId: turn_id,
+          });
+          return;
+        }
+        if (mutation.type === "env") {
+          this.effective_agent_env = { ...mutation.env };
+          await this.stateService.emit_action_event({
+            id: `agent-env:${this.id}:${mutation.mutation_id}`,
+            title: "Agent environment updated",
+            state: "completed",
+            turnId: turn_id,
+          });
+          return;
+        }
+        this.effective_agent_plugins = mutation.plugins;
+        await this.stateService.emit_action_event({
+          id: `agent-plugins:${this.id}:${mutation.mutation_id}`,
+          title: mutation.title,
+          state: "completed",
+          turnId: turn_id,
+        });
+      },
+    });
   }
 
   /**
@@ -388,8 +448,11 @@ export class Session implements AgentSession {
       tools: this.tools,
       logger: this.logger,
       getInstructionSystemBlocks: this.getInstructionSystemBlocks,
+      getAgentEnv: this.getAgentEnv,
+      get_agent_plugins: this.get_agent_plugins,
       getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
-      getPluginSystemBlocks: this.getPluginSystemBlocks,
+      getPluginSystemBlocks: async () =>
+        await this.effective_agent_plugins.systemBlocks(),
       ensureConfigured: this.ensureConfiguredHook,
       composers: this.composers,
       list_approvals: this.list_approvals,
@@ -441,6 +504,7 @@ export class Session implements AgentSession {
   private create_local_state(): SessionLocalState {
     return {
       sessionConfig: {},
+      effective_session_config: {},
       createdAt: Date.now(),
       timezone: resolveSystemTimezone(),
       initializePromise: null,
@@ -455,9 +519,11 @@ export class Session implements AgentSession {
       sessionId: this.id,
       historyStore: this.historyStore,
       getTools: () => this.tools,
-      getInstructionSystemBlocks: this.getInstructionSystemBlocks,
+      getInstructionSystemBlocks: () =>
+        this.effective_instruction_system_blocks.map((block) => ({ ...block })),
       getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
-      getPluginSystemBlocks: this.getPluginSystemBlocks,
+      getPluginSystemBlocks: async () =>
+        await this.effective_agent_plugins.systemBlocks(),
       getSessionCreatedAt: () => this.localState.createdAt,
       getSessionTimezone: () => this.localState.timezone,
     };
@@ -482,9 +548,11 @@ export class Session implements AgentSession {
         projectRoot: this.projectRoot,
         getSessionCreatedAt: () => this.localState.createdAt,
         getSessionTimezone: () => this.localState.timezone,
-        getInstructionSystemBlocks: this.getInstructionSystemBlocks,
+        getInstructionSystemBlocks: () =>
+          this.effective_instruction_system_blocks.map((block) => ({ ...block })),
         getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
-        getPluginSystemBlocks: this.getPluginSystemBlocks,
+        getPluginSystemBlocks: async () =>
+          await this.effective_agent_plugins.systemBlocks(),
       }),
     );
   }
@@ -516,12 +584,20 @@ export class Session implements AgentSession {
       sessionId: this.id,
       historyStore: this.historyStore,
       historyComposer: this.historyComposer,
-      getModel: () => this.localState.sessionConfig.model,
+      getModel: () =>
+        this.localState.effective_session_config.model ||
+        this.localState.sessionConfig.model,
       get_model_context_window: () =>
-        this.localState.sessionConfig.model_context_window,
+        this.localState.effective_session_config.model
+          ? this.localState.effective_session_config.model_context_window
+          : this.localState.sessionConfig.model_context_window,
       logger: this.logger,
       systemComposer: system_composer,
       getTools: () => this.tools,
+      getEnv: () => ({ ...this.effective_agent_env }),
+      get_systems: () =>
+        this.effective_instruction_system_blocks.map((block) => block.content),
+      get_plugins: () => this.effective_agent_plugins,
       ...(context_composer ? { contextComposer: context_composer } : {}),
       ...(compaction_composer
         ? { compactionComposer: compaction_composer }

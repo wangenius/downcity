@@ -13,6 +13,7 @@ import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import type { PluginActionResult } from "@/types/plugin/PluginAction.js";
 import type {
   AgentPlugins,
+  AgentPluginExecutionRuntime,
   PluginAvailability,
   PluginActionReadView,
   PluginReadView,
@@ -101,6 +102,13 @@ export class PluginRegistry implements AgentPlugins {
 
   private readonly records = new Map<string, PluginRuntimeRecord>();
 
+  private change_listener?: (input: {
+    /** 当前修改是注册还是卸载。 */
+    type: "register" | "unregister";
+    /** 当前修改的 plugin 名称。 */
+    plugin_name: string;
+  }) => void;
+
   constructor(params: {
     contextResolver: ContextResolver;
     hookRegistry: HookRegistry;
@@ -109,6 +117,13 @@ export class PluginRegistry implements AgentPlugins {
     this.contextResolver = params.contextResolver;
     this.hookRegistry = params.hookRegistry;
     this.pluginInstances = params.pluginInstances;
+  }
+
+  /**
+   * 设置 Agent 内部配置修改监听器。
+   */
+  set_change_listener(listener: PluginRegistry["change_listener"]): void {
+    this.change_listener = listener;
   }
 
   /**
@@ -134,6 +149,7 @@ export class PluginRegistry implements AgentPlugins {
 
     try {
       await this.start_record(record);
+      this.change_listener?.({ type: "register", plugin_name: key });
       return to_plugin_snapshot(record);
     } catch (error) {
       this.unregister_hooks(key);
@@ -179,6 +195,7 @@ export class PluginRegistry implements AgentPlugins {
     this.unregister_hooks(key);
     this.records.delete(key);
     this.pluginInstances.delete(key);
+    this.change_listener?.({ type: "unregister", plugin_name: key });
     return true;
   }
 
@@ -381,11 +398,25 @@ export class PluginRegistry implements AgentPlugins {
     plugin?: string;
     action?: string;
   }): PluginReadView | { plugins: PluginView[] } {
+    return this.read_from_records(this.records, params);
+  }
+
+  /**
+   * 从指定记录视图读取 plugin/action metadata。
+   */
+  private read_from_records(
+    records: ReadonlyMap<string, PluginRuntimeRecord>,
+    params: { plugin?: string; action?: string },
+  ): PluginReadView | { plugins: PluginView[] } {
     const pluginName = normalize_plugin_name(params.plugin || "");
     if (!pluginName) {
-      return { plugins: this.list() };
+      return {
+        plugins: Array.from(records.values())
+          .map((record) => toPluginView(record.plugin))
+          .sort((left, right) => left.name.localeCompare(right.name)),
+      };
     }
-    const plugin = this.get(pluginName);
+    const plugin = records.get(pluginName)?.plugin || null;
     if (!plugin) {
       return {
         name: pluginName,
@@ -470,8 +501,22 @@ export class PluginRegistry implements AgentPlugins {
     action: string;
     payload?: JsonValue;
   }): Promise<PluginActionResult<JsonValue>> {
+    return await this.run_action_from_records(this.records, params);
+  }
+
+  /**
+   * 从指定记录视图运行 plugin action。
+   */
+  private async run_action_from_records(
+    records: ReadonlyMap<string, PluginRuntimeRecord>,
+    params: {
+      plugin: string;
+      action: string;
+      payload?: JsonValue;
+    },
+  ): Promise<PluginActionResult<JsonValue>> {
     const key = normalize_plugin_name(params.plugin);
-    const record = this.records.get(key);
+    const record = records.get(key);
     if (!record) {
       return {
         success: false,
@@ -536,9 +581,18 @@ export class PluginRegistry implements AgentPlugins {
    * 读取当前生效的 plugin system blocks。
    */
   async systemBlocks(): Promise<AgentSessionSystemBlock[]> {
+    return await this.system_blocks_from_records(this.records);
+  }
+
+  /**
+   * 从指定记录视图解析 plugin system blocks。
+   */
+  private async system_blocks_from_records(
+    records: ReadonlyMap<string, PluginRuntimeRecord>,
+  ): Promise<AgentSessionSystemBlock[]> {
     const context = this.contextResolver();
     const out: AgentSessionSystemBlock[] = [];
-    for (const record of this.records.values()) {
+    for (const record of records.values()) {
       const plugin = record.plugin;
       if (record.state !== "ready") continue;
       if (typeof plugin.system !== "function") continue;
@@ -559,5 +613,19 @@ export class PluginRegistry implements AgentPlugins {
       }
     }
     return out;
+  }
+
+  /**
+   * 创建当前 configured registry 的模型 turn 执行视图。
+   */
+  execution_view(): AgentPluginExecutionRuntime {
+    const records = new Map(this.records);
+    return {
+      read: (params) => this.read_from_records(records, params),
+      runAction: async (params) =>
+        await this.run_action_from_records(records, params),
+      systemBlocks: async () =>
+        await this.system_blocks_from_records(records),
+    };
   }
 }

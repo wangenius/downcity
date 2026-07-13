@@ -9,8 +9,10 @@ Plugin 只属于 Agent。
 
 它的生命周期可以简化成两件事：
 
-- 注册：plugin 进入 `agent.plugins`，立即参与 action、system、hooks 和 resolves
-- 卸载：plugin 从 `agent.plugins` 移除，之后完全不可见
+- 注册：plugin 成功进入 `agent.plugins`
+- 卸载：plugin 成功从 `agent.plugins` 移除
+
+宿主直接调用 `agent.plugins` 时会立即看到新的 configured registry。已有 Session 的模型执行视图则在下一模型 turn 开始前切换；当前 provider 请求继续使用本 turn 已捕获的 action、metadata 与 system 视图。切换完成后，Session timeline 会写入 completed action message。
 
 不再需要单独理解 start、stop、restart 或项目级 enabled 开关。
 

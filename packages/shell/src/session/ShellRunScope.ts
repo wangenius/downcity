@@ -22,6 +22,9 @@ export interface ShellScopedRunContext {
    * 当前宿主 turn id。
    */
   turn_id?: string;
+
+  /** 当前模型 turn 已提交生效的 Agent env。 */
+  env?: Readonly<Record<string, string>>;
 }
 
 /**

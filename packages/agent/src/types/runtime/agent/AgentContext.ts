@@ -34,6 +34,7 @@ import type {
 } from "@/types/session/SessionMutation.js";
 import type { SessionApprovalRuntimeEvent } from "@/types/session/SessionApproval.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
+import { getSessionRunContext } from "@/executor/SessionRunScope.js";
 
 /**
  * 跨 plugin runtime 调用参数。
@@ -233,7 +234,7 @@ export interface AgentContextOptions {
    *
    * 关键点（中文）
    * - 必须是 Agent 持有的同一个 mutable 引用，不要克隆后再传入。
-   * - 通过 `agent.setEnv` / `agent.patchEnv` 原地更新会被本 context 立即感知。
+   * - Session 模型 turn 内优先读取队列已经提交的 effective env。
    */
   env: Record<string, string>;
   /** 当前生效的 system 文本集合。 */
@@ -267,10 +268,10 @@ export class AgentContext {
   readonly logger: Logger;
   /** 当前运行时已解析配置。 */
   readonly config: DowncityConfig;
-  /** 当前项目环境变量共享视图。 */
-  readonly env: Record<string, string>;
-  /** 当前生效的 system 文本集合。 */
-  readonly systems: string[];
+  /** 当前 Agent configured env 共享对象。 */
+  private readonly configured_env: Record<string, string>;
+  /** 当前 Agent configured system 文本。 */
+  private readonly configured_systems: string[];
   /** 当前可见的路径能力集合。 */
   readonly paths: AgentPathRuntime;
   /** 当前可见的 plugin 配置持久化能力集合。 */
@@ -289,8 +290,8 @@ export class AgentContext {
     this.rootPath = options.rootPath;
     this.logger = options.logger;
     this.config = options.config;
-    this.env = options.env;
-    this.systems = options.systems;
+    this.configured_env = options.env;
+    this.configured_systems = options.systems;
     this.paths = options.paths;
     this.pluginConfig = options.pluginConfig;
     this.pluginInstances = options.pluginInstances;
@@ -299,6 +300,30 @@ export class AgentContext {
     this.invoke = {
       invoke: (params) => this.invoke_plugin_action(params),
     };
+  }
+
+  /**
+   * 读取当前调用链可见的 Agent env。
+   *
+   * 关键点（中文）
+   * - 模型 turn 内优先返回统一输入队列已经提交的 effective env。
+   * - Session 运行外返回 Agent 配置 API 最近一次成功写入的 configured env。
+   */
+  get env(): Record<string, string> {
+    const effective_env = getSessionRunContext()?.agentEnv;
+    return effective_env
+      ? { ...effective_env }
+      : this.configured_env;
+  }
+
+  /**
+   * 读取当前调用链可见的 Agent instruction。
+   */
+  get systems(): string[] {
+    const effective_systems = getSessionRunContext()?.agentSystems;
+    return effective_systems
+      ? [...effective_systems]
+      : this.configured_systems;
   }
 
   /**

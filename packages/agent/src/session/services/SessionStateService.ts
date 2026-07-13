@@ -37,6 +37,7 @@ import type {
   SessionUserMessageV1,
 } from "@/executor/types/SessionRecords.js";
 import type { SessionLocalState } from "@/types/session/SessionLocalState.js";
+import type { SessionRuntimeConfigMutation } from "@/types/session/SessionConfigMutation.js";
 import { generateId } from "@/utils/Id.js";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { AgentModel } from "@/model/CityModelAdapter.js";
@@ -114,6 +115,20 @@ type SessionSetOptions = {
 };
 
 type EmitActionInput = SessionActionRecordInputV1 | SessionActionRecordV1;
+
+/**
+ * Session 配置成功写入后的队列提交结果。
+ */
+export interface SessionConfiguredMutationResult {
+  /**
+   * 等待在下一模型 turn 提交的 mutation。
+   *
+   * 说明（中文）
+   * - 输入未产生实际配置变化时为空。
+   * - fork 等内部初始化路径可以选择立即提交而不返回 mutation。
+   */
+  mutation?: SessionRuntimeConfigMutation;
+}
 
 /**
  * 本地 Session 状态与持久化服务。
@@ -208,6 +223,9 @@ export class SessionStateService {
         ...(metadata.modelId ? { modelId: metadata.modelId } : {}),
       };
       await this.restore_persisted_model();
+      this.state.effective_session_config = {
+        ...this.state.sessionConfig,
+      };
     })();
     await this.state.initializePromise;
   }
@@ -246,7 +264,10 @@ export class SessionStateService {
   /**
    * 写入当前 session 配置。
    */
-  async set(input: AgentSessionSetInput, options?: SessionSetOptions): Promise<void> {
+  async set(
+    input: AgentSessionSetInput,
+    options?: SessionSetOptions,
+  ): Promise<SessionConfiguredMutationResult> {
     const should_emit_action = options?.emit_action !== false;
     const previous_model_label = this.state.sessionConfig.modelLabel;
     const previous_model_id = String(
@@ -272,49 +293,71 @@ export class SessionStateService {
     const next_model_name = next_model_label || next_model_id;
     const action_id = `model-switching:${this.session_id}:${Date.now()}:${generateId()}`;
 
-    if (should_emit_model_switch_action) {
-      await this.emit_action_event({
-        id: action_id,
-        title: `Switching session model from ${previous_model_name} to ${next_model_name}`,
-        state: "running",
-      });
-    }
-
     try {
+      const next_config: AgentSessionConfigSnapshot = {
+        ...this.state.sessionConfig,
+      };
       if (next_model) {
-        this.state.sessionConfig.model = normalizeAgentModel(next_model);
-        this.state.sessionConfig.modelLabel = next_model_label;
-        this.state.sessionConfig.model_context_window =
+        next_config.model = normalizeAgentModel(next_model);
+        next_config.modelLabel = next_model_label;
+        next_config.model_context_window =
           read_agent_model_context_window(next_model);
       }
       if (next_model_id) {
-        this.state.sessionConfig.modelId = next_model_id;
+        next_config.modelId = next_model_id;
       }
       await patchSessionModelLabel({
         projectRoot: this.project_root,
         agentId: this.agent_id,
         sessionId: this.session_id,
-        model: this.state.sessionConfig.model,
-        modelId: this.state.sessionConfig.modelId,
+        model: next_config.model,
+        modelId: next_config.modelId,
       });
-    } catch (error) {
-      if (should_emit_model_switch_action) {
+      this.state.sessionConfig = next_config;
+
+      const apply_effective_config = async (turn_id?: string): Promise<void> => {
+        this.state.effective_session_config = {
+          ...next_config,
+        };
+        if (!should_emit_model_switch_action) return;
         await this.emit_action_event({
           id: action_id,
-          title: `Session model switch from ${previous_model_name} to ${next_model_name} failed`,
-          description: error instanceof Error ? error.message : String(error),
-          state: "failed",
+          title: `Session model switched from ${previous_model_name} to ${next_model_name}`,
+          state: "completed",
+          ...(turn_id ? { turnId: turn_id } : {}),
         });
-      }
-      throw error;
-    }
+      };
 
-    if (should_emit_model_switch_action) {
-      await this.emit_action_event({
-        id: action_id,
-        title: `Session model switched from ${previous_model_name} to ${next_model_name}`,
-        state: "completed",
-      });
+      if (options?.emit_action === false) {
+        await apply_effective_config();
+        return {};
+      }
+
+      const mutation_id = generateId();
+      return {
+        mutation: {
+          mutation_id,
+          scope: "session",
+          apply: async ({ turn_id }) => {
+            try {
+              await apply_effective_config(turn_id);
+            } catch (error) {
+              if (should_emit_model_switch_action) {
+                await this.emit_action_event({
+                  id: action_id,
+                  title: `Session model switch from ${previous_model_name} to ${next_model_name} failed`,
+                  description: error instanceof Error ? error.message : String(error),
+                  state: "failed",
+                  turnId: turn_id,
+                });
+              }
+              throw error;
+            }
+          },
+        },
+      };
+    } catch (error) {
+      throw error;
     }
   }
 

@@ -15,6 +15,7 @@ export type { SessionOptions } from "./types/session/SessionOptions.js";
 export {
   inferAgentModelLabel,
   normalizeAgentModel,
+  read_agent_model_context_window,
 } from "./model/CityModelAdapter.js";
 export type { AgentModel } from "./model/CityModelAdapter.js";
 export type {

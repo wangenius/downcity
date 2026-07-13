@@ -62,6 +62,11 @@ type ExecutorOptions = {
   getModel: () => LanguageModel | undefined;
 
   /**
+   * 读取当前 session 模型支持的总上下文窗口长度。
+   */
+  get_model_context_window?: () => number | undefined;
+
+  /**
    * 统一日志器。
    */
   logger: Logger;
@@ -100,6 +105,7 @@ export class Executor implements SessionExecutor {
   private readonly historyComposer: SessionHistoryComposer;
   private readonly historyStore: SessionHistoryStore;
   private readonly getModel: ExecutorOptions["getModel"];
+  private readonly get_model_context_window?: ExecutorOptions["get_model_context_window"];
   private readonly logger: Logger;
   private readonly compactionComposer: SessionCompactionComposer;
   private readonly systemComposer: SessionSystemComposer;
@@ -122,6 +128,7 @@ export class Executor implements SessionExecutor {
     this.historyStore = options.historyStore;
     this.historyComposer = options.historyComposer;
     this.getModel = options.getModel;
+    this.get_model_context_window = options.get_model_context_window;
     this.logger = options.logger;
     this.compactionComposer =
       options.compactionComposer || new JsonlSessionCompactionComposer();
@@ -359,10 +366,12 @@ export class Executor implements SessionExecutor {
         }
         await this.emitAction(run_context, action);
       };
+      const context_window = this.get_model_context_window?.();
 
       await this.compactionComposer.run({
         historyStore: this.historyStore,
         model,
+        ...(context_window !== undefined ? { context_window } : {}),
         system,
         retryCount: retry_count,
         onAction: emit_compaction_action,

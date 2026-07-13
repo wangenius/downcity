@@ -44,7 +44,21 @@ description: Provider is an abstract base class for AI upstreams. Subclass it to
  GET  /v1/ai/models            → model catalog
  ```
 
- `passthroughModel` is the upstream model id used during auto-passthrough.
+`passthroughModel` is the upstream model id used during auto-passthrough.
+
+## Model context window
+
+Use `context_window` to declare the model's total context capacity in tokens:
+
+```ts
+ai.use(deepseek.model({
+  id: "deepseek-v4-flash",
+  name: "DeepSeek V4 Flash",
+  context_window: 128_000,
+}));
+```
+
+AIService returns this value through `/v1/ai/models`. When `@downcity/agent` runs a City model, its default session compaction starts at 80% of the configured window, leaving room for system messages, tools, and the current output. Models without `context_window` keep the Agent's existing 128k compaction budget, while an explicit `maxInputTokensApprox` still takes precedence.
 
 ## Model reasoning effort
 

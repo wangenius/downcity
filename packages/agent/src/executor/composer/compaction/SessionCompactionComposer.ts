@@ -25,6 +25,11 @@ export type SessionCompactionInput = {
   model: LanguageModel;
 
   /**
+   * 当前模型支持的总上下文窗口长度，单位为 token。
+   */
+  context_window?: number;
+
+  /**
    * 当前轮 system messages。
    */
   system: SystemModelMessage[];

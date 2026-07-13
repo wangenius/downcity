@@ -10,6 +10,7 @@ import type {
   ModelConfig,
   PublicModel,
 } from "./types.js";
+import { validate_model_context_window } from "./model-context-window.js";
 import { validate_model_reasoning } from "./reasoning.js";
 
 /** 模型环境变量读取函数。 */
@@ -37,6 +38,7 @@ export class AIModelRegistry {
       if (this.model_map.has(config.id)) {
         throw new Error(`Duplicate model: ${config.id}`);
       }
+      validate_model_context_window(config);
       validate_model_reasoning(config);
       this.model_map.set(config.id, config);
     }
@@ -75,6 +77,9 @@ export class AIModelRegistry {
       id: model.id,
       name: model.name,
       description: model.description ?? "",
+      ...(model.context_window !== undefined
+        ? { context_window: model.context_window }
+        : {}),
       modalities: options.get_modalities(model),
       tags: model.tags ?? [],
       meta: model.meta ?? {},

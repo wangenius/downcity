@@ -517,6 +517,8 @@ export class Session implements AgentSession {
       historyStore: this.historyStore,
       historyComposer: this.historyComposer,
       getModel: () => this.localState.sessionConfig.model,
+      get_model_context_window: () =>
+        this.localState.sessionConfig.model_context_window,
       logger: this.logger,
       systemComposer: system_composer,
       getTools: () => this.tools,

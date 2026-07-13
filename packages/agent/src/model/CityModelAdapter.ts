@@ -45,6 +45,21 @@ export function normalizeAgentModel(model: AgentModel): LanguageModel {
 }
 
 /**
+ * 从 Agent 模型输入读取已声明的上下文窗口。
+ *
+ * 只有 CityModel 携带可信的模型目录元数据；普通 AI SDK LanguageModel 未声明时返回空。
+ */
+export function read_agent_model_context_window(
+  model: AgentModel | undefined,
+): number | undefined {
+  if (!model || !isCityModel(model)) return undefined;
+  const context_window = model.context_window;
+  return Number.isSafeInteger(context_window) && Number(context_window) > 0
+    ? Number(context_window)
+    : undefined;
+}
+
+/**
  * 从 Agent 模型输入推导展示标签。
  */
 export function inferAgentModelLabel(model: AgentModel | undefined): string | undefined {

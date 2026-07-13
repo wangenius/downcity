@@ -324,6 +324,8 @@ export abstract class Provider {
      id: string;
      name: string;
      description?: string;
+     /** 模型支持的总上下文窗口长度，单位为 token。 */
+     context_window?: number;
      tags?: string[];
      meta?: Record<string, unknown>;
      reasoning?: CityModelReasoning;
@@ -362,6 +364,7 @@ export abstract class Provider {
        provider_id: this.id,
        name: spec.name,
        description: spec.description,
+       context_window: spec.context_window,
        tags: spec.tags,
        meta: spec.meta,
        reasoning: spec.reasoning,

@@ -85,7 +85,8 @@ async function testCatalog() {
   const t = catalog.forModality("text");
   const reasoning_efforts = m?.reasoning?.efforts;
   const default_reasoning_effort = m?.reasoning?.default_effort;
-  void m; void all; void t; void reasoning_efforts; void default_reasoning_effort;
+  const context_window = m?.context_window;
+  void m; void all; void t; void reasoning_efforts; void default_reasoning_effort; void context_window;
 }
 void testCatalog();
 

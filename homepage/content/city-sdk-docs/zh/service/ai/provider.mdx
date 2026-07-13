@@ -44,7 +44,21 @@ description: Provider 是第三方 AI 提供商的基类，通过子类化声明
  GET  /v1/ai/models            → 模型目录
  ```
 
- `passthroughModel` 控制自动透传时发往上游的 model 值。
+`passthroughModel` 控制自动透传时发往上游的 model 值。
+
+## 模型上下文窗口
+
+通过 `context_window` 声明模型支持的总上下文 token 容量：
+
+```ts
+ai.use(deepseek.model({
+  id: "deepseek-v4-flash",
+  name: "DeepSeek V4 Flash",
+  context_window: 128_000,
+}));
+```
+
+该值会通过 `/v1/ai/models` 返回给客户端。`@downcity/agent` 使用 City 模型时，会默认在上下文达到窗口的 80% 时触发 session compact，为 system、工具调用和本轮输出保留余量。未配置 `context_window` 的模型继续使用 Agent 的 128k 默认 compact 预算；自定义 `maxInputTokensApprox` 仍拥有最高优先级。
 
 ## 模型推理强度
 

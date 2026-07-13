@@ -90,6 +90,8 @@ export interface AgentSessionConfigSnapshot {
   modelLabel?: string;
   /** 当前 session 绑定的稳定模型 ID。 */
   modelId?: string;
+  /** 当前模型支持的总上下文窗口长度，单位为 token。 */
+  model_context_window?: number;
 }
 
 /**

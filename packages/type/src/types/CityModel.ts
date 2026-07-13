@@ -53,6 +53,8 @@ export interface CityModelDescriptor {
   name: string;
   /** 模型说明文本。 */
   description: string;
+  /** 模型支持的总上下文窗口长度，单位为 token。 */
+  context_window?: number;
   /** 该模型支持的能力列表，例如 `text`、`stream`、`image`。 */
   modalities: string[];
   /** 用于筛选或展示的模型标签。 */

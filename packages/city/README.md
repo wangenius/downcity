@@ -163,6 +163,7 @@ ai.use(
   deepseek.model({
     id: "deepseek-v4-flash",
     name: "DeepSeek V4 Flash",
+    context_window: 128_000,
   }),
 );
 

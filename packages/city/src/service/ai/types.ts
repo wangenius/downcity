@@ -126,6 +126,8 @@ export interface ModelConfig {
   name: string;
   /** 模型描述 */
   description?: string;
+  /** 模型支持的总上下文窗口长度，单位为 token。 */
+  context_window?: number;
   /** 模型标签 */
   tags?: string[];
   /** 模型元数据 */

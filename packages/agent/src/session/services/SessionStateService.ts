@@ -10,6 +10,7 @@
 import {
   inferAgentModelLabel,
   normalizeAgentModel,
+  read_agent_model_context_window,
 } from "@/model/CityModelAdapter.js";
 import {
   patchSessionModelLabel,
@@ -283,6 +284,8 @@ export class SessionStateService {
       if (next_model) {
         this.state.sessionConfig.model = normalizeAgentModel(next_model);
         this.state.sessionConfig.modelLabel = next_model_label;
+        this.state.sessionConfig.model_context_window =
+          read_agent_model_context_window(next_model);
       }
       if (next_model_id) {
         this.state.sessionConfig.modelId = next_model_id;
@@ -322,6 +325,8 @@ export class SessionStateService {
     const model = await this.resolve_model_by_id(model_id);
     this.state.sessionConfig.model = normalizeAgentModel(model);
     this.state.sessionConfig.modelLabel = inferAgentModelLabel(model);
+    this.state.sessionConfig.model_context_window =
+      read_agent_model_context_window(model);
   }
 
   /** 使用宿主 resolver 解析稳定模型 ID。 */

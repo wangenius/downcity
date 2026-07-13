@@ -28,7 +28,7 @@ export class JsonlSessionCompactionComposer implements SessionCompactionComposer
     this.options = options || {};
   }
 
-  private resolvePolicy(retryCount: number): {
+  private resolvePolicy(retryCount: number, context_window?: number): {
     keepLastMessages: number;
     maxInputTokensApprox: number;
     compactRatio: number;
@@ -37,14 +37,24 @@ export class JsonlSessionCompactionComposer implements SessionCompactionComposer
       typeof this.options.keepLastMessages === "number"
         ? Math.max(6, Math.min(5000, Math.floor(this.options.keepLastMessages)))
         : 30;
-    const baseMaxInputTokensApprox =
+    const configured_max_input_tokens =
       typeof this.options.maxInputTokensApprox === "number"
-        ? Math.max(2000, Math.min(200_000, Math.floor(this.options.maxInputTokensApprox)))
-        : 128000;
+        && Number.isFinite(this.options.maxInputTokensApprox)
+        ? Math.max(2000, Math.floor(this.options.maxInputTokensApprox))
+        : undefined;
+    const model_context_window =
+      Number.isSafeInteger(context_window) && Number(context_window) > 0
+        ? Number(context_window)
+        : undefined;
+    const baseMaxInputTokensApprox = configured_max_input_tokens
+      ?? (model_context_window !== undefined
+        ? Math.max(1, Math.floor(model_context_window * 0.8))
+        : 128000);
     const retryFactor = Math.max(1, Math.pow(2, retryCount));
     const keepLastMessages = Math.max(6, Math.floor(baseKeepLastMessages / retryFactor));
+    const minimum_input_tokens = Math.min(2000, baseMaxInputTokensApprox);
     const maxInputTokensApprox = Math.max(
-      2000,
+      minimum_input_tokens,
       Math.floor(baseMaxInputTokensApprox / retryFactor),
     );
     const compactRatioRaw =
@@ -64,7 +74,7 @@ export class JsonlSessionCompactionComposer implements SessionCompactionComposer
     compacted: boolean;
     reason?: string;
   }> {
-    const policy = this.resolvePolicy(input.retryCount);
+    const policy = this.resolvePolicy(input.retryCount, input.context_window);
     return await input.historyStore.compact({
       model: input.model,
       system: input.system,

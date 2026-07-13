@@ -558,6 +558,7 @@ export class SessionAssistantMessageWriter {
   readonly message_id: string;
   private readonly recorder: SessionRecorder;
   private readonly pending_text_parts = new Map<string, "text" | "reasoning">();
+  private readonly active_text_part_ids = new Map<string, string>();
   private closed = false;
 
   constructor(recorder: SessionRecorder, message_id: string) {
@@ -573,7 +574,7 @@ export class SessionAssistantMessageWriter {
       case "text-start":
       case "reasoning-start": {
         const type = chunk.type === "text-start" ? "text" : "reasoning";
-        const part_id = `${type}:${chunk.id}`;
+        const part_id = this.resolve_text_part_id(type, chunk.id);
         if (!current.parts.some((part) => part.part_id === part_id)) {
           this.pending_text_parts.set(part_id, type);
         }
@@ -582,7 +583,7 @@ export class SessionAssistantMessageWriter {
       case "text-delta":
       case "reasoning-delta": {
         const type = chunk.type === "text-delta" ? "text" : "reasoning";
-        const part_id = `${type}:${chunk.id}`;
+        const part_id = this.resolve_text_part_id(type, chunk.id);
         await this.ensure_text_part(part_id, type);
         await this.recorder.append_assistant_delta(
           this.message_id,
@@ -594,13 +595,17 @@ export class SessionAssistantMessageWriter {
       }
       case "text-end":
       case "reasoning-end": {
-        const part_id = `${chunk.type === "text-end" ? "text" : "reasoning"}:${chunk.id}`;
+        const type = chunk.type === "text-end" ? "text" : "reasoning";
+        const source_part_id = this.source_text_part_id(type, chunk.id);
+        const part_id = this.active_text_part_ids.get(source_part_id);
+        if (!part_id) return;
         const part = current.parts.find((item) => item.part_id === part_id);
         if (part?.type === "text" || part?.type === "reasoning") {
           await this.upsert_part({ ...part, state: "done" });
         } else {
           this.pending_text_parts.delete(part_id);
         }
+        this.active_text_part_ids.delete(source_part_id);
         return;
       }
       case "tool-input-start":
@@ -724,6 +729,32 @@ export class SessionAssistantMessageWriter {
     );
   }
 
+  /**
+   * 把 AI SDK 当前 stream 内的临时 chunk ID 映射为 Message 内唯一 Part ID。
+   *
+   * AI SDK 会在不同 `streamText()` 调用中重复使用 `txt-0`、`reasoning-0`
+   * 等 ID，因此这些 ID 只能用于关联当前尚未结束的文本片段。
+   */
+  private resolve_text_part_id(
+    type: "text" | "reasoning",
+    chunk_id: string,
+  ): string {
+    const source_part_id = this.source_text_part_id(type, chunk_id);
+    const active_part_id = this.active_text_part_ids.get(source_part_id);
+    if (active_part_id) return active_part_id;
+    const part_id = `${type}:${generateId()}`;
+    this.active_text_part_ids.set(source_part_id, part_id);
+    return part_id;
+  }
+
+  /** 构造当前流片段使用的临时关联键。 */
+  private source_text_part_id(
+    type: "text" | "reasoning",
+    chunk_id: string,
+  ): string {
+    return `${type}:${chunk_id}`;
+  }
+
   /** 在首个有效 Delta 到达时才固定文本 Part 的真实顺序。 */
   private async ensure_text_part(
     part_id: string,
@@ -771,6 +802,7 @@ export class SessionAssistantMessageWriter {
   private async close(status: "completed" | "stopped" | "failed"): Promise<void> {
     if (this.closed) return;
     this.pending_text_parts.clear();
+    this.active_text_part_ids.clear();
     await this.recorder.complete_assistant_message(this.message_id, status);
     this.closed = true;
   }

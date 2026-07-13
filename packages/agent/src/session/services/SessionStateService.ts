@@ -46,8 +46,6 @@ import {
   from_ui_user_parts,
   to_executor_ui_message,
 } from "@/session/recorder/SessionMessageCodec.js";
-import fs from "fs-extra";
-import { getSdkAgentSessionMessagesPath } from "@/session/storage/Paths.js";
 import type { SessionMessage } from "@/types/session/SessionMessage.js";
 
 type SessionStateServiceOptions = {
@@ -384,28 +382,17 @@ export class SessionStateService {
    * 仅刷新当前 session metadata。
    */
   async touch_metadata(): Promise<void> {
-    const message_page = await this.recorder.list_messages({
-      limit: 500,
-      include_internal: true,
-    });
-    const messages_path = getSdkAgentSessionMessagesPath(
-      this.project_root,
-      this.agent_id,
-      this.session_id,
-    );
-    const history_bytes = await fs.stat(messages_path)
-      .then((file_stat) => file_stat.size)
-      .catch(() => 0);
+    const stats = await this.recorder.storage_stats();
     const preview_text = resolve_message_preview(
-      message_page.items[message_page.items.length - 1],
+      stats.latest_message || undefined,
     ).slice(0, 180);
     await touchSessionMetadata({
       projectRoot: this.project_root,
       agentId: this.agent_id,
       sessionId: this.session_id,
       sessionConfig: this.state.sessionConfig,
-      message_count: message_page.total,
-      history_bytes,
+      message_count: stats.message_count,
+      history_bytes: stats.history_bytes,
       ...(preview_text ? { preview_text } : {}),
     });
   }

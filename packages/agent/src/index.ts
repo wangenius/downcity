@@ -48,6 +48,13 @@ export type {
   SessionUserMessage,
   SessionUserMessagePart,
 } from "./types/session/SessionMessage.js";
+export type {
+  SessionContextSnapshot,
+  SessionMessageStorageStats,
+  SessionSegmentRange,
+  SessionSegmentSnapshot,
+  SessionSegmentSummary,
+} from "./types/session/SessionSegment.js";
 export {
   is_session_mutation,
 } from "./types/session/SessionMutation.js";

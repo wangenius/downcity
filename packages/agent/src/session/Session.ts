@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 面向 `new Agent(...)` 的本地会话使用场景。
  * - 对外保留稳定 Session facade，把状态、turn、view 逻辑下沉到独立 service。
- * - 内部继续复用 `Executor` / `JsonlSessionHistoryStore` / Composer 体系。
+ * - 内部使用 `SessionRecorder` 统一管理 Active、Segment 与流式 Assistant 草稿。
  */
 
 import { Executor } from "@executor/Executor.js";
@@ -422,7 +422,7 @@ export class Session implements AgentSession {
     const messages_dir_path = `${session_dir_path}/messages`;
     return new JsonlSessionMessageStore({
       session_id: this.id,
-      file_path: `${messages_dir_path}/messages.jsonl`,
+      file_path: `${messages_dir_path}/active.jsonl`,
       assistant_message_file_path: getSdkAgentSessionAssistantMessagePath(
         this.projectRoot,
         this.agentId,

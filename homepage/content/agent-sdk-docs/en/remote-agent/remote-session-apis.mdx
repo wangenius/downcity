@@ -15,7 +15,7 @@ const unsubscribe = session.subscribe(apply_mutation);
 const turn = await session.prompt({ query: "Continue" });
 await turn.finished;
 
-const page = await session.messages({ limit: 50 });
+const page = await session.messages();
 unsubscribe();
 ```
 

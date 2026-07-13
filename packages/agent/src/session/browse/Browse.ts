@@ -94,13 +94,6 @@ type SessionBrowseBaseInput = {
   executing?: boolean;
 };
 
-type SessionArchiveFileV1 = {
-  v?: unknown;
-  sessionId?: unknown;
-  archivedAt?: unknown;
-  messages?: unknown;
-};
-
 function decodeMaybe(input: string): string {
   try {
     return decodeURIComponent(input);
@@ -138,11 +131,6 @@ function normalizeCursor(input: unknown): number {
 function encodeCursor(offset: number): string | undefined {
   if (!Number.isFinite(offset) || offset <= 0) return undefined;
   return String(Math.floor(offset));
-}
-
-function normalizeArchiveId(input: unknown): string | undefined {
-  const value = String(input || "").trim();
-  return value || undefined;
 }
 
 function stringifyForDisplay(input: unknown, maxChars = 2400): string {
@@ -344,7 +332,7 @@ export async function loadSessionMessagesFromPath(
     }
   }
 
-  const inflight_path = filePath.replace(/messages\.jsonl$/, "assistant_message.json");
+  const inflight_path = path.join(path.dirname(filePath), "assistant_message.json");
   if (await fs.pathExists(inflight_path)) {
     try {
       const message = (await fs.readJson(inflight_path)) as SessionMessage;
@@ -395,50 +383,10 @@ function project_canonical_message_record(message: SessionMessage): SessionRecor
   }];
 }
 
-/**
- * 读取 compact archive 文件中的消息。
- *
- * 关键点（中文）
- * - archive 是 compact 时被覆盖的“上一层历史”，不是当前运行态事实源。
- * - 这里不读取 inflight，因为 archive 层永远是已完成的历史快照。
- */
-export async function loadSessionArchiveMessagesFromPath(
-  filePath: string,
-): Promise<SessionRecordV1[]> {
-  try {
-    const raw = (await fs.readJson(filePath)) as SessionArchiveFileV1 | null;
-    const items = Array.isArray(raw?.messages) ? raw.messages : [];
-    return items.filter((item): item is SessionRecordV1 => {
-      if (!item || typeof item !== "object") return false;
-      const candidate = item as { type?: unknown; role?: unknown; parts?: unknown };
-      return (
-        (
-          candidate.type === "action" ||
-          candidate.role === "user" ||
-          candidate.role === "assistant"
-        ) &&
-        (candidate.type === "action" || Array.isArray(candidate.parts))
-      );
-    });
-  } catch {
-    return [];
-  }
-}
-
 function isCompactSummaryMessage(message: SessionRecordV1): boolean {
   if (!is_session_message_record(message)) return false;
   const metadata = (message.metadata || null) as SessionMetadataV1 | null;
   return metadata?.source === "compact" || metadata?.kind === "summary";
-}
-
-function resolvePreviousArchiveId(messages: SessionRecordV1[]): string | undefined {
-  for (const message of messages) {
-    if (!isCompactSummaryMessage(message)) continue;
-    const metadata = (message.metadata || null) as SessionMetadataV1 | null;
-    const archiveId = normalizeArchiveId(metadata?.archiveId);
-    if (archiveId) return archiveId;
-  }
-  return undefined;
 }
 
 function filterUserVisibleHistoryMessages(
@@ -460,9 +408,11 @@ export function buildSessionInfo(
         180,
       )
     : input.metadata.previewText;
-  const message_count = messages
-    ? messages.length
-    : input.metadata.messageCount || 0;
+  const message_count = typeof input.metadata.messageCount === "number"
+    ? input.metadata.messageCount
+    : messages
+      ? filterUserVisibleHistoryMessages(messages).length
+      : 0;
   const title =
     typeof input.metadata.title === "string" && input.metadata.title.trim()
       ? input.metadata.title.trim()
@@ -494,7 +444,7 @@ export function buildSessionInfo(
  * 读取列表所需的轻量 session 摘要。
  *
  * 关键点（中文）
- * - 新记录直接使用 metadata 摘要，不扫描 messages.jsonl。
+ * - 新记录直接使用 metadata 摘要，不扫描 active.jsonl。
  * - 旧记录或执行中记录回退读取一次完整历史，并把摘要补写回 metadata。
  */
 async function resolve_session_summary_metadata(input: {
@@ -507,10 +457,9 @@ async function resolve_session_summary_metadata(input: {
   /** 是否强制刷新摘要。 */
   refresh: boolean;
 }): Promise<SessionHistoryMetaV1> {
-  const history_bytes = await fs.stat(input.messagesPath)
-    .then((file_stat) => file_stat.size)
-    .catch(() => 0);
-  const inflight_path = `${input.messagesPath.slice(0, -"messages.jsonl".length)}assistant_message.json`;
+  const storage_stats = await resolve_session_disk_stats(input.messagesPath);
+  const history_bytes = storage_stats.history_bytes;
+  const inflight_path = path.join(path.dirname(input.messagesPath), "assistant_message.json");
   const has_inflight = await fs.pathExists(inflight_path);
   if (
     !input.refresh &&
@@ -529,15 +478,76 @@ async function resolve_session_summary_metadata(input: {
   void _previous_preview;
   const next_metadata: SessionHistoryMetaV1 = {
     ...metadata_without_preview,
-    messageCount: messages.length,
+    messageCount: storage_stats.message_count,
     historyBytes: history_bytes,
-    ...(preview_text ? { previewText: preview_text } : {}),
+    ...(preview_text || input.metadata.previewText
+      ? { previewText: preview_text || input.metadata.previewText }
+      : {}),
   };
   const temp_path = `${input.metaPath}.${process.pid}.${Date.now()}.tmp`;
   await fs.ensureDir(path.dirname(input.metaPath));
   await fs.writeJson(temp_path, next_metadata, { spaces: 2 });
   await fs.move(temp_path, input.metaPath, { overwrite: true });
   return next_metadata;
+}
+
+/**
+ * 只读取 Active 和 Segment 文件索引，计算列表所需的持久化统计。
+ *
+ * 关键点（中文）
+ * - Segment 的结束 sequence 直接来自文件名，不解析历史正文。
+ * - Active 需要逐行读取，以同时覆盖 revision 行与运行中 Assistant sequence。
+ */
+async function resolve_session_disk_stats(messages_path: string) {
+  const messages_dir_path = path.dirname(messages_path);
+  const segments_dir_path = path.join(messages_dir_path, "segments");
+  const segment_entries = await fs.readdir(segments_dir_path, { withFileTypes: true })
+    .catch(() => []);
+  const segment_files = segment_entries.flatMap((entry) => {
+    if (!entry.isFile()) return [];
+    const match = /^(\d+)-(\d+)\.jsonl$/.exec(entry.name);
+    if (!match) return [];
+    return [{
+      file_path: path.join(segments_dir_path, entry.name),
+      end_sequence: Number(match[2]),
+    }];
+  });
+  const active_raw = await fs.readFile(messages_path, "utf8").catch(() => "");
+  let latest_active_sequence = 0;
+  for (const line of active_raw.split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      const message = JSON.parse(line) as Partial<SessionMessage>;
+      if (Number.isInteger(message.sequence)) {
+        latest_active_sequence = Math.max(latest_active_sequence, Number(message.sequence));
+      }
+    } catch {
+      // 单行损坏不阻断 Session 列表，其正文读取时会按既有规则忽略。
+    }
+  }
+  const inflight_path = path.join(messages_dir_path, "assistant_message.json");
+  try {
+    const inflight = await fs.readJson(inflight_path) as Partial<SessionMessage>;
+    if (Number.isInteger(inflight.sequence)) {
+      latest_active_sequence = Math.max(latest_active_sequence, Number(inflight.sequence));
+    }
+  } catch {
+    // 草稿不存在或损坏时只统计已完成历史。
+  }
+  const segment_sizes = await Promise.all(
+    segment_files.map(({ file_path }) => fs.stat(file_path)
+      .then((file_stat) => file_stat.size)
+      .catch(() => 0)),
+  );
+  const latest_segment_sequence = segment_files.reduce(
+    (latest, segment) => Math.max(latest, segment.end_sequence),
+    0,
+  );
+  return {
+    history_bytes: Buffer.byteLength(active_raw, "utf8") +
+      segment_sizes.reduce((total, size) => total + size, 0),
+    message_count: Math.max(latest_segment_sequence, latest_active_sequence),
+  };
 }
 
 /**
@@ -552,8 +562,6 @@ export function buildSessionRecordsPage(params: {
   const order = params.input?.order || "asc";
   const limit = normalizeLimit(params.input?.limit, 50, 500);
   const cursor = normalizeCursor(params.input?.cursor);
-  const archive_id = normalizeArchiveId(params.input?.archive_id);
-  const previous_archive_id = resolvePreviousArchiveId(params.messages);
   const visibleMessages = filterUserVisibleHistoryMessages(params.messages);
 
   if (view === "timeline") {
@@ -570,8 +578,6 @@ export function buildSessionRecordsPage(params: {
         ? { next_cursor: encodeCursor(nextOffset) }
         : {}),
       has_more: nextOffset < orderedEvents.length,
-      ...(archive_id ? { archive_id } : {}),
-      ...(previous_archive_id ? { previous_archive_id } : {}),
     };
   }
 
@@ -588,8 +594,6 @@ export function buildSessionRecordsPage(params: {
       ? { next_cursor: encodeCursor(nextOffset) }
       : {}),
     has_more: nextOffset < orderedMessages.length,
-    ...(archive_id ? { archive_id } : {}),
-    ...(previous_archive_id ? { previous_archive_id } : {}),
   };
 }
 

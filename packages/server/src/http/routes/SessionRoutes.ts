@@ -254,16 +254,11 @@ export function registerSdkSessionRoutes(
       }
       const session = await sessions.get(sessionId);
       const messages = await session.messages({
-        ...(c.req.query("limit") ? { limit: Number(c.req.query("limit")) } : {}),
-        ...(c.req.query("cursor") ? { cursor: c.req.query("cursor") } : {}),
         ...(c.req.query("before_sequence")
           ? { before_sequence: Number(c.req.query("before_sequence")) }
           : {}),
         ...(c.req.query("include_internal") === "true"
           ? { include_internal: true }
-          : {}),
-        ...(c.req.query("through_sequence")
-          ? { through_sequence: Number(c.req.query("through_sequence")) }
           : {}),
       });
       return c.json({

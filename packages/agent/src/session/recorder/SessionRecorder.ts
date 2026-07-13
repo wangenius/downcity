@@ -11,6 +11,7 @@ import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type {
   ListSessionMessagesInput,
   SessionActionMessage,
+  SessionAssistantFilePart,
   SessionAssistantMessage,
   SessionAssistantMessagePart,
   SessionAssistantToolPart,
@@ -24,6 +25,11 @@ import type {
   SessionMutation,
   SessionMessageMutation as SessionMessageSnapshotMutation,
 } from "@/types/session/SessionMutation.js";
+import type {
+  SessionContextSnapshot,
+  SessionMessageStorageStats,
+  SessionSegmentSummary,
+} from "@/types/session/SessionSegment.js";
 
 /** SessionRecorder 构造参数。 */
 export interface SessionRecorderOptions {
@@ -289,36 +295,86 @@ export class SessionRecorder {
     }))) as SessionErrorMessage;
   }
 
-  /** 读取折叠后的 Message snapshot。 */
+  /** 读取 Active 或指定边界之前最近的完整 Segment。 */
   async list_messages(
     input?: ListSessionMessagesInput,
   ): Promise<SessionMessagePage> {
     await this.ensure_initialized();
-    const include_internal = input?.include_internal === true;
-    const through_sequence = Number.isFinite(input?.through_sequence)
-      ? Number(input?.through_sequence)
-      : Number.POSITIVE_INFINITY;
-    const before_sequence = Number.isFinite(input?.before_sequence)
-      ? Number(input?.before_sequence)
-      : Number.POSITIVE_INFINITY;
-    const all = [...this.messages_by_id.values()]
-      .filter(
-        (message) =>
-          (include_internal || message.visibility === "visible") &&
-          message.sequence <= through_sequence &&
-          message.sequence < before_sequence,
-      )
-      .sort((left, right) => left.sequence - right.sequence);
-    const offset = decode_cursor(input?.cursor);
-    const limit = normalize_limit(input?.limit, 100, 500);
-    const items = all.slice(offset, offset + limit).map((item) => structuredClone(item));
-    const next_offset = offset + items.length;
+    const requests_segment = input?.before_sequence !== undefined;
+    const before_sequence = input?.before_sequence;
+    if (
+      requests_segment &&
+      (!Number.isInteger(before_sequence) || Number(before_sequence) <= 0)
+    ) {
+      throw new Error("before_sequence must be a positive integer");
+    }
+    const segment = requests_segment
+      ? await this.store.read_segment_before(Number(before_sequence))
+      : null;
+    const source = requests_segment ? "segment" as const : "active" as const;
+    const messages = requests_segment
+      ? segment?.messages || []
+      : [...this.messages_by_id.values()].sort(compare_message_sequence);
+    const start_sequence = messages[0]?.sequence;
+    const end_sequence = messages.at(-1)?.sequence;
+    const history_boundary = source === "segment"
+      ? segment?.range.start_sequence
+      : await this.store.active_before_sequence(messages);
+    const has_more = history_boundary !== undefined &&
+      await this.store.has_segment_before(history_boundary);
+    const stats = await this.store.stats();
+    const items = messages
+      .filter((message) => input?.include_internal === true || message.visibility === "visible")
+      .map((message) => structuredClone(message));
     return {
       items,
-      total: all.length,
-      ...(next_offset < all.length ? { next_cursor: encode_cursor(next_offset) } : {}),
-      has_more: next_offset < all.length,
+      total: stats.message_count,
+      source,
+      ...(start_sequence !== undefined ? { start_sequence } : {}),
+      ...(end_sequence !== undefined ? { end_sequence } : {}),
+      ...(has_more && history_boundary !== undefined
+        ? { next_before_sequence: history_boundary }
+        : {}),
+      has_more,
     };
+  }
+
+  /** 读取最新累计 Summary 与全部 Active Message，供模型上下文使用。 */
+  async context_snapshot(): Promise<SessionContextSnapshot> {
+    await this.ensure_initialized();
+    return {
+      summary: await this.store.read_latest_summary(),
+      messages: [...this.messages_by_id.values()]
+        .sort(compare_message_sequence)
+        .map((message) => structuredClone(message)),
+    };
+  }
+
+  /** 读取全部真实历史，供 Fork 等明确的全量复制操作使用。 */
+  async list_history_messages(): Promise<SessionMessage[]> {
+    await this.ensure_initialized();
+    return await this.store.list_history_messages();
+  }
+
+  /** 读取当前 Session 的存储统计。 */
+  async storage_stats(): Promise<SessionMessageStorageStats> {
+    await this.ensure_initialized();
+    return await this.store.stats();
+  }
+
+  /** 把 Active 前缀和累计 Summary 提交为不可变 Segment。 */
+  async compact_active(input: {
+    /** 移入 Segment 的最后一条真实 Message sequence。 */
+    through_sequence: number;
+    /** 写入 Segment footer 的累计 Summary。 */
+    summary: SessionSegmentSummary;
+  }): Promise<void> {
+    await this.ensure_initialized();
+    const result = await this.store.compact_active(input);
+    this.messages_by_id.clear();
+    for (const message of result.active_messages) {
+      this.messages_by_id.set(message.message_id, structuredClone(message));
+    }
   }
 
   /** 向当前 Session 导入 fork 来源 Message，并重新分配全部身份和顺序。 */
@@ -551,6 +607,7 @@ export class SessionRecorder {
   private async ensure_initialized(): Promise<void> {
     if (!this.initialized) await this.initialize();
   }
+
 }
 
 /** 单个 Assistant segment 的流式 writer。 */
@@ -671,10 +728,7 @@ export class SessionAssistantMessageWriter {
         return;
       }
       case "file":
-        await this.upsert_part({
-          part_id: `file:${generateId()}`,
-          sequence: this.next_part_sequence(),
-          type: "file",
+        await this.append_file_part({
           media_type: chunk.mediaType,
           url: chunk.url,
         });
@@ -687,6 +741,36 @@ export class SessionAssistantMessageWriter {
   /** 写入一个完整 Assistant part。 */
   async upsert_part(part: SessionAssistantMessagePart): Promise<void> {
     await this.recorder.update_assistant_part(this.message_id, part);
+  }
+
+  /**
+   * 把最终结果中的文件补入当前 Assistant，并对流式已写入文件去重。
+   */
+  async append_file_part(
+    input: Pick<SessionAssistantFilePart, "filename" | "media_type" | "url">,
+  ): Promise<void> {
+    const filename = String(input.filename || "").trim();
+    const current = this.current_message();
+    const existing = current.parts.find(
+      (part) =>
+        part.type === "file" &&
+        part.url === input.url &&
+        part.media_type === input.media_type,
+    );
+    if (existing?.type === "file") {
+      if (filename && String(existing.filename || "").trim() !== filename) {
+        await this.upsert_part({ ...existing, filename });
+      }
+      return;
+    }
+    await this.upsert_part({
+      part_id: `file:${generateId()}`,
+      sequence: this.next_part_sequence(),
+      type: "file",
+      media_type: input.media_type,
+      url: input.url,
+      ...(filename ? { filename } : {}),
+    });
   }
 
   /** 当前实现逐 chunk 等待落盘，因此 flush 在返回时天然完成。 */
@@ -907,32 +991,15 @@ function to_json_value(input: unknown): JsonValue {
   }
 }
 
-function normalize_limit(value: number | undefined, fallback: number, maximum: number): number {
-  if (!Number.isFinite(value)) return fallback;
-  return Math.min(maximum, Math.max(1, Math.floor(Number(value))));
-}
-
-function encode_cursor(offset: number): string {
-  return Buffer.from(JSON.stringify({ offset }), "utf8").toString("base64url");
-}
-
-function decode_cursor(cursor: string | undefined): number {
-  const value = String(cursor || "").trim();
-  if (!value) return 0;
-  try {
-    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as { offset?: unknown };
-    return typeof parsed.offset === "number" && parsed.offset >= 0
-      ? Math.floor(parsed.offset)
-      : 0;
-  } catch {
-    throw new Error("Invalid Session Message cursor");
-  }
-}
-
 function resolve_import_id(map: Map<string, string>, source_id: string, prefix: string): string {
   const existing = map.get(source_id);
   if (existing) return existing;
   const created = `${prefix}:${generateId()}`;
   map.set(source_id, created);
   return created;
+}
+
+/** 按真实 Message sequence 升序排序。 */
+function compare_message_sequence(left: SessionMessage, right: SessionMessage): number {
+  return left.sequence - right.sequence;
 }

@@ -1,14 +1,14 @@
 ---
 title: Message 与 Part
-description: 读取线性历史、理解四种 Message 和 Assistant 内部 Part
+description: 读取 Active 与 Segment 历史，理解 Message、Part 和 sequence
 ---
 
 # Message 与 Part
 
-`session.messages()` 返回 Session 的持久化状态快照。它是首次渲染、分页加载和断线恢复的事实来源；实时变化由 `subscribe()` 补充。
+`session.messages()` 返回当前 Active 的全部持久化 Message，不需要 `limit`。实时变化由 `subscribe()` 补充。
 
 ```ts
-const page = await session.messages({ limit: 100 });
+const page = await session.messages();
 
 for (const message of page.items) {
   render_message(message);
@@ -18,15 +18,18 @@ for (const message of page.items) {
 返回结果为：
 
 ```ts
-{
+interface SessionMessagePage {
   items: SessionMessage[];
   total: number;
+  source: "active" | "segment";
+  start_sequence?: number;
+  end_sequence?: number;
+  next_before_sequence?: number;
   has_more: boolean;
-  next_cursor?: string;
 }
 ```
 
-注意这里是 snake case 的 `has_more` 与 `next_cursor`；Session 集合的 `list()` 分页结果则使用 `hasMore` 与 `nextCursor`。
+`total` 是 Session 已创建的真实 Message 总数，不是当前 `items.length`。`source` 说明本次结果来自当前 Active 还是一个已关闭 Segment。
 
 ## 四类顶层 Message
 
@@ -41,8 +44,6 @@ Session 内只有一条按 `sequence` 排序的顶层 Message 序列。工具调
 
 ## Assistant Part
 
-Assistant Message 的 `parts` 可包含：
-
 | `type` | 关键字段 | 说明 |
 | --- | --- | --- |
 | `text` | `text`, `state` | 用户可见输出，`streaming -> done` |
@@ -51,44 +52,38 @@ Assistant Message 的 `parts` 可包含：
 | `file` | `url`, `media_type` | Assistant 生成或引用的文件 |
 | `data` | `data_type`, `data` | 结构化 UI 数据 |
 
-每个 Assistant Part 有稳定的 `part_id` 和不可变的内部 `sequence`。工具状态变化必须更新同一个 Part，不应在 UI 中创建“请求”和“结果”两个重复行。
+每个 Assistant Part 有稳定的 `part_id` 和不可变的内部 `sequence`。工具状态变化更新同一个 Part，不应在 UI 中创建“请求”和“结果”两个重复行。
 
 ## 顺序、版本与可见性
 
-每条 Message 都有：
+每条 Message 都有稳定 `message_id`、创建后不变的 `sequence`，以及随完整快照更新递增的 `revision`。客户端不能用较低 revision 覆盖较高 revision。
 
-- `message_id`：稳定身份，用来定位更新目标。
-- `sequence`：在线性历史中的位置，创建后不变。
-- `revision`：同一 Message 的版本；收到较低 revision 的快照不能覆盖较高 revision。
-- `visibility`：`visible` 或 `internal`。
-- `created_at` / `updated_at`：毫秒时间戳。
+默认 `messages()` 只返回 `visibility: "visible"` 的 Message。调试或审计时可传 `include_internal: true`。Compact Summary 不是 Message，不占用 sequence，也不会出现在 `messages()` 结果中。
 
-默认 `messages()` 不返回 `internal` Message，例如内部 summary。调试、审计或实现高级历史浏览器时才传 `include_internal: true`。
+## 加载更早历史
 
-## 分页与向上加载
+第一次调用不传参数，得到 Active 全量。若 `has_more` 为 `true`，把 `next_before_sequence` 原样传回，会得到紧邻的前一个完整 Segment：
 
 ```ts
-let page = await session.messages({ limit: 50 });
+let page = await session.messages();
 render_messages(page.items);
 
-while (page.has_more && page.next_cursor) {
+while (page.has_more && page.next_before_sequence !== undefined) {
   page = await session.messages({
-    limit: 50,
-    cursor: page.next_cursor,
+    before_sequence: page.next_before_sequence,
   });
   prepend_messages(page.items);
 }
 ```
 
-`cursor` 是透明字符串，只能回传。实现聊天记录向上滚动时，也可以用 `before_sequence` 请求某个已知 Message 之前的内容；`through_sequence` 可把读取范围固定到一个历史边界。
+`before_sequence` 必须是正整数。每次历史读取返回一个完整 Segment，不支持 `limit`、`cursor`、offset 或 Segment 内切片。这样 UI 边界与物理 Compact 边界一致，也不会重复读取累计 Summary。
 
 ## 与实时 Mutation 配合
 
-不要每收到一个 Delta 就重新读取整个历史。正确分工是：
-
-1. 用 `messages()` 建立初始状态。
+1. 用 `messages()` 建立 Active 初始状态。
 2. 用 `message` / `part` Mutation 替换对应快照。
 3. 用 `delta` 追加当前 Part 的新文本。
-4. 断线后重新读取快照并按 revision 合并。
+4. 向上滚动时按 `next_before_sequence` 逐个加载 Segment。
+5. 断线后重新读取 Active，并按 `message_id + revision` 合并。
 
-完整的同步算法见 [重连与同步](/zh/agent-sdk-docs/sessions/reconnect-and-sync)。
+完整同步算法见 [重连与同步](/zh/agent-sdk-docs/sessions/reconnect-and-sync)，存储细节见 [元数据与落盘](/zh/agent-sdk-docs/sessions/metadata-and-storage)。

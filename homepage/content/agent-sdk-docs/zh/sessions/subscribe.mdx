@@ -30,7 +30,7 @@ unsubscribe();
 | `turn` | `start | finish` | Turn 执行生命周期 | 否 |
 | `session` | `title` | Session 自身属性变化 | 否 |
 
-`message`、`part` 和 `delta` 都在对应完整 Message 或 Assistant 草稿持久化成功后才发布。Mutation envelope 本身不写入 `messages.jsonl`。
+`message`、`part` 和 `delta` 都在对应完整 Message 或 Assistant 草稿持久化成功后才发布。Mutation envelope 本身不写入 `active.jsonl` 或 Segment。
 
 ## 用 Delta 流式显示文本
 

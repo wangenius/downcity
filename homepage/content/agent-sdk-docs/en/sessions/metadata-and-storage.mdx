@@ -1,71 +1,99 @@
 ---
 title: Metadata and Storage
-description: Understand Session history, Assistant drafts, metadata, and interrupted-process recovery
+description: Understand Active, Segments, cumulative Summaries, Assistant drafts, and recovery
 ---
 
 # Metadata and Storage
 
-SDK Sessions are saved under the project directory. Persistence exists to recover conversation and execution state, not for an application to write these files as its own database.
+SDK Sessions are persisted under the project directory. Applications should read and write through the Session API rather than use these files as their own database.
 
 ```text
 <projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/
 └── messages/
-    ├── messages.jsonl
+    ├── active.jsonl
     ├── assistant_message.json
-    └── meta.json
+    ├── meta.json
+    └── segments/
+        ├── 000000000001-000000000900.jsonl
+        └── 000000000901-000000001500.jsonl
 ```
 
-`agentId` is part of the storage partition. Multiple Agents in one project can use the same `sessionId` without conflict, but do not treat `agentId` as a casual display label.
+`agentId` is part of the storage partition. Multiple Agents in one project can use the same `sessionId` without conflict.
 
-## `messages.jsonl`: completed history
+## Active and Segments
 
-Each line is a complete `SessionMessage` snapshot, not a Mutation and never an object with `variant`. User, Error, completed Assistant, and Action Messages are stored here.
+`active.jsonl` contains only real `SessionMessage` values still in the active window after the latest Compact. It has no fixed message-count or API page-size limit. Its length is controlled by the token threshold, `keepLastMessages`, and `compactRatio`.
 
-Some Messages have multiple revisions, such as an Action changing from `running` to `completed`. The reader keeps the greatest revision for a `message_id` and then returns linear history ordered by `sequence`.
-
-This is why applications should call `session.messages()` rather than parse JSONL themselves: the SDK already handles revisions, visibility, and pagination.
-
-## `assistant_message.json`: streaming draft
-
-Before it completes, a streaming Assistant does not append every Delta to history. Instead, it atomically replaces the current complete draft:
+During Compact, the SDK selects an older Active prefix and creates an immutable Segment named by its sequence range. The Segment stores real Messages first and one cumulative Summary footer last:
 
 ```text
-text delta / reasoning delta / tool state update
--> update complete Assistant Message draft
--> publish live Mutation
+message sequence 1
+...
+message sequence 900
+summary through sequence 900
 ```
 
-On completion, the final Assistant Message is appended to `messages.jsonl` and the draft is removed. This lets every Delta reach the UI while keeping history from growing once per token.
+The next Compact might create `901-1500`. Its footer merges the previous Summary with new content from 901-1500, so it cumulatively covers 1-1500. A Summary is not a `SessionMessage`, consumes no sequence, and is never stored in Active.
 
-Each Session has at most one streaming Assistant draft at a time. Tool calls live in that draft's `parts` and retain real `text -> tool -> text` order.
+## Model context
 
-## Interrupted-process recovery
+Each model turn reads only:
 
-When a Session starts or reopens, the SDK checks for unfinished drafts:
+```text
+latest Segment cumulative Summary
++ every User / Assistant Message in Active
+```
 
-- A streaming Assistant is finalized into a history Message with `status: "stopped"`.
-- A still-`running` Action is finalized as `failed`.
-- Existing text, reasoning, and tool Parts are retained and never reordered.
+It does not scan all old Segments. Old Segments serve historical UI, Fork, and audit. `session.messages()` returns all Active Messages; passing `before_sequence` returns the immediately preceding whole Segment.
 
-A recovered client should still load `messages()` before subscribing to future Mutations. Do not infer an interrupted tool's final result from local UI cache.
+## Session progression
+
+```mermaid
+sequenceDiagram
+    participant App
+    participant Session
+    participant Recorder
+    participant Active as active.jsonl
+    participant Segment as segments/<start>-<end>.jsonl
+    participant Model
+
+    App->>Session: prompt({ query })
+    Session->>Recorder: create User Message
+    Recorder->>Active: append complete User snapshot
+    Session->>Model: latest Summary + Active context
+    Model-->>Session: text / tool / file chunks
+    Session->>Recorder: update Assistant draft and Parts
+    Recorder->>Active: append final Assistant snapshot
+    Session->>Recorder: token threshold triggers Compact
+    Recorder->>Model: old Summary + Active prefix
+    Model-->>Recorder: new cumulative Summary
+    Recorder->>Segment: atomically create Messages + Summary footer
+    Recorder->>Active: atomically retain only Active tail
+    App->>Session: messages()
+    Session-->>App: every Active Message
+    App->>Session: messages({ before_sequence })
+    Session-->>App: Messages from previous whole Segment
+```
+
+## `assistant_message.json`
+
+Before completion, a streaming Assistant atomically replaces one complete draft instead of appending every Delta to Active. On completion, the final snapshot is appended to `active.jsonl` and the draft is removed. Each Session has at most one streaming draft. Text, Tool, and File Parts retain the model's generation order through their own `sequence` values.
+
+## Recovery and consistency
+
+Compact atomically creates the Segment before atomically replacing Active. If the process exits between those operations, the original Messages temporarily exist in both files but are not lost. Initialization uses the latest Segment end sequence to remove the overlapping Active prefix.
+
+When a Session starts or reopens, the SDK also checks the Assistant draft. Existing text, reasoning, tool, and file Parts are retained in their original order.
+
+## Performance boundaries
+
+- Normal model progression reads only the latest Summary and Active, so it does not grow linearly with total history.
+- Loading older history parses one Segment at a time.
+- Segment files are immutable and their names are the sequence index; no `manifest.json` is required.
+- `fork()` intentionally copies full history and therefore reads every Segment; it is a lower-frequency full-history operation.
 
 ## `meta.json`
 
-`meta.json` stores lightweight fields for lists and detail views, including:
+`meta.json` stores lightweight list and detail fields such as `sessionId`, `agentId`, title, model, timestamps, message count, history bytes, and timezone. The SDK updates these summaries as Session properties and Message state change.
 
-- `sessionId`, `agentId`
-- `title`
-- `modelId`, `modelLabel`
-- `createdAt`, `updatedAt`
-- `timezone`
-
-Session property changes such as model and title update metadata. A title change also publishes a `session/title` Mutation.
-
-## Usage boundary
-
-- Read state through `messages()`, `get_info()`, `system()`, and the Session collection API.
-- Change state through `prompt()`, `set()`, `fork()`, and `archive()`.
-- Do not manually edit, delete, or concurrently write these files. Doing so breaks revision handling, draft atomicity, and recovery.
-- For troubleshooting, inspect files read-only, but treat SDK API results as the source of truth for an external UI.
-
-The Session collection manages archived directories. Use `archive()` and `clean_archive()` instead of moving directories yourself.
+Archiving a Session and Compact Segments are distinct. `archive()` moves the entire Session into archived sessions storage; Compact only closes an old Active prefix under the current Session's `segments/` directory.

@@ -1,35 +1,31 @@
 ---
 title: SDK Session Layout
-description: Why local SDK Agent sessions live under .downcity/agents/<agentId>/...
+description: File layout and data boundaries for local SDK Agent Sessions
 ---
 
 # SDK Session Layout
 
-Local SDK Agent sessions are persisted under:
+Local SDK Agent Sessions are persisted under:
 
 ```text
-<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/messages.jsonl
+<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/
+└── messages/
+    ├── active.jsonl
+    ├── assistant_message.json
+    ├── meta.json
+    └── segments/
+        └── <start_sequence>-<end_sequence>.jsonl
 ```
 
-## Why `agentId` exists in the path
+`agentId` isolates Agents in the same project and `sessionId` isolates each continuous conversation.
 
-Because several SDK Agents may coexist inside the same project directory.
+- `active.jsonl`: complete `SessionMessage` snapshots retained after the latest Compact.
+- `assistant_message.json`: the one complete in-progress Assistant draft.
+- `segments/*.jsonl`: immutable history ranges with real Messages first and a cumulative Summary footer last.
+- `meta.json`: a lightweight index of title, model, timestamps, message count, and storage bytes.
 
-`agentId` isolates their session data.
+Segment filenames use zero-padded 12-digit sequences, such as `000000000001-000000000900.jsonl`. There is no manifest; scanning filenames determines history order. A Summary is not a Message and consumes no sequence.
 
-## What you will see there
+Applications should call `session.messages()` for Active and use `before_sequence` to load older Segments. Do not write these files directly.
 
-- `messages.jsonl`
-- `assistant_message.json`
-- `meta.json`
-- archive directories
-
-`meta.json` includes the persisted `title`. After the first user message, the SDK attempts to generate and write a title with the currently available model. If no model is available or generation fails, the title may remain empty; the presentation layer should fall back to `sessionId` or a product-defined placeholder.
-
-Each line in `messages.jsonl` is a complete `SessionMessage` snapshot; streaming `part` and `delta` events are never written there. `assistant_message.json` stores the complete in-progress Assistant Message and is atomically replaced after each streaming change. On completion, the SDK appends the final Assistant to `messages.jsonl` and removes the draft file.
-
-When you debug multiple sessions or multiple agents, this directory layout becomes very important because it defines how data stays isolated between different execution units.
-
-## Related docs
-
-- [Session metadata and storage](/en/agent-sdk-docs/sessions/metadata-and-storage)
+See [Session metadata and storage](/en/agent-sdk-docs/sessions/metadata-and-storage) for progression, Compact, and recovery behavior.

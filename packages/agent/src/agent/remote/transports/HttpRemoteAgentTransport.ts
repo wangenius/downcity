@@ -219,15 +219,10 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
     input?: ListSessionMessagesInput,
   ): Promise<SessionMessagePage> {
     const query = new URLSearchParams();
-    if (input?.limit !== undefined) query.set("limit", String(input.limit));
-    if (input?.cursor) query.set("cursor", input.cursor);
     if (input?.before_sequence !== undefined) {
       query.set("before_sequence", String(input.before_sequence));
     }
     if (input?.include_internal) query.set("include_internal", "true");
-    if (input?.through_sequence !== undefined) {
-      query.set("through_sequence", String(input.through_sequence));
-    }
     const payload = await read_http_json<{
       success?: boolean;
       error?: string;

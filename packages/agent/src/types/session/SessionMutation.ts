@@ -1,7 +1,7 @@
 /**
  * Session 的统一实时 Mutation 协议。
  *
- * Mutation 描述订阅之后发生的状态变化，不等同于 messages.jsonl 持久化格式。
+ * Mutation 描述订阅之后发生的状态变化，不等同于 Active/Segment 持久化格式。
  */
 
 import type { SessionAssistantMessagePart, SessionMessage } from "@/types/session/SessionMessage.js";

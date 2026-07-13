@@ -24,7 +24,7 @@ const unsubscribe = session.subscribe((mutation) => {
 });
 
 const [message_page, info] = await Promise.all([
-  session.messages({ limit: 100 }),
+  session.messages(),
   session.get_info(),
 ]);
 
@@ -64,9 +64,9 @@ When a remote connection closes:
 
 If a client is awaiting `turn.finished` when the connection breaks, handle its failed result and restore the UI by reloading the Session. Do not synthesize Assistant completion from client-side timers.
 
-## Paginated history
+## Segment history
 
-When the first screen only loads a recent page, a live Mutation can still reference an older Message that is not in memory. Keep pending state by `message_id` or load adjacent history according to product policy; never overwrite the current page merely to handle one Mutation.
+The initial snapshot loads all Active Messages. To load earlier history, pass the current result's `next_before_sequence` to read the previous whole Segment. Live Mutations update Active only; do not use them to replace already loaded Segments.
 
 ## Deduplication
 

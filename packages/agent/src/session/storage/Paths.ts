@@ -88,7 +88,7 @@ export function getSdkAgentArchivedSessionMessagesDirPath(
 }
 
 /**
- * 单个已归档 session 的消息 JSONL 文件路径。
+ * 单个已归档 session 的 Active JSONL 文件路径。
  */
 export function getSdkAgentArchivedSessionMessagesPath(
   projectRoot: string,
@@ -97,7 +97,7 @@ export function getSdkAgentArchivedSessionMessagesPath(
 ): string {
   return path.join(
     getSdkAgentArchivedSessionMessagesDirPath(projectRoot, agentId, sessionId),
-    "messages.jsonl",
+    "active.jsonl",
   );
 }
 
@@ -144,7 +144,7 @@ export function getSdkAgentSessionMessagesDirPath(
 }
 
 /**
- * 单个 session 的消息 JSONL 文件路径。
+ * 单个 session 的 Active JSONL 文件路径。
  */
 export function getSdkAgentSessionMessagesPath(
   projectRoot: string,
@@ -153,7 +153,7 @@ export function getSdkAgentSessionMessagesPath(
 ): string {
   return path.join(
     getSdkAgentSessionMessagesDirPath(projectRoot, agentId, sessionId),
-    "messages.jsonl",
+    "active.jsonl",
   );
 }
 
@@ -172,45 +172,12 @@ export function getSdkAgentSessionMetaPath(
 }
 
 /**
- * 单个 session 的 archive 目录路径。
- */
-export function getSdkAgentSessionArchiveDirPath(
-  projectRoot: string,
-  agentId: string,
-  sessionId: string,
-): string {
-  return path.join(
-    getSdkAgentSessionMessagesDirPath(projectRoot, agentId, sessionId),
-    "archive",
-  );
-}
-
-/**
- * 单个 session 的 compact archive JSON 文件路径。
- *
- * 关键点（中文）
- * - `archiveId` 来自 compact summary metadata，不由调用方拼接扩展名。
- * - 这里统一 encode，避免 archiveId 中的特殊字符影响文件路径。
- */
-export function getSdkAgentSessionArchiveFilePath(
-  projectRoot: string,
-  agentId: string,
-  sessionId: string,
-  archiveId: string,
-): string {
-  return path.join(
-    getSdkAgentSessionArchiveDirPath(projectRoot, agentId, sessionId),
-    `${encodeURIComponent(String(archiveId || "").trim())}.json`,
-  );
-}
-
-/**
  * 单个 session 的 inflight assistant 路径。
  *
  * 关键点（中文）
  * - 运行中的 assistant 只保留一份增量快照。
  * - step / tool 过程会持续重写这个文件，避免中途中断后过程完全丢失。
- * - 完成后再把最终 assistant 合并进 `messages.jsonl`，并清理该文件。
+ * - 完成后再把最终 assistant 合并进 `active.jsonl`，并清理该文件。
  */
 export function getSdkAgentSessionAssistantMessagePath(
   projectRoot: string,

@@ -40,11 +40,6 @@ export type SessionHistoryCompactInput = {
   maxInputTokensApprox: number;
 
   /**
-   * compact 时是否归档旧消息。
-   */
-  archiveOnCompact: boolean;
-
-  /**
    * 前段压缩比例（0-1）。
    */
   compactRatio: number;
@@ -88,19 +83,13 @@ export interface SessionHistoryStore {
    */
   finalize_inflight(message?: SessionRecordV1 | null): Promise<void>;
 
-  /**
-   * 读取完整 session records。
-   */
+  /** 读取当前模型上下文所需的 session records。 */
   list_records(): Promise<SessionRecordV1[]>;
 
-  /**
-   * 读取 session record 区间 [start, end)。
-   */
+  /** 读取当前模型上下文 record 区间 [start, end)。 */
   slice_records(start: number, end: number): Promise<SessionRecordV1[]>;
 
-  /**
-   * 读取 session record 总条数。
-   */
+  /** 读取当前模型上下文 record 总条数。 */
   record_count(): Promise<number>;
 
   /**

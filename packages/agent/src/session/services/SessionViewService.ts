@@ -8,12 +8,7 @@
  */
 
 import { nanoid } from "nanoid";
-import {
-  buildSessionRecordsPage,
-  buildSessionInfo,
-  loadSessionArchiveMessagesFromPath,
-} from "@/session/browse/Browse.js";
-import { getSdkAgentSessionArchiveFilePath } from "@/session/storage/Paths.js";
+import { buildSessionInfo } from "@/session/browse/Browse.js";
 import { ensureSessionTitle } from "@/session/SessionTitle.js";
 import { readSessionMetadata } from "@/session/storage/Metadata.js";
 import { buildSessionSystemBlocks } from "@/session/SessionSystemBuilder.js";
@@ -21,8 +16,6 @@ import type { SessionHistoryStore } from "@/executor/store/history/SessionHistor
 import type { SessionSystemComposer } from "@/executor/composer/system/SessionSystemComposer.js";
 import type {
   AgentSessionForkInput,
-  AgentSessionRecordsInput,
-  AgentSessionRecordsPage,
   AgentSessionInfo,
   AgentSessionSystemBlock,
   AgentSessionSystemSnapshot,
@@ -193,42 +186,6 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
   }
 
   /**
-   * 读取当前 session records 分页。
-   */
-  async records(
-    input?: AgentSessionRecordsInput,
-  ): Promise<AgentSessionRecordsPage> {
-    const archive_id = String(input?.archive_id || "").trim();
-    const [metadata, current_messages] = await Promise.all([
-      readSessionMetadata({
-        projectRoot: this.project_root,
-        agentId: this.agent_id,
-        sessionId: this.session_id,
-      }),
-      this.history_store.list_records(),
-    ]);
-    const page_messages = archive_id
-      ? await loadSessionArchiveMessagesFromPath(
-          getSdkAgentSessionArchiveFilePath(
-            this.project_root,
-            this.agent_id,
-            this.session_id,
-            archive_id,
-          ),
-        )
-      : current_messages;
-    const session = await this.build_info({
-      metadata,
-      messages: current_messages,
-    });
-    return buildSessionRecordsPage({
-      session,
-      messages: page_messages,
-      input,
-    });
-  }
-
-  /**
    * 读取当前 session 生效的 system 快照。
    */
   async system(): Promise<AgentSessionSystemSnapshot> {
@@ -290,14 +247,11 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
       typeof input === "string"
         ? String(input || "").trim() || undefined
         : String(input?.messageId || "").trim() || undefined;
-    const message_page = await this.recorder.list_messages({
-      limit: 500,
-      include_internal: true,
-    });
+    const messages = await this.recorder.list_history_messages();
     const fork_messages =
       !message_id
-        ? message_page.items
-        : this.resolve_fork_messages(message_page.items, message_id);
+        ? messages
+        : this.resolve_fork_messages(messages, message_id);
     const action_id = `history-forking:${this.session_id}:${Date.now()}:${nanoid(8)}`;
 
     await this.state_service.emit_action_event({

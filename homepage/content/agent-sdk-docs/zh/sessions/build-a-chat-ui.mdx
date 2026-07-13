@@ -24,7 +24,7 @@ const unsubscribe = session.subscribe(async (mutation, reply) => {
 });
 
 const [page, info] = await Promise.all([
-  session.messages({ limit: 100 }),
+  session.messages(),
   session.get_info(),
 ]);
 

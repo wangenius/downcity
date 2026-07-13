@@ -24,7 +24,7 @@ const unsubscribe = session.subscribe((mutation) => {
 });
 
 const [message_page, info] = await Promise.all([
-  session.messages({ limit: 100 }),
+  session.messages(),
   session.get_info(),
 ]);
 
@@ -64,9 +64,9 @@ snapshot_ready = true;
 
 如果断线时本地仍有 `turn.finished` 等待者，应用层应处理其失败结果，并通过重新读取 Session 恢复界面。不要凭客户端计时器合成 Assistant 完成状态。
 
-## 分页历史
+## Segment 历史
 
-首屏只读取最近一页时，实时 Mutation 仍然可能引用不在内存中的旧 Message。遇到这种情况应按 `message_id` 保存待合并状态，或按产品策略加载相邻历史；不要为了单次 Mutation 覆盖掉已有整页历史。
+首屏会读取全部 Active。需要更早历史时，使用当前结果的 `next_before_sequence` 读取前一个完整 Segment。实时 Mutation 只更新 Active；不要用它覆盖已加载的旧 Segment。
 
 ## 去重
 

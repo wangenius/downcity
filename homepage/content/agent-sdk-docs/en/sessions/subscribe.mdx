@@ -30,7 +30,7 @@ Every Mutation has `mutation_id`, `session_id`, and `created_at`.
 | `turn` | `start | finish` | Turn execution lifecycle | No |
 | `session` | `title` | Session property change | No |
 
-`message`, `part`, and `delta` are published only after the corresponding complete Message or Assistant draft is persisted. The Mutation envelope itself is never written to `messages.jsonl`.
+`message`, `part`, and `delta` are published only after the corresponding complete Message or Assistant draft is persisted. The Mutation envelope itself is never written to `active.jsonl` or a Segment.
 
 ## Render text with Deltas
 

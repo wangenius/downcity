@@ -118,7 +118,7 @@ test("list_sessions returns persisted title from active session metadata", async
         "sessions",
         encodeURIComponent(session.id),
         "messages",
-        "messages.jsonl",
+        "active.jsonl",
       ),
     );
     assert.equal(meta.historyBytes, history_stat.size);
@@ -158,23 +158,41 @@ test("list_sessions reflects canonical Recorder history changes", async () => {
     encodeURIComponent(session.id),
     "messages",
   );
-  const messages_path = path.join(messages_dir, "messages.jsonl");
+  const messages_path = path.join(messages_dir, "active.jsonl");
   const meta_path = path.join(messages_dir, "meta.json");
 
   try {
     await session.append_assistant_message({
       text: "Recorder appended history",
     });
+    await session.recorder.compact_active({
+      through_sequence: 1,
+      summary: {
+        record_type: "summary",
+        session_id: session.id,
+        summary_id: "summary-through-1",
+        through_sequence: 1,
+        text: "Initial history was compacted.",
+        created_at: Date.now(),
+      },
+    });
 
     const page = await collection.list();
+    const info = await session.get_info();
     const repaired_meta = JSON.parse(await fs.readFile(meta_path, "utf8"));
     const history_stat = await fs.stat(messages_path);
+    const segment_stat = await fs.stat(path.join(
+      messages_dir,
+      "segments",
+      "000000000001-000000000001.jsonl",
+    ));
 
     assert.equal(page.items[0].messageCount, 2);
+    assert.equal(info.messageCount, 2);
     assert.equal(page.items[0].previewText, "Recorder appended history");
     assert.equal(repaired_meta.messageCount, 2);
     assert.equal(repaired_meta.previewText, "Recorder appended history");
-    assert.equal(repaired_meta.historyBytes, history_stat.size);
+    assert.equal(repaired_meta.historyBytes, history_stat.size + segment_stat.size);
   } finally {
     await agent.dispose();
   }

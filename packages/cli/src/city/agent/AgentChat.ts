@@ -121,9 +121,7 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
         const session = await interactive.remote_agent.sessions.get(session_id);
         const [info, messages] = await Promise.all([
           session.get_info(),
-          session.messages({
-          limit: 200,
-          }),
+          session.messages(),
         ]);
         const title = info.title?.trim() || "Untitled";
         const model_id = String(info.modelId || "").trim() || undefined;

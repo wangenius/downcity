@@ -14,7 +14,6 @@ import type {
 type JsonlSessionCompactionComposerOptions = {
   keepLastMessages?: number;
   maxInputTokensApprox?: number;
-  archiveOnCompact?: boolean;
   compactRatio?: number;
 };
 
@@ -32,7 +31,6 @@ export class JsonlSessionCompactionComposer implements SessionCompactionComposer
   private resolvePolicy(retryCount: number): {
     keepLastMessages: number;
     maxInputTokensApprox: number;
-    archiveOnCompact: boolean;
     compactRatio: number;
   } {
     const baseKeepLastMessages =
@@ -49,10 +47,6 @@ export class JsonlSessionCompactionComposer implements SessionCompactionComposer
       2000,
       Math.floor(baseMaxInputTokensApprox / retryFactor),
     );
-    const archiveOnCompact =
-      this.options.archiveOnCompact === undefined
-        ? true
-        : Boolean(this.options.archiveOnCompact);
     const compactRatioRaw =
       typeof this.options.compactRatio === "number" &&
       Number.isFinite(this.options.compactRatio)
@@ -62,7 +56,6 @@ export class JsonlSessionCompactionComposer implements SessionCompactionComposer
     return {
       keepLastMessages,
       maxInputTokensApprox,
-      archiveOnCompact,
       compactRatio,
     };
   }
@@ -77,7 +70,6 @@ export class JsonlSessionCompactionComposer implements SessionCompactionComposer
       system: input.system,
       keepLastMessages: policy.keepLastMessages,
       maxInputTokensApprox: policy.maxInputTokensApprox,
-      archiveOnCompact: policy.archiveOnCompact,
       compactRatio: policy.compactRatio,
       ...(input.onAction ? { onAction: input.onAction } : {}),
     });

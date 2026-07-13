@@ -11,11 +11,12 @@ import path from "node:path";
 import { JsonlSessionMessageStore } from "../bin/session/recorder/JsonlSessionMessageStore.js";
 import { SessionRecorder } from "../bin/session/recorder/SessionRecorder.js";
 import { SessionRecorderHistoryStore } from "../bin/session/recorder/SessionRecorderHistoryStore.js";
+import { SessionViewService } from "../bin/session/services/SessionViewService.js";
 import { MockLanguageModelV3 } from "ai/test";
 
 async function create_recorder(session_id = "session-recorder-test") {
   const root_path = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-session-recorder-"));
-  const file_path = path.join(root_path, "messages.jsonl");
+  const file_path = path.join(root_path, "active.jsonl");
   const assistant_message_file_path = path.join(root_path, "assistant_message.json");
   const events = [];
   const recorder = new SessionRecorder({
@@ -32,7 +33,45 @@ async function read_jsonl(file_path) {
   return raw.split("\n").filter(Boolean).map((line) => JSON.parse(line));
 }
 
-test("delta 只更新 Assistant 草稿，完成后才写入 messages.jsonl", async () => {
+async function create_seeded_recorder(session_id, messages) {
+  const root_path = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-session-seeded-"));
+  const file_path = path.join(root_path, "active.jsonl");
+  await fs.writeFile(
+    file_path,
+    `${messages.map((message) => JSON.stringify(message)).join("\n")}\n`,
+    "utf8",
+  );
+  const recorder = new SessionRecorder({
+    session_id,
+    store: new JsonlSessionMessageStore({ session_id, file_path }),
+    publish: () => {},
+  });
+  await recorder.initialize();
+  return { recorder, file_path };
+}
+
+function create_seeded_user_message(session_id, sequence) {
+  return {
+    message_id: `user-${String(sequence)}`,
+    session_id,
+    turn_id: `turn-${String(sequence)}`,
+    sequence,
+    revision: 1,
+    visibility: "visible",
+    created_at: sequence,
+    updated_at: sequence,
+    type: "user",
+    input_type: "prompt",
+    parts: [{
+      part_id: `user-text-${String(sequence)}`,
+      type: "text",
+      text: `message ${String(sequence)}`,
+      state: "done",
+    }],
+  };
+}
+
+test("delta 只更新 Assistant 草稿，完成后才写入 active.jsonl", async () => {
   const { recorder, events, file_path, assistant_message_file_path } = await create_recorder();
   await recorder.append_user_message({
     turn_id: "turn-1",
@@ -216,7 +255,7 @@ test("重启时将 Assistant 草稿收口为 stopped，并将运行中 Action �
   });
   await recovered.initialize();
 
-  const page = await recovered.list_messages({ limit: 10 });
+  const page = await recovered.list_messages();
   assert.deepEqual(page.items.map((message) => message.type), ["user", "assistant", "action"]);
   assert.equal(page.items[1].status, "stopped");
   assert.equal(page.items[1].parts[0].text, "partial");
@@ -244,7 +283,7 @@ test("Action revision 追加完整快照，读取时只返回最新版本", asyn
   assert.equal(page.items[0].title, "Compacted");
 });
 
-test("compact 追加 internal summary 且不重写已有 Message 快照", async () => {
+test("compact 把 Active 前缀关闭为带累计 Summary 的 Segment", async () => {
   const { recorder, file_path } = await create_recorder("compact-test");
   for (let index = 1; index <= 6; index += 1) {
     await recorder.append_user_message({
@@ -253,7 +292,6 @@ test("compact 追加 internal summary 且不重写已有 Message 快照", async 
       parts: [{ part_id: `user-${String(index)}`, type: "text", text: `message ${String(index)}`, state: "done" }],
     });
   }
-  const before = await fs.readFile(file_path, "utf8");
   const history_store = new SessionRecorderHistoryStore({ session_id: "compact-test", recorder });
   const model = new MockLanguageModelV3({
     modelId: "compact-model",
@@ -272,14 +310,305 @@ test("compact 追加 internal summary 且不重写已有 Message 快照", async 
     system: [],
     keepLastMessages: 2,
     maxInputTokensApprox: 1,
-    archiveOnCompact: false,
     compactRatio: 0.5,
   });
   assert.equal(result.compacted, true);
-  assert.equal((await fs.readFile(file_path, "utf8")).startsWith(before), true);
-  const all = await recorder.list_messages({ limit: 100, include_internal: true });
-  const summary = all.items.find((message) => message.type === "assistant" && message.kind === "summary");
-  assert.equal(summary.visibility, "internal");
-  assert.equal(summary.parts[0].sequence, 1);
+  assert.equal((await fs.readFile(file_path, "utf8")).includes("message 1"), false);
+  const active = await recorder.list_messages({ include_internal: true });
+  assert.deepEqual(active.items.map((message) => message.sequence), [4, 5, 6]);
+  assert.equal(active.source, "active");
+  assert.equal(active.has_more, true);
+  const segment = await recorder.list_messages({
+    before_sequence: active.start_sequence,
+    include_internal: true,
+  });
+  assert.deepEqual(segment.items.map((message) => message.sequence), [1, 2, 3]);
+  assert.equal(segment.source, "segment");
   assert.equal((await history_store.list_records()).length, 4);
+  await assert.rejects(
+    recorder.list_messages({ before_sequence: 0 }),
+    /before_sequence must be a positive integer/,
+  );
+});
+
+test("重启后从最新 Segment Summary 与 Active 恢复模型上下文", async () => {
+  const session_id = "compact-restart-test";
+  const { recorder, file_path } = await create_recorder(session_id);
+  for (let index = 1; index <= 6; index += 1) {
+    await recorder.append_user_message({
+      turn_id: `turn-${String(index)}`,
+      input_type: "prompt",
+      parts: [{
+        part_id: `user-${String(index)}`,
+        type: "text",
+        text: `message ${String(index)}`,
+        state: "done",
+      }],
+    });
+  }
+  await recorder.compact_active({
+    through_sequence: 4,
+    summary: {
+      record_type: "summary",
+      session_id,
+      summary_id: "summary-through-4",
+      through_sequence: 4,
+      text: "summary through 4",
+      created_at: 7,
+    },
+  });
+
+  const restarted = new SessionRecorder({
+    session_id,
+    store: new JsonlSessionMessageStore({ session_id, file_path }),
+    publish: () => {},
+  });
+  await restarted.initialize();
+  const context_store = new SessionRecorderHistoryStore({ session_id, recorder: restarted });
+  const context = await context_store.list_records();
+  assert.deepEqual(
+    context.map((message) => message.parts[0]?.text),
+    ["summary through 4", "message 5", "message 6"],
+  );
+  const segment = await restarted.list_messages({ before_sequence: 5 });
+  assert.deepEqual(segment.items.map((message) => message.sequence), [1, 2, 3, 4]);
+});
+
+test("Compact 两步提交中断后会清理 Active 与 Segment 的重叠前缀", async () => {
+  const session_id = "compact-overlap-recovery-test";
+  const { recorder, file_path } = await create_recorder(session_id);
+  for (let index = 1; index <= 6; index += 1) {
+    await recorder.append_user_message({
+      turn_id: `turn-${String(index)}`,
+      input_type: "prompt",
+      parts: [{
+        part_id: `user-${String(index)}`,
+        type: "text",
+        text: `message ${String(index)}`,
+        state: "done",
+      }],
+    });
+  }
+  await recorder.compact_active({
+    through_sequence: 4,
+    summary: {
+      record_type: "summary",
+      session_id,
+      summary_id: "summary-through-4",
+      through_sequence: 4,
+      text: "summary through 4",
+      created_at: 7,
+    },
+  });
+
+  const segment_path = path.join(
+    path.dirname(file_path),
+    "segments",
+    "000000000001-000000000004.jsonl",
+  );
+  const segment_rows = await read_jsonl(segment_path);
+  const active_rows = await read_jsonl(file_path);
+  await fs.writeFile(
+    file_path,
+    `${[...segment_rows.slice(0, -1), ...active_rows]
+      .map((message) => JSON.stringify(message))
+      .join("\n")}\n`,
+    "utf8",
+  );
+
+  const restarted = new SessionRecorder({
+    session_id,
+    store: new JsonlSessionMessageStore({ session_id, file_path }),
+    publish: () => {},
+  });
+  await restarted.initialize();
+  const active = await restarted.list_messages();
+  assert.deepEqual(active.items.map((message) => message.sequence), [5, 6]);
+  assert.deepEqual(
+    (await read_jsonl(file_path)).map((message) => message.sequence),
+    [5, 6],
+  );
+});
+
+test("连续 Compact 生成按 sequence 连续的 Segment 与累计 Summary", async () => {
+  const session_id = "cumulative-compact-test";
+  const { recorder } = await create_recorder(session_id);
+  const prompts = [];
+  let generation_count = 0;
+  const model = new MockLanguageModelV3({
+    modelId: "cumulative-compact-model",
+    doGenerate: async (options) => {
+      prompts.push(JSON.stringify(options.prompt));
+      generation_count += 1;
+      return {
+        content: [{ type: "text", text: `Summary ${String(generation_count)}` }],
+        finishReason: { unified: "stop", raw: "stop" },
+        usage: {
+          inputTokens: { total: 0, noCache: 0, cacheRead: 0, cacheWrite: 0 },
+          outputTokens: { total: 0, text: 0, reasoning: 0 },
+        },
+        warnings: [],
+      };
+    },
+  });
+  const history_store = new SessionRecorderHistoryStore({ session_id, recorder });
+  const append_messages = async (start, end) => {
+    for (let index = start; index <= end; index += 1) {
+      await recorder.append_user_message({
+        turn_id: `turn-${String(index)}`,
+        input_type: "prompt",
+        parts: [{
+          part_id: `user-${String(index)}`,
+          type: "text",
+          text: `message ${String(index)}`,
+          state: "done",
+        }],
+      });
+    }
+  };
+  const compact = async () => await history_store.compact({
+    model,
+    system: [],
+    keepLastMessages: 2,
+    maxInputTokensApprox: 1,
+    compactRatio: 0.5,
+  });
+
+  await append_messages(1, 8);
+  assert.equal((await compact()).compacted, true);
+  await append_messages(9, 12);
+  assert.equal((await compact()).compacted, true);
+
+  assert.equal(prompts.length, 2);
+  assert.equal(prompts[1].includes("<previous-summary>"), true);
+  assert.equal(prompts[1].includes("Summary 1"), true);
+  const active = await recorder.list_messages();
+  assert.deepEqual(active.items.map((message) => message.sequence), [9, 10, 11, 12]);
+  const latest_segment = await recorder.list_messages({ before_sequence: 9 });
+  assert.deepEqual(latest_segment.items.map((message) => message.sequence), [5, 6, 7, 8]);
+  assert.equal(latest_segment.has_more, true);
+  const earliest_segment = await recorder.list_messages({
+    before_sequence: latest_segment.start_sequence,
+  });
+  assert.deepEqual(earliest_segment.items.map((message) => message.sequence), [1, 2, 3, 4]);
+  const context = await history_store.list_records();
+  assert.equal(context[0].parts[0]?.text, "Summary 2");
+});
+
+test("Summary 生成失败时保留完整 Active 且不创建 Segment", async () => {
+  const session_id = "compact-summary-failure-test";
+  const { recorder, file_path } = await create_recorder(session_id);
+  for (let index = 1; index <= 6; index += 1) {
+    await recorder.append_user_message({
+      turn_id: `turn-${String(index)}`,
+      input_type: "prompt",
+      parts: [{
+        part_id: `user-${String(index)}`,
+        type: "text",
+        text: `message ${String(index)}`,
+        state: "done",
+      }],
+    });
+  }
+  const model = new MockLanguageModelV3({
+    modelId: "failed-compact-model",
+    doGenerate: async () => {
+      throw new Error("summary unavailable");
+    },
+  });
+  const history_store = new SessionRecorderHistoryStore({ session_id, recorder });
+  const result = await history_store.compact({
+    model,
+    system: [],
+    keepLastMessages: 2,
+    maxInputTokensApprox: 1,
+    compactRatio: 0.5,
+  });
+
+  assert.deepEqual(result, { compacted: false, reason: "summary_failed" });
+  assert.deepEqual(
+    (await recorder.list_messages()).items.map((message) => message.sequence),
+    [1, 2, 3, 4, 5, 6],
+  );
+  const segment_entries = await fs.readdir(path.join(path.dirname(file_path), "segments"));
+  assert.deepEqual(segment_entries, []);
+});
+
+test("内部上下文读取完整快照并保留第 500 条之后的最新消息", async () => {
+  const session_id = "complete-context-snapshot-test";
+  const messages = Array.from(
+    { length: 501 },
+    (_, index) => create_seeded_user_message(session_id, index + 1),
+  );
+  const { recorder } = await create_seeded_recorder(session_id, messages);
+  await recorder.compact_active({
+    through_sequence: 499,
+    summary: {
+      record_type: "summary",
+      session_id,
+      summary_id: "summary-through-499",
+      through_sequence: 499,
+      text: "summary through 499",
+      created_at: 502,
+    },
+  });
+
+  const active = await recorder.list_messages();
+  assert.deepEqual(active.items.map((message) => message.sequence), [500, 501]);
+  assert.equal(active.source, "active");
+  assert.equal(active.next_before_sequence, 500);
+  const previous = await recorder.list_messages({ before_sequence: 500 });
+  assert.equal(previous.source, "segment");
+  assert.equal(previous.items.length, 499);
+  assert.equal(previous.start_sequence, 1);
+  assert.equal(previous.end_sequence, 499);
+
+  const history_store = new SessionRecorderHistoryStore({ session_id, recorder });
+  const context = await history_store.list_records();
+  assert.deepEqual(
+    context.map((message) => message.parts[0]?.text),
+    ["summary through 499", "message 500", "message 501"],
+  );
+});
+
+test("Session fork 可以选择并复制第 500 条之后的消息", async () => {
+  const session_id = "complete-fork-snapshot-test";
+  const messages = Array.from(
+    { length: 501 },
+    (_, index) => create_seeded_user_message(session_id, index + 1),
+  );
+  const { recorder } = await create_seeded_recorder(session_id, messages);
+  let imported_messages = [];
+  const state_service = {
+    emit_action_event: async () => {},
+    get_config: () => ({}),
+  };
+  const view_service = new SessionViewService({
+    agent_id: "fork-agent",
+    project_root: os.tmpdir(),
+    session_id,
+    history_store: new SessionRecorderHistoryStore({ session_id, recorder }),
+    recorder,
+    state_service,
+    logger: { log: async () => {} },
+    is_executing: () => false,
+    get_instruction_system_blocks: () => [],
+    get_managed_plugin_system_blocks: async () => [],
+    get_plugin_system_blocks: async () => [],
+    create_fork_session: async () => ({
+      session: { id: "forked-session", set: async () => {} },
+      history_store: {},
+      recorder: {
+        import_messages: async (input) => {
+          imported_messages = input;
+        },
+      },
+      state_service: { set: async () => {} },
+    }),
+  });
+
+  await view_service.fork("user-501");
+
+  assert.equal(imported_messages.length, 501);
+  assert.equal(imported_messages[500].message_id, "user-501");
 });

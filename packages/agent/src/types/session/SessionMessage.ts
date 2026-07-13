@@ -228,26 +228,30 @@ export type SessionMessage =
 
 /** 读取 Session Message snapshot 的分页输入。 */
 export interface ListSessionMessagesInput {
-  /** 单页数量上限。 */
-  limit?: number;
-  /** 上一页返回的透明游标。 */
-  cursor?: string;
-  /** 只返回 sequence 严格小于该值的 Message，供向前翻页。 */
+  /**
+   * 返回该 sequence 之前的最近一个完整历史 Segment。
+   *
+   * 必须是正整数；省略时直接返回 Active 中的全部 Message。
+   */
   before_sequence?: number;
   /** 是否包含 internal Message。 */
   include_internal?: boolean;
-  /** 只返回不大于该 sequence 的 Message。 */
-  through_sequence?: number;
 }
 
 /** Session Message snapshot 分页结果。 */
 export interface SessionMessagePage {
-  /** 当前页按 sequence 升序排列的 Message。 */
+  /** 当前 Active 或 Segment 中按 sequence 升序排列的 Message。 */
   items: SessionMessage[];
-  /** 当前过滤条件下的 Message 总数。 */
+  /** 当前 Session 已分配的真实 Message 总数。 */
   total: number;
-  /** 下一页透明游标。 */
-  next_cursor?: string;
-  /** 是否仍有更多 Message。 */
+  /** 当前结果来自 Active 还是已关闭 Segment。 */
+  source: "active" | "segment";
+  /** 当前结果覆盖的第一条真实 Message sequence。 */
+  start_sequence?: number;
+  /** 当前结果覆盖的最后一条真实 Message sequence。 */
+  end_sequence?: number;
+  /** 继续向前读取时应作为 before_sequence 传入的边界。 */
+  next_before_sequence?: number;
+  /** 当前结果之前是否仍有更早 Segment。 */
   has_more: boolean;
 }

@@ -32,7 +32,7 @@ const session = await agent.sessions.create({
 
 await session.set({ model });
 
-const initial_page = await session.messages({ limit: 100 });
+const initial_page = await session.messages();
 render_messages(initial_page.items);
 
 const unsubscribe = session.subscribe(async (mutation, reply) => {

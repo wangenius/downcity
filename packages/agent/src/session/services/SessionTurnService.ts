@@ -201,8 +201,16 @@ export class SessionTurnService {
       query: executor_query,
       runContext: run_context,
     });
+    const final_assistant_parts = result.assistantMessage
+      ? from_ui_assistant_parts(result.assistantMessage.parts)
+      : [];
     const final_assistant_writer = assistant_writer_ref.current;
     if (final_assistant_writer) {
+      for (const part of final_assistant_parts) {
+        if (part.type === "file") {
+          await final_assistant_writer.append_file_part(part);
+        }
+      }
       if (input.abortSignal?.aborted) {
         await final_assistant_writer.stop();
       } else if (result.success) {
@@ -211,14 +219,13 @@ export class SessionTurnService {
         await final_assistant_writer.fail(result.error);
       }
     } else if (result.assistantMessage) {
-      const parts = from_ui_assistant_parts(result.assistantMessage.parts);
-      if (parts.length > 0) {
+      if (final_assistant_parts.length > 0) {
         assistant_segment_index += 1;
         const fallback_writer = await this.recorder.open_assistant_message({
           turn_id: input.turnId,
           segment_index: assistant_segment_index,
         });
-        for (const part of parts) await fallback_writer.upsert_part(part);
+        for (const part of final_assistant_parts) await fallback_writer.upsert_part(part);
         if (result.success) await fallback_writer.complete();
         else await fallback_writer.fail(result.error);
       }

@@ -2,7 +2,7 @@
  * SessionRecorder 到 Executor SessionHistoryStore 的内部投影适配器。
  *
  * 关键点（中文）
- * - Recorder 的 messages.jsonl 与 assistant_message.json 共同组成持久化事实源。
+ * - Recorder 的 active.jsonl、segments 与 assistant_message.json 共同组成持久化事实源。
  * - Executor 继续读取临时 UIMessage 投影，不直接拥有文件写入权。
  * - 流式草稿写入由 AssistantMessageWriter 负责，Executor 的旧接口只提供投影兼容。
  */
@@ -111,11 +111,8 @@ export class SessionRecorderHistoryStore implements SessionHistoryStore {
 
   /** 从 Recorder 当前快照投影运行中的 Assistant。 */
   async read_inflight(): Promise<SessionRecordV1 | null> {
-    const page = await this.recorder.list_messages({
-      limit: 500,
-      include_internal: true,
-    });
-    const assistant = [...page.items]
+    const snapshot = await this.recorder.context_snapshot();
+    const assistant = [...snapshot.messages]
       .reverse()
       .find(
         (message) =>
@@ -132,15 +129,32 @@ export class SessionRecorderHistoryStore implements SessionHistoryStore {
 
   /** 返回 Context Composer 使用的 UIMessage 投影。 */
   async list_records(): Promise<SessionRecordV1[]> {
-    const page = await this.recorder.list_messages({
-      limit: 500,
-      include_internal: true,
-    });
-    const messages = project_context_messages(page.items);
-    return messages.flatMap((message) => {
+    const snapshot = await this.recorder.context_snapshot();
+    const records: SessionRecordV1[] = [];
+    if (snapshot.summary) {
+      records.push({
+        id: snapshot.summary.summary_id,
+        role: "assistant",
+        metadata: {
+          v: 1,
+          ts: snapshot.summary.created_at,
+          sessionId: this.sessionId,
+          source: "compact",
+          kind: "summary",
+          extra: {
+            visibility: "internal",
+            summaryThroughSequence: snapshot.summary.through_sequence,
+          },
+        },
+        parts: [{ type: "text", text: snapshot.summary.text }],
+      });
+    }
+    for (const message of snapshot.messages) {
+      if (message.type !== "user" && message.type !== "assistant") continue;
       const projected = to_executor_ui_message(message);
-      return projected ? [projected] : [];
-    });
+      if (projected) records.push(projected);
+    }
+    return records;
   }
 
   /** 返回 Context Message 区间。 */
@@ -158,7 +172,7 @@ export class SessionRecorderHistoryStore implements SessionHistoryStore {
     return {};
   }
 
-  /** 通过 Recorder 追加 internal summary，不重写 Mutation 历史。 */
+  /** 通过 Recorder 把 Active 前缀关闭为带累计 Summary 的 Segment。 */
   async compact(input: SessionHistoryCompactInput): Promise<{
     compacted: boolean;
     reason?: string;
@@ -235,40 +249,6 @@ export class SessionRecorderHistoryStore implements SessionHistoryStore {
       },
     };
   }
-}
-
-function project_context_messages(messages: import("@/types/session/SessionMessage.js").SessionMessage[]) {
-  const latest_summary = [...messages]
-    .reverse()
-    .find(
-      (message) =>
-        message.type === "assistant" &&
-        message.kind === "summary" &&
-        message.visibility === "internal",
-    );
-  if (
-    !latest_summary ||
-    latest_summary.type !== "assistant" ||
-    !latest_summary.summary_through_message_id
-  ) {
-    return messages.filter(
-      (message) => message.type === "user" || message.type === "assistant",
-    );
-  }
-  const boundary_index = messages.findIndex(
-    (message) => message.message_id === latest_summary.summary_through_message_id,
-  );
-  return [
-    latest_summary,
-    ...messages
-      .slice(boundary_index + 1)
-      .filter(
-        (message) =>
-          message !== latest_summary &&
-          message.type === "user" ||
-          (message.type === "assistant" && message.kind !== "summary"),
-      ),
-  ];
 }
 
 function infer_action_type(message_id: string): string {

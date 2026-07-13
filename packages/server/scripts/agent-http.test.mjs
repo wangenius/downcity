@@ -106,7 +106,7 @@ function create_fake_agent() {
       return { stopped: false, cancelledQueuedPrompts: 0, reason: "idle" };
     },
     async messages() {
-      return { items: [], total: 0, has_more: false };
+      return { items: [], total: 0, source: "active", has_more: false };
     },
     async system() {
       return { sessionId: info.sessionId, session: info, blocks: [] };

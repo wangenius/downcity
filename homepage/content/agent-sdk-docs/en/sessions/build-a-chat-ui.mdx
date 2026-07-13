@@ -1,0 +1,100 @@
+---
+title: Build a Chat UI
+description: Combine history, streaming text, tools, approvals, stop, and reconnect into one Session client
+---
+
+# Build a Chat UI
+
+A usable Session chat UI does not need a second Timeline. It maintains one linear state of `SessionMessage` values and merges Mutations into that state.
+
+## Initialize
+
+Subscribe and buffer first, then load snapshots so startup cannot lose a Delta:
+
+```ts
+const buffered: SessionMutation[] = [];
+let ready = false;
+
+const unsubscribe = session.subscribe(async (mutation, reply) => {
+  if (!ready) {
+    buffered.push(mutation);
+    return;
+  }
+  await apply_live_mutation(mutation, reply);
+});
+
+const [page, info] = await Promise.all([
+  session.messages({ limit: 100 }),
+  session.get_info(),
+]);
+
+set_messages(page.items);
+set_session_info(info);
+
+for (const mutation of buffered) {
+  await apply_live_mutation(mutation);
+}
+ready = true;
+```
+
+See [Reconnect and sync](/en/agent-sdk-docs/sessions/reconnect-and-sync) for full race handling.
+
+## Submit and stop
+
+```ts
+async function submit(query: string): Promise<void> {
+  const turn = await session.prompt({ query });
+  set_active_turn(turn.id);
+
+  const result = await turn.finished;
+  clear_active_turn(turn.id);
+
+  if (!result.success) {
+    show_turn_error(result.error || "Execution failed");
+  }
+}
+
+async function stop(): Promise<void> {
+  const result = await session.stop();
+  if (result.cancelledQueuedPrompts > 0) {
+    show_notice("Input that had not started was cancelled");
+  }
+}
+```
+
+Disable Send for empty input. Drive the Stop button from Turn Mutations or `get_info().executing`.
+
+## Rendering rules
+
+- Render the conversation by top-level Message `sequence`.
+- Render text, tool, then text inside an Assistant by Part `sequence`.
+- Append a `delta` only to its current text/reasoning Part.
+- Replace complete Part state by stable `part_id`.
+- Replace complete Message state by `message_id + revision`.
+- Render approval controls for `approval-required`, progress for `running`, and errors for `failed` Tool Parts.
+
+Do not flatten tool calls into another persisted list and do not overwrite an Assistant already rendered by Parts with final `turn.text`.
+
+## Approval card
+
+Approval UI gets the same identity from a Tool Part and `session.approvals()`:
+
+```ts
+await session.resolve_approval({
+  approval_id,
+  decision: "approved",
+});
+```
+
+After submission, wait for the next Part Mutation. Change tool display state only when the SDK publishes `running`, `completed`, or `failed`.
+
+## Session switch and unmount
+
+Switch Sessions in this order:
+
+1. `unsubscribe()` from the old Session.
+2. Clear old messages, Turn state, and approval UI state.
+3. After obtaining the new Session, run initialization.
+4. Never reuse the old Session's `approval_id`, `part_id`, or Turn loading state.
+
+This boundary prevents approval decisions from targeting the wrong Session and prevents old Deltas from appearing in the new history.

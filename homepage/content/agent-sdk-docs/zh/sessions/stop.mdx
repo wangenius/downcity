@@ -1,24 +1,22 @@
 ---
-title: session.stop()
-description: 停止当前 Session turn，并取消尚未被吸收的排队 prompt
+title: 停止 Turn
+description: 使用 session.stop() 中止当前执行并清空尚未吸收的输入队列
 ---
 
-# `session.stop()`
+# 停止 Turn
 
-`session.stop()` 用来停止当前正在执行的 turn。
+`session.stop()` 停止当前运行的 Turn，并取消尚未被该 Turn 吸收的排队输入。
 
 ```ts
-const turn = await session.prompt({
-  query: "执行一个较长任务",
-});
+const turn = await session.prompt({ query: "执行一个长任务" });
 
-const result = await session.stop();
-console.log(result.stopped);
+const stop_result = await session.stop();
+console.log(stop_result);
 
-await turn.finished;
+const result = await turn.finished;
 ```
 
-## 返回值
+## 返回结果
 
 ```ts
 type AgentSessionStopResult = {
@@ -29,33 +27,35 @@ type AgentSessionStopResult = {
 };
 ```
 
-字段含义：
+| 字段 | 含义 |
+| --- | --- |
+| `stopped` | 是否停止了活跃 Turn 或清空了排队输入 |
+| `turnId` | 被停止的活跃 Turn；仅有活跃 Turn 时存在 |
+| `cancelledQueuedPrompts` | 尚未绑定到 Turn 的输入数量 |
+| `reason` | `stopped` 或空闲状态的 `idle` |
 
-- `stopped`：本次调用是否实际停止了活跃 turn 或取消了排队 prompt
-- `turnId`：被停止的当前 turn
-- `cancelledQueuedPrompts`：被取消的未绑定 prompt 数量
-- `reason`：`stopped` 表示发生了停止动作，`idle` 表示当前没有可停止的工作
+## 输入队列语义
 
-## 队列语义
+当用户连续提交输入时，有些输入已经作为 steering 并入当前 Turn，有些仍在等待下一 Turn。停止的边界是：
 
-`session.prompt()` 允许在当前 turn 运行中继续追加输入。`stop()` 的规则是：
+```text
+当前 Turn 已吸收的输入  -> 随当前 Turn 一起停止
+尚未吸收的排队输入      -> 取消，不会自动启动下一 Turn
+```
 
-- 当前正在执行的 turn 会被停止
-- 已经被当前 turn 吸收的 prompt 会随当前 turn 一起结束
-- 尚未被吸收、仍在队列里的 prompt 会被取消
-- 被取消的 queued prompt 不会自动开启下一轮
+因此“停止”按钮不会因为队列里还留有文字而立刻开始下一轮。如果产品需要保留草稿，应在调用 `stop()` 前把输入保存在 UI 草稿状态，而不是依赖 SDK 队列。
 
-因此用户点击停止后，session 不会因为队列里还有输入而立刻继续执行。
+## 最终状态
 
-## 事件和结果
-
-被停止的 turn 会以失败结果结束：
+被停止的 Turn 仍会完成 `turn.finished`：
 
 ```ts
 const result = await turn.finished;
 
 console.log(result.success); // false
-console.log(result.error);   // "Turn stopped"
+console.log(result.error);   // 通常为 Turn stopped
 ```
 
-`turn.finished` 仍然会 resolve，不会因为 stop 而 reject。
+订阅流也会收到 `variant: "turn", type: "finish", status: "stopped"`。不要因为 stop 而让等待 `finished` 的 Promise 永远挂起。
+
+空闲 Session 调用 `stop()` 不抛错，会返回 `stopped: false` 与 `reason: "idle"`，适合让 UI 的停止操作保持幂等。

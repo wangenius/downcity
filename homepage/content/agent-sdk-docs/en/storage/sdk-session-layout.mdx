@@ -24,7 +24,7 @@ Because several SDK Agents may coexist inside the same project directory.
 - `meta.json`
 - archive directories
 
-`meta.json` includes the persisted `title`. After the first user message, the SDK writes a title; if model title generation fails, it uses a truncated version of that first user message.
+`meta.json` includes the persisted `title`. After the first user message, the SDK attempts to generate and write a title with the currently available model. If no model is available or generation fails, the title may remain empty; the presentation layer should fall back to `sessionId` or a product-defined placeholder.
 
 Each line in `messages.jsonl` is a complete `SessionMessage` snapshot; streaming `part` and `delta` events are never written there. `assistant_message.json` stores the complete in-progress Assistant Message and is atomically replaced after each streaming change. On completion, the SDK appends the final Assistant to `messages.jsonl` and removes the draft file.
 

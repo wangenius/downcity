@@ -1,0 +1,90 @@
+---
+title: Tool Approvals
+description: Query, display, and resolve unrestricted tool requests within a specific Session
+---
+
+# Tool Approvals
+
+An approval belongs to the Session that started the tool call, not to the top-level `Agent`. This prevents a decision from being submitted to the wrong conversation when Sessions run in parallel.
+
+When a tool such as Shell requests extra permission, its Tool Part in the current Assistant Message enters `approval-required`.
+
+```text
+ready -> approval-required -> running -> completed
+                         \-> failed
+```
+
+## Resolve directly in a live subscription
+
+The callback's second argument is bound to the current Mutation. It is available only when the current Mutation is an approval-required Tool Part:
+
+```ts
+const unsubscribe = session.subscribe(async (mutation, reply) => {
+  if (
+    mutation.variant !== "part" ||
+    mutation.type !== "tool" ||
+    mutation.part.state !== "approval-required"
+  ) {
+    return;
+  }
+
+  show_approval_request(mutation.part);
+
+  // After user confirmation:
+  await reply.approval({ decision: "approved" });
+});
+```
+
+The only decisions are `approved` and `denied`. Calling `reply.approval()` for any other Mutation fails, so the UI must not show approval controls for every event.
+
+## Query first, resolve later
+
+An approval screen, a reconnected client, or a client without a continuous subscription should use Session methods:
+
+```ts
+const pending = await session.approvals();
+
+for (const approval of pending) {
+  render_approval({
+    tool_name: approval.tool_name,
+    command: approval.command,
+    cwd: approval.cwd,
+    reason: approval.reason,
+    operation: approval.operation,
+  });
+}
+
+await session.resolve_approval({
+  approval_id: pending[0].approval_id,
+  decision: "denied",
+});
+```
+
+`resolve_approval()` only handles a pending request in the current Session. When the request is missing, already resolved by another client, or belongs to another Session, its result has `success: false`; it is never resolved across a Session boundary.
+
+## Approval modes
+
+```ts
+const current = await session.approval_mode();
+
+await session.set_approval_mode({
+  mode: "always-allow",
+});
+```
+
+| Mode | Behavior |
+| --- | --- |
+| `ask` | Default. Every unrestricted request enters the pending queue. |
+| `always-allow` | New future requests in this Session are automatically approved. |
+
+`always-allow` does not change the sandbox type, affect other Sessions, or resolve requests that are already pending. A product should surface the active mode clearly and place elevated permission behind explicit user choice.
+
+## UI implementation details
+
+- Use `approval_id` as the stable approval-card key and `tool_call_id` to link it to the Tool Part.
+- Keep a tool output area waiting while the Part is `approval-required`; do not mark it complete.
+- After submitting a decision, wait for the next Part Mutation to show `running`, `completed`, or `failed`; do not synthesize success client-side.
+- One request can have multiple subscribers; `resolve_approval()`'s `success` is authoritative.
+- On Session change, clear the old approval queue. Never send an old Session's `approval_id` to a new Session.
+
+See [Live subscriptions](/en/agent-sdk-docs/sessions/subscribe) for complete Tool Part state and rendering.

@@ -1,0 +1,80 @@
+---
+title: 重连与同步
+description: 用快照加 Mutation 构建不丢流式事件的 Session 客户端
+---
+
+# 重连与同步
+
+`subscribe()` 只发送未来变化，`messages()` 只返回读取瞬间的快照。把两者按错误顺序组合会产生竞态：先读快照再订阅时，快照完成前发生的 Delta 可能丢失。
+
+可靠流程是“先订阅并缓冲，再读快照，再合并缓冲事件”。
+
+## 推荐算法
+
+```ts
+const buffered: SessionMutation[] = [];
+let snapshot_ready = false;
+
+const unsubscribe = session.subscribe((mutation) => {
+  if (!snapshot_ready) {
+    buffered.push(mutation);
+    return;
+  }
+  apply_mutation(mutation);
+});
+
+const [message_page, info] = await Promise.all([
+  session.messages({ limit: 100 }),
+  session.get_info(),
+]);
+
+replace_message_state(message_page.items);
+replace_session_info(info);
+
+for (const mutation of buffered) {
+  apply_mutation(mutation);
+}
+
+snapshot_ready = true;
+```
+
+真实 UI 应把 `buffered` 的处理与 `snapshot_ready = true` 放在同一个串行状态更新中，避免缓冲清空与新事件到达之间再出现窗口。
+
+## 合并规则
+
+| Mutation | 合并方式 |
+| --- | --- |
+| `message` | 按 `message_id` upsert，仅应用更高 `revision` |
+| `part` | 在对应 Assistant Message 内按 `part_id` upsert，仅应用更高 `revision` |
+| `delta` | 只向对应 text/reasoning Part 追加 `delta` |
+| `turn` | 按 `turn_id` 更新运行状态 |
+| `session` | 更新当前 Session 元数据，例如标题 |
+
+断线后不要假定 Delta 可以重放。丢失的 Delta 已经合并进 `assistant_message.json` 或最终 Message 快照，因此重新读取 `messages()` 是恢复正确状态的关键。
+
+## RemoteSession 断线
+
+远程连接关闭后：
+
+1. 保留当前 UI 快照作为临时展示，不把它当最终事实。
+2. 清理旧订阅。
+3. 建立新订阅并暂存 Mutation。
+4. 重新读取 `messages()` 与 `get_info()`。
+5. 按上面的合并规则应用暂存事件。
+
+如果断线时本地仍有 `turn.finished` 等待者，应用层应处理其失败结果，并通过重新读取 Session 恢复界面。不要凭客户端计时器合成 Assistant 完成状态。
+
+## 分页历史
+
+首屏只读取最近一页时，实时 Mutation 仍然可能引用不在内存中的旧 Message。遇到这种情况应按 `message_id` 保存待合并状态，或按产品策略加载相邻历史；不要为了单次 Mutation 覆盖掉已有整页历史。
+
+## 去重
+
+同一个连接的事件通常有序，但客户端仍应做到幂等：
+
+- 用 `message_id + revision` 排除旧快照。
+- 对 Part 使用所属 Message 的 revision。
+- 对 Delta 只在流仍连续时追加；重连后以快照为准。
+- 可用 `mutation_id` 去重同一个事件的重复投递。
+
+这套方式适用于本地与远程 Session。区别仅在远程 transport 可能断开，本地回调通常不会。

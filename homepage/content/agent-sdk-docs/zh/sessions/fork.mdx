@@ -1,31 +1,45 @@
 ---
-title: session.fork()
-description: 从当前 Session 复制一条分支会话，适合试验不同方向
+title: 分叉 Session
+description: 从完整历史或指定 Message 创建可独立继续执行的新 Session
 ---
 
-# `session.fork()`
+# 分叉 Session
 
-## 示例
+`session.fork()` 从当前 Session 的历史创建一个独立的新 Session。分叉后的后续输入、模型执行、工具状态与审批都彼此隔离。
 
 ```ts
-const branched = await session.fork();
-const fromMessage = await session.fork("message-id");
+const full_branch = await session.fork();
+
+const branch_at_message = await session.fork({
+  messageId: "assistant:repo-analysis:abc",
+});
 ```
 
-## 两种 fork 方式
+也可以直接传入 `messageId` 字符串：
 
-### 不传 `messageId`
+```ts
+const branch = await session.fork("assistant:repo-analysis:abc");
+```
 
-复制当前完整历史，创建一条新 session。
+## 两种边界
 
-### 传 `messageId`
+| 调用 | 复制范围 |
+| --- | --- |
+| `fork()` | 当前可见历史的完整状态 |
+| `fork({ messageId })` | 从开头复制到该 Message，包含该 Message |
 
-复制到某条消息为止的历史，用它作为分叉点。
+分叉点是顶层 Message，不是 Assistant 内的 `part_id`。如果需要在工具调用前后试验不同方向，先在 `messages()` 中找到对应 Assistant Message 的 `message_id`。
 
-## 适合什么场景
+## 来源与顺序
 
-- 保留主线讨论不变
-- 在侧线尝试不同提示词
-- 做“从某个节点开始重跑”
+复制进新 Session 的 Message 保留新的 Session 身份和新的线性顺序，同时可携带 `origin`，记录来源的 `session_id`、`message_id` 与 `turn_id`。这使分叉可追溯，但分叉后两个 Session 不共享可变状态。
 
-如果你经常需要对同一份上下文做多个分支实验，`fork()` 会比手工复制历史方便得多。
+不要把分叉理解为“两个窗口共同编辑一份历史”。源 Session 的后续 Message 不会自动出现到分叉中，分叉的后续 Message 也不会回写源 Session。
+
+## 适合的场景
+
+- 在保留主线结论的前提下比较两种实现方案。
+- 从某一条用户输入重新提问，避免后续上下文干扰。
+- 为长任务建立实验支线，而不污染主会话。
+
+分叉后按普通 Session 使用：加载 `messages()`、建立 `subscribe()`，然后调用 `prompt()`。不需要复制 Mutation，也不应该复制源 Session 的 pending approval。

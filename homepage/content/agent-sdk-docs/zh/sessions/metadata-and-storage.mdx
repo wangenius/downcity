@@ -1,63 +1,71 @@
 ---
-title: Session 元数据与落盘
-description: SDK Session 的元数据、消息文件和目录布局
+title: 元数据与落盘
+description: 理解 Session 的历史、Assistant 草稿、元数据和中断恢复边界
 ---
 
-# Session 元数据与落盘
+# 元数据与落盘
 
-SDK session 默认落盘到：
-
-```text
-<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/messages.jsonl
-```
-
-同一目录下还会有：
+SDK Session 默认保存到项目目录中。落盘的目的是恢复对话与执行状态，不是让应用直接把文件当数据库写入。
 
 ```text
-<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/meta.json
+<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/
+└── messages/
+    ├── messages.jsonl
+    ├── assistant_message.json
+    └── meta.json
 ```
 
-以及运行中的 assistant 快照：
+`agentId` 是存储分区的一部分。同一项目里多个 Agent 可以使用相同 `sessionId` 而不冲突，但不要把 `agentId` 当作随意修改的展示名称。
+
+## `messages.jsonl`：完成历史
+
+每一行是一个完整 `SessionMessage` 快照，不是 Mutation，也不包含 `variant`。User、Error、完成的 Assistant 和 Action 都在这里保存。
+
+某些 Message 会有多个 revision，例如 Action 从 `running` 变为 `completed`。读取层会按 `message_id` 选择最高 revision，再按 `sequence` 返回线性历史。
+
+这就是为什么应用应该调用 `session.messages()`，而不是自行解析 JSONL：SDK 已经处理了 revision、可见性与分页。
+
+## `assistant_message.json`：流式草稿
+
+流式 Assistant 在完成前不会把每个 Delta 追加到历史，而是持续原子覆盖当前完整草稿：
 
 ```text
-<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/assistant_message.json
+text delta / reasoning delta / tool state update
+-> 更新完整 Assistant Message 草稿
+-> 发布实时 Mutation
 ```
 
-## 为什么要按 `agentId` 分区
+完成时，最终 Assistant Message 追加到 `messages.jsonl`，随后草稿文件被删除。这样既能让每个 Delta 实时到达前端，也避免历史文件因每个 token 无限增长。
 
-因为同一个项目目录下，可能有多个 SDK agent 共存。
+同一时刻每个 Session 最多有一个 streaming Assistant 草稿。工具调用位于该草稿的 `parts` 中，保持 `text -> tool -> text` 的真实顺序。
 
-`agentId` 可以把它们隔离开。
+## 进程中断恢复
 
-这也是为什么 `id` 不能随便乱填的原因之一。
+启动或重新打开 Session 时，SDK 会检查未完成草稿：
 
-## 你通常能在这里得到什么
+- streaming Assistant 会收口为 `status: "stopped"` 的历史 Message。
+- 仍为 `running` 的 Action 会收口为 `failed`。
+- 已有文本、推理和工具 Part 会保留，不会被重新排序。
 
-- 消息历史
-- 运行中的 assistant 快照
-- session metadata
-- 归档目录
-
-`messages.jsonl` 每行保存一条完整 `SessionMessage` 快照。Action 状态变化会以相同 `message_id` 和更高 `revision` 追加新快照；读取时只取最新 revision。
-
-`assistant_message.json` 保存当前尚未完成的完整 Assistant Message。流式 `part` 和 `delta` 只更新这份原子快照，不进入 `messages.jsonl`。正常结束时最终 Assistant 会追加到历史并删除草稿；进程中断后，SDK 会把草稿收口为 `stopped` 历史消息。
-
-如果你在排障、做历史回放或多 agent 实验，这些落盘信息都很有价值。
+恢复后的客户端仍应先读 `messages()`，再订阅未来 Mutation。不要根据本地缓存推断中断前的最终工具结果。
 
 ## `meta.json`
 
-`meta.json` 保存 session 列表和详情所需的轻量字段：
+`meta.json` 保存列表与详情所需的轻量属性，例如：
 
-- `sessionId`
-- `agentId`
+- `sessionId`、`agentId`
 - `title`
-- `modelLabel`
-- `createdAt`
-- `updatedAt`
+- `modelId`、`modelLabel`
+- `createdAt`、`updatedAt`
 - `timezone`
 
-`title` 是持久化字段。首条用户消息出现后，SDK 会优先用模型生成标题；如果生成失败，就用首条用户消息截断后写入 `title`。
+模型、标题等 Session 属性变化会同步更新 metadata；标题更新也会发布 `session/title` Mutation。
 
-## 相关文档
+## 使用边界
 
-- [SDK Session 布局](/zh/agent-sdk-docs/storage/sdk-session-layout)
+- 使用 `messages()`、`get_info()`、`system()` 和 Session 集合 API 读取状态。
+- 使用 `prompt()`、`set()`、`fork()`、`archive()` 修改状态。
+- 不要手工编辑、删除或同时写入这些文件。这样会破坏 revision、草稿原子性与恢复逻辑。
+- 排障时可以只读检查文件，但对外 UI 仍应以 SDK API 结果为准。
+
+归档 Session 的目录由 Session 集合管理。使用 `archive()` 与 `clean_archive()`，不要手动移动目录。

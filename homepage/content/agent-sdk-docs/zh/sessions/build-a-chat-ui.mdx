@@ -1,0 +1,100 @@
+---
+title: 构建聊天界面
+description: 将历史、流式文本、工具、审批、停止和重连组合成一个 Session 客户端
+---
+
+# 构建聊天界面
+
+一个可用的 Session 聊天界面不需要维护第二份 Timeline。它只维护由 `SessionMessage` 构成的线性状态，并把 Mutation 合并进这份状态。
+
+## 初始化
+
+先订阅并缓冲，再加载快照，避免启动时丢失 Delta：
+
+```ts
+const buffered: SessionMutation[] = [];
+let ready = false;
+
+const unsubscribe = session.subscribe(async (mutation, reply) => {
+  if (!ready) {
+    buffered.push(mutation);
+    return;
+  }
+  await apply_live_mutation(mutation, reply);
+});
+
+const [page, info] = await Promise.all([
+  session.messages({ limit: 100 }),
+  session.get_info(),
+]);
+
+set_messages(page.items);
+set_session_info(info);
+
+for (const mutation of buffered) {
+  await apply_live_mutation(mutation);
+}
+ready = true;
+```
+
+完整竞态处理见 [重连与同步](/zh/agent-sdk-docs/sessions/reconnect-and-sync)。
+
+## 提交与停止
+
+```ts
+async function submit(query: string): Promise<void> {
+  const turn = await session.prompt({ query });
+  set_active_turn(turn.id);
+
+  const result = await turn.finished;
+  clear_active_turn(turn.id);
+
+  if (!result.success) {
+    show_turn_error(result.error || "执行失败");
+  }
+}
+
+async function stop(): Promise<void> {
+  const result = await session.stop();
+  if (result.cancelledQueuedPrompts > 0) {
+    show_notice("未开始的输入已取消");
+  }
+}
+```
+
+发送按钮应在输入为空时禁用；停止按钮应由 `turn` Mutation 或 `get_info().executing` 驱动。
+
+## 渲染规则
+
+- 按顶层 Message 的 `sequence` 渲染对话。
+- Assistant 内按 Part 的 `sequence` 渲染文本、工具、再文本。
+- `delta` 只追加到当前 text/reasoning Part。
+- `part` 用稳定 `part_id` 覆盖完整状态。
+- `message` 用 `message_id + revision` 覆盖完整 Message。
+- Tool Part 为 `approval-required` 时显示审批控件；为 `running` 时显示执行中；为 `failed` 时展示错误。
+
+不要把工具调用平铺到第二份可持久化列表，也不要用最终 `turn.text` 覆盖已经按 Part 渲染的 Assistant Message。
+
+## 审批卡片
+
+审批 UI 从 Tool Part 和 `session.approvals()` 得到相同身份：
+
+```ts
+await session.resolve_approval({
+  approval_id,
+  decision: "approved",
+});
+```
+
+提交后保持等待下一条 Part Mutation。只有 SDK 发布 `running`、`completed` 或 `failed` 后才改变工具展示状态。
+
+## Session 切换与卸载
+
+切换会话时按这个顺序：
+
+1. `unsubscribe()` 旧会话。
+2. 清空旧会话的消息、Turn 与审批 UI 状态。
+3. 取到新 Session 后执行初始化流程。
+4. 不复用旧会话的 `approval_id`、`part_id` 或 Turn loading 状态。
+
+这是避免“审批提交给错误会话”和“历史滚动显示旧 Delta”的必要边界。

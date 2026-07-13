@@ -1,30 +1,113 @@
 ---
-title: session.subscribe()
-description: Subscribe to the unified live Mutation stream of a local or remote Session
+title: Live Subscriptions
+description: Consume the unified SessionMutation stream for streaming text, tools, Turns, and Session changes
 ---
 
-# `session.subscribe()`
+# Live Subscriptions
 
-`session.subscribe()` is the only live subscription entry point for a Session. It emits Message snapshots, Assistant Parts, text deltas, Turn lifecycle, and Session state changes.
+`session.subscribe()` is the only live Session entry point. It broadcasts only changes after subscription, with no cache, replay, or backpressure management.
 
 ```ts
-const unsubscribe = session.subscribe(async (mutation, reply) => {
-  if (mutation.variant === "delta" && mutation.type === "text") {
-    process.stdout.write(mutation.delta);
+const unsubscribe = session.subscribe((mutation, reply) => {
+  apply_mutation(mutation);
+});
+
+// Always release it when it is no longer needed.
+unsubscribe();
+```
+
+The callback may be async. A thrown error or rejection from one subscriber does not roll back persisted state or block other subscribers.
+
+## Five Mutation variants
+
+Every Mutation has `mutation_id`, `session_id`, and `created_at`.
+
+| `variant` | `type` | Purpose | Has Message revision |
+| --- | --- | --- | --- |
+| `message` | `user | assistant | action | error` | Complete top-level Message snapshot | Yes |
+| `part` | `text | reasoning | tool | file | data` | Complete Assistant Part snapshot | Yes |
+| `delta` | `text | reasoning` | New raw text fragment | Yes |
+| `turn` | `start | finish` | Turn execution lifecycle | No |
+| `session` | `title` | Session property change | No |
+
+`message`, `part`, and `delta` are published only after the corresponding complete Message or Assistant draft is persisted. The Mutation envelope itself is never written to `messages.jsonl`.
+
+## Render text with Deltas
+
+```ts
+session.subscribe((mutation) => {
+  if (mutation.variant !== "delta" || mutation.type !== "text") return;
+
+  append_text({
+    message_id: mutation.message_id,
+    part_id: mutation.part_id,
+    delta: mutation.delta,
+  });
+});
+```
+
+A Delta is an appended fragment, not cumulative text. Do not use it as a complete Part snapshot and do not infer order from text content; use `message_id`, `part_id`, and `revision`.
+
+## Correct state with complete snapshots
+
+Network behavior, batched rendering, and UI transitions can leave client-maintained intermediate state incomplete. `message` and `part` are complete corrective snapshots:
+
+```ts
+function apply_mutation(mutation: SessionMutation): void {
+  if (mutation.variant === "message") {
+    upsert_message(mutation.message, mutation.revision);
+    return;
   }
 
-  if (
-    mutation.variant === "part" &&
-    mutation.type === "tool" &&
-    mutation.part.state === "approval-required"
-  ) {
-    await reply.approval({ decision: "approved" });
+  if (mutation.variant === "part") {
+    upsert_part(mutation.message_id, mutation.part, mutation.revision);
+    return;
+  }
+
+  if (mutation.variant === "delta") {
+    append_part_delta(mutation.message_id, mutation.part_id, mutation.delta);
+  }
+}
+```
+
+Track the greatest applied `revision` for each Message. A `message` or `part` snapshot at or below that revision can be ignored so an old event cannot overwrite newer state.
+
+## Turns and title updates
+
+```ts
+session.subscribe((mutation) => {
+  if (mutation.variant === "turn" && mutation.type === "start") {
+    set_turn_running(mutation.turn_id);
+  }
+
+  if (mutation.variant === "turn" && mutation.type === "finish") {
+    set_turn_finished(mutation.turn_id, mutation.status, mutation.error);
+  }
+
+  if (mutation.variant === "session" && mutation.type === "title") {
+    set_session_title(mutation.title);
   }
 });
 ```
 
-Mutations have five variants: `message`, `part`, `delta`, `turn`, and `session`. Message-backed Mutations are published after the corresponding Message or Assistant draft is persisted. Turn and Session Mutations describe live runtime state.
+`turn.finish` has `completed`, `failed`, or `stopped` status. It and `turn.finished` describe the same final execution: the former is for subscription-driven UI, the latter for control flow.
 
-Mutations are a live protocol, not the history format. They do not replay history or recover a disconnected stream; reload `messages()` and `get_info()` after reconnecting.
+## Tool Part state machine
 
-An approval-required Tool Part keeps the same `part_id` while moving through `ready -> approval-required -> running | failed`. Reply in the callback with `reply.approval({ decision: "approved" })`, or resolve it later with `session.resolve_approval(...)`.
+The same Tool Part is updated under the same `part_id`:
+
+```text
+input-streaming -> ready -> approval-required -> running -> completed
+                                                   \-> failed
+ready ----------------------------------------------> running
+```
+
+`input-streaming` means the model is still producing tool arguments; `ready` means input is complete but execution has not started. Key UI elements by `tool_call_id` or `part_id`; do not append a new item for every Part update.
+
+See [Tool approvals](/en/agent-sdk-docs/sessions/approvals) for approval handling.
+
+## Lifecycle boundary
+
+`unsubscribe()` stops only future events. It does not stop a Session, Turn, or tool. Call it on route, component, or Session changes; when returning to the Session, reload snapshots and subscribe again.
+
+Reconnecting requires more than subscribing again. See [Reconnect and sync](/en/agent-sdk-docs/sessions/reconnect-and-sync).

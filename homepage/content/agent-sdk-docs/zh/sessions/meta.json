@@ -2,14 +2,18 @@
   "title": "Sessions",
   "pages": [
     "overview",
+    "session-management",
     "set-model",
     "info",
-    "prompt",
+    "prompt-and-turns",
     "stop",
-    "subscribe",
     "messages",
+    "subscribe",
+    "reconnect-and-sync",
+    "approvals",
     "system",
     "fork",
-    "metadata-and-storage"
+    "metadata-and-storage",
+    "build-a-chat-ui"
   ]
 }

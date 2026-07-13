@@ -1,0 +1,69 @@
+---
+title: Managing Sessions
+description: Create, open, list, archive, and permanently clean up Sessions
+---
+
+# Managing Sessions
+
+`agent.sessions` is the collection entry point. It manages only Sessions owned by the current Agent; it never searches or mutates another `agentId`'s data.
+
+## Create and open
+
+```ts
+const created = await agent.sessions.create({
+  sessionId: "repo-analysis",
+});
+
+const existing = await agent.sessions.get("repo-analysis");
+```
+
+`create()` expresses creation intent. It throws when the ID already exists instead of silently reusing it. When `sessionId` is omitted, the SDK generates a stable, non-guessable ID. For get-or-create behavior, call `get()` first and call `create()` only when it is missing.
+
+## List and search
+
+```ts
+const page = await agent.sessions.list({
+  limit: 30,
+  query: "repo",
+});
+
+for (const item of page.items) {
+  render_session_row(item);
+}
+
+if (page.hasMore) {
+  const next_page = await agent.sessions.list({
+    limit: 30,
+    cursor: page.nextCursor,
+    query: "repo",
+  });
+}
+```
+
+List items are lightweight summaries, not complete Messages. Common fields are `sessionId`, `title`, `previewText`, `messageCount`, `modelLabel`, `updatedAt`, and `executing`. `cursor` is opaque: return it to the SDK unchanged.
+
+`query` is a lightweight contains filter for a session picker. It is not a full-text search language.
+
+## Archive and clean up
+
+```ts
+await agent.sessions.archive({ id: "repo-analysis" });
+
+const archived_page = await agent.sessions.archived({ limit: 30 });
+
+const removed = await agent.sessions.clean_archive();
+console.log(removed.removedSessionIds);
+```
+
+Archiving removes a Session from the active list without immediately destroying it. A running Session cannot be archived; wait for its Turn or call `stop()` first.
+
+`clean_archive()` permanently deletes every archived Session. Treat it as an explicit empty-trash action and require user confirmation in a UI.
+
+## UI guidance
+
+1. Use lightweight `list()` summaries for the sidebar.
+2. After selection, call `get()` and then load `messages()`.
+3. Render `executing: true` as the runtime state; do not guess from timestamps.
+4. Remove an archived item from the active list and reload archived data after success.
+
+A Session title can be empty. The presentation layer should fall back to `sessionId` or a product-defined placeholder.

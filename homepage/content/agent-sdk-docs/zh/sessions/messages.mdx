@@ -1,11 +1,11 @@
 ---
-title: session.messages()
-description: 分页读取 Session 已持久化的 Message 快照
+title: Message 与 Part
+description: 读取线性历史、理解四种 Message 和 Assistant 内部 Part
 ---
 
-# `session.messages()`
+# Message 与 Part
 
-`session.messages()` 返回当前 Session 已持久化的 Message 快照，按 `sequence` 排序。
+`session.messages()` 返回 Session 的持久化状态快照。它是首次渲染、分页加载和断线恢复的事实来源；实时变化由 `subscribe()` 补充。
 
 ```ts
 const page = await session.messages({ limit: 100 });
@@ -15,6 +15,80 @@ for (const message of page.items) {
 }
 ```
 
-返回值包含 `items`、`total`、`has_more` 与可选的 `next_cursor`。可传入 `limit`、`cursor`、`before_sequence`、`through_sequence` 和 `include_internal`。
+返回结果为：
 
-实时更新使用 `session.subscribe()`。它只观察订阅建立后的 Mutation；重新连接时应重新读取 `messages()` 快照并重新订阅。
+```ts
+{
+  items: SessionMessage[];
+  total: number;
+  has_more: boolean;
+  next_cursor?: string;
+}
+```
+
+注意这里是 snake case 的 `has_more` 与 `next_cursor`；Session 集合的 `list()` 分页结果则使用 `hasMore` 与 `nextCursor`。
+
+## 四类顶层 Message
+
+| `type` | 表示什么 | 常见展示 |
+| --- | --- | --- |
+| `user` | 用户输入或运行中 steering | 用户气泡、附件 |
+| `assistant` | 模型生成的一段回复 | 文本、推理、工具、文件 |
+| `action` | 模型切换、压缩等运行时操作 | 状态通知 |
+| `error` | Session 或 Turn 的可展示错误 | 错误提示与重试入口 |
+
+Session 内只有一条按 `sequence` 排序的顶层 Message 序列。工具调用不是另一条 Timeline，也不是顶层 Message；它属于 Assistant Message 的 `parts`，因此 `text -> tool -> text` 会以真实生成顺序保存。
+
+## Assistant Part
+
+Assistant Message 的 `parts` 可包含：
+
+| `type` | 关键字段 | 说明 |
+| --- | --- | --- |
+| `text` | `text`, `state` | 用户可见输出，`streaming -> done` |
+| `reasoning` | `text`, `state` | 推理输出，是否展示由产品决定 |
+| `tool` | `tool_call_id`, `tool_name`, `state` | 工具输入、审批、运行和结果 |
+| `file` | `url`, `media_type` | Assistant 生成或引用的文件 |
+| `data` | `data_type`, `data` | 结构化 UI 数据 |
+
+每个 Assistant Part 有稳定的 `part_id` 和不可变的内部 `sequence`。工具状态变化必须更新同一个 Part，不应在 UI 中创建“请求”和“结果”两个重复行。
+
+## 顺序、版本与可见性
+
+每条 Message 都有：
+
+- `message_id`：稳定身份，用来定位更新目标。
+- `sequence`：在线性历史中的位置，创建后不变。
+- `revision`：同一 Message 的版本；收到较低 revision 的快照不能覆盖较高 revision。
+- `visibility`：`visible` 或 `internal`。
+- `created_at` / `updated_at`：毫秒时间戳。
+
+默认 `messages()` 不返回 `internal` Message，例如内部 summary。调试、审计或实现高级历史浏览器时才传 `include_internal: true`。
+
+## 分页与向上加载
+
+```ts
+let page = await session.messages({ limit: 50 });
+render_messages(page.items);
+
+while (page.has_more && page.next_cursor) {
+  page = await session.messages({
+    limit: 50,
+    cursor: page.next_cursor,
+  });
+  prepend_messages(page.items);
+}
+```
+
+`cursor` 是透明字符串，只能回传。实现聊天记录向上滚动时，也可以用 `before_sequence` 请求某个已知 Message 之前的内容；`through_sequence` 可把读取范围固定到一个历史边界。
+
+## 与实时 Mutation 配合
+
+不要每收到一个 Delta 就重新读取整个历史。正确分工是：
+
+1. 用 `messages()` 建立初始状态。
+2. 用 `message` / `part` Mutation 替换对应快照。
+3. 用 `delta` 追加当前 Part 的新文本。
+4. 断线后重新读取快照并按 revision 合并。
+
+完整的同步算法见 [重连与同步](/zh/agent-sdk-docs/sessions/reconnect-and-sync)。

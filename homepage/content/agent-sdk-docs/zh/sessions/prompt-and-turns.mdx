@@ -1,0 +1,110 @@
+---
+title: 输入与 Turn
+description: 使用 session.prompt() 提交用户输入、理解 steering、排队和最终结果
+---
+
+# 输入与 Turn
+
+`session.prompt()` 是唯一的用户输入入口。它接受一条新的输入，并在 SDK 已确认该输入归属哪个 Turn 后返回 `TurnHandle`。
+
+```ts
+const turn = await session.prompt({
+  query: "分析这个仓库",
+});
+
+const result = await turn.finished;
+if (result.success) {
+  console.log(result.text);
+}
+```
+
+`prompt()` 不等于“等待模型最终回答”。实时过程由 `subscribe()` 接收；最终结果由 `turn.finished` 接收。
+
+## 输入格式
+
+`query` 可以是文本，也可以是 AI SDK 的 User Part 数组：
+
+```ts
+const turn = await session.prompt({
+  query: [
+    { type: "text", text: "说明图片里的架构" },
+    {
+      type: "file",
+      mediaType: "image/png",
+      url: "/absolute/path/architecture.png",
+      filename: "architecture.png",
+    },
+  ],
+});
+```
+
+输入 API 使用 AI SDK 的 `mediaType` 命名；读回的持久化 `SessionMessage` 使用 `media_type`。两者属于不同边界，不应把读回的 Part 原样当作 `prompt()` 输入。
+
+本地 Session 会在调用模型前读取本地图片文件，并转换成模型可消费的数据格式。远程 Session 的本地文件路径是否可用取决于服务端能否访问该路径；远程客户端优先使用可访问 URL 或由服务端可读取的资源路径。
+
+## Turn Handle
+
+```ts
+const turn = await session.prompt({ query: "继续" });
+
+console.log(turn.id);
+console.log(turn.result); // 完成前为 null
+
+const result = await turn.finished;
+```
+
+`finished` 不会因模型或工具失败而 reject，而是总会 resolve 为：
+
+```ts
+{
+  turnId: string;
+  success: boolean;
+  text: string;
+  error?: string;
+  assistantMessage?: unknown;
+}
+```
+
+因此应用代码必须检查 `success`，而不是只等待 Promise 成功兑现。
+
+## 运行中继续输入
+
+运行中的 Session 仍可再次调用 `prompt()`：
+
+```ts
+const first_turn = await session.prompt({ query: "先分析目录结构" });
+const follow_up = await session.prompt({ query: "只看 packages/agent" });
+```
+
+Session 会自行决定第二条输入：
+
+| 情况 | 结果 |
+| --- | --- |
+| 当前 Turn 仍可吸收输入 | 写入一条 `input_type: "steer"` 的 User Message，并入当前 Turn |
+| 当前 Turn 已越过可吸收边界 | 写入普通 User Message，排到下一 Turn |
+| Session 空闲 | 立即创建新 Turn |
+
+两个 `prompt()` 调用可以返回同一个 `turn.id`，这表示它们被并入同一轮执行，不是重复执行。不要在客户端另建队列，也不要假设每次调用都会创建新 Turn。
+
+## 实时显示与最终结果
+
+典型界面同时做两件事：
+
+```ts
+const unsubscribe = session.subscribe(render_mutation);
+const turn = await session.prompt({ query: "生成实现方案" });
+const result = await turn.finished;
+unsubscribe();
+```
+
+- `delta`：立即追加可见文本或推理文本。
+- `part`：更新同一个工具或文本 Part 的完整状态。
+- `turn.finish`：更新加载状态并与 `turn.finished` 结果对齐。
+
+不要用 `turn.result` 轮询流式内容。它仅在 Turn 结束后变成最终快照。
+
+## 空输入与错误处理
+
+空字符串、空数组和只含空文本的 Part 数组会被拒绝。调用前应禁用空输入提交，调用后仍应处理错误，例如远程连接失败、模型未配置或 Session 已归档。
+
+停止运行中的 Turn 请使用 [session.stop()](/zh/agent-sdk-docs/sessions/stop)。

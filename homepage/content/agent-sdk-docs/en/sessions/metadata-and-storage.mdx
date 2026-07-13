@@ -1,63 +1,71 @@
 ---
-title: Session Metadata and Storage
-description: SDK Session metadata, message files, and directory layout
+title: Metadata and Storage
+description: Understand Session history, Assistant drafts, metadata, and interrupted-process recovery
 ---
 
-# Session Metadata and Storage
+# Metadata and Storage
 
-SDK sessions are persisted by default under:
-
-```text
-<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/messages.jsonl
-```
-
-The same directory also contains:
+SDK Sessions are saved under the project directory. Persistence exists to recover conversation and execution state, not for an application to write these files as its own database.
 
 ```text
-<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/meta.json
+<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/
+└── messages/
+    ├── messages.jsonl
+    ├── assistant_message.json
+    └── meta.json
 ```
 
-and the in-progress assistant snapshot:
+`agentId` is part of the storage partition. Multiple Agents in one project can use the same `sessionId` without conflict, but do not treat `agentId` as a casual display label.
+
+## `messages.jsonl`: completed history
+
+Each line is a complete `SessionMessage` snapshot, not a Mutation and never an object with `variant`. User, Error, completed Assistant, and Action Messages are stored here.
+
+Some Messages have multiple revisions, such as an Action changing from `running` to `completed`. The reader keeps the greatest revision for a `message_id` and then returns linear history ordered by `sequence`.
+
+This is why applications should call `session.messages()` rather than parse JSONL themselves: the SDK already handles revisions, visibility, and pagination.
+
+## `assistant_message.json`: streaming draft
+
+Before it completes, a streaming Assistant does not append every Delta to history. Instead, it atomically replaces the current complete draft:
 
 ```text
-<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/assistant_message.json
+text delta / reasoning delta / tool state update
+-> update complete Assistant Message draft
+-> publish live Mutation
 ```
 
-## Why storage is partitioned by `agentId`
+On completion, the final Assistant Message is appended to `messages.jsonl` and the draft is removed. This lets every Delta reach the UI while keeping history from growing once per token.
 
-Because multiple SDK agents can exist inside the same project directory.
+Each Session has at most one streaming Assistant draft at a time. Tool calls live in that draft's `parts` and retain real `text -> tool -> text` order.
 
-`agentId` keeps their session data isolated.
+## Interrupted-process recovery
 
-This is also one of the reasons why `id` should not be treated as a casual display string.
+When a Session starts or reopens, the SDK checks for unfinished drafts:
 
-## What you can usually find here
+- A streaming Assistant is finalized into a history Message with `status: "stopped"`.
+- A still-`running` Action is finalized as `failed`.
+- Existing text, reasoning, and tool Parts are retained and never reordered.
 
-- message history
-- in-progress assistant snapshot
-- session metadata
-- archive directories
-
-Each line in `messages.jsonl` stores a complete `SessionMessage` snapshot. Action state changes append a new snapshot with the same `message_id` and a higher `revision`; readers keep only the latest revision.
-
-`assistant_message.json` stores the current unfinished Assistant Message. Streaming `part` and `delta` changes only update this atomic snapshot and never enter `messages.jsonl`. On normal completion the final Assistant is appended to history and the draft is removed; after an interrupted process, the SDK finalizes the draft as a `stopped` history message.
-
-If you are troubleshooting, replaying history, or running multi-agent experiments, this persisted data is extremely useful.
+A recovered client should still load `messages()` before subscribing to future Mutations. Do not infer an interrupted tool's final result from local UI cache.
 
 ## `meta.json`
 
-`meta.json` stores the lightweight fields used by session lists and detail views:
+`meta.json` stores lightweight fields for lists and detail views, including:
 
-- `sessionId`
-- `agentId`
+- `sessionId`, `agentId`
 - `title`
-- `modelLabel`
-- `createdAt`
-- `updatedAt`
+- `modelId`, `modelLabel`
+- `createdAt`, `updatedAt`
 - `timezone`
 
-`title` is persisted. After the first user message, the SDK first tries to generate a title with the configured model. If generation fails, it writes a truncated version of the first user message as `title`.
+Session property changes such as model and title update metadata. A title change also publishes a `session/title` Mutation.
 
-## Related docs
+## Usage boundary
 
-- [SDK Session layout](/en/agent-sdk-docs/storage/sdk-session-layout)
+- Read state through `messages()`, `get_info()`, `system()`, and the Session collection API.
+- Change state through `prompt()`, `set()`, `fork()`, and `archive()`.
+- Do not manually edit, delete, or concurrently write these files. Doing so breaks revision handling, draft atomicity, and recovery.
+- For troubleshooting, inspect files read-only, but treat SDK API results as the source of truth for an external UI.
+
+The Session collection manages archived directories. Use `archive()` and `clean_archive()` instead of moving directories yourself.

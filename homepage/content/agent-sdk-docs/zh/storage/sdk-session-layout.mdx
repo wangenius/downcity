@@ -24,7 +24,7 @@ SDK 本地 Agent 的 session 默认落盘到：
 - `meta.json`
 - archive 目录
 
-`meta.json` 中包含持久化 `title`。首条用户消息出现后，SDK 会写入标题；如果模型标题生成失败，就使用首条用户消息的截断文本。
+`meta.json` 中包含持久化 `title`。首条用户消息出现后，SDK 会尝试使用当前可用模型生成并写入标题；模型不可用或生成失败时，标题可以保持为空，展示层应自行回退到 `sessionId` 或产品定义的占位文案。
 
 `messages.jsonl` 的每一行都是完整的 `SessionMessage` 快照，不会写入流式 `part` 或 `delta` 事件。`assistant_message.json` 保存当前正在生成的完整 Assistant Message，并在每次流式变化后原子覆盖。运行完成后，SDK 会把最终 Assistant 追加到 `messages.jsonl`，再删除该草稿文件。
 

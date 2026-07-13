@@ -1,70 +1,96 @@
 ---
 title: Session Overview
-description: Understand the central role of Session in the Agent SDK and the most common usage sequence
+description: What a Session owns, its lifecycle, and the shared local and remote workflow
 ---
 
 # Session Overview
 
-In the SDK, the thing that actually executes work is the session.
+`Agent` assembles the runtime: models, tools, plugins, configuration, and storage. A `Session` owns one continuous conversation, its history, streaming output, and tool approvals.
 
-## Preferred local interactive pattern
+A Session is one persisted, linearly ordered Message sequence. It can be reopened with `get()` after a process restart, and local `Agent` and `RemoteAgent` share nearly the same calling model.
 
-### Local Agent
+## The essential flow
+
+```text
+create / get
+-> load an initial messages() snapshot
+-> subscribe() to live changes
+-> prompt() returns a turn handle
+-> handle delta, part, and approval
+-> await turn.finished
+-> stop(), fork(), or archive when needed
+```
+
+Subscribe before calling `prompt()`. A subscription only receives future Mutations; it never replays output that happened before it was established.
+
+## A complete local example
 
 ```ts
-const session = await agent.sessions.create();
+const session = await agent.sessions.create({
+  sessionId: "repo-analysis",
+});
+
 await session.set({ model });
 
-const unsubscribe = session.subscribe((mutation) => {
-  if (mutation.variant === "delta" && mutation.type === "text") {
-    process.stdout.write(mutation.delta);
+const initial_page = await session.messages({ limit: 100 });
+render_messages(initial_page.items);
+
+const unsubscribe = session.subscribe(async (mutation, reply) => {
+  apply_mutation_to_ui(mutation);
+
+  if (
+    mutation.variant === "part" &&
+    mutation.type === "tool" &&
+    mutation.part.state === "approval-required"
+  ) {
+    await reply.approval({ decision: "approved" });
   }
 });
 
-const turn = await session.prompt({ query: "Continue" });
+const turn = await session.prompt({ query: "Analyze this repository's Session design" });
+const result = await turn.finished;
 
-await turn.finished;
+if (!result.success) {
+  show_error(result.error || "Turn failed");
+}
+
+unsubscribe();
 ```
 
-If you already provided a default model through `new Agent({ model })`, you do not need a separate `session.set({ model })`.
+`apply_mutation_to_ui()` should merge snapshots by `message_id + revision` and append only the incremental text of a `delta`. See [Live subscriptions](/en/agent-sdk-docs/sessions/subscribe) and [Reconnect and sync](/en/agent-sdk-docs/sessions/reconnect-and-sync).
 
-### RemoteAgent
+## The objects inside a Session
 
-```ts
-const session = await remoteAgent.sessions.create();
-const turn = await session.prompt({ query: "Continue" });
-await turn.finished;
-```
+| Object | Purpose | When to use it |
+| --- | --- | --- |
+| `SessionMessage` | The only persisted history model | Initial load, reconnect, history browsing |
+| `SessionMutation` | Live protocol for changes after subscription | Streaming UI, tool state, title updates |
+| `TurnHandle` | Execution handle for an accepted input | Waiting for the final result, checking a stopped turn |
+| `SessionApproval` | A pending tool request in this Session | Approval UI and background processing |
 
-## Methods you will use most often
+Do not treat Messages and Mutations as interchangeable. Messages are recoverable state snapshots; Mutations deliver state changes to a live client.
 
-- `set`
-- `get_info`
-- `prompt`
-- `stop`
-- `subscribe`
-- `messages`
-- `system`
-- `approvals` / `resolve_approval`
-- `approval_mode` / `set_approval_mode`
-- `fork`
+## Local versus remote
 
-If you remember only one thing, remember this: the real working object in the SDK is not `Agent` itself, but the `session`.
+Both expose `prompt()`, `stop()`, `subscribe()`, `messages()`, `approvals()`, and `fork()`. Model configuration is the important difference:
 
-`session.stop()` stops the current turn and cancels queued prompts that have not been merged into that turn yet.
+| Context | Configure a model |
+| --- | --- |
+| Local `AgentSession` | `session.set({ model })` or `session.set({ modelId })` |
+| `RemoteAgentSession` | Only `session.set({ modelId })`; the server resolves the model instance |
+| Downcity Agent project | Usually `execution.modelId` and City AIService own this; the client does not inject a model |
 
-## One important difference
+Never send a local model instance to a `RemoteAgentSession`.
 
-- local sessions must have a model available
-- remote sessions cannot currently receive a model instance from the client
+## API map
 
-So the biggest difference between local and remote usage is not the interaction shape. It is where the model is held and configured.
+- Manage Sessions: `agent.sessions.create/get/list/archive/archived/clean_archive()`
+- Input and completion: `session.prompt()` and `turn.finished`
+- Read and stream: `session.messages()`, `session.get_info()`, and `session.subscribe()`
+- Control execution: `session.stop()`, `session.set()`, and `session.fork()`
+- Tool approval: `session.approvals()`, `session.resolve_approval()`, and `session.approval_mode()`
+- Inspect context: `session.system()` and [metadata and storage](/en/agent-sdk-docs/sessions/metadata-and-storage)
 
-## One more boundary
+## Next
 
-If you are working inside a normal Downcity Agent project, the model usually comes from:
-
-- Agent config `execution.modelId`
-- the connected `Federation AIService`
-
-In that case, `session.set({ model })` should not be treated as the default path.
+Start with [Managing Sessions](/en/agent-sdk-docs/sessions/session-management), then read [Prompts and Turns](/en/agent-sdk-docs/sessions/prompt-and-turns) and [Messages](/en/agent-sdk-docs/sessions/messages).

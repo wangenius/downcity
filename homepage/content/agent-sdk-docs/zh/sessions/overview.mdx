@@ -1,83 +1,96 @@
 ---
 title: Session 总览
-description: 理解 Session 在 Agent SDK 中的核心地位和常见使用顺序
+description: Session 的职责、生命周期，以及本地和远程模式的统一使用方式
 ---
 
 # Session 总览
 
-在 SDK 里，真正承载执行的是 session。
+`Agent` 负责组装运行时：模型、工具、plugin、配置和存储位置。真正承载一次连续对话、历史、流式输出与工具审批的是 `Session`。
 
-## 当前推荐的本地交互模式
+一个 Session 是一条持久化的、线性有序的 Message 序列。你可以离开进程后重新 `get()` 它，也可以在本地 `Agent` 与 `RemoteAgent` 之间复用几乎相同的调用方式。
 
-### 本地 Agent
+## 先记住这条主线
+
+```text
+create / get
+-> 读取 messages() 初始快照
+-> subscribe() 实时变化
+-> prompt() 返回 turn handle
+-> 处理 delta、part、approval
+-> await turn.finished
+-> 需要时 stop()、fork() 或 archive()
+```
+
+订阅要在 `prompt()` 前建立。它只发送建立订阅之后的 Mutation，不会补发已经发生的流式输出。
+
+## 一个完整的本地例子
 
 ```ts
-const session = await agent.sessions.create();
+const session = await agent.sessions.create({
+  sessionId: "repo-analysis",
+});
+
 await session.set({ model });
 
-const unsubscribe = session.subscribe((mutation) => {
-  if (mutation.variant === "delta" && mutation.type === "text") {
-    process.stdout.write(mutation.delta);
+const initial_page = await session.messages({ limit: 100 });
+render_messages(initial_page.items);
+
+const unsubscribe = session.subscribe(async (mutation, reply) => {
+  apply_mutation_to_ui(mutation);
+
+  if (
+    mutation.variant === "part" &&
+    mutation.type === "tool" &&
+    mutation.part.state === "approval-required"
+  ) {
+    await reply.approval({ decision: "approved" });
   }
 });
 
-const turn = await session.prompt({ query: "继续" });
+const turn = await session.prompt({ query: "分析这个仓库的 Session 设计" });
+const result = await turn.finished;
 
-await turn.finished;
+if (!result.success) {
+  show_error(result.error || "Turn failed");
+}
+
+unsubscribe();
 ```
 
-如果你已经在 `new Agent({ model })` 里提供了默认模型，也可以不再单独调用 `session.set({ model })`。
+`apply_mutation_to_ui()` 应按 `message_id + revision` 合并完整快照；对 `delta` 只追加增量文本。完整做法见 [实时订阅](/zh/agent-sdk-docs/sessions/subscribe) 和 [重连与同步](/zh/agent-sdk-docs/sessions/reconnect-and-sync)。
 
-### RemoteAgent
+## Session 里有哪些对象
 
-```ts
-const session = await remoteAgent.sessions.create();
-const turn = await session.prompt({ query: "继续" });
-await turn.finished;
-```
+| 对象 | 作用 | 什么时候使用 |
+| --- | --- | --- |
+| `SessionMessage` | 持久化历史的唯一模型 | 首次加载、重连、历史浏览 |
+| `SessionMutation` | 订阅后的实时变化协议 | 流式渲染、工具状态、标题更新 |
+| `TurnHandle` | 一次输入归属的执行句柄 | 等待最终结果、停止后检查结果 |
+| `SessionApproval` | 当前 Session 的待审批工具请求 | 审批页、后台处理 |
 
-## 你最常会用到的方法
+Message 和 Mutation 不要混用：Message 是可恢复的状态快照；Mutation 是把状态变化及时送到客户端的协议。
 
-- `set`
-- `get_info`
-- `prompt`
-- `stop`
-- `subscribe`
-- `messages`
-- `system`
-- `approvals` / `resolve_approval`
-- `approval_mode` / `set_approval_mode`
-- `fork`
+## 本地与远程的差异
 
-如果你只能记住一个事实，那就是：SDK 真正的工作对象不是 `Agent` 本身，而是 `session`。
+两者都有 `prompt()`、`stop()`、`subscribe()`、`messages()`、`approvals()` 和 `fork()`。最大的差异在模型配置：
 
-## 一个重要区别
+| 场景 | 配置模型 |
+| --- | --- |
+| 本地 `AgentSession` | `session.set({ model })` 或 `session.set({ modelId })` |
+| `RemoteAgentSession` | 只能 `session.set({ modelId })`，由服务端解析模型实例 |
+| Downcity Agent 项目 | 通常由 `execution.modelId` 与 City AIService 决定，不需要客户端注入模型 |
 
-- 本地 session 需要确保有模型
-- 远程 session 当前不支持远程传模型实例
+远程客户端不要把本地模型实例传给 `RemoteAgentSession`。
 
-所以本地和远程的最大差异，不在交互形态，而在“模型是在哪里被持有和配置的”。
+## API 地图
 
-## 再补一个边界
+- 管理会话：`agent.sessions.create/get/list/archive/archived/clean_archive()`
+- 输入与完成：`session.prompt()`、`turn.finished`
+- 读取与实时：`session.messages()`、`session.get_info()`、`session.subscribe()`
+- 运行控制：`session.stop()`、`session.set()`、`session.fork()`
+- 工具审批：`session.approvals()`、`session.resolve_approval()`、`session.approval_mode()`
+- 调试上下文：`session.system()`、[元数据与落盘](/zh/agent-sdk-docs/sessions/metadata-and-storage)
 
-如果你是在正常的 Downcity Agent 项目里工作，模型通常来自：
+## 下一步
 
-- Agent config `execution.modelId`
-- 已连接的 `Federation AIService`
-
-这时 `session.set({ model })` 不应被当成默认路径。
-
-## 使用建议
-
-- 用 `prompt()` 追加新的用户输入
-- 用 `stop()` 停止当前 turn，并取消尚未被吸收的排队 prompt
-- 用 `subscribe()` 观察统一实时 Mutation
-- 用 `messages()` 读取初始快照；重新连接后重新读取快照并订阅
-- 需要等待某一轮最终结果时，使用 `turn.finished`
-
-## 继续阅读
-
-- [set model](/zh/agent-sdk-docs/sessions/set-model)
-- [prompt](/zh/agent-sdk-docs/sessions/prompt)
-- [stop](/zh/agent-sdk-docs/sessions/stop)
-- [subscribe](/zh/agent-sdk-docs/sessions/subscribe)
+先从 [管理 Session](/zh/agent-sdk-docs/sessions/session-management) 建立会话，再阅读 [输入与 Turn](/zh/agent-sdk-docs/sessions/prompt-and-turns) 和 [Message](/zh/agent-sdk-docs/sessions/messages)。

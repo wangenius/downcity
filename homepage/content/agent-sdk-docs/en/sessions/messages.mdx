@@ -1,11 +1,11 @@
 ---
-title: session.messages()
-description: Read paginated persisted Message snapshots for a Session
+title: Messages and Parts
+description: Read linear history and understand the four Message types and Assistant Parts
 ---
 
-# `session.messages()`
+# Messages and Parts
 
-`session.messages()` returns persisted Message snapshots ordered by `sequence`.
+`session.messages()` returns persisted Session state snapshots. It is the source of truth for initial rendering, pagination, and reconnect recovery; `subscribe()` complements it with live changes.
 
 ```ts
 const page = await session.messages({ limit: 100 });
@@ -15,6 +15,80 @@ for (const message of page.items) {
 }
 ```
 
-The page contains `items`, `total`, `has_more`, and an optional `next_cursor`. It accepts `limit`, `cursor`, `before_sequence`, `through_sequence`, and `include_internal`.
+It returns:
 
-Use `session.subscribe()` for live updates after the subscription is established. After reconnecting, reload a `messages()` snapshot and subscribe again.
+```ts
+{
+  items: SessionMessage[];
+  total: number;
+  has_more: boolean;
+  next_cursor?: string;
+}
+```
+
+Notice the snake-case `has_more` and `next_cursor`. Pagination from the Session collection's `list()` uses `hasMore` and `nextCursor` instead.
+
+## Four top-level Message types
+
+| `type` | Meaning | Typical presentation |
+| --- | --- | --- |
+| `user` | User input or in-flight steering | User bubble and attachments |
+| `assistant` | One generated model response segment | Text, reasoning, tools, files |
+| `action` | Runtime activity such as a model change or compaction | Status notice |
+| `error` | A displayable Session or Turn error | Error callout and retry entry point |
+
+A Session has one top-level Message sequence ordered by `sequence`. Tool calls are neither a second Timeline nor top-level Messages: they live in an Assistant Message's `parts`, so `text -> tool -> text` is persisted in its real generation order.
+
+## Assistant Parts
+
+An Assistant Message's `parts` can contain:
+
+| `type` | Key fields | Meaning |
+| --- | --- | --- |
+| `text` | `text`, `state` | Visible output, `streaming -> done` |
+| `reasoning` | `text`, `state` | Reasoning output; product decides whether to display it |
+| `tool` | `tool_call_id`, `tool_name`, `state` | Tool input, approval, execution, and result |
+| `file` | `url`, `media_type` | A file generated or referenced by the Assistant |
+| `data` | `data_type`, `data` | Structured UI data |
+
+Every Assistant Part has a stable `part_id` and immutable internal `sequence`. A tool state change updates that same Part; a UI should not create duplicate request and result rows.
+
+## Order, revision, and visibility
+
+Every Message has:
+
+- `message_id`: stable identity for locating updates.
+- `sequence`: its position in linear history; never changes after creation.
+- `revision`: version of that Message; a lower-revision snapshot must not overwrite a higher one.
+- `visibility`: `visible` or `internal`.
+- `created_at` / `updated_at`: timestamps in milliseconds.
+
+`messages()` excludes `internal` Messages, such as internal summaries, by default. Pass `include_internal: true` only for debugging, audit, or advanced history browsers.
+
+## Pagination and loading older history
+
+```ts
+let page = await session.messages({ limit: 50 });
+render_messages(page.items);
+
+while (page.has_more && page.next_cursor) {
+  page = await session.messages({
+    limit: 50,
+    cursor: page.next_cursor,
+  });
+  prepend_messages(page.items);
+}
+```
+
+`cursor` is opaque and must be passed through unchanged. A chat UI that loads upward can also use `before_sequence` for Messages before a known item; `through_sequence` fixes a read to one historical boundary.
+
+## Combining snapshots with live Mutations
+
+Do not reload the entire history for every Delta. The intended split is:
+
+1. Use `messages()` to establish initial state.
+2. Replace the targeted snapshot for a `message` or `part` Mutation.
+3. Append new text for a `delta` Mutation.
+4. On disconnect, reload snapshots and merge by revision.
+
+See [Reconnect and sync](/en/agent-sdk-docs/sessions/reconnect-and-sync) for the complete synchronization algorithm.

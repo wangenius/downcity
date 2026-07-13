@@ -31,4 +31,4 @@ session.subscribe(async (mutation, reply) => {
 });
 ```
 
-Mutations are a live protocol, not the history format. Use `messages()` for Message state and `get_info()` for Session state. Reload snapshots and subscribe again after a disconnect.
+Mutations are a live protocol, not the history format. Use `messages()` for Message state and `get_info()` for Session state. Reload snapshots and subscribe again after a disconnect. For the complete field table, state machine, and loss-free sync algorithm, see [Live subscriptions](/en/agent-sdk-docs/sessions/subscribe) and [Reconnect and sync](/en/agent-sdk-docs/sessions/reconnect-and-sync).

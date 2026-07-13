@@ -1,0 +1,110 @@
+---
+title: Prompts and Turns
+description: Submit user input with session.prompt() and understand steering, queueing, and final results
+---
+
+# Prompts and Turns
+
+`session.prompt()` is the only user-input entry point. It accepts one new input and returns a `TurnHandle` once the SDK has assigned that input to a concrete Turn.
+
+```ts
+const turn = await session.prompt({
+  query: "Analyze this repository",
+});
+
+const result = await turn.finished;
+if (result.success) {
+  console.log(result.text);
+}
+```
+
+`prompt()` does not mean “wait for the final model response.” Receive live activity through `subscribe()` and the final result through `turn.finished`.
+
+## Input shapes
+
+`query` accepts a string or an AI SDK User Part array:
+
+```ts
+const turn = await session.prompt({
+  query: [
+    { type: "text", text: "Explain the architecture in this image" },
+    {
+      type: "file",
+      mediaType: "image/png",
+      url: "/absolute/path/architecture.png",
+      filename: "architecture.png",
+    },
+  ],
+});
+```
+
+The input API uses the AI SDK name `mediaType`; persisted `SessionMessage` values use `media_type`. They are different boundaries, so do not feed a read Message Part back into `prompt()` unchanged.
+
+A local Session reads local image files before model execution and converts them into a model-consumable representation. For a remote Session, a local file path only works when the server can access it; prefer an accessible URL or a server-readable resource path.
+
+## Turn handles
+
+```ts
+const turn = await session.prompt({ query: "Continue" });
+
+console.log(turn.id);
+console.log(turn.result); // null before completion
+
+const result = await turn.finished;
+```
+
+`finished` never rejects for a model or tool failure. It always resolves to:
+
+```ts
+{
+  turnId: string;
+  success: boolean;
+  text: string;
+  error?: string;
+  assistantMessage?: unknown;
+}
+```
+
+Application code must check `success`; waiting for promise fulfillment alone is not a success check.
+
+## Sending input while a Turn runs
+
+You can call `prompt()` again while a Session is running:
+
+```ts
+const first_turn = await session.prompt({ query: "Analyze the directory layout first" });
+const follow_up = await session.prompt({ query: "Only inspect packages/agent" });
+```
+
+The Session decides what happens to the second input:
+
+| Situation | Result |
+| --- | --- |
+| The current Turn can still absorb input | It is persisted as a User Message with `input_type: "steer"` and merged into the current Turn |
+| The Turn has passed that boundary | It is persisted as a normal User Message and queued for the next Turn |
+| The Session is idle | A new Turn starts immediately |
+
+Two `prompt()` calls can return the same `turn.id`. That means they were merged into one execution, not executed twice. Do not build a second client-side queue or assume every call starts a new Turn.
+
+## Live rendering and final result
+
+A typical UI does both:
+
+```ts
+const unsubscribe = session.subscribe(render_mutation);
+const turn = await session.prompt({ query: "Produce an implementation plan" });
+const result = await turn.finished;
+unsubscribe();
+```
+
+- `delta` appends visible or reasoning text immediately.
+- `part` updates the complete state of the same tool or text Part.
+- `turn.finish` updates loading state and aligns with `turn.finished`.
+
+Do not poll `turn.result` for streaming content. It becomes the final snapshot only after the Turn ends.
+
+## Empty input and errors
+
+Empty strings, empty arrays, and arrays containing only empty text Parts are rejected. Disable empty submission in the UI and still handle errors such as remote connection failure, a missing model, or an archived Session.
+
+Use [session.stop()](/en/agent-sdk-docs/sessions/stop) to stop a running Turn.

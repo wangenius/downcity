@@ -557,6 +557,7 @@ export class SessionRecorder {
 export class SessionAssistantMessageWriter {
   readonly message_id: string;
   private readonly recorder: SessionRecorder;
+  private readonly pending_text_parts = new Map<string, "text" | "reasoning">();
   private closed = false;
 
   constructor(recorder: SessionRecorder, message_id: string) {
@@ -570,30 +571,35 @@ export class SessionAssistantMessageWriter {
     const current = this.current_message();
     switch (chunk.type) {
       case "text-start":
-      case "reasoning-start":
-        await this.upsert_part({
-          part_id: `${chunk.type === "text-start" ? "text" : "reasoning"}:${chunk.id}`,
-          sequence: this.next_part_sequence(),
-          type: chunk.type === "text-start" ? "text" : "reasoning",
-          text: "",
-          state: "streaming",
-        });
+      case "reasoning-start": {
+        const type = chunk.type === "text-start" ? "text" : "reasoning";
+        const part_id = `${type}:${chunk.id}`;
+        if (!current.parts.some((part) => part.part_id === part_id)) {
+          this.pending_text_parts.set(part_id, type);
+        }
         return;
+      }
       case "text-delta":
-      case "reasoning-delta":
+      case "reasoning-delta": {
+        const type = chunk.type === "text-delta" ? "text" : "reasoning";
+        const part_id = `${type}:${chunk.id}`;
+        await this.ensure_text_part(part_id, type);
         await this.recorder.append_assistant_delta(
           this.message_id,
-          `${chunk.type === "text-delta" ? "text" : "reasoning"}:${chunk.id}`,
-          chunk.type === "text-delta" ? "text" : "reasoning",
+          part_id,
+          type,
           chunk.delta,
         );
         return;
+      }
       case "text-end":
       case "reasoning-end": {
         const part_id = `${chunk.type === "text-end" ? "text" : "reasoning"}:${chunk.id}`;
         const part = current.parts.find((item) => item.part_id === part_id);
         if (part?.type === "text" || part?.type === "reasoning") {
           await this.upsert_part({ ...part, state: "done" });
+        } else {
+          this.pending_text_parts.delete(part_id);
         }
         return;
       }
@@ -718,6 +724,34 @@ export class SessionAssistantMessageWriter {
     );
   }
 
+  /** 在首个有效 Delta 到达时才固定文本 Part 的真实顺序。 */
+  private async ensure_text_part(
+    part_id: string,
+    type: "text" | "reasoning",
+  ): Promise<void> {
+    const existing = this.current_message().parts.find(
+      (part) => part.part_id === part_id,
+    );
+    if (existing) {
+      if (existing.type !== type) {
+        throw new Error(`Assistant Part type changed: ${part_id}`);
+      }
+      return;
+    }
+    const pending_type = this.pending_text_parts.get(part_id);
+    if (pending_type && pending_type !== type) {
+      throw new Error(`Assistant pending Part type changed: ${part_id}`);
+    }
+    await this.upsert_part({
+      part_id,
+      sequence: this.next_part_sequence(),
+      type,
+      text: "",
+      state: "streaming",
+    });
+    this.pending_text_parts.delete(part_id);
+  }
+
   private async upsert_tool(
     tool_call_id: string,
     changes: Pick<SessionAssistantToolPart, "tool_name" | "state"> &
@@ -736,6 +770,7 @@ export class SessionAssistantMessageWriter {
 
   private async close(status: "completed" | "stopped" | "failed"): Promise<void> {
     if (this.closed) return;
+    this.pending_text_parts.clear();
     await this.recorder.complete_assistant_message(this.message_id, status);
     this.closed = true;
   }

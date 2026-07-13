@@ -1,43 +1,48 @@
 ---
-title: session.get_info()
-description: Read the current Session summary and detail snapshot
+title: Session Details
+description: Use session.get_info() to read title, preview, model, and execution state
 ---
 
-# `session.get_info()`
+# Session Details
 
-`session.get_info()` returns the current summary/detail snapshot for one session.
-
-## Example
+`session.get_info()` returns a lightweight detail snapshot for the current Session. It is for headers, title bars, and current state; it does not replace `messages()`.
 
 ```ts
-const session = await agent.sessions.get("repo-analysis");
-
 const info = await session.get_info();
 
-console.log(info.sessionId);
-console.log(info.previewText);
-console.log(info.messageCount);
+render_header({
+  title: info.title || info.sessionId,
+  preview: info.previewText,
+  is_running: info.executing === true,
+  model: info.modelLabel,
+});
 ```
 
-## What it returns
+## Common fields
 
-Typical fields include:
+| Field | Meaning |
+| --- | --- |
+| `agentId` / `sessionId` | Stable ownership and identity |
+| `title` | An optional persisted title |
+| `previewText` | Recent text preview for lists |
+| `messageCount` | Number of persisted Messages |
+| `modelId` / `modelLabel` | Current stable model ID and display label |
+| `createdAt` / `updatedAt` | Timestamps in milliseconds |
+| `executing` | Whether a Turn is currently active |
+| `timezone` | Reference timezone recorded when the Session was created |
 
-- `agentId`
-- `sessionId`
-- `title`
-- `previewText`
-- `messageCount`
-- `createdAt`
-- `updatedAt`
-- `modelLabel`
-- `executing`
-- `timezone`
+`get_info()` does not return complete history or current streaming text. Use `messages()` for content and `subscribe()` for live state.
 
-`title` comes from the top-level `meta.json` field. After the first user message, the SDK persists a title; if model generation fails, it uses a truncated version of that first user message.
+## Actual title semantics
 
-## Good use cases
+After the first user message, the SDK tries to generate and persist a title with the currently available model. If no model is available or generation fails, the title may remain empty; the SDK does not guarantee a fallback from the first user message.
 
-- rendering the selected session header in UI
-- checking whether a session is currently executing
-- reading lightweight session detail before loading full history
+The UI must fall back to `sessionId`, `previewText`, or its own new-conversation label when `title` is empty. A title update is published live as `variant: "session", type: "title"`.
+
+## List versus detail
+
+- Sidebar: use `agent.sessions.list()` instead of calling `get_info()` for every item.
+- Selected Session: use `get_info()` to refresh header and execution state.
+- Content area: load history with `messages()` and keep it synchronized with `subscribe()`.
+
+Do not infer execution from `updatedAt`; a timestamp indicates recent persistence, not an active Turn.

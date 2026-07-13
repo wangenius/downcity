@@ -41,4 +41,4 @@ session.subscribe(async (mutation, reply) => {
 });
 ```
 
-Mutation 是实时协议，不是历史格式。加载已有历史使用 `messages()`；网络重连后重新读取 Message 与 Session 快照并重新订阅。
+Mutation 是实时协议，不是历史格式。加载已有历史使用 `messages()`；网络重连后重新读取 Message 与 Session 快照并重新订阅。完整的字段表、状态机和无丢事件同步方案见 [实时订阅](/zh/agent-sdk-docs/sessions/subscribe) 与 [重连与同步](/zh/agent-sdk-docs/sessions/reconnect-and-sync)。

@@ -1,22 +1,22 @@
 ---
-title: session.stop()
-description: Stop the current Session turn and cancel queued prompts that have not been merged yet
+title: Stopping a Turn
+description: Use session.stop() to abort current execution and clear input not yet absorbed by a Turn
 ---
 
-# `session.stop()`
+# Stopping a Turn
 
-Use `session.stop()` to stop the current running turn.
+`session.stop()` stops the currently running Turn and cancels queued input that has not yet been absorbed by that Turn.
 
 ```ts
-const turn = await session.prompt({
-  query: "Run a long task",
-});
+const turn = await session.prompt({ query: "Run a long task" });
 
-const stopResult = await session.stop();
-await turn.finished;
+const stop_result = await session.stop();
+console.log(stop_result);
+
+const result = await turn.finished;
 ```
 
-`stop()` aborts the active turn and cancels queued prompts that have not yet been merged into that turn.
+## Return value
 
 ```ts
 type AgentSessionStopResult = {
@@ -27,4 +27,35 @@ type AgentSessionStopResult = {
 };
 ```
 
-Stopped turns finish with `success: false`. `turn.finished` still resolves rather than rejecting.
+| Field | Meaning |
+| --- | --- |
+| `stopped` | Whether an active Turn was stopped or queued input was cleared |
+| `turnId` | The active Turn that was stopped; present only for an active Turn |
+| `cancelledQueuedPrompts` | Number of inputs not yet assigned to a Turn |
+| `reason` | `stopped`, or `idle` when there was nothing to stop |
+
+## Input queue semantics
+
+When users submit input consecutively, some input may already be merged into the current Turn as steering and some may still await the next Turn. Stop uses this boundary:
+
+```text
+Input already absorbed by the current Turn -> stops with that Turn
+Input still queued and not absorbed         -> is cancelled and never starts automatically
+```
+
+So a Stop button does not immediately start another execution because text remains in the queue. If a product must preserve a draft, keep it in UI draft state before calling `stop()` rather than relying on the SDK queue.
+
+## Final state
+
+A stopped Turn still settles `turn.finished`:
+
+```ts
+const result = await turn.finished;
+
+console.log(result.success); // false
+console.log(result.error);   // usually Turn stopped
+```
+
+The subscription also receives `variant: "turn", type: "finish", status: "stopped"`. Never leave code awaiting `finished` suspended because a stop occurred.
+
+Calling `stop()` on an idle Session does not throw. It returns `stopped: false` and `reason: "idle"`, making a UI stop action idempotent.

@@ -15,7 +15,19 @@ description: Session 输入输出对象里最重要的字段和语义
 - `AgentSessionTurnHandle`
 - `AgentSessionTurnResult`
 - `SessionMutation`
+- `SessionMessage`
+- `SessionApproval`
 - `AgentSessionInfo`
+
+## 先按用途选择类型
+
+| 你要做什么 | 应该消费的对象 |
+| --- | --- |
+| 首次加载、历史与重连恢复 | `SessionMessagePage` / `SessionMessage` |
+| 实时文本、工具和标题 | `SessionMutation` |
+| 等待一次执行结束 | `AgentSessionTurnHandle` / `AgentSessionTurnResult` |
+| 展示或提交工具审批 | `SessionApproval` / `SessionApprovalResult` |
+| 侧边栏与当前会话头部 | `AgentSessionSummary` / `AgentSessionInfo` |
 
 ## `AgentSessionPromptInput`
 
@@ -53,3 +65,11 @@ description: Session 输入输出对象里最重要的字段和语义
 - `reason`
 
 `session.stop()` 会停止当前 turn，并取消尚未被当前 turn 吸收的排队 prompt。空闲时调用不会抛错，会返回 `stopped: false` 和 `reason: "idle"`。
+
+## 深入阅读
+
+- [输入与 Turn](/zh/agent-sdk-docs/sessions/prompt-and-turns)：输入格式、steering 与排队语义。
+- [Message 与 Part](/zh/agent-sdk-docs/sessions/messages)：持久化线性历史、revision 与分页。
+- [实时订阅](/zh/agent-sdk-docs/sessions/subscribe)：五类 Mutation 与客户端合并规则。
+- [工具审批](/zh/agent-sdk-docs/sessions/approvals)：Session 级审批与审批模式。
+- [Session 详情](/zh/agent-sdk-docs/sessions/info)：摘要、标题与执行状态字段。

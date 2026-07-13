@@ -1,0 +1,69 @@
+---
+title: 管理 Session
+description: 创建、打开、列表、归档和永久清理 Session
+---
+
+# 管理 Session
+
+`agent.sessions` 是 Session 集合入口。它只管理当前 Agent 的会话，不会跨 `agentId` 查找或修改其他 Agent 的数据。
+
+## 创建与打开
+
+```ts
+const created = await agent.sessions.create({
+  sessionId: "repo-analysis",
+});
+
+const existing = await agent.sessions.get("repo-analysis");
+```
+
+`create()` 表示创建意图：同名 Session 已存在时会报错，不会静默复用。省略 `sessionId` 时由 SDK 生成不可推导的稳定 ID。需要“有则打开、无则创建”时，先 `get()`，按不存在错误再调用 `create()`。
+
+## 列表与搜索
+
+```ts
+const page = await agent.sessions.list({
+  limit: 30,
+  query: "repo",
+});
+
+for (const item of page.items) {
+  render_session_row(item);
+}
+
+if (page.hasMore) {
+  const next_page = await agent.sessions.list({
+    limit: 30,
+    cursor: page.nextCursor,
+    query: "repo",
+  });
+}
+```
+
+列表项是轻量摘要，不包含完整 Message。常用字段为 `sessionId`、`title`、`previewText`、`messageCount`、`modelLabel`、`updatedAt` 与 `executing`。`cursor` 是透明游标，只能原样传回 SDK。
+
+`query` 用于轻量包含匹配，适合侧边栏筛选；不要把它当作全文检索语法。
+
+## 归档与清理
+
+```ts
+await agent.sessions.archive({ id: "repo-analysis" });
+
+const archived_page = await agent.sessions.archived({ limit: 30 });
+
+const removed = await agent.sessions.clean_archive();
+console.log(removed.removedSessionIds);
+```
+
+归档会把 Session 从活跃列表移走，但不会立即永久删除。正在执行的 Session 不能归档，先等待 Turn 完成或调用 `stop()`。
+
+`clean_archive()` 会永久删除所有已归档 Session，适合明确的“清空回收站”操作；UI 必须在调用前要求用户确认。
+
+## UI 建议
+
+1. 列表页只用 `list()` 的摘要数据。
+2. 用户选中后调用 `get()`，再加载 `messages()`。
+3. 对 `executing: true` 的条目显示运行状态；不要仅根据最后更新时间猜测。
+4. 归档成功后从当前活跃列表移除该项，并重新读取归档列表。
+
+Session 列表的标题可能为空。展示层应回退到 `sessionId` 或产品定义的占位标题。

@@ -134,6 +134,16 @@ export class CoreEngineMessageState {
     this.currentModelMessages = [...this.currentModelMessages, ...messages];
   }
 
+  /**
+   * 原子替换当前模型侧消息基线。
+   *
+   * 关键点（中文）：compact 只替换 Provider 后续可见的 ModelMessage，
+   * Session 语义消息与持久化历史仍保持完整，等待 turn 收口后再单独归档。
+   */
+  replace_model_messages(messages: ModelMessage[]): void {
+    this.currentModelMessages = Array.isArray(messages) ? [...messages] : [];
+  }
+
   private async appendSessionMessagesAsModelMessages(
     messages: SessionRecordV1[],
   ): Promise<ModelMessage[]> {

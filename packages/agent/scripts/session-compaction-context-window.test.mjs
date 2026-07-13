@@ -1,10 +1,10 @@
 /**
- * @file 验证 CityModel 上下文窗口会驱动默认 session compact 预算。
+ * @file 验证 CityModel 上下文窗口元数据与 compact 的明确触发语义。
  *
  * 关键点（中文）
  * - CityModel 目录元数据需要在归一化前读取。
- * - 默认 compact 使用模型总窗口的 80%，并随重试次数收紧。
- * - 显式 maxInputTokensApprox 始终优先于模型目录配置。
+ * - compact 不再根据字符/token 预估自动触发。
+ * - 只有明确 force 或超限恢复才会调用 history store。
  */
 
 import assert from "node:assert/strict";
@@ -53,6 +53,7 @@ async function capture_compact_input(options = {}) {
     model: {},
     system: [],
     retryCount: options.retry_count ?? 0,
+    force: true,
     ...(options.context_window !== undefined
       ? { context_window: options.context_window }
       : {}),
@@ -68,28 +69,28 @@ test("CityModel exposes its configured context window to Agent", () => {
   );
 })
 
-test("default compact budget uses 80 percent of the model context window", async () => {
-  const first_attempt = await capture_compact_input({
-    context_window: 256000,
-  });
-  assert.equal(first_attempt.maxInputTokensApprox, 204800);
+test("compact input carries only an explicit force request", async () => {
+  const compact_input = await capture_compact_input({ context_window: 256000 });
+  assert.equal(compact_input.force, true);
+  assert.equal("maxInputTokensApprox" in compact_input, false);
+  assert.equal("compactRatio" in compact_input, false);
+  assert.equal("keepLastMessages" in compact_input, false);
+});
 
-  const retry = await capture_compact_input({
-    context_window: 256000,
-    retry_count: 1,
+test("normal composer run does not call history store without force", async () => {
+  let called = false;
+  const composer = new JsonlSessionCompactionComposer();
+  const result = await composer.run({
+    historyStore: {
+      compact: async () => {
+        called = true;
+        return { compacted: true };
+      },
+    },
+    model: {},
+    system: [],
+    retryCount: 0,
   });
-  assert.equal(retry.maxInputTokensApprox, 102400);
-})
-
-test("explicit compact budget overrides the model context window", async () => {
-  const compact_input = await capture_compact_input({
-    context_window: 256000,
-    composer_options: { maxInputTokensApprox: 64000 },
-  });
-  assert.equal(compact_input.maxInputTokensApprox, 64000);
-})
-
-test("compact keeps the existing 128k fallback without model metadata", async () => {
-  const compact_input = await capture_compact_input();
-  assert.equal(compact_input.maxInputTokensApprox, 128000);
-})
+  assert.deepEqual(result, { compacted: false, reason: "not_requested" });
+  assert.equal(called, false);
+});

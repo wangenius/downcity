@@ -386,14 +386,17 @@ export class Executor implements SessionExecutor {
       };
       const context_window = this.get_model_context_window?.();
 
-      await this.compactionComposer.run({
-        historyStore: this.historyStore,
-        model,
-        ...(context_window !== undefined ? { context_window } : {}),
-        system,
-        retryCount: retry_count,
-        onAction: emit_compaction_action,
-      });
+      if (retry_count > 0) {
+        await this.compactionComposer.run({
+          historyStore: this.historyStore,
+          model,
+          ...(context_window !== undefined ? { context_window } : {}),
+          system,
+          retryCount: retry_count,
+          force: true,
+          onAction: emit_compaction_action,
+        });
+      }
     } catch (error) {
       await this.emitAction(run_context, {
         type: "action",
@@ -440,9 +443,58 @@ export class Executor implements SessionExecutor {
       execute_input: input,
       model,
       run_context,
-      resolve_model_turn: async () =>
-        await this.resolve_model_turn(run_context),
+      resolve_step_inputs: async () =>
+        await this.resolve_step_inputs(run_context),
     });
+  }
+
+  /**
+   * 在 Assistant writer 完成后归档当前 canonical 历史。
+   *
+   * 关键点（中文）：持久化 compact 不能发生在流式 Assistant 草稿仍打开时，
+   * 因此由 SessionTurnService 在 writer complete/fail 之后显式调用。
+   */
+  async compact_history(run_context: SessionRunContext): Promise<{
+    compacted: boolean;
+    reason?: string;
+  }> {
+    const model = this.resolveModelOrThrow();
+    const system = await this.systemComposer.resolve(run_context);
+    let compaction_action_id = "";
+    const emit_compaction_action = async (
+      action: SessionActionRecordV1,
+    ): Promise<void> => {
+      if (action.state === "running") compaction_action_id = action.id;
+      await this.emitAction(run_context, action);
+    };
+    try {
+      const context_window = this.get_model_context_window?.();
+      return await this.compactionComposer.run({
+        historyStore: this.historyStore,
+        model,
+        ...(context_window !== undefined ? { context_window } : {}),
+        system,
+        retryCount: 0,
+        force: true,
+        onAction: emit_compaction_action,
+      });
+    } catch (error) {
+      await this.emitAction(run_context, {
+        type: "action",
+        id:
+          compaction_action_id ||
+          `compacting:${this.sessionId}:failed:${Date.now()}:${generateId()}`,
+        title: "Session records compact failed",
+        description: error instanceof Error ? error.message : String(error),
+        state: "failed",
+        metadata: {
+          v: 1,
+          ts: Date.now(),
+          sessionId: this.sessionId,
+        },
+      });
+      return { compacted: false, reason: "compact_failed" };
+    }
   }
 
   /**
@@ -452,10 +504,11 @@ export class Executor implements SessionExecutor {
    * - 调用方必须先提交 Session 统一输入队列，再调用本方法。
    * - 每次调用只读取一次 model、system 与 tools，并把它们传给同一个 `streamText()`。
    */
-  private async resolve_model_turn(run_context: SessionRunContext): Promise<{
+  private async resolve_step_inputs(run_context: SessionRunContext): Promise<{
     model: LanguageModel;
     system: SessionExecuteInput["system"];
     tools: SessionExecuteInput["tools"];
+    context_window?: number;
   }> {
     run_context.agentEnv = Object.freeze({ ...this.getEnv() });
     if (this.get_systems) {
@@ -465,6 +518,7 @@ export class Executor implements SessionExecutor {
       run_context.agentPlugins = this.get_plugins();
     }
     const composed_context = await this.contextComposer.compose(run_context);
+    const context_window = this.get_model_context_window?.();
     return {
       model: this.resolveModelOrThrow(),
       system: await this.systemComposer.resolve(run_context),
@@ -472,6 +526,7 @@ export class Executor implements SessionExecutor {
         composed_context.tools,
         run_context,
       ),
+      ...(context_window !== undefined ? { context_window } : {}),
     };
   }
 

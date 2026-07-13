@@ -252,6 +252,10 @@ export class SessionTurnService {
     await this.state_service.persist_deferred_user_messages(
       result.deferredPersistedUserMessages,
     );
+    if (result.compact_required) {
+      await this.executor.compact_history(run_context);
+      await this.state_service.touch_metadata();
+    }
     return {
       text: result.assistantMessage
         ? extractTextFromUiMessage(result.assistantMessage)

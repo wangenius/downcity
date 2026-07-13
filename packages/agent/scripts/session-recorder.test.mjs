@@ -308,23 +308,21 @@ test("compact 把 Active 前缀关闭为带累计 Summary 的 Segment", async ()
   const result = await history_store.compact({
     model,
     system: [],
-    keepLastMessages: 2,
-    maxInputTokensApprox: 1,
-    compactRatio: 0.5,
+    force: true,
   });
   assert.equal(result.compacted, true);
   assert.equal((await fs.readFile(file_path, "utf8")).includes("message 1"), false);
   const active = await recorder.list_messages({ include_internal: true });
-  assert.deepEqual(active.items.map((message) => message.sequence), [4, 5, 6]);
+  assert.deepEqual(active.items.map((message) => message.sequence), []);
   assert.equal(active.source, "active");
   assert.equal(active.has_more, true);
   const segment = await recorder.list_messages({
-    before_sequence: active.start_sequence,
+    before_sequence: 7,
     include_internal: true,
   });
-  assert.deepEqual(segment.items.map((message) => message.sequence), [1, 2, 3]);
+  assert.deepEqual(segment.items.map((message) => message.sequence), [1, 2, 3, 4, 5, 6]);
   assert.equal(segment.source, "segment");
-  assert.equal((await history_store.list_records()).length, 4);
+  assert.equal((await history_store.list_records()).length, 1);
   await assert.rejects(
     recorder.list_messages({ before_sequence: 0 }),
     /before_sequence must be a positive integer/,
@@ -469,9 +467,7 @@ test("连续 Compact 生成按 sequence 连续的 Segment 与累计 Summary", as
   const compact = async () => await history_store.compact({
     model,
     system: [],
-    keepLastMessages: 2,
-    maxInputTokensApprox: 1,
-    compactRatio: 0.5,
+    force: true,
   });
 
   await append_messages(1, 8);
@@ -483,19 +479,19 @@ test("连续 Compact 生成按 sequence 连续的 Segment 与累计 Summary", as
   assert.equal(prompts[1].includes("<previous-summary>"), true);
   assert.equal(prompts[1].includes("Summary 1"), true);
   const active = await recorder.list_messages();
-  assert.deepEqual(active.items.map((message) => message.sequence), [9, 10, 11, 12]);
-  const latest_segment = await recorder.list_messages({ before_sequence: 9 });
-  assert.deepEqual(latest_segment.items.map((message) => message.sequence), [5, 6, 7, 8]);
+  assert.deepEqual(active.items.map((message) => message.sequence), []);
+  const latest_segment = await recorder.list_messages({ before_sequence: 13 });
+  assert.deepEqual(latest_segment.items.map((message) => message.sequence), [9, 10, 11, 12]);
   assert.equal(latest_segment.has_more, true);
   const earliest_segment = await recorder.list_messages({
     before_sequence: latest_segment.start_sequence,
   });
-  assert.deepEqual(earliest_segment.items.map((message) => message.sequence), [1, 2, 3, 4]);
+  assert.deepEqual(earliest_segment.items.map((message) => message.sequence), [1, 2, 3, 4, 5, 6, 7, 8]);
   const context = await history_store.list_records();
   assert.equal(context[0].parts[0]?.text, "Summary 2");
 });
 
-test("Summary 生成失败时保留完整 Active 且不创建 Segment", async () => {
+test("Summary 生成失败时使用确定性 Summary 完成归档", async () => {
   const session_id = "compact-summary-failure-test";
   const { recorder, file_path } = await create_recorder(session_id);
   for (let index = 1; index <= 6; index += 1) {
@@ -520,18 +516,13 @@ test("Summary 生成失败时保留完整 Active 且不创建 Segment", async ()
   const result = await history_store.compact({
     model,
     system: [],
-    keepLastMessages: 2,
-    maxInputTokensApprox: 1,
-    compactRatio: 0.5,
+    force: true,
   });
 
-  assert.deepEqual(result, { compacted: false, reason: "summary_failed" });
-  assert.deepEqual(
-    (await recorder.list_messages()).items.map((message) => message.sequence),
-    [1, 2, 3, 4, 5, 6],
-  );
+  assert.deepEqual(result, { compacted: true });
+  assert.deepEqual((await recorder.list_messages()).items, []);
   const segment_entries = await fs.readdir(path.join(path.dirname(file_path), "segments"));
-  assert.deepEqual(segment_entries, []);
+  assert.equal(segment_entries.length, 1);
 });
 
 test("内部上下文读取完整快照并保留第 500 条之后的最新消息", async () => {

@@ -37,10 +37,8 @@ import { format_session_compaction_file_operations } from "@executor/composer/co
 export type SessionCompactParams = {
   model: LanguageModel;
   system: Array<SystemModelMessage>;
-  keepLastMessages: number;
-  maxInputTokensApprox: number;
   archiveOnCompact: boolean;
-  compactRatio: number;
+  force?: boolean;
   onAction?: (action: SessionActionRecordV1) => Promise<void>;
 };
 
@@ -104,29 +102,15 @@ export async function compactSessionMessagesIfNeeded(
         : "";
   });
 
-  if (snapshot.length < 4) {
-    return { compacted: false, reason: "small_messages" };
+  if (snapshot.length === 0) {
+    return { compacted: false, reason: "nothing_to_compact" };
+  }
+  if (!params.force) {
+    return { compacted: false, reason: "not_requested" };
   }
 
-  const systemText = (params.system || [])
-    .map((m) => String(m.content ?? ""))
-    .join("\n\n");
-  // 关键点（中文）：session messages 现在可能包含 tool parts / output，必须把它们计入预算估算，否则会低估 token。
-  let messagesJson = "";
-  try {
-    messagesJson = JSON.stringify(snapshot);
-  } catch {
-    messagesJson = "";
-  }
-  const est = estimateTokensApproxFromText(systemText + "\n\n" + messagesJson);
-  if (est <= params.maxInputTokensApprox) {
-    return { compacted: false, reason: "under_budget" };
-  }
-
-  // 关键点（中文）：触发 compact 后，优先压缩“最早一段消息”，默认比例 50%。
-  const compactRatio = normalizeCompactRatio(params.compactRatio);
-  const compactCount = resolveCompactCount(snapshot.length, compactRatio);
-  const older = snapshot.slice(0, compactCount);
+  // 关键点（中文）：明确 compact 时归档全部当前模型历史，避免单条巨大 assistant 永远留在 Active。
+  const older = snapshot;
   if (older.length === 0) return { compacted: false, reason: "nothing_to_compact" };
 
   action_started = true;
@@ -215,11 +199,7 @@ export async function compactSessionMessagesIfNeeded(
     const current_model_messages = current.filter(
       is_session_message_record,
     );
-    const currentCompactCount = resolveCompactCount(
-      current_model_messages.length,
-      compactRatio,
-    );
-    const currentOlder = current_model_messages.slice(0, currentCompactCount);
+    const currentOlder = current_model_messages;
     if (currentOlder.length === 0) return;
     const compacted_ids = new Set(
       currentOlder
@@ -269,44 +249,6 @@ export async function compactSessionMessagesIfNeeded(
   }
 
   return { compacted: true };
-}
-
-/**
- * 归一化压缩比例。
- *
- * 关键点（中文）
- * - 仅允许 0.1~0.9，避免“几乎不压缩”或“几乎全压缩”。
- */
-function normalizeCompactRatio(value: number): number {
-  if (!Number.isFinite(value)) return 0.5;
-  return Math.max(0.1, Math.min(0.9, value));
-}
-
-/**
- * 按比例计算前段压缩条数。
- *
- * 关键点（中文）
- * - 至少压缩 1 条；
- * - 至少保留 1 条未压缩消息。
- */
-function resolveCompactCount(total: number, ratio: number): number {
-  const n = Math.max(0, Math.floor(total));
-  if (n <= 1) return 0;
-  const raw = Math.floor(n * ratio);
-  return Math.max(1, Math.min(n - 1, raw));
-}
-
-/**
- * 近似 token 估算。
- *
- * 算法说明（中文）
- * - 这里使用经验近似，不追求精确 tokenizer 一致性。
- * - 目标是为 compact 提供保守预算，宁可略高估也不要低估。
- */
-function estimateTokensApproxFromText(text: string): number {
-  const t = String(text || "");
-  // 经验值：英文 ~4 chars/token；中文更接近 1-2 chars/token。这里用保守的 3 chars/token。
-  return Math.ceil(t.length / 3);
 }
 
 /**

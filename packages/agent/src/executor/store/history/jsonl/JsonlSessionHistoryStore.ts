@@ -665,10 +665,8 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
       {
         model: input.model,
         system: this.normalizeSystem(input.system),
-        keepLastMessages: input.keepLastMessages,
-        maxInputTokensApprox: input.maxInputTokensApprox,
         archiveOnCompact: false,
-        compactRatio: input.compactRatio,
+        force: input.force,
         ...(input.onAction ? { onAction: input.onAction } : {}),
       },
     );

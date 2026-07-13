@@ -47,6 +47,13 @@ export type SessionCompactionInput = {
    * - 回调由上层 Session 负责转成订阅事件与 action record。
    */
   onAction?: (action: SessionActionRecordV1) => Promise<void>;
+
+  /**
+   * 是否明确要求持久化 deep compact。
+   *
+   * 普通模型调用不应因为历史字符数量而触发 compact；仅 usage 反馈或超限恢复会设置此值。
+   */
+  force?: boolean;
 };
 
 /**

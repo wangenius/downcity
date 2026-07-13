@@ -22,9 +22,9 @@ SDK Sessions are persisted under the project directory. Applications should read
 
 ## Active and Segments
 
-`active.jsonl` contains only real `SessionMessage` values still in the active window after the latest Compact. It has no fixed message-count or API page-size limit. Its length is controlled by the token threshold, `keepLastMessages`, and `compactRatio`.
+`active.jsonl` contains only real `SessionMessage` values still in the active window after the latest Compact. It has no fixed message-count or API page-size limit. The SDK does not estimate tokens before a model call. Compact is scheduled only when the Provider's real `usage.totalTokens` (or `inputTokens + outputTokens` when total is unavailable) reaches 95% of the model's configured `context_window`.
 
-During Compact, the SDK selects an older Active prefix and creates an immutable Segment named by its sequence range. The Segment stores real Messages first and one cumulative Summary footer last:
+During Compact, the SDK first folds reasoning, text, and tool output at part level in the running model context while keeping the latest tool call/result/approval transaction intact. After the Assistant has finished persisting, the current Active is closed as an immutable Segment named by its sequence range. The Segment stores real Messages first and one cumulative Summary footer last:
 
 ```text
 message sequence 1
@@ -34,6 +34,8 @@ summary through sequence 900
 ```
 
 The next Compact might create `901-1500`. Its footer merges the previous Summary with new content from 901-1500, so it cumulatively covers 1-1500. A Summary is not a `SessionMessage`, consumes no sequence, and is never stored in Active.
+
+The next real usage after Compact validates the result: 50% of `context_window` or less passes; above 50% schedules another deep compact before the next step. If a Provider returns a context-length error without usage, the SDK also forces an in-memory fold and retries.
 
 ## Model context
 
@@ -64,8 +66,9 @@ sequenceDiagram
     Model-->>Session: text / tool / file chunks
     Session->>Recorder: update Assistant draft and Parts
     Recorder->>Active: append final Assistant snapshot
-    Session->>Recorder: token threshold triggers Compact
-    Recorder->>Model: old Summary + Active prefix
+    Session->>Session: Provider usage reaches 95% of context_window
+    Session->>Session: deep compact Parts/Tool transaction before next step
+    Recorder->>Model: old Summary + chunked Active context
     Model-->>Recorder: new cumulative Summary
     Recorder->>Segment: atomically create Messages + Summary footer
     Recorder->>Active: atomically retain only Active tail
@@ -88,6 +91,8 @@ When a Session starts or reopens, the SDK also checks the Assistant draft. Exist
 ## Performance boundaries
 
 - Normal model progression reads only the latest Summary and Active, so it does not grow linearly with total history.
+- Compact triggering uses only real Provider usage and performs no pre-call token estimation.
+- Summary input is chunked to a fixed character bound, so one large Assistant or Tool output cannot bypass folding.
 - Loading older history parses one Segment at a time.
 - Segment files are immutable and their names are the sequence index; no `manifest.json` is required.
 - `fork()` intentionally copies full history and therefore reads every Segment; it is a lower-frequency full-history operation.

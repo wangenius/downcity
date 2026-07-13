@@ -112,6 +112,15 @@ export interface SessionRunResult {
    * - 为保证消息顺序稳定，统一在 assistant 结果落盘后再由外层 Session 持久化。
    */
   deferredPersistedUserMessages?: SessionUserMessageV1[];
+
+  /**
+   * 本轮结束后是否需要把已完成的 canonical 历史持久化压缩。
+   *
+   * 关键点（中文）
+   * - 真实 usage 达到 95% 或本轮已经执行过内存 compact 时为 true。
+   * - 上层必须等 Assistant writer 收口后再执行，避免压缩流式草稿。
+   */
+  compact_required?: boolean;
 }
 
 /**

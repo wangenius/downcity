@@ -30,19 +30,11 @@ export type SessionHistoryCompactInput = {
   system: SessionSystemMessage[];
 
   /**
-   * 保留最近消息条数。
+   * 是否明确要求本次执行持久化 deep compact。
+   *
+   * 真实 usage 触发与内存消息折叠由 CoreEngine 决定；Store 只负责归档已经完成的历史。
    */
-  keepLastMessages: number;
-
-  /**
-   * 输入 token 近似上限。
-   */
-  maxInputTokensApprox: number;
-
-  /**
-   * 前段压缩比例（0-1）。
-   */
-  compactRatio: number;
+  force?: boolean;
 
   /**
    * 可选 action 发布回调。

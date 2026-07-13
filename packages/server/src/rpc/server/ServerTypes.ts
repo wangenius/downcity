@@ -8,7 +8,6 @@
 
 import type { AgentSessions } from "@downcity/agent";
 import type { AgentContext } from "@downcity/agent";
-import type { Shell } from "@downcity/shell";
 import type { RpcEventFrame } from "@/types/RpcProtocol.js";
 
 /**
@@ -23,8 +22,6 @@ export interface RpcServerStartOptions {
   sessions: AgentSessions;
   /** Agent 上下文访问口。 */
   getAgentContext?: () => AgentContext;
-  /** Shell 访问口。 */
-  getShell?: () => Shell | undefined;
 }
 
 /**
@@ -35,8 +32,6 @@ export interface RpcRequestHandlerOptions {
   sessions: AgentSessions;
   /** Agent 上下文访问口。 */
   getAgentContext?: () => AgentContext;
-  /** Shell 访问口。 */
-  getShell?: () => Shell | undefined;
 }
 
 /**

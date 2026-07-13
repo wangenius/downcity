@@ -2,39 +2,48 @@
  * city agent chat TUI 协调器。
  *
  * 关键点（中文）
- * - 对齐 Kimi Code 的 KimiTUI 布局：transcript → editor → footer。
- * - transcript 使用可滚动消息流，支持 PageUp/PageDown 回看历史。
+ * - 使用 header → transcript → approval → editor → command → footer 的稳定操作台布局。
+ * - transcript 支持方向键、分页键与鼠标滚轮回看历史。
  * - 编辑器负责消费标准快捷键（Ctrl+C/D/O/S），再回调 coordinator。
- * - footer 固定在输入框下方，常驻展示 session 标题/id 与快捷键/状态。
+ * - header 展示 Session 上下文，footer 只展示当前可执行操作与滚动状态。
  */
 
 import {
-  Key,
-  matchesKey,
   ProcessTerminal,
   TUI,
   type Component,
-  type OverlayHandle,
 } from "@earendil-works/pi-tui";
 
 import {
+  AgentHeaderComponent,
   ChatEditorComponent,
   ChatFooterComponent,
+  CommandHelpPanelComponent,
+  InlinePanelSlotComponent,
 } from "@/city/agent/tui/components/index.js";
 import { MessageListComponent } from "@/city/agent/tui/components/MessageList.js";
 import { SessionPickerComponent } from "@/city/agent/tui/dialogs/SessionPicker.js";
-import { ApprovalDialogComponent } from "@/city/agent/tui/dialogs/ApprovalDialog.js";
+import { ApprovalPanelComponent } from "@/city/agent/tui/dialogs/ApprovalDialog.js";
 import { ModelPickerComponent } from "@/city/agent/tui/dialogs/ModelPicker.js";
 import { PiTuiChatRenderer } from "@/city/agent/tui/PiTuiChatRenderer.js";
 import type { AgentChatSessionSummaryView } from "@/city/agent/AgentChatTypes.js";
 import type { AgentChatInteractiveRendererPort } from "@/city/types/AgentChatInteractive.js";
-import type { AppState, TranscriptEntry } from "@/city/agent/tui/types.js";
+import type {
+  AgentChatApprovalView,
+  AppState,
+  TranscriptEntry,
+} from "@/city/agent/tui/types.js";
 import type { AgentChatModelChoice } from "@/city/agent/tui/types/ModelPicker.js";
 import {
   dispatchSlashCommand,
   resolveSlashCommandInput,
   type SlashCommandHost,
 } from "@/city/agent/tui/commands/index.js";
+import {
+  resolve_transcript_scroll_delta,
+  TRANSCRIPT_MOUSE_TRACKING_DISABLE,
+  TRANSCRIPT_MOUSE_TRACKING_ENABLE,
+} from "@/city/agent/tui/controllers/TranscriptNavigation.js";
 
 /**
  * 协调器构造选项。
@@ -77,11 +86,15 @@ export interface AgentChatTuiCoordinatorOptions {
     text?: string;
   }>;
 
-  /** 批准 unrestricted sandbox 审批请求。 */
-  approve: (approval_id: string) => Promise<{ success: boolean; decision: string }>;
+  /** 按审批 ID 读取 Shell runtime 中的规范请求详情。 */
+  get_approval: (session_id: string, approval_id: string) => Promise<AgentChatApprovalView | undefined>;
 
-  /** 拒绝 unrestricted sandbox 审批请求。 */
-  deny: (approval_id: string) => Promise<{ success: boolean; decision: string }>;
+  /** 批准 unrestricted sandbox 审批请求。 */
+  resolve_approval: (
+    session_id: string,
+    approval_id: string,
+    decision: "approved" | "denied",
+  ) => Promise<{ success: boolean; decision: string }>;
 }
 
 /**
@@ -91,16 +104,19 @@ export class AgentChatTuiCoordinator {
   private readonly options: AgentChatTuiCoordinatorOptions;
   private readonly terminal: ProcessTerminal;
   private readonly tui: TUI;
+  private readonly header: AgentHeaderComponent;
   private readonly footer: ChatFooterComponent;
   private readonly message_list: MessageListComponent;
   private readonly editor: ChatEditorComponent;
+  private readonly approval_panel: InlinePanelSlotComponent;
+  private readonly command_panel: InlinePanelSlotComponent;
   private app_state: AppState;
   private current_session_id: string;
   private running = false;
   private stopped = false;
   private resolve_run: (() => void) | null = null;
-  private overlay_handle: OverlayHandle | null = null;
   private remove_input_listener: (() => void) | null = null;
+  private command_panel_loading = false;
 
   /**
    * 全局 tool output 展开状态。
@@ -113,13 +129,10 @@ export class AgentChatTuiCoordinator {
    * 待处理的 unrestricted sandbox 审批请求队列。
    * 当模型并行发起多个需要审批的 tool call 时，依次弹出选择器。
    */
-  private approval_queue: Array<{
-    approval_id: string;
-    tool_name: string;
-    cmd: string;
-    cwd: string;
-    reason: string;
-  }> = [];
+  private approval_queue: AgentChatApprovalView[] = [];
+
+  /** 已接收的审批 ID，避免同一 part 快照重复展示。 */
+  private readonly received_approval_ids = new Set<string>();
 
   /**
    * slash 命令宿主，解耦命令分发与 coordinator 内部实现。
@@ -134,7 +147,7 @@ export class AgentChatTuiCoordinator {
         this.add_error_message(text);
       },
       show_help: () => {
-        this.add_status_message("/help · /session · /model · /new · /clear · /quit");
+        this.show_command_help();
       },
       clear_transcript: () => {
         this.message_list.clear();
@@ -172,6 +185,7 @@ export class AgentChatTuiCoordinator {
       session_title: undefined,
       is_executing: false,
       status_text: "",
+      transcript_scroll_offset: 0,
     };
 
     this.terminal = new ProcessTerminal();
@@ -179,10 +193,16 @@ export class AgentChatTuiCoordinator {
     this.terminal.setTitle(this.build_title());
 
     this.editor = new ChatEditorComponent(this.tui);
-    this.footer = new ChatFooterComponent(this.app_state, this.tui);
+    this.header = new AgentHeaderComponent(this.app_state, this.tui);
+    this.footer = new ChatFooterComponent(this.app_state);
+    this.approval_panel = new InlinePanelSlotComponent();
+    this.command_panel = new InlinePanelSlotComponent();
 
     this.message_list = new MessageListComponent({
       get_viewport_height: () => this.get_message_list_viewport_height(),
+      on_scroll_change: (scroll_offset) => {
+        this.app_state.transcript_scroll_offset = scroll_offset;
+      },
     });
 
     this.editor.on_submit = (text) => {
@@ -201,6 +221,14 @@ export class AgentChatTuiCoordinator {
       this.toggle_tool_output_expansion();
       this.request_render();
     };
+    this.editor.on_up_arrow_empty = () => {
+      this.scroll_transcript(3);
+      return true;
+    };
+    this.editor.on_down_arrow_empty = () => {
+      this.scroll_transcript(-3);
+      return true;
+    };
   }
 
   /**
@@ -215,9 +243,12 @@ export class AgentChatTuiCoordinator {
     }
     this.running = true;
 
-    // 顺序：transcript → editor → footer，footer 常驻展示 session 信息与快捷键。
+    // 两个交互槽位进入正常布局流：审批在输入框上方，命令交互在输入框下方。
+    this.tui.addChild(this.header as Component);
     this.tui.addChild(this.message_list as Component);
+    this.tui.addChild(this.approval_panel as Component);
     this.tui.addChild(this.editor as Component);
+    this.tui.addChild(this.command_panel as Component);
     this.tui.addChild(this.footer as Component);
     this.tui.setFocus(this.editor as Component);
 
@@ -229,74 +260,71 @@ export class AgentChatTuiCoordinator {
     await this.load_history(this.current_session_id);
 
     this.tui.start();
+    this.terminal.write(TRANSCRIPT_MOUSE_TRACKING_ENABLE);
 
     return await new Promise<void>((resolve) => {
       this.resolve_run = resolve;
     });
   }
 
-  /**
-   * 入队并尝试显示 unrestricted sandbox 审批弹窗。
-   */
-  private show_approval_dialog(params: {
+  /** 入队并尝试显示输入框上方的 unrestricted sandbox 审批面板。 */
+  private show_approval_panel(params: {
     approval_id: string;
     tool_name: string;
     cmd: string;
     cwd: string;
     reason: string;
   }): void {
-    if (this.stopped) {
-      return;
-    }
-    this.approval_queue.push(params);
-    this.ensure_approval_dialog();
+    if (this.stopped || this.received_approval_ids.has(params.approval_id)) return;
+    this.received_approval_ids.add(params.approval_id);
+    void this.enqueue_approval_panel({
+      session_id: this.current_session_id,
+      ...params,
+    });
   }
 
-  /**
-   * 如果当前没有弹窗且队列非空，显示下一个审批弹窗。
-   */
-  private ensure_approval_dialog(): void {
-    if (this.overlay_handle || this.stopped || this.approval_queue.length === 0) {
+  /** 使用 runtime 规范详情补全审批请求，再进入内联审批队列。 */
+  private async enqueue_approval_panel(params: AgentChatApprovalView): Promise<void> {
+    let canonical: AgentChatApprovalView | undefined;
+    try {
+      canonical = await this.options.get_approval(params.session_id, params.approval_id);
+    } catch {
+      // 远程详情读取失败时继续使用 Mutation 中的工具输入，审批能力不能因此中断。
+    }
+    if (this.stopped) return;
+    this.approval_queue.push({ ...params, ...canonical });
+    this.ensure_approval_panel();
+  }
+
+  /** 当前没有审批面板且队列非空时，显示下一个请求。 */
+  private ensure_approval_panel(): void {
+    if (this.approval_panel.is_active || this.stopped || this.approval_queue.length === 0) {
       return;
     }
 
     const params = this.approval_queue[0];
-    const dialog = new ApprovalDialogComponent({
+    const panel = new ApprovalPanelComponent({
       approval_id: params.approval_id,
       tool_name: params.tool_name,
       cmd: params.cmd,
       cwd: params.cwd,
       reason: params.reason,
       on_decide: (decision) => {
-        this.hide_approval_dialog();
-        if (decision === "approve") {
-          void this.approve(params.approval_id);
-        } else if (decision === "deny") {
-          void this.deny(params.approval_id);
-        }
-        this.ensure_approval_dialog();
+        this.hide_approval_panel();
+        void this.resolve_approval_panel(params, decision);
       },
     });
 
-    this.overlay_handle = this.tui.showOverlay(dialog as Component, {
-      width: "80%",
-      maxHeight: "70%",
-      anchor: "center",
-    });
-    this.overlay_handle.focus();
+    this.command_panel.clear();
+    this.approval_panel.show(panel);
+    this.tui.setFocus(this.approval_panel as Component);
     this.request_render();
   }
 
-  /**
-   * 隐藏当前弹窗并从队列移除当前请求。
-   */
-  private hide_approval_dialog(): void {
-    this.approval_queue.shift();
-    if (!this.overlay_handle) {
-      return;
-    }
-    this.overlay_handle.hide();
-    this.overlay_handle = null;
+  /** 隐藏当前审批面板并从队列移除当前请求。 */
+  private hide_approval_panel(): void {
+    if (this.approval_panel.is_active) this.approval_queue.shift();
+    this.approval_panel.clear();
     this.tui.setFocus(this.editor as Component);
     this.request_render();
   }
@@ -311,14 +339,7 @@ export class AgentChatTuiCoordinator {
       this.request_render();
       return;
     }
-    try {
-      const result = await this.options.approve(target_id);
-      if (!result.success) {
-        this.add_error_message(`Failed to approve ${target_id}`);
-      }
-    } catch (error) {
-      this.add_error_message(this.format_error(error));
-    }
+    await this.submit_approval_decision(target_id, "approve");
     this.request_render();
   }
 
@@ -332,15 +353,49 @@ export class AgentChatTuiCoordinator {
       this.request_render();
       return;
     }
+    await this.submit_approval_decision(target_id, "deny");
+    this.request_render();
+  }
+
+  /**
+   * 提交面板决策；失败时将请求放回队首，避免 Agent 永久等待。
+   */
+  private async resolve_approval_panel(
+    approval: AgentChatApprovalView,
+    decision: "approve" | "deny",
+  ): Promise<void> {
+    const success = await this.submit_approval_decision(
+      approval.approval_id,
+      decision,
+      approval.session_id,
+    );
+    if (!success && !this.stopped) this.approval_queue.unshift(approval);
+    this.ensure_approval_panel();
+    this.request_render();
+  }
+
+  /**
+   * 向远端 Shell runtime 提交审批决策。
+   *
+   * @returns 是否成功命中并完成 pending approval。
+   */
+  private async submit_approval_decision(
+    approval_id: string,
+    decision: "approve" | "deny",
+    session_id = this.current_session_id,
+  ): Promise<boolean> {
     try {
-      const result = await this.options.deny(target_id);
-      if (!result.success) {
-        this.add_error_message(`Failed to deny ${target_id}`);
-      }
+      const result = await this.options.resolve_approval(
+        session_id,
+        approval_id,
+        decision === "approve" ? "approved" : "denied",
+      );
+      if (result.success) return true;
+      this.add_error_message(`Failed to ${decision} ${approval_id}`);
     } catch (error) {
       this.add_error_message(this.format_error(error));
     }
-    this.request_render();
+    return false;
   }
 
   /**
@@ -352,9 +407,10 @@ export class AgentChatTuiCoordinator {
     }
     this.stopped = true;
     this.hide_session_picker();
-    this.hide_approval_dialog();
+    this.hide_approval_panel();
     this.remove_input_listener?.();
-    this.footer.dispose();
+    this.header.dispose();
+    this.terminal.write(TRANSCRIPT_MOUSE_TRACKING_DISABLE);
     this.tui.stop();
     this.resolve_run?.();
   }
@@ -374,9 +430,20 @@ export class AgentChatTuiCoordinator {
    */
   private get_message_list_viewport_height(): number {
     const width = this.terminal.columns;
+    const header_lines = this.header.render(width).length;
+    const approval_lines = this.approval_panel.render(width).length;
     const editor_lines = this.editor.render(width).length;
+    const command_lines = this.command_panel.render(width).length;
     const footer_lines = this.footer.render(width).length;
-    return Math.max(1, this.terminal.rows - editor_lines - footer_lines);
+    return Math.max(
+      1,
+      this.terminal.rows
+        - header_lines
+        - approval_lines
+        - editor_lines
+        - command_lines
+        - footer_lines,
+    );
   }
 
   /**
@@ -405,6 +472,15 @@ export class AgentChatTuiCoordinator {
     });
 
     if (
+      this.app_state.is_executing &&
+      (intent.kind === "not-command" || intent.kind === "message")
+    ) {
+      this.add_error_message("Cannot send a new message while the current turn is running.");
+      this.request_render();
+      return;
+    }
+
+    if (
       intent.kind === "builtin" ||
       intent.kind === "blocked" ||
       intent.kind === "invalid"
@@ -430,8 +506,8 @@ export class AgentChatTuiCoordinator {
   private async run_turn(message: string): Promise<void> {
     this.app_state.is_executing = true;
     this.app_state.status_text = "working...";
+    this.header.set_state(this.app_state);
     this.footer.set_state(this.app_state);
-    this.editor.disableSubmit = true;
     this.message_list.scroll_to_bottom();
     this.add_user_message(message);
     this.request_render();
@@ -440,7 +516,7 @@ export class AgentChatTuiCoordinator {
       this.message_list,
       () => this.request_render(),
       (params) => {
-        this.show_approval_dialog(params);
+        this.show_approval_panel(params);
       },
     );
     const outcome = await this.options.run_turn({
@@ -451,8 +527,8 @@ export class AgentChatTuiCoordinator {
 
     this.app_state.is_executing = false;
     this.app_state.status_text = "";
+    this.header.set_state(this.app_state);
     this.footer.set_state(this.app_state);
-    this.editor.disableSubmit = false;
 
     if (!outcome.success) {
       this.add_error_message(outcome.error || "agent chat failed");
@@ -463,13 +539,10 @@ export class AgentChatTuiCoordinator {
     this.request_render();
   }
 
-  /**
-   * 显示 session 选择器弹窗。
-   */
+  /** 在输入框下方显示 Session 选择器。 */
   private async show_session_picker(): Promise<void> {
-    if (this.overlay_handle) {
-      return;
-    }
+    if (!this.can_open_command_panel()) return;
+    this.command_panel_loading = true;
 
     let sessions: AgentChatSessionSummaryView[] = [];
     try {
@@ -478,7 +551,10 @@ export class AgentChatTuiCoordinator {
       this.add_error_message(this.format_error(error));
       this.request_render();
       return;
+    } finally {
+      this.command_panel_loading = false;
     }
+    if (this.stopped || this.approval_panel.is_active) return;
 
     const picker = new SessionPickerComponent({
       sessions,
@@ -496,31 +572,20 @@ export class AgentChatTuiCoordinator {
       },
     });
 
-    this.overlay_handle = this.tui.showOverlay(picker as Component, {
-      width: "80%",
-      maxHeight: "70%",
-      anchor: "center",
-    });
-    this.overlay_handle.focus();
+    this.command_panel.show(picker);
+    this.tui.setFocus(this.command_panel as Component);
     this.request_render();
   }
 
-  /**
-   * 隐藏 session 选择器。
-   */
+  /** 隐藏 Session 选择器。 */
   private hide_session_picker(): void {
-    if (!this.overlay_handle) {
-      return;
-    }
-    this.overlay_handle.hide();
-    this.overlay_handle = null;
-    this.tui.setFocus(this.editor as Component);
-    this.request_render();
+    this.hide_command_panel();
   }
 
-  /** 显示当前 Session 的模型选择器。 */
+  /** 在输入框下方显示当前 Session 的模型选择器。 */
   private async show_model_picker(): Promise<void> {
-    if (this.overlay_handle) return;
+    if (!this.can_open_command_panel()) return;
+    this.command_panel_loading = true;
 
     let models: AgentChatModelChoice[];
     try {
@@ -529,7 +594,10 @@ export class AgentChatTuiCoordinator {
       this.add_error_message(this.format_error(error));
       this.request_render();
       return;
+    } finally {
+      this.command_panel_loading = false;
     }
+    if (this.stopped || this.approval_panel.is_active) return;
     if (models.length === 0) {
       this.add_error_message("No models available in Federation.");
       this.request_render();
@@ -547,20 +615,37 @@ export class AgentChatTuiCoordinator {
         this.hide_model_picker();
       },
     });
-    this.overlay_handle = this.tui.showOverlay(picker as Component, {
-      width: "80%",
-      maxHeight: "70%",
-      anchor: "center",
-    });
-    this.overlay_handle.focus();
+    this.command_panel.show(picker);
+    this.tui.setFocus(this.command_panel as Component);
     this.request_render();
   }
 
   /** 隐藏模型选择器并恢复编辑器焦点。 */
   private hide_model_picker(): void {
-    if (!this.overlay_handle) return;
-    this.overlay_handle.hide();
-    this.overlay_handle = null;
+    this.hide_command_panel();
+  }
+
+  /** 在输入框下方显示 Slash 命令帮助。 */
+  private show_command_help(): void {
+    if (!this.can_open_command_panel()) return;
+    this.command_panel.show(
+      new CommandHelpPanelComponent(() => this.hide_command_panel()),
+    );
+    this.tui.setFocus(this.command_panel as Component);
+    this.request_render();
+  }
+
+  /** 判断当前是否允许打开输入框下方交互面板。 */
+  private can_open_command_panel(): boolean {
+    return !this.stopped
+      && !this.command_panel_loading
+      && !this.command_panel.is_active
+      && !this.approval_panel.is_active;
+  }
+
+  /** 清空输入框下方面板并恢复编辑器焦点。 */
+  private hide_command_panel(): void {
+    this.command_panel.clear();
     this.tui.setFocus(this.editor as Component);
     this.request_render();
   }
@@ -580,6 +665,7 @@ export class AgentChatTuiCoordinator {
       await this.options.update_session_model(this.current_session_id, model_id);
       this.app_state.session_model_id = model_id;
       this.app_state.session_model_name = this.resolve_model_name(model_id, models);
+      this.header.set_state(this.app_state);
       this.footer.set_state(this.app_state);
       this.terminal.setTitle(this.build_title());
       this.add_status_message(`Session model switched · ${this.app_state.session_model_name} · effective next turn`);
@@ -612,10 +698,12 @@ export class AgentChatTuiCoordinator {
    */
   private async switch_session(session_id: string): Promise<void> {
     this.current_session_id = session_id;
+    this.received_approval_ids.clear();
     this.app_state.session_id = session_id;
     this.app_state.session_title = undefined;
     this.app_state.session_model_id = undefined;
     this.app_state.session_model_name = undefined;
+    this.header.set_state(this.app_state);
     this.footer.set_state(this.app_state);
     this.terminal.setTitle(this.build_title());
     this.message_list.clear();
@@ -637,6 +725,7 @@ export class AgentChatTuiCoordinator {
       this.app_state.session_title = title;
       this.app_state.session_model_id = model_id;
       this.app_state.session_model_name = model_name || model_id;
+      this.header.set_state(this.app_state);
       this.footer.set_state(this.app_state);
       this.terminal.setTitle(this.build_title());
       for (const entry of entries) {
@@ -697,39 +786,26 @@ export class AgentChatTuiCoordinator {
    * @returns 是否消费该输入。
    */
   private handle_global_input(data: string): { consume: boolean } | undefined {
-    if (this.overlay_handle && !this.overlay_handle.isHidden()) {
+    if (this.approval_panel.is_active || this.command_panel.is_active) {
       return undefined;
     }
 
     const page_size = Math.max(1, this.get_message_list_viewport_height() - 1);
+    const scroll_delta = resolve_transcript_scroll_delta(data, page_size);
+    if (scroll_delta === null) return undefined;
+    this.scroll_transcript(scroll_delta);
+    return { consume: true };
+  }
 
-    if (matchesKey(data, Key.pageUp)) {
-      this.message_list.scroll_by(page_size);
-      this.request_render();
-      return { consume: true };
-    }
-    if (matchesKey(data, Key.pageDown)) {
-      this.message_list.scroll_by(-page_size);
-      this.request_render();
-      return { consume: true };
-    }
-    if (matchesKey(data, Key.shift("up"))) {
-      this.message_list.scroll_by(1);
-      this.request_render();
-      return { consume: true };
-    }
-    if (matchesKey(data, Key.shift("down"))) {
-      this.message_list.scroll_by(-1);
-      this.request_render();
-      return { consume: true };
-    }
-    if (matchesKey(data, Key.ctrl("l"))) {
-      this.message_list.scroll_to_bottom();
-      this.request_render();
-      return { consume: true };
-    }
-
-    return undefined;
+  /**
+   * 滚动 transcript 并触发界面刷新。
+   *
+   * @param delta 正数查看历史，负数返回最新内容。
+   */
+  private scroll_transcript(delta: number): void {
+    this.message_list.scroll_by(delta);
+    this.footer.set_state(this.app_state);
+    this.request_render();
   }
 
   /**

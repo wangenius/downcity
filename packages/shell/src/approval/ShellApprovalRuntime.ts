@@ -117,7 +117,7 @@ export function setShellApprovalMode(params: {
   return mode;
 }
 
-function publishApprovalResult(params: {
+async function publishApprovalResult(params: {
   context: ShellHostContext;
   ownerContextId?: string;
   turnId?: string;
@@ -126,13 +126,13 @@ function publishApprovalResult(params: {
   toolName: ShellApprovalToolName;
   decision: ShellApprovalStatus;
   toolCallId?: string;
-}): void {
+}): Promise<void> {
   const sessionId = String(params.ownerContextId || "").trim();
   if (!sessionId || !params.context.session) return;
   const turnId = String(params.turnId || sessionId).trim();
   const toolCallId = String(params.toolCallId || params.shellId || "").trim();
   try {
-    params.context.session.get(sessionId).publishEvent({
+    await params.context.session.get(sessionId).publishEvent({
       type: "tool-approval-result",
       turnId,
       toolCallId,
@@ -257,7 +257,7 @@ export async function requestUnrestrictedApproval(params: {
     return { approvalId, status: "denied" };
   }
 
-  const status = await new Promise<ShellApprovalStatus>((resolve) => {
+  const status_promise = new Promise<ShellApprovalStatus>((resolve) => {
     const timer = setTimeout(() => {
       resolveApproval({
         state: params.state,
@@ -286,46 +286,49 @@ export async function requestUnrestrictedApproval(params: {
       resolve,
     });
 
-    const eventTurnId = String(turnId || ownerContextId).trim();
-    try {
-      params.context.session?.get(ownerContextId).publishEvent({
-        type: "tool-approval-request",
-        turnId: eventTurnId,
-        toolCallId: resolvedToolCallId,
-        toolName: params.toolName,
-        approvalId,
-        sandbox: "unrestricted",
-        cmd: params.cmd,
-        cwd: params.cwd,
-        reason: params.reason,
-        status: "pending",
-        operation,
-        shellId: params.shellId,
-        ...(inputPreview !== undefined ? { inputPreview } : {}),
-        ...(typeof params.inputChars === "number" ? { inputChars: params.inputChars } : {}),
-      });
-    } catch {
-      // ignore event delivery failures
-    }
-
-    appendAudit({
-      context: params.context,
-      record: {
-        event: "approval_requested",
-        approval_id: approvalId,
-        session_id: ownerContextId || null,
-        tool_call_id: resolvedToolCallId,
-        agent_id: params.context.config?.id || null,
-        cmd: params.cmd,
-        operation,
-        ...(inputPreview !== undefined ? { input_preview: inputPreview } : {}),
-        ...(typeof params.inputChars === "number" ? { input_chars: params.inputChars } : {}),
-        cwd: params.cwd,
-        reason: params.reason,
-        created_at: new Date(createdAt).toISOString(),
-      },
-    }).catch(() => undefined);
   });
+
+  const eventTurnId = String(turnId || ownerContextId).trim();
+  try {
+    await params.context.session?.get(ownerContextId).publishEvent({
+      type: "tool-approval-request",
+      turnId: eventTurnId,
+      toolCallId: resolvedToolCallId,
+      toolName: params.toolName,
+      approvalId,
+      sandbox: "unrestricted",
+      cmd: params.cmd,
+      cwd: params.cwd,
+      reason: params.reason,
+      status: "pending",
+      operation,
+      shellId: params.shellId,
+      ...(inputPreview !== undefined ? { inputPreview } : {}),
+      ...(typeof params.inputChars === "number" ? { inputChars: params.inputChars } : {}),
+    });
+  } catch {
+    // Event 投影失败不应让审批永久挂起，pending 仍可通过 Session.approvals() 处理。
+  }
+
+  await appendAudit({
+    context: params.context,
+    record: {
+      event: "approval_requested",
+      approval_id: approvalId,
+      session_id: ownerContextId || null,
+      tool_call_id: resolvedToolCallId,
+      agent_id: params.context.config?.id || null,
+      cmd: params.cmd,
+      operation,
+      ...(inputPreview !== undefined ? { input_preview: inputPreview } : {}),
+      ...(typeof params.inputChars === "number" ? { input_chars: params.inputChars } : {}),
+      cwd: params.cwd,
+      reason: params.reason,
+      created_at: new Date(createdAt).toISOString(),
+    },
+  }).catch(() => undefined);
+
+  const status = await status_promise;
 
   return { approvalId, status };
 }
@@ -343,9 +346,7 @@ export async function resolveApproval(params: {
   if (!approval) return false;
   params.state.approvals.delete(params.approvalId);
   clearTimeout(approval.timer);
-  approval.resolve(params.decision);
-
-  publishApprovalResult({
+  await publishApprovalResult({
     context: params.context,
     ownerContextId: approval.ownerContextId,
     turnId: approval.turnId,
@@ -355,6 +356,7 @@ export async function resolveApproval(params: {
     decision: params.decision,
     toolCallId: approval.toolCallId,
   });
+  approval.resolve(params.decision);
 
   await appendAudit({
     context: params.context,
@@ -385,6 +387,8 @@ export function listPendingApprovals(state: ShellRuntimeState): Array<{
   approvalId: string;
   shellId: string;
   ownerContextId?: string;
+  turnId?: string;
+  toolCallId?: string;
   toolName: ShellApprovalToolName;
   cmd: string;
   operation: "exec" | "start" | "write";
@@ -398,6 +402,8 @@ export function listPendingApprovals(state: ShellRuntimeState): Array<{
     approvalId: approval.approvalId,
     shellId: approval.shellId,
     ...(approval.ownerContextId ? { ownerContextId: approval.ownerContextId } : {}),
+    ...(approval.turnId ? { turnId: approval.turnId } : {}),
+    ...(approval.toolCallId ? { toolCallId: approval.toolCallId } : {}),
     toolName: approval.toolName,
     cmd: approval.cmd,
     operation: approval.operation,

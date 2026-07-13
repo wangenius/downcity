@@ -143,7 +143,6 @@ export async function runCommand(
     port,
     getAgentContext: () => agent.getContext(),
     sdkRouter: agent_http.router(),
-    getShell: () => agent.getShell(),
   });
 
   const agentLogger = agent.getLogger();

@@ -3,8 +3,7 @@
  */
 
 /**
- * 消息内容相对子弹的缩进空格数。
- * 必须与 STATUS_BULLET / USER_MESSAGE_BULLET 的可见宽度一致。
+ * 消息内容相对角色标题的缩进空格数。
  */
 export const MESSAGE_INDENT = "  ";
 

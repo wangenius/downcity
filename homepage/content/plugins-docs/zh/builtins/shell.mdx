@@ -45,16 +45,18 @@ Unrestricted 执行每次都需要用户审批。缺少 `reason` 会在执行前
 
 ## 审批 API
 
-前端或 SDK 客户端通过 Agent API 审批：
+前端或 SDK 客户端通过发起工具调用的 Session 审批：
 
 ```ts
-const pending = await agent.approvals();
+const pending = await session.approvals();
 
-await agent.approve({ approval_id: pending[0].approval_id });
-await agent.deny({ approval_id: pending[0].approval_id });
+await session.resolve_approval({
+  approval_id: pending[0].approval_id,
+  decision: "approved",
+});
 ```
 
-`RemoteAgent` 通过 Downcity Agent HTTP gateway 暴露同样的 API。
+本地和远程 Session 暴露相同 API。实时 UI 还可以在 `session.subscribe()` 收到 `approval-required` Tool Part 时调用 `reply.approval({ decision })`。
 
 ## Session Approval Mode
 
@@ -64,14 +66,11 @@ Shell approval mode 只作用于当前 session：
 - `always-allow`：当前 session 内自动通过 shell approval，不再弹出新的 pending approval。
 
 ```ts
-const modes = agent.approval_modes();
-
-agent.set_approval_mode({
-  session_id: "consoleui",
+await session.set_approval_mode({
   mode: "always-allow",
 });
 
-const current = agent.approval_mode({ session_id: "consoleui" });
+const current = await session.approval_mode();
 ```
 
 `always-allow` 不改变 sandbox 模式，只是把原本需要手动批准的 unrestricted 请求自动记录为 approved。已有 pending approval 不会被自动批准。
@@ -79,7 +78,7 @@ const current = agent.approval_mode({ session_id: "consoleui" });
 ## 关键语义
 
 - Shell 归属于 `@downcity/shell`，不属于 `@downcity/plugins`。
-- Agent 只挂载 Shell tools，并转发 session event。
+- Agent 只挂载 Shell tools；工具审批和实时 Mutation 都归属具体 Session。
 - Safe Sandbox 命令可读写项目，并使用配置的 sandbox 目录。
 - Unrestricted 命令只有在逐次审批通过后才会离开 Safe Sandbox 执行。
 - `always-allow` 只影响当前 session 的新 approval 请求，不影响其它 session。

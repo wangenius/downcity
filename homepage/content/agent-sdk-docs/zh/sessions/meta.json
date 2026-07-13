@@ -7,7 +7,7 @@
     "prompt",
     "stop",
     "subscribe",
-    "history",
+    "messages",
     "system",
     "fork",
     "metadata-and-storage"

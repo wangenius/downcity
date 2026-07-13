@@ -56,7 +56,13 @@ downcity agent chat -m "hello"
 
 `downcity agent model <path> --set <model-id>` 更新 Agent 默认模型，并在下次启动或重启时生效。添加 `--session-id <id>` 后则只覆盖该运行中 Session 的模型，并从下一轮对话开始生效。交互模式会先选择 Agent 默认模型或一个运行中的 Session，再选择 Federation 模型。
 
-交互式 Agent Chat 的 footer 会显示当前 Session 使用的模型名称。在聊天中输入 `/model`，可以从 Federation 当前可用的对话模型中搜索并切换；选择结果写入当前 Session，并从下一轮对话开始生效。
+交互式 Agent Chat 顶部会显示当前 Session、模型和运行状态。在聊天中输入 `/model` 或 `/session` 后，选择器会直接显示在输入框下方，不会遮挡消息历史。模型选择结果写入当前 Session，并从下一轮对话开始生效。
+
+消息历史支持鼠标滚轮、空输入时的 `↑` / `↓`、`PageUp` / `PageDown`；`Ctrl+L` 可直接返回最新消息。工具执行默认折叠，使用 `Ctrl+O` 统一展开或收起参数与结果。
+
+当 unrestricted shell 操作需要审批时，输入框上方的内联面板会显示命令、工作目录和申请原因。选择 Approve 或 Deny 后提交；`Esc` / `Ctrl+C` 按安全语义执行 Deny。远端提交失败时，请求会保留并重新显示，不会让当前轮次失去审批入口。
+
+Agent 执行期间仍可提交 `/approve`、`/deny`、`/help` 和 `/quit`。会改变会话或 transcript 的 `/model`、`/session`、`/new`、`/clear` 仅在空闲时可用；普通消息也不会并发开启第二个 turn。
 
 ### Agent 历史
 

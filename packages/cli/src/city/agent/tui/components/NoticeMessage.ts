@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 直接从 Kimi Code 的 status-message.ts 挪用。
  * - 继承 Container，顶部带 Spacer，支持 invalidate 重新染色。
- * - 标题使用 textStrong，详情使用 textDim。
+ * - 标题使用 error 语义色，详情使用 textDim。
  */
 
 import { Container, Spacer, Text } from "@earendil-works/pi-tui";
@@ -30,7 +30,7 @@ export class NoticeMessageComponent extends Container {
     this.detail = detail;
     this.addChild(new Spacer(1));
     this.title_text = new Text(
-      `  ${current_theme.fg("textStrong", title)}`,
+      `  ${current_theme.bold_fg("error", title)}`,
       0,
       0,
     );
@@ -49,7 +49,7 @@ export class NoticeMessageComponent extends Container {
    * 主题切换时重新染色。
    */
   override invalidate(): void {
-    this.title_text.setText(`  ${current_theme.fg("textStrong", this.title)}`);
+    this.title_text.setText(`  ${current_theme.bold_fg("error", this.title)}`);
     if (this.detail_text !== undefined && this.detail !== undefined) {
       this.detail_text.setText(
         `  ${current_theme.fg("textDim", this.detail)}`,

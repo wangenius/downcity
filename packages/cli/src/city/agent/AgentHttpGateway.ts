@@ -20,9 +20,7 @@ import { healthRouter } from "@/city/agent/http/health/health.js";
 import { createPluginsRouter } from "@/city/agent/http/plugins/plugins.js";
 import { createStaticRouter } from "@/city/agent/http/static/static.js";
 import { createControlRouter } from "@/city/agent/http/control/ControlRouter.js";
-import { createShellRouter } from "@/city/agent/http/shell/shell.js";
 import type { AgentContext } from "@downcity/agent";
-import type { Shell } from "@downcity/shell";
 
 /**
  * Agent HTTP 网关启动参数。
@@ -36,8 +34,6 @@ export interface AgentHttpGatewayStartOptions {
   getAgentContext: () => AgentContext;
   /** 可选 SDK transport 子路由（来自 `@downcity/server` 的 `AgentHTTP.router()`）。 */
   sdkRouter?: HonoType;
-  /** 可选 Shell 绑定。 */
-  getShell?: () => Shell | undefined;
 }
 
 /**
@@ -58,7 +54,7 @@ export interface AgentHttpGatewayInstance {
 export function createAgentHttpGatewayApp(
   options: Pick<
     AgentHttpGatewayStartOptions,
-    "getAgentContext" | "sdkRouter" | "getShell"
+    "getAgentContext" | "sdkRouter"
   >,
 ): Hono {
   const app = new Hono();
@@ -80,9 +76,6 @@ export function createAgentHttpGatewayApp(
   app.route("/", healthRouter);
   app.route("/", createPluginsRouter({
     getAgentContext: options.getAgentContext,
-  }));
-  app.route("/", createShellRouter({
-    getShell: () => options.getShell?.(),
   }));
   app.route("/", createExecuteRouter({
     getAgentContext: options.getAgentContext,

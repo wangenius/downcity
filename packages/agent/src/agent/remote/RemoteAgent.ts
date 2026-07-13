@@ -23,14 +23,6 @@ import type {
   RemoteAgentPluginActionInput,
   RemoteAgentPluginActionResult,
 } from "@/types/agent/RemoteAgentPluginAction.js";
-import type {
-  ShellApprovalMode,
-  ShellApprovalDecisionResult,
-  ShellApprovalModeUpdateResult,
-  ShellApprovalModeOption,
-  ShellSessionApprovalModeView,
-  ShellApprovalView,
-} from "@downcity/shell";
 import type { RemoteAgentTransport } from "@/agent/remote/RemoteTransport.js";
 import { RemoteSession } from "@/agent/remote/RemoteSession.js";
 import { create_remote_agent_transport } from "@/agent/remote/TransportFactory.js";
@@ -57,7 +49,7 @@ export class RemoteAgent {
    *
    * 关键点（中文）
    * - 这是 RemoteAgent 顶层能力，不绑定某个 session。
-   * - Shell approval 请使用 `approvals()` / `approve()` / `deny()`。
+   * - Shell approval 通过具体 RemoteSession 处理。
    */
   async runPluginAction(
     input: RemoteAgentPluginActionInput,
@@ -75,51 +67,6 @@ export class RemoteAgent {
       action,
       ...(input.payload !== undefined ? { payload: input.payload } : {}),
     });
-  }
-
-  /**
-   * 列出远程 Agent 的 shell pending approvals。
-   */
-  async approvals(): Promise<ShellApprovalView[]> {
-    return await this.transport.approvals();
-  }
-
-  /**
-   * 列出远程 Agent 显式设置过的 shell approval 模式。
-   */
-  async approval_modes(): Promise<ShellApprovalModeOption[]> {
-    return await this.transport.approval_modes();
-  }
-
-  /**
-   * 读取远程 Agent 指定 session 的 shell approval 模式。
-   */
-  async approval_mode(input: { session_id: string }): Promise<ShellSessionApprovalModeView> {
-    return await this.transport.approval_mode(input);
-  }
-
-  /**
-   * 设置远程 Agent 指定 session 的 shell approval 模式。
-   */
-  async set_approval_mode(input: {
-    session_id: string;
-    mode: ShellApprovalMode;
-  }): Promise<ShellApprovalModeUpdateResult> {
-    return await this.transport.set_approval_mode(input);
-  }
-
-  /**
-   * 批准远程 Agent 的 shell approval。
-   */
-  async approve(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
-    return await this.transport.approve(input);
-  }
-
-  /**
-   * 拒绝远程 Agent 的 shell approval。
-   */
-  async deny(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
-    return await this.transport.deny(input);
   }
 
   /**

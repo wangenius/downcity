@@ -72,10 +72,12 @@ await turn.finished;
 - `agent.ready()`
 - `agent.dispose()`
 - `agent.sessions`
-- `agent.runPluginAction(input)`
 - `agent.setInstruction(input)`
+- `agent.getEnv()` / `agent.setEnv()` / `agent.patchEnv()`
 - `agent.getConfig()`
 - `agent.getLogger()`
+- `agent.getContext()`
+- `agent.getShell()`
 - `agent.plugins`
 
 典型职责：
@@ -123,8 +125,12 @@ await turn.finished;
 - `session.prompt(input)`
 - `session.stop()`
 - `session.subscribe(subscriber)`
-- `session.records(input?)`
+- `session.messages(input?)`
 - `session.system()`
+- `session.approvals()`
+- `session.approval_mode()`
+- `session.set_approval_mode(input)`
+- `session.resolve_approval(input)`
 - `session.fork(input?)`
 
 典型顺序：
@@ -133,7 +139,7 @@ await turn.finished;
 2. `await session.set({ model })` 或在 `Agent` 构造时传默认模型
 3. `const turn = await session.prompt({ query })`
 4. `await turn.finished`
-5. 按需再用 `session.records()` / `session.get_info()` / `session.fork()`
+5. 按需再用 `session.messages()` / `session.get_info()` / `session.fork()`
 
 ## `RemoteAgentSession`
 
@@ -146,14 +152,18 @@ await turn.finished;
 - `session.prompt(input)`
 - `session.stop()`
 - `session.subscribe(subscriber)`
-- `session.records(input?)`
+- `session.messages(input?)`
 - `session.system()`
+- `session.approvals()`
+- `session.approval_mode()`
+- `session.set_approval_mode(input)`
+- `session.resolve_approval(input)`
 - `session.fork(input?)`
 
 一个关键差异：
 
 - 本地 `AgentSession` 支持 `set({ model })`
-- 远程 `RemoteAgentSession` 不接受客户端直接传本地模型实例
+- 远程 `RemoteAgentSession` 不接受客户端直接传本地模型实例，但支持 `set({ modelId })`
 
 ## Agent 项目和 Federation AIService 的关系
 
@@ -173,8 +183,9 @@ await turn.finished;
   - 需要浏览已归档的会话列表：`agent.sessions.archived(input?)`
   - 需要永久清空已归档会话：`agent.sessions.clean_archive()`
 - 需要读取单个 session 的当前摘要/详情：`get_info()`
-- 需要分页读取会话内容：`records()`
-- 需要监听后续 turn 事件：`subscribe()`
+- 需要分页读取会话内容：`messages()`
+- 需要实时监听 Message、流式增量、Turn 与 Session 状态：`subscribe()`
+- 需要处理当前 Session 的工具审批：`approvals()` / `resolve_approval()`
 - 需要停止当前 turn 并清空未吸收队列：`stop()`
 - 需要查看当前实际生效的 system prompt 快照：`system()`
 - 需要从当前状态分叉一条新会话：`fork()`

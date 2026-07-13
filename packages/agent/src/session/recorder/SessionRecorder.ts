@@ -1,13 +1,12 @@
 /**
  * SessionRecorder：Session Message 的唯一持久化与发布入口。
  *
- * Mutation 先写入单一 messages.jsonl，成功后更新内存 snapshot，最后发布同一个对象。
+ * 完整 Message 与 Assistant 草稿先持久化，成功后再发布实时 Mutation。
  */
 
 import type { UIMessage, UIMessageChunk } from "ai";
 import { generateId } from "@/utils/Id.js";
 import { JsonlSessionMessageStore } from "@/session/recorder/JsonlSessionMessageStore.js";
-import { reduce_session_message } from "@/session/recorder/SessionMessageReducer.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type {
   ListSessionMessagesInput,
@@ -22,23 +21,18 @@ import type {
   SessionUserMessagePart,
 } from "@/types/session/SessionMessage.js";
 import type {
-  ListSessionMessageChangesInput,
-  SessionMessageMutation,
-  SessionMessageMutationPage,
-  SessionMessageMutationSubscriber,
-  SessionMessageMutationUnsubscribe,
-  SessionMessageSnapshotMutation,
-  SessionPartSnapshotMutation,
-} from "@/types/session/SessionMessageMutation.js";
+  SessionMutation,
+  SessionMessageMutation as SessionMessageSnapshotMutation,
+} from "@/types/session/SessionMutation.js";
 
 /** SessionRecorder 构造参数。 */
 export interface SessionRecorderOptions {
   /** 当前 Session 标识。 */
   session_id: string;
-  /** 单一 JSONL Mutation store。 */
+  /** Message 快照 store。 */
   store: JsonlSessionMessageStore;
-  /** Mutation 成功提交后的发布函数。 */
-  publish: (mutation: SessionMessageMutation) => void;
+  /** 持久化成功后的实时 Mutation 发布函数。 */
+  publish: (mutation: SessionMutation) => void;
 }
 
 /** User Message 创建参数。 */
@@ -120,7 +114,6 @@ export class SessionRecorder {
   readonly session_id: string;
   private readonly store: JsonlSessionMessageStore;
   private readonly publish: SessionRecorderOptions["publish"];
-  private readonly subscribers = new Set<SessionMessageMutationSubscriber>();
   private readonly messages_by_id = new Map<string, SessionMessage>();
   private initialized = false;
 
@@ -131,7 +124,7 @@ export class SessionRecorder {
     if (!this.session_id) throw new Error("SessionRecorder requires session_id");
   }
 
-  /** 重放已有 Mutation，并收口进程中断遗留的运行状态。 */
+  /** 恢复已有 Message，并收口进程中断遗留的运行状态。 */
   async initialize(): Promise<void> {
     if (this.initialized) return;
     await this.store.initialize();
@@ -202,7 +195,7 @@ export class SessionRecorder {
       ...(input.summary_through_message_id
         ? { summary_through_message_id: input.summary_through_message_id }
         : {}),
-    }))) as SessionAssistantMessage;
+    }), true)) as SessionAssistantMessage;
     return new SessionAssistantMessageWriter(this, message.message_id);
   }
 
@@ -256,10 +249,10 @@ export class SessionRecorder {
     status: "running" | "completed" | "failed",
     changes?: { title?: string; description?: string; data?: JsonObject },
   ): Promise<SessionActionMessage> {
-    const mutation = await this.store.commit((state) => {
+    const message = await this.store.append_message((state) => {
       const current = require_message(state.messages, message_id, "action");
       const created_at = Date.now();
-      const message: SessionActionMessage = {
+      return {
         ...current,
         status,
         ...(changes?.title ? { title: changes.title } : {}),
@@ -269,11 +262,10 @@ export class SessionRecorder {
         ...(changes?.data ? { data: structuredClone(changes.data) } : {}),
         revision: current.revision + 1,
         updated_at: created_at,
-      };
-      return this.build_message_mutation(state.commit_sequence, message);
+      } satisfies SessionActionMessage;
     });
-    this.accept_mutation(mutation);
-    return this.get_message(message_id) as SessionActionMessage;
+    this.accept_message(message);
+    return message as SessionActionMessage;
   }
 
   /** 创建用户可见 Error Message。 */
@@ -302,9 +294,6 @@ export class SessionRecorder {
     input?: ListSessionMessagesInput,
   ): Promise<SessionMessagePage> {
     await this.ensure_initialized();
-    const mutations = await this.store.list_mutations();
-    const latest_commit_sequence =
-      mutations[mutations.length - 1]?.commit_sequence || 0;
     const include_internal = input?.include_internal === true;
     const through_sequence = Number.isFinite(input?.through_sequence)
       ? Number(input?.through_sequence)
@@ -329,36 +318,7 @@ export class SessionRecorder {
       total: all.length,
       ...(next_offset < all.length ? { next_cursor: encode_cursor(next_offset) } : {}),
       has_more: next_offset < all.length,
-      latest_commit_sequence,
     };
-  }
-
-  /** 从指定 commit_sequence 增量读取 Mutation。 */
-  async list_message_changes(
-    input: ListSessionMessageChangesInput,
-  ): Promise<SessionMessageMutationPage> {
-    await this.ensure_initialized();
-    const after = Math.max(0, Math.floor(input.after_commit_sequence || 0));
-    const limit = normalize_limit(input.limit, 200, 1000);
-    const all = await this.store.list_mutations();
-    const matching = all.filter((item) => item.commit_sequence > after);
-    const items = matching.slice(0, limit);
-    const latest_commit_sequence = all[all.length - 1]?.commit_sequence || 0;
-    return {
-      items,
-      has_more: matching.length > items.length,
-      next_commit_sequence:
-        items[items.length - 1]?.commit_sequence || after,
-      latest_commit_sequence,
-    };
-  }
-
-  /** 订阅已成功持久化的未来 Mutation。 */
-  subscribe(
-    subscriber: SessionMessageMutationSubscriber,
-  ): SessionMessageMutationUnsubscribe {
-    this.subscribers.add(subscriber);
-    return () => this.subscribers.delete(subscriber);
   }
 
   /** 向当前 Session 导入 fork 来源 Message，并重新分配全部身份和顺序。 */
@@ -400,23 +360,37 @@ export class SessionRecorder {
     delta: string,
   ): Promise<void> {
     if (!delta) return;
-    const mutation = await this.store.commit((state) => {
-      const current = require_message(state.messages, message_id, "assistant");
-      return {
-        mutation_id: generateId(),
-        variant: "delta",
-        type,
-        commit_sequence: state.commit_sequence,
-        message_id,
-        revision: current.revision + 1,
-        session_id: this.session_id,
-        turn_id: current.turn_id,
-        created_at: Date.now(),
-        part_id,
-        delta,
-      } satisfies SessionMessageMutation;
-    });
-    this.accept_mutation(mutation);
+    const current = require_message([...this.messages_by_id.values()], message_id, "assistant");
+    require_streaming_assistant(current);
+    const part = current.parts.find((item) => item.part_id === part_id);
+    if (!part || (part.type !== "text" && part.type !== "reasoning")) {
+      throw new Error(`Delta target Part does not exist: ${part_id}`);
+    }
+    if (part.type !== type) throw new Error(`Delta type changed for Part: ${part_id}`);
+    const created_at = Date.now();
+    const message: SessionAssistantMessage = {
+      ...current,
+      revision: current.revision + 1,
+      updated_at: created_at,
+      parts: current.parts.map((item) =>
+        item.part_id === part_id && (item.type === "text" || item.type === "reasoning")
+          ? { ...item, text: item.text + delta }
+          : item,
+      ),
+    };
+    await this.store.write_assistant_message(message);
+    this.accept_mutation({
+      mutation_id: generateId(),
+      variant: "delta",
+      type,
+      message_id,
+      revision: message.revision,
+      session_id: this.session_id,
+      turn_id: message.turn_id,
+      created_at,
+      part_id,
+      delta,
+    }, message);
   }
 
   /** @internal 写入 Assistant 完整 part。 */
@@ -424,23 +398,36 @@ export class SessionRecorder {
     message_id: string,
     part: SessionAssistantMessagePart,
   ): Promise<void> {
-    const mutation = await this.store.commit((state) => {
-      const current = require_message(state.messages, message_id, "assistant");
-      return {
-        mutation_id: generateId(),
-        variant: "part",
-        type: part.type,
-        commit_sequence: state.commit_sequence,
-        message_id,
-        revision: current.revision + 1,
-        session_id: this.session_id,
-        turn_id: current.turn_id,
-        created_at: Date.now(),
-        part_id: part.part_id,
-        part: structuredClone(part),
-      } as SessionPartSnapshotMutation;
-    });
-    this.accept_mutation(mutation);
+    const current = require_message([...this.messages_by_id.values()], message_id, "assistant");
+    require_streaming_assistant(current);
+    const existing = current.parts.find((item) => item.part_id === part.part_id);
+    if (existing && existing.sequence !== part.sequence) {
+      throw new Error(`Assistant Part sequence changed: ${part.part_id}`);
+    }
+    const created_at = Date.now();
+    const next_part = structuredClone(part);
+    const message: SessionAssistantMessage = {
+      ...current,
+      revision: current.revision + 1,
+      updated_at: created_at,
+      parts: (existing
+        ? current.parts.map((item) => item.part_id === part.part_id ? next_part : item)
+        : [...current.parts, next_part]
+      ).sort((left, right) => left.sequence - right.sequence),
+    };
+    await this.store.write_assistant_message(message);
+    this.accept_mutation({
+      mutation_id: generateId(),
+      variant: "part",
+      type: next_part.type,
+      message_id,
+      revision: message.revision,
+      session_id: this.session_id,
+      turn_id: message.turn_id,
+      created_at,
+      part_id: next_part.part_id,
+      part: next_part,
+    } as SessionMutation, message);
   }
 
   /** @internal 收口 Assistant Message。 */
@@ -448,45 +435,100 @@ export class SessionRecorder {
     message_id: string,
     status: "completed" | "stopped" | "failed",
   ): Promise<void> {
-    const mutation = await this.store.commit((state) => {
-      const current = require_message(state.messages, message_id, "assistant");
-      const created_at = Date.now();
-      const message: SessionAssistantMessage = {
-        ...current,
-        revision: current.revision + 1,
-        status,
-        updated_at: created_at,
-        parts: current.parts.map((part) =>
-          part.type === "text" || part.type === "reasoning"
-            ? { ...part, state: "done" as const }
-            : part,
-        ),
-      };
-      return this.build_message_mutation(state.commit_sequence, message);
+    const current = require_message([...this.messages_by_id.values()], message_id, "assistant");
+    require_streaming_assistant(current);
+    const created_at = Date.now();
+    const message: SessionAssistantMessage = {
+      ...current,
+      revision: current.revision + 1,
+      status,
+      updated_at: created_at,
+      parts: current.parts.map((part) =>
+        part.type === "text" || part.type === "reasoning"
+          ? { ...part, state: "done" as const }
+          : part,
+      ),
+    };
+    await this.store.finalize_assistant_message(message);
+    this.accept_message(message);
+  }
+
+  /** @internal 将 Shell Runtime 审批请求更新到当前 Tool Part。 */
+  async require_tool_approval(input: {
+    tool_call_id: string;
+    approval_id: string;
+  }): Promise<void> {
+    const tool = this.find_streaming_tool(input.tool_call_id);
+    await this.update_assistant_part(tool.message_id, {
+      ...tool.part,
+      state: "approval-required",
+      approval_id: input.approval_id,
     });
-    this.accept_mutation(mutation);
+  }
+
+  /** @internal 将审批结果更新到当前 Tool Part。 */
+  async resolve_tool_approval(input: {
+    tool_call_id: string;
+    approval_id: string;
+    decision: "approved" | "denied" | "expired";
+  }): Promise<void> {
+    const tool = this.find_streaming_tool(input.tool_call_id);
+    if (tool.part.approval_id && tool.part.approval_id !== input.approval_id) {
+      throw new Error(`Tool approval identity mismatch: ${input.approval_id}`);
+    }
+    await this.update_assistant_part(tool.message_id, {
+      ...tool.part,
+      state: input.decision === "approved" ? "running" : "failed",
+      ...(input.decision === "approved"
+        ? {}
+        : { error: input.decision === "expired" ? "Approval expired" : "Approval denied" }),
+    });
   }
 
   private async create_message(
     factory: (sequence: number, created_at: number) => SessionMessage,
+    draft = false,
   ): Promise<SessionMessage> {
-    const mutation = await this.store.commit((state) => {
-      const message = factory(state.message_sequence, Date.now());
-      return this.build_message_mutation(state.commit_sequence, message);
-    });
-    this.accept_mutation(mutation);
-    return (mutation as SessionMessageSnapshotMutation).message;
+    if (draft) {
+      const message = await this.store.create_assistant_message((state) => {
+        const candidate = factory(state.message_sequence, Date.now());
+        if (candidate.type !== "assistant" || candidate.status !== "streaming") {
+          throw new Error("Draft Message must be a streaming Assistant");
+        }
+        return candidate;
+      });
+      this.accept_message(message);
+      return message;
+    }
+    const message = await this.store.append_message((state) =>
+      factory(state.message_sequence, Date.now()),
+    );
+    this.accept_message(message);
+    return message;
+  }
+
+  private find_streaming_tool(tool_call_id: string): {
+    message_id: string;
+    part: SessionAssistantToolPart;
+  } {
+    for (const message of this.messages_by_id.values()) {
+      if (message.type !== "assistant" || message.status !== "streaming") continue;
+      const part = message.parts.find(
+        (item): item is SessionAssistantToolPart =>
+          item.type === "tool" && item.tool_call_id === tool_call_id,
+      );
+      if (part) return { message_id: message.message_id, part };
+    }
+    throw new Error(`Streaming Tool Part not found: ${tool_call_id}`);
   }
 
   private build_message_mutation(
-    commit_sequence: number,
     message: SessionMessage,
   ): SessionMessageSnapshotMutation {
     return {
       mutation_id: generateId(),
       variant: "message",
       type: message.type,
-      commit_sequence,
       message_id: message.message_id,
       sequence: message.sequence,
       revision: message.revision,
@@ -497,18 +539,13 @@ export class SessionRecorder {
     } as SessionMessageSnapshotMutation;
   }
 
-  private accept_mutation(mutation: SessionMessageMutation): void {
-    const current = this.messages_by_id.get(mutation.message_id);
-    const next = reduce_session_message(current, mutation);
-    this.messages_by_id.set(next.message_id, next);
+  private accept_message(message: SessionMessage): void {
+    this.accept_mutation(this.build_message_mutation(message), message);
+  }
+
+  private accept_mutation(mutation: SessionMutation, message: SessionMessage): void {
+    this.messages_by_id.set(message.message_id, structuredClone(message));
     this.publish(mutation);
-    for (const subscriber of this.subscribers) {
-      try {
-        subscriber(mutation);
-      } catch {
-        // 单个订阅者异常不能影响已经完成的提交。
-      }
-    }
   }
 
   private async ensure_initialized(): Promise<void> {
@@ -536,6 +573,7 @@ export class SessionAssistantMessageWriter {
       case "reasoning-start":
         await this.upsert_part({
           part_id: `${chunk.type === "text-start" ? "text" : "reasoning"}:${chunk.id}`,
+          sequence: this.next_part_sequence(),
           type: chunk.type === "text-start" ? "text" : "reasoning",
           text: "",
           state: "streaming",
@@ -578,7 +616,7 @@ export class SessionAssistantMessageWriter {
       case "tool-input-available":
         await this.upsert_tool(chunk.toolCallId, {
           tool_name: chunk.toolName,
-          state: "running",
+          state: "ready",
           input: to_json_value(chunk.input),
         });
         return;
@@ -624,6 +662,7 @@ export class SessionAssistantMessageWriter {
       case "file":
         await this.upsert_part({
           part_id: `file:${generateId()}`,
+          sequence: this.next_part_sequence(),
           type: "file",
           media_type: chunk.mediaType,
           url: chunk.url,
@@ -672,6 +711,13 @@ export class SessionAssistantMessageWriter {
     );
   }
 
+  private next_part_sequence(): number {
+    return this.current_message().parts.reduce(
+      (value, part) => Math.max(value, part.sequence + 1),
+      1,
+    );
+  }
+
   private async upsert_tool(
     tool_call_id: string,
     changes: Pick<SessionAssistantToolPart, "tool_name" | "state"> &
@@ -681,6 +727,7 @@ export class SessionAssistantMessageWriter {
     await this.upsert_part({
       ...(current || {}),
       part_id: `tool:${tool_call_id}`,
+      sequence: current?.sequence || this.next_part_sequence(),
       type: "tool",
       tool_call_id,
       ...changes,
@@ -769,6 +816,18 @@ function require_message<TType extends SessionMessage["type"]>(
     throw new Error(`Session ${type} Message not found: ${message_id}`);
   }
   return message as Extract<SessionMessage, { type: TType }>;
+}
+
+function require_streaming_assistant(
+  message: SessionMessage,
+): SessionAssistantMessage {
+  if (message.type !== "assistant") {
+    throw new Error(`Session Message is not assistant: ${message.message_id}`);
+  }
+  if (message.status !== "streaming") {
+    throw new Error(`Assistant Message is already closed: ${message.message_id}`);
+  }
+  return message;
 }
 
 function to_json_value(input: unknown): JsonValue {

@@ -2,23 +2,24 @@
  * tool 调用与结果展示组件。
  *
  * 关键点（中文）
- * - 对齐 Kimi Code ToolCallComponent 的 header 样式：
- *   运行中显示 `Using {tool} (keyArg)`，完成后显示 `Used {tool} (keyArg)`。
- * - bullet 颜色随状态变化：pending 用 text，success 用 success，error 用 error。
+ * - 使用完整边框表达一次工具执行，状态标记固定在 Header 右侧。
+ * - 工具名、关键参数、执行结果分别占据稳定的信息层级。
  * - 同一组件先展示 tool-call 参数，收到 tool-result 后通过 `update_result` 更新为结果。
  * - 支持 approval-request / approval-result 展示形态。
  * - 默认折叠，仅展示标题与最多 RESULT_PREVIEW_LINES 行详情，
  *   避免长输出把历史消息顶出可视区。
  */
 
-import { Spacer, Text, truncateToWidth, type Component } from "@earendil-works/pi-tui";
-
 import {
-  FAILURE_MARK,
-  STATUS_BULLET,
-  SUCCESS_MARK,
-} from "@/city/agent/tui/constant/symbols.js";
-import { MESSAGE_INDENT, RESULT_PREVIEW_LINES } from "@/city/agent/tui/constant/rendering.js";
+  Spacer,
+  Text,
+  truncateToWidth,
+  visibleWidth,
+  type Component,
+} from "@earendil-works/pi-tui";
+
+import { FAILURE_MARK, SUCCESS_MARK } from "@/city/agent/tui/constant/symbols.js";
+import { RESULT_PREVIEW_LINES } from "@/city/agent/tui/constant/rendering.js";
 import { current_theme } from "@/city/agent/tui/theme/index.js";
 import type {
   ToolApprovalRequestEntry,
@@ -84,12 +85,23 @@ export class ToolCallBlockComponent implements Component {
    *
    * @param result tool 返回结果。
    */
-  update_result(result: unknown): void {
+  update_result(result: unknown, status: "success" | "error" = "success"): void {
     if (this.entry.kind !== "tool-call") {
       return;
     }
     this.entry.result = result;
-    this.entry.status = "success";
+    this.entry.status = status;
+  }
+
+  /**
+   * 将工具块切换为等待审批状态。
+   *
+   * @param approval_id 当前审批请求 ID。
+   */
+  require_approval(approval_id: string): void {
+    if (this.entry.kind !== "tool-call") return;
+    this.entry.status = "approval-required";
+    this.entry.approval_id = approval_id;
   }
 
   /**
@@ -118,22 +130,20 @@ export class ToolCallBlockComponent implements Component {
       lines.push(line);
     }
 
-    // header：build_title 已包含染色 bullet。
-    const title = this.build_title();
-    const title_lines = new Text(title, 0, 0).render(safe_width);
-    for (let i = 0; i < title_lines.length; i += 1) {
-      const line = i === 0 ? title_lines[i] : MESSAGE_INDENT + title_lines[i];
-      lines.push(line);
+    if (safe_width < 8) {
+      return [truncateToWidth(this.build_header_label(), safe_width, "…")];
     }
 
-    // body：缩进与 bullet 对齐。
+    const inner_width = safe_width - 2;
+    lines.push(this.build_top_border(inner_width));
+
     const detail_lines = this.build_detail_lines();
     const body_lines: string[] = [];
     for (const detail of detail_lines) {
       const colored_detail = current_theme.fg("textDim", detail);
-      const rendered = new Text(colored_detail, 0, 0).render(safe_width);
+      const rendered = new Text(colored_detail, 0, 0).render(Math.max(1, inner_width - 2));
       for (const line of rendered) {
-        body_lines.push(MESSAGE_INDENT + line);
+        body_lines.push(line);
       }
     }
 
@@ -141,66 +151,93 @@ export class ToolCallBlockComponent implements Component {
       const visible_body = this.expanded
         ? body_lines
         : body_lines.slice(0, RESULT_PREVIEW_LINES);
-      lines.push(...visible_body);
+      for (const body_line of visible_body) {
+        lines.push(this.build_body_line(body_line, inner_width));
+      }
       if (!this.expanded && body_lines.length > RESULT_PREVIEW_LINES) {
         const remaining = body_lines.length - RESULT_PREVIEW_LINES;
-        lines.push(
-          MESSAGE_INDENT +
-            current_theme.dim(`... (${remaining} more lines, ctrl+o to expand)`),
-        );
+        lines.push(this.build_body_line(
+          current_theme.dim(`... ${remaining} more lines · Ctrl+O expand`),
+          inner_width,
+        ));
       }
     }
+
+    lines.push(current_theme.fg("border", `└${"─".repeat(inner_width)}┘`));
 
     return lines.map((line) => truncateToWidth(line, safe_width, "…"));
   }
 
-  private build_title(): string {
+  /** 构建工具块顶部边框、标题与状态。 */
+  private build_top_border(inner_width: number): string {
+    const total_width = inner_width + 2;
+    const status = this.build_status_mark();
+    const fixed_width = visibleWidth(status) + 9;
+    const label = truncateToWidth(
+      this.build_header_label(),
+      Math.max(1, total_width - fixed_width - 1),
+      "…",
+    );
+    const fill_width = Math.max(1, total_width - visibleWidth(label) - fixed_width);
+    const border = current_theme.fg("border", "─".repeat(fill_width));
+    return `${current_theme.fg("border", "┌─")} ${label} ${border} ${status} ${current_theme.fg("border", "─┐")}`;
+  }
+
+  /** 构建工具块正文行。 */
+  private build_body_line(content: string, inner_width: number): string {
+    const available = Math.max(1, inner_width - 2);
+    const visible_content = truncateToWidth(content, available, "…");
+    const padding = " ".repeat(Math.max(0, available - visibleWidth(visible_content)));
+    const border = current_theme.fg("border", "│");
+    return `${border} ${visible_content}${padding} ${border}`;
+  }
+
+  /** 构建工具或审批标题。 */
+  private build_header_label(): string {
     switch (this.entry.kind) {
       case "tool-call": {
-        const is_success = this.entry.status === "success";
-        const is_error = this.entry.status === "error";
-        const bullet = is_success
-          ? current_theme.fg("success", STATUS_BULLET)
-          : is_error
-            ? current_theme.fg("error", FAILURE_MARK)
-            : current_theme.fg("text", STATUS_BULLET);
-        // 对齐 Kimi Code：完成（无论成功或失败）统一显示 "Used"，
-        // 仅通过 bullet（✗）区分错误；进行中显示 "Using"。
-        const is_finished = is_success || is_error;
-        const verb = is_finished ? "Used" : "Using";
         const tool_label = current_theme.bold_fg("primary", this.entry.tool_name);
         const key_arg = extract_key_argument(this.entry.tool_name, this.entry.args);
-        const arg_str = key_arg ? current_theme.dim(` (${key_arg})`) : "";
-        return `${bullet}${verb} ${tool_label}${arg_str}`;
+        const arg_str = key_arg ? current_theme.dim(` · ${key_arg}`) : "";
+        return `${current_theme.bold_fg("textStrong", "Tool")} · ${tool_label}${arg_str}`;
       }
       case "tool-approval-request": {
-        const bullet = current_theme.fg("accent", "▶ ");
         const tool_label = current_theme.bold_fg("primary", this.entry.tool_name);
-        return `${bullet}${tool_label} requests unrestricted sandbox`;
+        return `${current_theme.bold_fg("warning", "Approval")} · ${tool_label}`;
       }
       case "tool-approval-result": {
-        const is_approved = this.entry.decision === "approved";
-        const mark = is_approved
-          ? current_theme.fg("success", SUCCESS_MARK)
-          : current_theme.fg("error", FAILURE_MARK);
-        const decision_text = current_theme.bold_fg(
-          is_approved ? "success" : "error",
-          this.entry.decision,
-        );
-        return `${mark}${decision_text}`;
+        return `${current_theme.bold_fg("textStrong", "Approval")} · ${this.entry.tool_name}`;
       }
       default:
         return "";
     }
   }
 
+  /** 构建工具块右侧状态标记。 */
+  private build_status_mark(): string {
+    if (this.entry.kind === "tool-call") {
+      if (this.entry.status === "success") return current_theme.fg("success", SUCCESS_MARK.trim());
+      if (this.entry.status === "error") return current_theme.fg("error", FAILURE_MARK.trim());
+      if (this.entry.status === "approval-required") return current_theme.fg("warning", "!");
+      return current_theme.fg("primary", "●");
+    }
+    if (this.entry.kind === "tool-approval-request") {
+      return current_theme.fg("warning", "!");
+    }
+    const approved = this.entry.decision === "approved";
+    return current_theme.fg(approved ? "success" : "error", approved ? "✓" : "✗");
+  }
+
   private build_detail_lines(): string[] {
     switch (this.entry.kind) {
       case "tool-call": {
+        const approval = this.entry.status === "approval-required"
+          ? [`approval required · ${this.entry.approval_id || "pending"}`]
+          : [];
         if (this.entry.result !== undefined) {
-          return this.format_result(this.entry.result);
+          return [...approval, ...this.format_result(this.entry.result)];
         }
-        return this.format_json_args(this.entry.args);
+        return [...approval, ...this.format_json_args(this.entry.args)];
       }
       case "tool-approval-request":
         return [

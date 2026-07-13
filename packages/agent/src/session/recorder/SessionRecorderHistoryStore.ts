@@ -2,9 +2,9 @@
  * SessionRecorder 到 Executor SessionHistoryStore 的内部投影适配器。
  *
  * 关键点（中文）
- * - Recorder messages.jsonl 是唯一持久化事实源。
+ * - Recorder 的 messages.jsonl 与 assistant_message.json 共同组成持久化事实源。
  * - Executor 继续读取临时 UIMessage 投影，不直接拥有文件写入权。
- * - inflight 写入已经由 AssistantMessageWriter 取代，因此对应接口只提供投影兼容。
+ * - 流式草稿写入由 AssistantMessageWriter 负责，Executor 的旧接口只提供投影兼容。
  */
 
 import { nanoid } from "nanoid";
@@ -109,7 +109,7 @@ export class SessionRecorderHistoryStore implements SessionHistoryStore {
     });
   }
 
-  /** Recorder 已经逐 delta 保存 assistant，不再维护第二份 inflight。 */
+  /** 从 Recorder 当前快照投影运行中的 Assistant。 */
   async read_inflight(): Promise<SessionRecordV1 | null> {
     const page = await this.recorder.list_messages({
       limit: 500,
@@ -124,10 +124,10 @@ export class SessionRecorderHistoryStore implements SessionHistoryStore {
     return assistant ? to_executor_ui_message(assistant) : null;
   }
 
-  /** 旧 inflight 写入口已废弃；流式内容由 Recorder writer 负责。 */
+  /** Executor 草稿写入口不持久化；流式内容由 Recorder writer 负责。 */
   async write_inflight(_message: SessionRecordV1): Promise<void> {}
 
-  /** 旧 inflight 收口入口已废弃；Assistant writer 负责 complete。 */
+  /** Executor 草稿收口入口不持久化；Assistant writer 负责 complete。 */
   async finalize_inflight(_message?: SessionRecordV1 | null): Promise<void> {}
 
   /** 返回 Context Composer 使用的 UIMessage 投影。 */

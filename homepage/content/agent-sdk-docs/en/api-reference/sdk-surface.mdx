@@ -1,163 +1,33 @@
 ---
 title: SDK Surface
-description: The practical public API surface of Agent, RemoteAgent, and Session from a developer's point of view
+description: The public Agent, RemoteAgent, and Session API
 ---
 
 # SDK Surface
 
-If you only want the practical developer-facing API shape, remember this:
-
-- `Agent` is the local runtime entry
-- `RemoteAgent` is the remote session client
-- `AgentSession` is the local working object
-- `RemoteAgentSession` is the remote working object
-
-## Recommended mental model
-
-The SDK is session-first.
-
-In most apps, the real object you work with is not `Agent` itself, but the session returned by:
-
-- `agent.sessions.create()`
-- `agent.sessions.get(sessionId)`
-- `remoteAgent.sessions.create()`
-- `remoteAgent.sessions.get(sessionId)`
-
-## Typical local flow
-
-```ts
-import { Agent } from "@downcity/agent";
-
-const agent = new Agent({
-  id: "demo",
-  path: process.cwd(),
-});
-
-const session = await agent.sessions.create();
-await session.set({ model });
-
-const turn = await session.prompt({
-  query: "Summarize this repository",
-});
-
-await turn.finished;
-```
-
-You can also provide a default model directly in `new Agent({ model })`.
-
-## Typical remote flow
-
-```ts
-import { RemoteAgent } from "@downcity/agent";
-
-const agent = new RemoteAgent({
-  url: "http://127.0.0.1:5314/agents/repo-helper",
-});
-
-const session = await agent.sessions.get("repo-analysis");
-const turn = await session.prompt({
-  query: "Continue",
-});
-
-await turn.finished;
-```
+The SDK is session-first. `Agent` owns local runtime assembly and `RemoteAgent` connects to an exposed runtime.
 
 ## `Agent`
 
-Use `Agent` when the agent runtime lives in the same local process or host environment.
+- `new Agent(options)`, `ready()`, `dispose()`
+- `sessions.create()`, `get()`, `list()`, `archive()`, `archived()`, `clean_archive()`
+- `setInstruction()`, `getEnv()`, `setEnv()`, `patchEnv()`
+- `getConfig()`, `getLogger()`, `getContext()`, `getShell()`, and `plugins`
 
-Core methods:
-
-- `new Agent(options)`
-- `agent.ready()`
-- `agent.dispose()`
-- `agent.sessions`
-- `agent.runPluginAction(input)`
-- `agent.setInstruction(input)`
-- `agent.getConfig()`
-- `agent.getLogger()`
-- `agent.plugins`
-
-Typical responsibilities:
-
-- create and resume local sessions
-- automatically start plugin lifecycles and ActionSchedule on construction; explicit `ready()` / `dispose()` only when needed
-- expose plugin integration
-- provide narrow advanced helpers for config and logging
-
-If you need RPC or HTTP, use the `AgentRPC` / `AgentHTTP` classes from [`@downcity/server`](/en/agent-sdk-docs/local-agent/http-and-rpc).
+Local plugin actions use `agent.plugins.runAction(...)`. HTTP and RPC transports are supplied by `AgentHTTP` and `AgentRPC` in `@downcity/server`.
 
 ## `RemoteAgent`
 
-Use `RemoteAgent` when another process has already exposed an agent.
+- `new RemoteAgent({ url, token? })`
+- `sessions` collection methods matching local Agent
+- `runPluginAction()` and `close()`
 
-Core methods:
+HTTP URLs use the server root such as `http://127.0.0.1:5314`; RPC uses `rpc://127.0.0.1:15314`.
 
-- `new RemoteAgent({ url })`
-- `agent.sessions`
+## Sessions
 
-It currently supports:
+Both local and remote Sessions provide `get_info()`, `prompt()`, `stop()`, `subscribe()`, `messages()`, `system()`, `approvals()`, `approval_mode()`, `set_approval_mode()`, `resolve_approval()`, and `fork()`.
 
-- `http://...`
-- `https://...`
-- `rpc://...`
+Local Sessions accept `set({ model })` or `set({ modelId })`. Remote Sessions reject a local model instance and accept only `set({ modelId })`.
 
-Typical responsibilities:
-
-- connect to an existing remote Agent runtime
-- switch to a known remote session
-- browse available remote sessions
-- respond to runtime plugin actions, such as shell approval requests
-
-## `AgentSession`
-
-`AgentSession` is the main local execution object.
-
-Core methods:
-
-- `session.id`
-- `session.agentId`
-- `session.config`
-- `session.set(input)`
-- `session.get_info()`
-- `session.prompt(input)`
-- `session.subscribe(subscriber)`
-- `session.records(input?)`
-- `session.system()`
-- `session.fork(input?)`
-
-Typical usage order:
-
-1. `await agent.sessions.create()`
-2. `await session.set({ model })` or provide a default model on `Agent`
-3. `const turn = await session.prompt({ query })`
-4. `await turn.finished`
-5. optional: `session.records()` / `session.get_info()` / `session.fork()`
-
-## `RemoteAgentSession`
-
-`RemoteAgentSession` keeps nearly the same interaction shape as local sessions, but without local model injection.
-
-Core methods:
-
-- `session.id`
-- `session.get_info()`
-- `session.prompt(input)`
-- `session.subscribe(subscriber)`
-- `session.records(input?)`
-- `session.system()`
-- `session.fork(input?)`
-
-Important difference:
-
-- local `AgentSession` supports `set({ model })`
-- remote `RemoteAgentSession` does not accept a local model instance from the client
-
-## Agent projects and Federation AIService
-
-If you are using this SDK inside a normal Downcity Agent project, there is one more distinction:
-
-- pure SDK embedding: pass a local `model`
-- Downcity project: bind through `execution.modelId` to `Federation AIService`
-
-So `session.set({ model })` is not the default path for every scenario.
+`subscribe()` emits the unified live Mutation stream after the subscription is established. Load initial Message and Session snapshots, and reload them after reconnecting.

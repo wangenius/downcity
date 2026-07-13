@@ -30,32 +30,31 @@ Use `runPluginAction()` when your client UI needs to call an action on the remot
 
 ```ts
 await agent.runPluginAction({
-  plugin: "shell",
-  action: "approve",
+  plugin: "example",
+  action: "refresh",
   payload: {
-    approvalId: "ap_xxx",
+    scope: "current-session",
   },
 });
 ```
 
-For unrestricted shell approval flows, subscribe to session events and respond to `tool-approval-request`:
+Shell approvals belong to the specific remote Session, not the top-level `RemoteAgent`:
 
 ```ts
-session.subscribe(async (event) => {
-  if (event.type !== "tool-approval-request") return;
+const approvals = await session.approvals();
+await session.resolve_approval({
+  approval_id: approvals[0].approval_id,
+  decision: "approved",
+});
+```
 
-  const displayText = event.operation === "write"
-    ? event.inputPreview || event.cmd
-    : event.cmd;
-  const approved = window.confirm(`${displayText}\n\n${event.reason}`);
+You can also handle an approval-required Tool Part through the unified Mutation stream:
 
-  await agent.runPluginAction({
-    plugin: "shell",
-    action: approved ? "approve" : "deny",
-    payload: {
-      approvalId: event.approvalId,
-    },
-  });
+```ts
+session.subscribe(async (mutation, reply) => {
+  if (mutation.variant === "part" && mutation.type === "tool" && mutation.part.state === "approval-required") {
+    await reply.approval({ decision: "approved" });
+  }
 });
 ```
 
@@ -65,7 +64,7 @@ The current constructor shape is:
 
 ```ts
 new RemoteAgent({
-  url: "http://127.0.0.1:5314/agents/repo-helper",
+  url: "http://127.0.0.1:5314",
 });
 ```
 

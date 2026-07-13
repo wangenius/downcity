@@ -20,7 +20,7 @@ description: 本地 Agent SDK 的核心公开接口
 
 `agent.sessions.create()` 和 `agent.sessions.get()` 返回 `AgentSession`。
 
-`agent.getConfig()` 和 `agent.getLogger()` 是更窄的高级集成辅助入口。宿主如果需要更底层的装配能力，还可以使用 `agent.getRuntime()`、`agent.getContext()` 与 `agent.sessions`。
+`agent.getConfig()`、`agent.getLogger()` 和 `agent.getContext()` 是高级集成辅助入口；没有 `agent.getRuntime()` 公开方法。
 
 ## Sessions
 
@@ -45,6 +45,10 @@ description: 本地 Agent SDK 的核心公开接口
 - `instruction`
 - `plugins`
 - `Session`
+- `model_id`
+- `resolve_model`
+- `config`
+- `plugin_config`
 
 当前没有 `mode` 这个构造参数。
 
@@ -57,7 +61,7 @@ description: 本地 Agent SDK 的核心公开接口
 
 ## Env
 
-`Agent` 的 env 是当前实例生命周期内的动态运行时状态。构造参数 `env` 和项目根目录 `.env` 会组成初始值，之后宿主可以在不重建 Agent 的情况下更新它。
+`Agent` 的 env 是当前实例生命周期内的动态运行时状态。构造参数 `env` 与项目根目录 `.env` 会组成初始值；同名值以 `.env` 为准，之后宿主可以在不重建 Agent 的情况下更新它。
 
 - `agent.getEnv()`：返回当前 env 的浅拷贝快照
 - `agent.setEnv(next)`：整体替换当前 env

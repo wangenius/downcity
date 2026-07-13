@@ -15,6 +15,7 @@ import type {
   AgentArchiveSessionsInput,
 } from "@downcity/agent";
 import type { AgentSessionPromptInput } from "@downcity/agent";
+import type { SessionApprovalDecision, SessionApprovalMode } from "@downcity/agent";
 import type { SessionModelUpdateBody } from "@/types/SessionModelRoute.js";
 
 const NDJSON_CONTENT_TYPE = "application/x-ndjson; charset=utf-8";
@@ -196,6 +197,8 @@ export function registerSdkSessionRoutes(
             controller.enqueue(encoder.encode(`${JSON.stringify(value)}\n`));
           };
 
+          // HTTP transport 既要转发持久化 mutation，也要转发 turn 生命周期，
+          // 否则 RemoteSession 无法收到 turn-finish 并兑现 turn.finished。
           const unsubscribe = session.subscribe((event) => {
             writeLine(event);
           });
@@ -266,34 +269,6 @@ export function registerSdkSessionRoutes(
       return c.json({
         success: true,
         messages,
-      });
-    } catch (error) {
-      return c.json(
-        {
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        },
-        500,
-      );
-    }
-  });
-
-  app.get("/api/sdk/sessions/:sessionId/message-changes", async (c) => {
-    try {
-      const sessionId = String(c.req.param("sessionId") || "").trim();
-      if (!sessionId) {
-        return c.json({ success: false, error: "Missing sessionId" }, 400);
-      }
-      const session = await sessions.get(sessionId);
-      const changes = await session.message_changes({
-        after_commit_sequence: Number(
-          c.req.query("after_commit_sequence") || 0,
-        ),
-        ...(c.req.query("limit") ? { limit: Number(c.req.query("limit")) } : {}),
-      });
-      return c.json({
-        success: true,
-        changes,
       });
     } catch (error) {
       return c.json(
@@ -377,6 +352,58 @@ export function registerSdkSessionRoutes(
         },
         500,
       );
+    }
+  });
+
+  app.get("/api/sdk/sessions/:sessionId/approvals", async (c) => {
+    try {
+      const session = await sessions.get(String(c.req.param("sessionId") || "").trim());
+      return c.json({ success: true, approvals: await session.approvals() });
+    } catch (error) {
+      return c.json({ success: false, error: error instanceof Error ? error.message : String(error) }, 500);
+    }
+  });
+
+  app.get("/api/sdk/sessions/:sessionId/approval-mode", async (c) => {
+    try {
+      const session = await sessions.get(String(c.req.param("sessionId") || "").trim());
+      return c.json({ success: true, ...(await session.approval_mode()) });
+    } catch (error) {
+      return c.json({ success: false, error: error instanceof Error ? error.message : String(error) }, 500);
+    }
+  });
+
+  app.post("/api/sdk/sessions/:sessionId/approval-mode", async (c) => {
+    try {
+      const session = await sessions.get(String(c.req.param("sessionId") || "").trim());
+      const body = await c.req.json().catch(() => null) as { mode?: unknown } | null;
+      const mode = String(body?.mode || "") as SessionApprovalMode;
+      if (mode !== "ask" && mode !== "always-allow") {
+        return c.json({ success: false, error: "mode must be ask or always-allow" }, 400);
+      }
+      return c.json({ success: true, ...(await session.set_approval_mode({ mode })) });
+    } catch (error) {
+      return c.json({ success: false, error: error instanceof Error ? error.message : String(error) }, 500);
+    }
+  });
+
+  app.post("/api/sdk/sessions/:sessionId/approval", async (c) => {
+    try {
+      const session = await sessions.get(String(c.req.param("sessionId") || "").trim());
+      const body = await c.req.json().catch(() => null) as {
+        approval_id?: unknown;
+        decision?: unknown;
+      } | null;
+      const approval_id = String(body?.approval_id || "").trim();
+      const decision = String(body?.decision || "") as SessionApprovalDecision;
+      if (!approval_id) return c.json({ success: false, error: "approval_id is required" }, 400);
+      if (decision !== "approved" && decision !== "denied") {
+        return c.json({ success: false, error: "decision must be approved or denied" }, 400);
+      }
+      const result = await session.resolve_approval({ approval_id, decision });
+      return c.json(result, result.success ? 200 : 404);
+    } catch (error) {
+      return c.json({ success: false, error: error instanceof Error ? error.message : String(error) }, 500);
     }
   });
 

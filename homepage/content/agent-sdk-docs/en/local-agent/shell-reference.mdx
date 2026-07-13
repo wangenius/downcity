@@ -17,7 +17,7 @@ pnpm add @downcity/shell
 
 ## Shell
 
-The `Shell` class manages command execution and interactive approval feedback.
+The `Shell` class manages command execution and the approval runtime. Application-level approvals belong to a specific Session.
 
 ### Minimal usage
 
@@ -46,11 +46,9 @@ interface ShellOptions {
 
 ### Methods
 
-`shell.approve(input)` — Approve a pending shell action.
-
-`shell.deny(input)` — Deny a pending shell action.
-
 `shell.dispose()` — Release shell resources.
+
+Approval requests appear as an `approval-required` Tool Part in `session.subscribe((mutation, reply) => {})`. At the application layer, use `reply.approval(...)`, or `session.approvals()` and `session.resolve_approval(...)`; do not call the Shell Runtime's internal approval methods directly.
 
 ## Sandbox
 

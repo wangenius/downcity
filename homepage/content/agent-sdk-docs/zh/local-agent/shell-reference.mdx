@@ -15,7 +15,7 @@ pnpm add @downcity/shell
 
 ## Shell
 
-`Shell` 类管理命令执行和交互式审批反馈。
+`Shell` 类管理命令执行和交互式审批运行时。应用层审批归属具体 Session，通过 Session API 处理。
 
 ### 最小示例
 
@@ -42,9 +42,9 @@ const agent = new Agent({
 
 ### 方法
 
-- `shell.approve(input)` — 批准待审批的 shell action
-- `shell.deny(input)` — 拒绝待审批的 shell action
 - `shell.dispose()` — 释放 shell 资源
+
+审批请求会在 `session.subscribe((mutation, reply) => {})` 中表现为 `approval-required` Tool Part。应用层使用 `reply.approval(...)`，或使用 `session.approvals()` 与 `session.resolve_approval(...)`，不直接调用 Shell Runtime 的内部审批方法。
 
 ## 沙箱
 

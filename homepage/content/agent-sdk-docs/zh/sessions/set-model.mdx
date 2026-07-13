@@ -58,7 +58,13 @@ const agent = new Agent({
 
 ## 远程 session 呢
 
-远程 session 当前不支持直接这样设置模型。
+远程 session 不接受本地模型实例，但可以请求服务端按稳定 ID 切换模型：
+
+```ts
+await remote_session.set({ modelId: "quality" });
+```
+
+服务端 Agent 必须配置 `resolve_model`，才能把这个 ID 解析成实际模型。
 
 ## Downcity Agent 项目呢
 

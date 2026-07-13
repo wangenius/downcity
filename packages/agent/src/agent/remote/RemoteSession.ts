@@ -1,9 +1,7 @@
 /**
- * RemoteSession：远程 session actor 客户端。
+ * RemoteSession：统一 SessionMutation 协议的远程 Session 客户端。
  *
- * 关键点（中文）
- * - 这里只负责 session 级 API、turn lifecycle 与事件泵。
- * - 具体 HTTP / RPC 细节由 RemoteSessionTransport 提供。
+ * 事件泵只传输一种 Mutation；审批查询、模式和决策全部绑定当前 Session。
  */
 
 import type {
@@ -14,29 +12,29 @@ import type {
   AgentSessionSystemSnapshot,
 } from "@/types/agent/SessionTypes.js";
 import type { RemoteAgentSession } from "@/types/agent/SessionActor.js";
-import { isAgentSessionPromptInputEmpty } from "@/types/sdk/AgentSessionPrompt.js";
-import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type {
-  AgentSessionEvent,
-  AgentSessionSubscriber,
-  AgentSessionUnsubscribe,
-} from "@/types/sdk/AgentSessionEvent.js";
-import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
+  ResolveSessionApprovalInput,
+  SessionApproval,
+  SessionApprovalModeSnapshot,
+  SessionApprovalResult,
+  SetSessionApprovalModeInput,
+} from "@/types/session/SessionApproval.js";
 import type {
-  AgentSessionTurnHandle,
-  AgentSessionTurnResult,
-} from "@/types/sdk/AgentSessionTurn.js";
+  SessionMutation,
+  SessionMutationSubscriber,
+  SessionMutationUnsubscribe,
+} from "@/types/session/SessionMutation.js";
 import type {
   ListSessionMessagesInput,
   SessionMessagePage,
 } from "@/types/session/SessionMessage.js";
-import {
-  is_session_message_mutation,
-  type ListSessionMessageChangesInput,
-  type SessionMessageMutationPage,
-  type SessionMessageMutationSubscriber,
-  type SessionMessageMutationUnsubscribe,
-} from "@/types/session/SessionMessageMutation.js";
+import { isAgentSessionPromptInputEmpty } from "@/types/sdk/AgentSessionPrompt.js";
+import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
+import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
+import type {
+  AgentSessionTurnHandle,
+  AgentSessionTurnResult,
+} from "@/types/sdk/AgentSessionTurn.js";
 import { SessionEventHub } from "@/session/runtime/SessionEventHub.js";
 import type {
   RemoteSessionTransport,
@@ -46,29 +44,27 @@ import type {
 type Deferred<T> = {
   /** 当前延迟 Promise。 */
   promise: Promise<T>;
-  /** 兑现 Promise。 */
+  /** 兑现当前 Promise。 */
   resolve: (value: T) => void;
 };
 
 type RemoteTurnLifecycle = {
-  /** 当前 turnId。 */
-  turnId: string;
-  /** 当前 turn 的最终结果快照。 */
+  /** 当前 Turn 标识。 */
+  turn_id: string;
+  /** 当前 Turn 的最终结果；运行中为 null。 */
   result: AgentSessionTurnResult | null;
-  /** 当前 turn 完成 Promise 控制器。 */
+  /** 当前 Turn 完成 Promise 控制器。 */
   deferred_finished: Deferred<AgentSessionTurnResult>;
 };
 
-/**
- * 远程 Session 客户端。
- */
+/** 远程 Session 客户端。 */
 export class RemoteSession implements RemoteAgentSession {
   readonly id: string;
   readonly agentId: string;
   readonly config: AgentSessionConfigSnapshot;
 
   private readonly transport: RemoteSessionTransport;
-  private readonly event_hub = new SessionEventHub();
+  private readonly event_hub: SessionEventHub;
   private readonly turns_by_id = new Map<string, RemoteTurnLifecycle>();
   private readonly completed_turn_ids: string[] = [];
   private event_pump_connect_promise: Promise<void> | null = null;
@@ -80,72 +76,60 @@ export class RemoteSession implements RemoteAgentSession {
     this.transport = transport;
     this.id = info.sessionId;
     this.agentId = info.agentId;
-    // 远程 session 不暴露服务端模型实例，只保留可序列化配置。
     this.config = {
       ...(info.modelId ? { modelId: info.modelId } : {}),
       ...(info.modelLabel ? { modelLabel: info.modelLabel } : {}),
     };
+    this.event_hub = new SessionEventHub({
+      create_reply: (mutation) => ({
+        approval: async ({ decision }) => {
+          return await this.resolve_approval({
+            approval_id: require_approval_id(mutation),
+            decision,
+          });
+        },
+      }),
+    });
   }
 
   /** 按稳定模型 ID 更新远程 Session 模型。 */
   async set(input: AgentSessionSetInput): Promise<void> {
-    if (input.model) {
-      throw new Error("Remote session.set does not accept a local model instance.");
-    }
+    if (input.model) throw new Error("Remote session.set does not accept a local model instance.");
     const model_id = String(input.modelId || "").trim();
-    if (!model_id) {
-      throw new Error("Remote session.set requires modelId.");
-    }
+    if (!model_id) throw new Error("Remote session.set requires modelId.");
     const info = await this.transport.set(this.id, { modelId: model_id });
     this.config.modelId = info.modelId;
     this.config.modelLabel = info.modelLabel;
   }
 
-  /**
-   * 读取当前远程 session 详情。
-   */
+  /** 读取当前远程 Session 详情。 */
   async get_info(): Promise<AgentSessionInfo> {
     return await this.transport.get_info(this.id);
   }
 
-  /**
-   * 向当前远程 session 追加一条新的 prompt。
-   */
+  /** 向当前远程 Session 追加 Prompt。 */
   async prompt(input: AgentSessionPromptInput): Promise<AgentSessionTurnHandle> {
     if (isAgentSessionPromptInputEmpty(input)) {
       throw new Error("remote session.prompt requires a non-empty query");
     }
-
     await this.ensure_event_pump();
     const turn = await this.transport.prompt(this.id, input);
-    const lifecycle = this.ensure_turn_lifecycle(turn.id);
-    return create_turn_handle(lifecycle);
+    return create_turn_handle(this.ensure_turn_lifecycle(turn.id));
   }
 
-  /**
-   * 停止当前远程 session turn，并取消未吸收队列。
-   */
+  /** 停止当前远程 Session Turn。 */
   async stop(): Promise<AgentSessionStopResult> {
     await this.ensure_event_pump();
     return await this.transport.stop(this.id);
   }
 
-  /**
-   * 订阅当前远程 session 的 future 事件。
-   */
-  subscribe(
-    subscriber: SessionMessageMutationSubscriber,
-  ): SessionMessageMutationUnsubscribe {
+  /** 订阅当前 Session 的全部未来 Mutation。 */
+  subscribe(subscriber: SessionMutationSubscriber): SessionMutationUnsubscribe {
     this.event_subscriber_count += 1;
     void this.ensure_event_pump().catch((error) => {
-      this.event_hub.publish({
-        type: "error",
-        message: error instanceof Error ? error.message : String(error),
-      });
+      this.fail_pending_turns(error instanceof Error ? error.message : String(error));
     });
-    const unsubscribe = this.event_hub.subscribe((event) => {
-      if (is_session_message_mutation(event)) subscriber(event);
-    });
+    const unsubscribe = this.event_hub.subscribe(subscriber);
     return () => {
       unsubscribe();
       this.event_subscriber_count = Math.max(0, this.event_subscriber_count - 1);
@@ -153,47 +137,44 @@ export class RemoteSession implements RemoteAgentSession {
     };
   }
 
-  /** 订阅 transport 使用的 Message 与 lifecycle 事件。 */
-  subscribe_transport(subscriber: AgentSessionSubscriber): AgentSessionUnsubscribe {
-    return this.event_hub.subscribe(subscriber);
-  }
-
-  /**
-   * 读取远程消息历史。
-   */
+  /** 读取远程 Message 快照。 */
   async messages(input?: ListSessionMessagesInput): Promise<SessionMessagePage> {
     return await this.transport.messages(this.id, input);
   }
 
-  /** 读取远程增量 Message Mutation。 */
-  async message_changes(
-    input: ListSessionMessageChangesInput,
-  ): Promise<SessionMessageMutationPage> {
-    return await this.transport.message_changes(this.id, input);
-  }
-
-  /**
-   * 读取远程 session 当前生效的 system prompt 快照。
-   */
+  /** 读取远程 Session 的 System 快照。 */
   async system(): Promise<AgentSessionSystemSnapshot> {
     return await this.transport.system(this.id);
   }
 
-  /**
-   * 分叉远程 session。
-   */
+  /** 列出当前远程 Session 的 pending 工具审批。 */
+  async approvals(): Promise<SessionApproval[]> {
+    return await this.transport.approvals(this.id);
+  }
+
+  /** 读取当前远程 Session 的工具审批模式。 */
+  async approval_mode(): Promise<SessionApprovalModeSnapshot> {
+    return await this.transport.approval_mode(this.id);
+  }
+
+  /** 更新当前远程 Session 的工具审批模式。 */
+  async set_approval_mode(input: SetSessionApprovalModeInput): Promise<SessionApprovalModeSnapshot> {
+    return await this.transport.set_approval_mode(this.id, input);
+  }
+
+  /** 处理当前远程 Session 的 pending 工具审批。 */
+  async resolve_approval(input: ResolveSessionApprovalInput): Promise<SessionApprovalResult> {
+    return await this.transport.resolve_approval(this.id, input);
+  }
+
+  /** 从当前远程 Session 创建分支。 */
   async fork(input?: AgentSessionForkInput | string): Promise<RemoteAgentSession> {
-    const info = await this.transport.fork(this.id, input);
-    return new RemoteSession(this.transport, info);
+    return new RemoteSession(this.transport, await this.transport.fork(this.id, input));
   }
 
   private async ensure_event_pump(): Promise<void> {
-    if (this.event_pump_connect_promise) {
-      await this.event_pump_connect_promise;
-      return;
-    }
+    if (this.event_pump_connect_promise) return await this.event_pump_connect_promise;
     if (this.event_pump_running) return;
-
     this.event_pump_connect_promise = (async () => {
       let resolved_ready = false;
       this.event_subscription = await this.transport.subscribe({
@@ -201,19 +182,12 @@ export class RemoteSession implements RemoteAgentSession {
         on_ready: () => {
           resolved_ready = true;
         },
-        on_event: (event) => {
-          this.handle_event(event);
-        },
-        on_close: (error) => {
-          this.handle_event_pump_closed(error);
-        },
+        on_event: (mutation) => this.handle_mutation(mutation),
+        on_close: (error) => this.handle_event_pump_closed(error),
       });
       this.event_pump_running = true;
-      if (!resolved_ready) {
-        throw new Error("Remote session events connection closed before ready");
-      }
+      if (!resolved_ready) throw new Error("Remote session events connection closed before ready");
     })();
-
     try {
       await this.event_pump_connect_promise;
     } finally {
@@ -221,53 +195,38 @@ export class RemoteSession implements RemoteAgentSession {
     }
   }
 
-  private handle_event(event: AgentSessionEvent): void {
-    if (!is_session_message_mutation(event) && event.type === "error") {
-      this.fail_pending_turns(event.message);
-    }
-    const turn_id = extract_turn_id(event);
-    if (turn_id) {
-      this.ensure_turn_lifecycle(turn_id);
-    }
-
-    if (event.type === "turn-finish") {
-      const lifecycle = this.ensure_turn_lifecycle(event.turnId);
+  private handle_mutation(mutation: SessionMutation): void {
+    const turn_id = "turn_id" in mutation ? mutation.turn_id : undefined;
+    if (turn_id) this.ensure_turn_lifecycle(turn_id);
+    if (mutation.variant === "turn" && mutation.type === "finish") {
+      const lifecycle = this.ensure_turn_lifecycle(mutation.turn_id);
       const result: AgentSessionTurnResult = {
-        turnId: event.turnId,
-        text: event.text,
-        success: event.success,
-        ...(event.error ? { error: event.error } : {}),
+        turnId: mutation.turn_id,
+        text: mutation.text || "",
+        success: mutation.status === "completed",
+        ...(mutation.error ? { error: mutation.error } : {}),
       };
       lifecycle.result = result;
       lifecycle.deferred_finished.resolve(result);
-      this.remember_completed_turn(event.turnId);
+      this.remember_completed_turn(mutation.turn_id);
       void this.maybe_stop_event_pump();
     }
-
-    this.event_hub.publish(event);
+    this.event_hub.publish(mutation);
   }
 
-  /**
-   * 收口底层事件连接断开后的运行态。
-   *
-   * 关键点（中文）
-   * - 连接已经结束时必须清除 running 标记，后续 prompt 才会重新订阅。
-   * - 当前未完成 turn 立即失败，避免调用侧永久等待 finished。
-   */
   private handle_event_pump_closed(error?: unknown): void {
     this.event_subscription = null;
     this.event_pump_running = false;
-    const message = error instanceof Error
-      ? error.message
-      : String(error || "Remote session events connection closed");
-    this.fail_pending_turns(message);
+    this.fail_pending_turns(
+      error instanceof Error ? error.message : String(error || "Remote session events connection closed"),
+    );
   }
 
   private ensure_turn_lifecycle(turn_id: string): RemoteTurnLifecycle {
     const cached = this.turns_by_id.get(turn_id);
     if (cached) return cached;
     const created: RemoteTurnLifecycle = {
-      turnId: turn_id,
+      turn_id,
       result: null,
       deferred_finished: create_deferred<AgentSessionTurnResult>(),
     };
@@ -279,14 +238,14 @@ export class RemoteSession implements RemoteAgentSession {
     for (const lifecycle of this.turns_by_id.values()) {
       if (lifecycle.result) continue;
       const result: AgentSessionTurnResult = {
-        turnId: lifecycle.turnId,
+        turnId: lifecycle.turn_id,
         text: "",
         success: false,
         error: message,
       };
       lifecycle.result = result;
       lifecycle.deferred_finished.resolve(result);
-      this.remember_completed_turn(lifecycle.turnId);
+      this.remember_completed_turn(lifecycle.turn_id);
     }
   }
 
@@ -294,9 +253,7 @@ export class RemoteSession implements RemoteAgentSession {
     this.completed_turn_ids.push(turn_id);
     while (this.completed_turn_ids.length > 200) {
       const oldest_turn_id = this.completed_turn_ids.shift();
-      if (oldest_turn_id) {
-        this.turns_by_id.delete(oldest_turn_id);
-      }
+      if (oldest_turn_id) this.turns_by_id.delete(oldest_turn_id);
     }
   }
 
@@ -308,9 +265,7 @@ export class RemoteSession implements RemoteAgentSession {
     this.event_pump_running = false;
     if (!current) return;
     await current.close().catch((error) => {
-      this.fail_pending_turns(
-        error instanceof Error ? error.message : String(error),
-      );
+      this.fail_pending_turns(error instanceof Error ? error.message : String(error));
     });
   }
 }
@@ -320,17 +275,12 @@ function create_deferred<T>(): Deferred<T> {
   const promise = new Promise<T>((inner_resolve) => {
     resolve = inner_resolve;
   });
-  return {
-    promise,
-    resolve,
-  };
+  return { promise, resolve };
 }
 
-function create_turn_handle(
-  lifecycle: RemoteTurnLifecycle,
-): AgentSessionTurnHandle {
+function create_turn_handle(lifecycle: RemoteTurnLifecycle): AgentSessionTurnHandle {
   return {
-    id: lifecycle.turnId,
+    id: lifecycle.turn_id,
     get result() {
       return lifecycle.result;
     },
@@ -338,22 +288,14 @@ function create_turn_handle(
   };
 }
 
-function extract_turn_id(event: AgentSessionEvent): string | null {
-  if (is_session_message_mutation(event)) {
-    return event.turn_id || null;
+function require_approval_id(mutation: SessionMutation): string {
+  if (
+    mutation.variant === "part" &&
+    mutation.type === "tool" &&
+    mutation.part.state === "approval-required" &&
+    mutation.part.approval_id
+  ) {
+    return mutation.part.approval_id;
   }
-  switch (event.type) {
-    case "turn-start":
-    case "text-delta":
-    case "reasoning-delta":
-    case "tool-call":
-    case "tool-result":
-    case "assistant-step":
-    case "turn-finish":
-      return event.turnId;
-    case "action":
-      return event.metadata.turnId || null;
-    default:
-      return null;
-  }
+  throw new Error("Current Session Mutation is not an approval-required Tool Part");
 }

@@ -212,13 +212,13 @@ export function getSdkAgentSessionArchiveFilePath(
  * - step / tool 过程会持续重写这个文件，避免中途中断后过程完全丢失。
  * - 完成后再把最终 assistant 合并进 `messages.jsonl`，并清理该文件。
  */
-export function getSdkAgentSessionInflightPath(
+export function getSdkAgentSessionAssistantMessagePath(
   projectRoot: string,
   agentId: string,
   sessionId: string,
 ): string {
   return path.join(
     getSdkAgentSessionMessagesDirPath(projectRoot, agentId, sessionId),
-    "inflight.json",
+    "assistant_message.json",
   );
 }

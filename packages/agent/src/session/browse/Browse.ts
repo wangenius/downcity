@@ -45,6 +45,8 @@ import { getSdkAgentArchivedSessionsDirPath } from "@/session/storage/Paths.js";
 import { getSdkAgentArchivedSessionMessagesPath } from "@/session/storage/Paths.js";
 import { getSdkAgentArchivedSessionMetaPath } from "@/session/storage/Paths.js";
 import { readSessionMetadataFromPath } from "@/session/storage/Metadata.js";
+import { to_executor_ui_message } from "@/session/recorder/SessionMessageCodec.js";
+import type { SessionMessage } from "@/types/session/SessionMessage.js";
 
 type AnyUiPart = UIMessagePart<Record<string, never>, Record<string, never>>;
 
@@ -324,46 +326,73 @@ export function toSessionTimelineEvents(
 export async function loadSessionMessagesFromPath(
   filePath: string,
 ): Promise<SessionRecordV1[]> {
-  const messages: SessionRecordV1[] = [];
+  const messages_by_id = new Map<string, SessionMessage>();
   if (await fs.pathExists(filePath)) {
     const raw = await fs.readFile(filePath, "utf-8");
     const lines = raw.split("\n").filter(Boolean);
     for (const line of lines) {
       try {
-        const parsed = JSON.parse(line) as SessionRecordV1;
-        if (!parsed || typeof parsed !== "object") continue;
-        const candidate = parsed as { type?: unknown; role?: unknown };
-        if (
-          candidate.type !== "action" &&
-          candidate.role !== "user" &&
-          candidate.role !== "assistant"
-        ) {
-          continue;
+        const message = JSON.parse(line) as SessionMessage;
+        if (!is_canonical_session_message(message)) continue;
+        const previous = messages_by_id.get(message.message_id);
+        if (!previous || message.revision > previous.revision) {
+          messages_by_id.set(message.message_id, message);
         }
-        messages.push(parsed);
       } catch {
         // 关键点（中文）：单行损坏不影响整个 session 的可读性。
       }
     }
   }
 
-  const inflight_path = filePath.replace(/messages\.jsonl$/, "inflight.json");
+  const inflight_path = filePath.replace(/messages\.jsonl$/, "assistant_message.json");
   if (await fs.pathExists(inflight_path)) {
     try {
-      const parsed = (await fs.readJson(inflight_path)) as SessionRecordV1;
-      if (
-        is_session_message_record(parsed) &&
-        parsed.role === "assistant" &&
-        Array.isArray(parsed.parts)
-      ) {
-        messages.push(parsed);
+      const message = (await fs.readJson(inflight_path)) as SessionMessage;
+      if (is_canonical_session_message(message) && message.type === "assistant") {
+        messages_by_id.set(message.message_id, message);
       }
     } catch {
-      // ignore invalid inflight snapshot
+      // 运行中快照损坏时仍返回已经完成的历史。
     }
   }
 
-  return messages;
+  return [...messages_by_id.values()]
+    .sort((left, right) => left.sequence - right.sequence)
+    .flatMap(project_canonical_message_record);
+}
+
+function is_canonical_session_message(input: unknown): input is SessionMessage {
+  if (!input || typeof input !== "object") return false;
+  const candidate = input as Partial<SessionMessage>;
+  return (
+    typeof candidate.message_id === "string" &&
+    typeof candidate.session_id === "string" &&
+    typeof candidate.sequence === "number" &&
+    typeof candidate.revision === "number" &&
+    (candidate.type === "user" ||
+      candidate.type === "assistant" ||
+      candidate.type === "action" ||
+      candidate.type === "error")
+  );
+}
+
+function project_canonical_message_record(message: SessionMessage): SessionRecordV1[] {
+  const projected = to_executor_ui_message(message);
+  if (projected) return [projected];
+  if (message.type !== "action") return [];
+  return [{
+    type: "action",
+    id: message.message_id,
+    title: message.title,
+    ...(message.description ? { description: message.description } : {}),
+    state: message.status,
+    metadata: {
+      v: 1,
+      ts: message.updated_at,
+      sessionId: message.session_id,
+      ...(message.turn_id ? { turnId: message.turn_id } : {}),
+    },
+  }];
 }
 
 /**
@@ -481,7 +510,7 @@ async function resolve_session_summary_metadata(input: {
   const history_bytes = await fs.stat(input.messagesPath)
     .then((file_stat) => file_stat.size)
     .catch(() => 0);
-  const inflight_path = `${input.messagesPath.slice(0, -"messages.jsonl".length)}inflight.json`;
+  const inflight_path = `${input.messagesPath.slice(0, -"messages.jsonl".length)}assistant_message.json`;
   const has_inflight = await fs.pathExists(inflight_path);
   if (
     !input.refresh &&

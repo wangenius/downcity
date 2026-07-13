@@ -197,9 +197,9 @@ export class JsonlSessionHistoryStore implements SessionHistoryStore {
   private getInflightFilePath(): string {
     if (this.overrideInflightFilePath) return this.overrideInflightFilePath;
     if (this.overrideMessagesDirPath) {
-      return path.join(this.overrideMessagesDirPath, "inflight.json");
+      return path.join(this.overrideMessagesDirPath, "assistant_message.json");
     }
-    return path.join(this.getMessagesDirPath(), "inflight.json");
+    return path.join(this.getMessagesDirPath(), "assistant_message.json");
   }
 
   private getLockFilePath(): string {

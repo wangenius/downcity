@@ -25,14 +25,10 @@ import type {
   SessionMessagePage,
 } from "@/types/session/SessionMessage.js";
 import type {
-  ListSessionMessageChangesInput,
-  SessionMessageMutationPage,
-} from "@/types/session/SessionMessageMutation.js";
-import type {
   RemoteAgentPluginActionInput,
   RemoteAgentPluginActionResult,
 } from "@/types/agent/RemoteAgentPluginAction.js";
-import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
+import type { SessionMutation } from "@/types/session/SessionMutation.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type {
@@ -40,13 +36,12 @@ import type {
   TransportSubscription,
 } from "@/agent/remote/RemoteTransport.js";
 import type {
-  ShellApprovalMode,
-  ShellApprovalDecisionResult,
-  ShellApprovalModeUpdateResult,
-  ShellApprovalModeOption,
-  ShellSessionApprovalModeView,
-  ShellApprovalView,
-} from "@downcity/shell";
+  ResolveSessionApprovalInput,
+  SessionApproval,
+  SessionApprovalModeSnapshot,
+  SessionApprovalResult,
+  SetSessionApprovalModeInput,
+} from "@/types/session/SessionApproval.js";
 
 type SdkEventsReadyFrame = {
   /** SDK HTTP events 连接内部 ready 标记。 */
@@ -174,7 +169,7 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
   async subscribe(params: {
     session_id: string;
     on_ready: () => void;
-    on_event: (event: AgentSessionEvent) => void;
+    on_event: (event: SessionMutation) => void;
     on_close: (error?: unknown) => void;
   }): Promise<TransportSubscription> {
     const abort_controller = new AbortController();
@@ -249,28 +244,6 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
       throw new Error(String(payload.error || "Remote session messages failed"));
     }
     return payload.messages;
-  }
-
-  async message_changes(
-    session_id: string,
-    input: ListSessionMessageChangesInput,
-  ): Promise<SessionMessageMutationPage> {
-    const query = new URLSearchParams({
-      after_commit_sequence: String(input.after_commit_sequence),
-    });
-    if (input.limit !== undefined) query.set("limit", String(input.limit));
-    const payload = await read_http_json<{
-      success?: boolean;
-      error?: string;
-      changes?: SessionMessageMutationPage;
-    }>(
-      `${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/message-changes?${query.toString()}`,
-      { headers: this.headers() },
-    );
-    if (!payload.success || !payload.changes) {
-      throw new Error(String(payload.error || "Remote session message changes failed"));
-    }
-    return payload.changes;
   }
 
   async system(session_id: string): Promise<AgentSessionSystemSnapshot> {
@@ -433,12 +406,12 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
     return payload;
   }
 
-  async approvals(): Promise<ShellApprovalView[]> {
+  async approvals(session_id: string): Promise<SessionApproval[]> {
     const payload = await read_http_json<{
       success?: boolean;
       error?: string;
-      approvals?: ShellApprovalView[];
-    }>(`${this.base_url}/api/shell/approvals`, {
+      approvals?: SessionApproval[];
+    }>(`${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/approvals`, {
       headers: this.headers(),
     });
     if (!payload.success || !Array.isArray(payload.approvals)) {
@@ -447,28 +420,13 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
     return payload.approvals;
   }
 
-  async approval_modes(): Promise<ShellApprovalModeOption[]> {
-    const payload = await read_http_json<{
-      success?: boolean;
-      error?: string;
-      modes?: ShellApprovalModeOption[];
-    }>(`${this.base_url}/api/shell/approval-modes`, {
-      headers: this.headers(),
-    });
-    if (!payload.success || !Array.isArray(payload.modes)) {
-      throw new Error(String(payload.error || "Remote shell approval modes failed"));
-    }
-    return payload.modes;
-  }
-
-  async approval_mode(input: { session_id: string }): Promise<ShellSessionApprovalModeView> {
-    const session_id = String(input.session_id || "").trim();
+  async approval_mode(session_id: string): Promise<SessionApprovalModeSnapshot> {
     const payload = await read_http_json<{
       success?: boolean;
       error?: string;
       session_id?: string;
-      mode?: ShellApprovalMode;
-    }>(`${this.base_url}/api/shell/approval-mode?session_id=${encodeURIComponent(session_id)}`, {
+      mode?: SessionApprovalModeSnapshot["mode"];
+    }>(`${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/approval-mode`, {
       headers: this.headers(),
     });
     if (!payload.success || !payload.session_id || !payload.mode) {
@@ -480,18 +438,19 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
     };
   }
 
-  async set_approval_mode(input: {
-    session_id: string;
-    mode: ShellApprovalMode;
-  }): Promise<ShellApprovalModeUpdateResult> {
-    const payload = await read_http_json<ShellApprovalModeUpdateResult & {
+  async set_approval_mode(
+    session_id: string,
+    input: SetSessionApprovalModeInput,
+  ): Promise<SessionApprovalModeSnapshot> {
+    const payload = await read_http_json<SessionApprovalModeSnapshot & {
+      success?: boolean;
       error?: string;
-    }>(`${this.base_url}/api/shell/approval-mode`, {
+    }>(`${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/approval-mode`, {
       method: "POST",
       headers: this.headers({
         "Content-Type": "application/json",
       }),
-      body: JSON.stringify(input),
+      body: JSON.stringify({ mode: input.mode }),
     });
     if (payload.success !== true) {
       throw new Error(String(payload.error || "Remote shell approval mode update failed"));
@@ -499,29 +458,21 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
     return payload;
   }
 
-  async approve(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
-    return await this.run_shell_decision("approve", input.approval_id);
-  }
-
-  async deny(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
-    return await this.run_shell_decision("deny", input.approval_id);
-  }
-
-  private async run_shell_decision(
-    action: "approve" | "deny",
-    approval_id: string,
-  ): Promise<ShellApprovalDecisionResult> {
-    const payload = await read_http_json<ShellApprovalDecisionResult & {
+  async resolve_approval(
+    session_id: string,
+    input: ResolveSessionApprovalInput,
+  ): Promise<SessionApprovalResult> {
+    const payload = await read_http_json<SessionApprovalResult & {
       error?: string;
-    }>(`${this.base_url}/api/shell/${action}`, {
+    }>(`${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/approval`, {
       method: "POST",
       headers: this.headers({
         "Content-Type": "application/json",
       }),
-      body: JSON.stringify({ approval_id }),
+      body: JSON.stringify(input),
     });
     if (typeof payload.success !== "boolean") {
-      throw new Error(String(payload.error || `Remote shell ${action} failed`));
+      throw new Error(String(payload.error || "Remote session approval failed"));
     }
     return payload;
   }
@@ -555,7 +506,7 @@ async function consume_http_event_stream(params: {
   abort_controller: AbortController;
   on_ready: () => void;
   on_ready_error: (error: unknown) => void;
-  on_event: (event: AgentSessionEvent) => void;
+  on_event: (event: SessionMutation) => void;
 }): Promise<unknown | undefined> {
   const decoder = new TextDecoder();
   const reader = params.body.getReader();
@@ -578,7 +529,7 @@ async function consume_http_event_stream(params: {
             ready_resolved = true;
             params.on_ready();
           } else {
-            params.on_event(value as AgentSessionEvent);
+            params.on_event(value as SessionMutation);
           }
         }
         newline_index = buffered.indexOf("\n");
@@ -592,7 +543,7 @@ async function consume_http_event_stream(params: {
         ready_resolved = true;
         params.on_ready();
       } else {
-        params.on_event(value as AgentSessionEvent);
+        params.on_event(value as SessionMutation);
       }
     }
 
@@ -602,10 +553,6 @@ async function consume_http_event_stream(params: {
         params.on_ready_error(error);
         throw error;
       }
-      params.on_event({
-        type: "error",
-        message: "Remote session events connection closed",
-      });
     }
   } catch (error) {
     close_error = error;
@@ -613,10 +560,6 @@ async function consume_http_event_stream(params: {
       if (!ready_resolved) {
         params.on_ready_error(error);
       }
-      params.on_event({
-        type: "error",
-        message: error instanceof Error ? error.message : String(error),
-      });
     }
   } finally {
     try {

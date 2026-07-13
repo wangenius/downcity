@@ -1,62 +1,44 @@
 ---
-title: Session 事件
-description: Session.subscribe() 会发出哪些事件类型以及各自表示什么
+title: Session Mutation
+description: Session.subscribe() 返回的 Mutation 类型与 UI 使用方式
 ---
 
-# Session 事件
+# Session Mutation
 
-`session.subscribe()` 当前会发出的核心事件类型：
+`session.subscribe()` 返回统一的 `SessionMutation`。Message 数据、流式增量、Turn 生命周期和 Session 状态都通过同一个订阅入口传递。
 
-- `turn-start`
-- `text-delta`
-- `reasoning-delta`
-- `tool-call`
-- `tool-result`
-- `assistant-step`
-- `action`
-- `turn-finish`
-- `error`
+所有 Mutation 都有 `mutation_id`、`session_id` 与 `created_at`。Message 相关 Mutation 还包含 `message_id` 与 `revision`，客户端用它们定位目标消息并防止旧快照覆盖新状态。
 
-## 最常见的是 `text-delta`
+## 最常见的是文本 delta
 
 如果你只是做实时文本输出，通常只需要先处理：
 
 ```ts
-if (event.type === "text-delta") {
-  process.stdout.write(event.text);
+if (mutation.variant === "delta" && mutation.type === "text") {
+  process.stdout.write(mutation.delta);
 }
 ```
 
-如果你要做更完整的体验，通常还应同时处理：
+五种 variant 的职责是：
 
-- `turn-start`
-- `turn-finish`
-- `error`
-- `assistant-step`
-- `action`
-- `tool-call`
-- `tool-result`
+- `message`：完整顶层 Message 快照
+- `part`：完整 Assistant Part 快照，例如 Tool 状态
+- `delta`：text / reasoning 新增片段
+- `turn`：Turn 的 `start` / `finish` 生命周期
+- `session`：Session 自身状态变化，例如 `title`
 
-`assistant-step` 对 chat bridge 这类 transport 很有用，因为它可以拿到 step 级可见回复，同时又不需要自己接管 Session history 落盘。
-
-## `action`
-
-`action` 表示 Session 内部辅助工作，例如上下文压缩、模型切换和历史分叉。它不是 assistant 正文。
-
-模型切换 action 的 `title` 会直接包含原模型与新模型名称，例如 `Session model switched from GPT-5 to Claude Sonnet`，UI 可以直接展示标题，不需要自行拼接模型名称。
-
-Action event 同时会作为 `type: "action"` record 持久化到 Session JSONL。同一个 action 复用同一个 `id`，并随着生命周期把 `state` 更新为 `running`、`completed` 或 `failed`。Action record 会出现在 UI history/timeline 中，但 Agent 在构建 LLM 输入前会过滤掉它。
-
-Agent 当前内置的辅助 action 包括：
-
-- `compacting`
-- `model-switching`
-- `history-forking`
+Tool Part 进入 `approval-required` 后，订阅回调的第二个参数可以直接提交决定：
 
 ```ts
-session.subscribe((event) => {
-  if (event.type === "action") {
-    console.log(event.state, event.title, event.description);
+session.subscribe(async (mutation, reply) => {
+  if (
+    mutation.variant === "part" &&
+    mutation.type === "tool" &&
+    mutation.part.state === "approval-required"
+  ) {
+    await reply.approval({ decision: "approved" });
   }
 });
 ```
+
+Mutation 是实时协议，不是历史格式。加载已有历史使用 `messages()`；网络重连后重新读取 Message 与 Session 快照并重新订阅。

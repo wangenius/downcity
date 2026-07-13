@@ -1,0 +1,258 @@
+/**
+ * Agent Chat TUI 视觉组件与 transcript 导航回归测试。
+ */
+
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { visibleWidth } from "@earendil-works/pi-tui";
+
+import { AgentHeaderComponent } from "../bin/city/agent/tui/components/AgentHeader.js";
+import { AssistantMessageComponent } from "../bin/city/agent/tui/components/AssistantMessage.js";
+import { ChatFooterComponent } from "../bin/city/agent/tui/components/ChatFooter.js";
+import { CommandHelpPanelComponent } from "../bin/city/agent/tui/components/CommandHelpPanel.js";
+import { InlinePanelSlotComponent } from "../bin/city/agent/tui/components/InlinePanelSlot.js";
+import { MessageListComponent } from "../bin/city/agent/tui/components/MessageList.js";
+import { ToolCallBlockComponent } from "../bin/city/agent/tui/components/ToolCallBlock.js";
+import { UserMessageComponent } from "../bin/city/agent/tui/components/UserMessage.js";
+import { resolve_transcript_scroll_delta } from "../bin/city/agent/tui/controllers/TranscriptNavigation.js";
+import { PiTuiChatRenderer } from "../bin/city/agent/tui/PiTuiChatRenderer.js";
+import { ApprovalPanelComponent } from "../bin/city/agent/tui/dialogs/ApprovalDialog.js";
+import { ModelPickerComponent } from "../bin/city/agent/tui/dialogs/ModelPicker.js";
+import { SessionPickerComponent } from "../bin/city/agent/tui/dialogs/SessionPicker.js";
+import { resolveSlashCommandInput } from "../bin/city/agent/tui/commands/resolve.js";
+
+// oxlint-disable-next-line no-control-regex -- 测试需要移除 ANSI SGR 颜色序列。
+const ANSI_SGR = /\u001B\[[0-9;]*m/g;
+
+function plain(lines) {
+  return lines.map((line) => line.replace(ANSI_SGR, ""));
+}
+
+test("transcript 导航同时识别分页键和鼠标滚轮", () => {
+  assert.equal(resolve_transcript_scroll_delta("\u001B[5~", 12), 12);
+  assert.equal(resolve_transcript_scroll_delta("\u001B[6~", 12), -12);
+  assert.equal(resolve_transcript_scroll_delta("\u001B[<64;20;8M", 12), 3);
+  assert.equal(resolve_transcript_scroll_delta("\u001B[<65;20;8M", 12), -3);
+  assert.equal(resolve_transcript_scroll_delta("a", 12), null);
+});
+
+test("MessageList 可以离开底部查看历史并重新返回最新消息", () => {
+  const scroll_offsets = [];
+  const message_list = new MessageListComponent({
+    get_viewport_height: () => 4,
+    on_scroll_change: (scroll_offset) => scroll_offsets.push(scroll_offset),
+  });
+  for (let index = 1; index <= 8; index += 1) {
+    message_list.add_entry({
+      id: `status-${index}`,
+      kind: "status",
+      text: `status ${index}`,
+      created_at: index,
+    });
+  }
+
+  const latest = plain(message_list.render(48)).join("\n");
+  assert.match(latest, /status 8/);
+  assert.doesNotMatch(latest, /status 1/);
+
+  message_list.scroll_by(4);
+  const history = plain(message_list.render(48)).join("\n");
+  assert.match(history, /status 1/);
+  assert.doesNotMatch(history, /status 8/);
+  assert.ok(message_list.current_scroll_offset > 0);
+
+  message_list.scroll_to_bottom();
+  assert.match(plain(message_list.render(48)).join("\n"), /status 8/);
+  assert.equal(message_list.current_scroll_offset, 0);
+  assert.ok(scroll_offsets.some((offset) => offset > 0));
+});
+
+test("角色消息和工具执行块保持稳定层级且不超过可用宽度", () => {
+  const user = plain(new UserMessageComponent("Inspect this project").render(48));
+  assert.equal(user[1], "You");
+  assert.match(user[2], /^  Inspect this project/);
+
+  const assistant_component = new AssistantMessageComponent(true, true);
+  assistant_component.update_content("I am checking the build.", true);
+  const assistant = plain(assistant_component.render(48));
+  assert.match(assistant.join("\n"), /Assistant · working/);
+
+  const tool = new ToolCallBlockComponent({
+    id: "tool-1",
+    kind: "tool-call",
+    tool_call_id: "call-1",
+    tool_name: "shell_exec",
+    args: { cmd: "pnpm typecheck" },
+    status: "pending",
+    created_at: 1,
+  });
+  const tool_lines = tool.render(48);
+  assert.match(plain(tool_lines).join("\n"), /Tool · shell_exec/);
+  assert.ok(plain(tool_lines).some((line) => line.startsWith("┌")));
+  assert.ok(plain(tool_lines).some((line) => line.startsWith("└")));
+  assert.ok(plain(tool_lines).find((line) => line.startsWith("┌"))?.endsWith("┐"));
+  assert.ok(tool_lines.every((line) => visibleWidth(line) <= 48));
+
+  const narrow_tool_lines = plain(tool.render(24));
+  assert.ok(narrow_tool_lines.find((line) => line.startsWith("┌"))?.endsWith("┐"));
+});
+
+test("Header 与 Footer 在宽屏和窄屏下保持上下文与操作层级", () => {
+  const app_state = {
+    agent_id: "demo",
+    session_id: "session-123456789",
+    session_title: "Build diagnostics",
+    session_model_name: "GPT-5.2",
+    is_executing: false,
+    status_text: "",
+    transcript_scroll_offset: 0,
+  };
+  const header = new AgentHeaderComponent(app_state, { requestRender() {} });
+  const footer = new ChatFooterComponent(app_state);
+
+  for (const width of [96, 48, 24]) {
+    const header_lines = header.render(width);
+    const footer_lines = footer.render(width);
+    assert.ok([...header_lines, ...footer_lines].every((line) => visibleWidth(line) <= width));
+    assert.match(plain(header_lines).join("\n"), /READY/);
+  }
+
+  app_state.transcript_scroll_offset = 9;
+  footer.set_state(app_state);
+  assert.match(plain(footer.render(48)).join("\n"), /HISTORY · 9 lines/);
+});
+
+test("审批 part 展示请求详情且 Esc 按安全语义拒绝", () => {
+  const message_list = new MessageListComponent({
+    get_viewport_height: () => 20,
+  });
+  let approval_request;
+  const renderer = new PiTuiChatRenderer(
+    message_list,
+    () => {},
+    (request) => {
+      approval_request = request;
+    },
+  );
+  renderer.start_turn();
+  renderer.attach_turn_id("turn-1");
+  renderer.render_event({
+    mutation_id: "mutation-1",
+    message_id: "assistant-1",
+    revision: 2,
+    session_id: "session-1",
+    turn_id: "turn-1",
+    created_at: 1,
+    variant: "part",
+    type: "tool",
+    part_id: "tool:call-1",
+    part: {
+      part_id: "tool:call-1",
+      type: "tool",
+      tool_call_id: "call-1",
+      tool_name: "shell_exec",
+      state: "approval-required",
+      approval_id: "approval-1",
+      input: {
+        cmd: "rm -rf build",
+        workdir: "/workspace",
+        reason: "Clean generated output",
+      },
+    },
+  });
+
+  assert.deepEqual(approval_request, {
+    approval_id: "approval-1",
+    tool_name: "shell_exec",
+    cmd: "rm -rf build",
+    cwd: "/workspace",
+    reason: "Clean generated output",
+  });
+  assert.match(
+    plain(message_list.render(64)).join("\n"),
+    /approval required · approval-1/,
+  );
+
+  let decision;
+  const dialog = new ApprovalPanelComponent({
+    ...approval_request,
+    on_decide: (next_decision) => {
+      decision = next_decision;
+    },
+  });
+  dialog.handleInput("\u001B");
+  assert.equal(decision, "deny");
+});
+
+test("执行期间保留审批命令提交能力并阻止破坏性 Slash 命令", () => {
+  assert.equal(
+    resolveSlashCommandInput({ input: "/approve ap_1", is_streaming: true }).kind,
+    "builtin",
+  );
+  assert.equal(
+    resolveSlashCommandInput({ input: "/deny ap_1", is_streaming: true }).kind,
+    "builtin",
+  );
+  assert.equal(
+    resolveSlashCommandInput({ input: "/clear", is_streaming: true }).kind,
+    "blocked",
+  );
+  assert.equal(
+    resolveSlashCommandInput({ input: "/model", is_streaming: true }).kind,
+    "blocked",
+  );
+});
+
+test("内联槽位空闲时不占高度并把输入转交给下方面板", () => {
+  const slot = new InlinePanelSlotComponent();
+  assert.deepEqual(slot.render(64), []);
+
+  let closed = false;
+  slot.show(new CommandHelpPanelComponent(() => {
+    closed = true;
+    slot.clear();
+  }));
+  assert.match(plain(slot.render(64)).join("\n"), /Slash commands/);
+  slot.handleInput("\u001B");
+  assert.equal(closed, true);
+  assert.deepEqual(slot.render(64), []);
+});
+
+test("Model 与 Session Picker 在输入框下方保持搜索和选择能力", () => {
+  const slot = new InlinePanelSlotComponent();
+  let selected_model = "";
+  slot.show(new ModelPickerComponent({
+    models: [
+      { model_id: "claude", model_name: "Claude", modalities: ["text"] },
+      { model_id: "gpt", model_name: "GPT", modalities: ["text"] },
+    ],
+    on_select: (model_id) => {
+      selected_model = model_id;
+    },
+    on_cancel: () => {},
+  }));
+  slot.handleInput("g");
+  assert.match(plain(slot.render(64)).join("\n"), /Search: g/);
+  slot.handleInput("\r");
+  assert.equal(selected_model, "gpt");
+
+  let selected_session;
+  slot.show(new SessionPickerComponent({
+    sessions: [{
+      sessionId: "session-2",
+      title: "Second session",
+      messageCount: 2,
+      executing: false,
+    }],
+    current_session_id: "default",
+    on_select: (result) => {
+      selected_session = result;
+    },
+    on_cancel: () => {},
+  }));
+  for (const character of "second") slot.handleInput(character);
+  assert.match(plain(slot.render(64)).join("\n"), /Search: second/);
+  slot.handleInput("\r");
+  assert.deepEqual(selected_session, { kind: "session", sessionId: "session-2" });
+});

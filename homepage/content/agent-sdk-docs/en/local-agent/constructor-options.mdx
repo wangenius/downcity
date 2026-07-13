@@ -48,7 +48,7 @@ The SDK uses it to:
 - load project config
 - organize session storage
 
-If `path` is wrong, many later behaviors will feel confusing because the agent will read config and write data in the wrong context.
+If `path` is wrong, the agent will read the wrong `.env` and write runtime data in the wrong context.
 
 ## `instruction`
 
@@ -165,7 +165,7 @@ Key points:
 - Shell is not a plugin
 - the Agent mounts shell tools from the Shell instance
 - session and turn context are wired internally
-- approval APIs are `agent.approvals()`, `agent.approve(...)`, and `agent.deny(...)`
+- approvals belong to a specific Session; use `session.approvals()`, `session.resolve_approval(...)`, and `session.set_approval_mode(...)`
 
 ## `plugins`
 

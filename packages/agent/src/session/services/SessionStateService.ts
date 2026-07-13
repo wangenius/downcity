@@ -26,9 +26,7 @@ import type {
   AgentSessionConfigSnapshot,
   AgentSessionSetInput,
 } from "@/types/agent/SessionTypes.js";
-import type {
-  AgentSessionEvent,
-} from "@/types/sdk/AgentSessionEvent.js";
+import type { SessionMutation } from "@/types/session/SessionMutation.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type {
   SessionActionRecordInputV1,
@@ -102,7 +100,7 @@ type SessionStateServiceOptions = {
   /**
    * 发布 session 事件。
    */
-  publish_event: (event: AgentSessionEvent) => void;
+  publish_event: (mutation: SessionMutation) => void;
 };
 
 type SessionSetOptions = {
@@ -372,6 +370,7 @@ export class SessionStateService {
       ? from_ui_assistant_parts(params.message.parts)
       : [{
           part_id: `external-assistant-text:${Date.now()}`,
+          sequence: 1,
           type: "text" as const,
           text: String(params.fallbackText || "").trim(),
           state: "done" as const,
@@ -442,8 +441,11 @@ export class SessionStateService {
     const next_title = String(next_metadata.title || "").trim();
     if (!next_title || next_title === before_title) return;
     this.publish_event({
-      type: "session-title",
-      sessionId: this.session_id,
+      mutation_id: generateId(),
+      variant: "session",
+      type: "title",
+      session_id: this.session_id,
+      created_at: Date.now(),
       title: next_title,
     });
   }

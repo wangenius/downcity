@@ -18,14 +18,16 @@ import type {
   AgentSessionSystemSnapshot,
   AgentSessionSetInput,
 } from "@/types/agent/SessionTypes.js";
-import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
+import type { SessionMutation } from "@/types/session/SessionMutation.js";
+import type {
+  ResolveSessionApprovalInput,
+  SetSessionApprovalModeInput,
+} from "@/types/session/SessionApproval.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type { ListSessionMessagesInput } from "@/types/session/SessionMessage.js";
-import type { ListSessionMessageChangesInput } from "@/types/session/SessionMessageMutation.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { PluginControlAction } from "@/types/plugin/PluginState.js";
-import type { ShellApprovalMode } from "@downcity/shell";
 
 /**
  * RPC 请求。
@@ -140,15 +142,34 @@ export type RpcRequest =
   | {
       /** 请求 id，用于匹配响应。 */
       id: string;
-      /** 读取 session message mutations。 */
-      method: "sdk.sessions.message_changes";
-      /** changes 查询参数。 */
-      params: {
-        /** 目标 session id。 */
-        sessionId: string;
-        /** Mutation 增量参数。 */
-        input: ListSessionMessageChangesInput;
-      };
+      /** 列出指定 Session 的 pending 工具审批。 */
+      method: "sdk.sessions.approvals";
+      /** 目标 Session 参数。 */
+      params: { sessionId: string };
+    }
+  | {
+      /** 请求 id，用于匹配响应。 */
+      id: string;
+      /** 读取指定 Session 的工具审批模式。 */
+      method: "sdk.sessions.approvalMode";
+      /** 目标 Session 参数。 */
+      params: { sessionId: string };
+    }
+  | {
+      /** 请求 id，用于匹配响应。 */
+      id: string;
+      /** 更新指定 Session 的工具审批模式。 */
+      method: "sdk.sessions.setApprovalMode";
+      /** Session 与审批模式参数。 */
+      params: { sessionId: string; input: SetSessionApprovalModeInput };
+    }
+  | {
+      /** 请求 id，用于匹配响应。 */
+      id: string;
+      /** 处理指定 Session 的 pending 工具审批。 */
+      method: "sdk.sessions.resolveApproval";
+      /** Session 与审批决策参数。 */
+      params: { sessionId: string; input: ResolveSessionApprovalInput };
     }
   | {
       /** 请求 id，用于匹配响应。 */
@@ -302,64 +323,6 @@ export type RpcRequest =
         /** action payload。 */
         payload?: JsonValue;
       };
-    }
-  | {
-      /** 请求 id，用于匹配响应。 */
-      id: string;
-      /** 列出 shell approvals。 */
-      method: "internal.shell.approvals";
-    }
-  | {
-      /** 请求 id，用于匹配响应。 */
-      id: string;
-      /** 列出 shell approval 模式。 */
-      method: "internal.shell.approvalModes";
-    }
-  | {
-      /** 请求 id，用于匹配响应。 */
-      id: string;
-      /** 读取 shell approval 模式。 */
-      method: "internal.shell.approvalMode";
-      /** session 参数。 */
-      params: {
-        /** session id。 */
-        sessionId: string;
-      };
-    }
-  | {
-      /** 请求 id，用于匹配响应。 */
-      id: string;
-      /** 设置 shell approval 模式。 */
-      method: "internal.shell.setApprovalMode";
-      /** session 模式参数。 */
-      params: {
-        /** session id。 */
-        sessionId: string;
-        /** approval 模式。 */
-        mode: ShellApprovalMode;
-      };
-    }
-  | {
-      /** 请求 id，用于匹配响应。 */
-      id: string;
-      /** 批准 shell approval。 */
-      method: "internal.shell.approve";
-      /** approval 参数。 */
-      params: {
-        /** approval id。 */
-        approvalId: string;
-      };
-    }
-  | {
-      /** 请求 id，用于匹配响应。 */
-      id: string;
-      /** 拒绝 shell approval。 */
-      method: "internal.shell.deny";
-      /** approval 参数。 */
-      params: {
-        /** approval id。 */
-        approvalId: string;
-      };
     };
 
 /**
@@ -410,7 +373,7 @@ export interface RpcEventFrame {
   /** 当前订阅 id。 */
   subscriptionId: string;
   /** session 事件。 */
-  event: AgentSessionEvent;
+  event: SessionMutation;
 }
 
 /**

@@ -22,15 +22,16 @@ import type {
   AgentSessionSystemSnapshot,
 } from "@/types/agent/SessionTypes.js";
 import type {
-  AgentSessionSubscriber,
-  AgentSessionUnsubscribe,
-} from "@/types/sdk/AgentSessionEvent.js";
+  SessionMutationSubscriber,
+  SessionMutationUnsubscribe,
+} from "@/types/session/SessionMutation.js";
 import type {
-  ListSessionMessageChangesInput,
-  SessionMessageMutationPage,
-  SessionMessageMutationSubscriber,
-  SessionMessageMutationUnsubscribe,
-} from "@/types/session/SessionMessageMutation.js";
+  ResolveSessionApprovalInput,
+  SessionApproval,
+  SessionApprovalModeSnapshot,
+  SessionApprovalResult,
+  SetSessionApprovalModeInput,
+} from "@/types/session/SessionApproval.js";
 import type {
   ListSessionMessagesInput,
   SessionMessagePage,
@@ -80,24 +81,26 @@ export interface AgentSessionActor {
 
   /** 订阅当前 session 的未来事件。 */
   subscribe(
-    subscriber: SessionMessageMutationSubscriber,
-  ): SessionMessageMutationUnsubscribe;
-
-  /** 订阅远程 transport 使用的 Message 与 turn lifecycle 事件。 */
-  subscribe_transport(
-    subscriber: AgentSessionSubscriber,
-  ): AgentSessionUnsubscribe;
+    subscriber: SessionMutationSubscriber,
+  ): SessionMutationUnsubscribe;
 
   /** 读取当前 session messages 分页。 */
   messages(input?: ListSessionMessagesInput): Promise<SessionMessagePage>;
 
-  /** 读取指定 cursor 后的 Message Mutation。 */
-  message_changes(
-    input: ListSessionMessageChangesInput,
-  ): Promise<SessionMessageMutationPage>;
-
   /** 读取当前 session 生效的 system 快照。 */
   system(): Promise<AgentSessionSystemSnapshot>;
+
+  /** 列出当前 Session 的 pending 工具审批。 */
+  approvals(): Promise<SessionApproval[]>;
+
+  /** 读取当前 Session 的工具审批模式。 */
+  approval_mode(): Promise<SessionApprovalModeSnapshot>;
+
+  /** 更新当前 Session 的工具审批模式。 */
+  set_approval_mode(input: SetSessionApprovalModeInput): Promise<SessionApprovalModeSnapshot>;
+
+  /** 处理当前 Session 的 pending 工具审批。 */
+  resolve_approval(input: ResolveSessionApprovalInput): Promise<SessionApprovalResult>;
 }
 
 /**

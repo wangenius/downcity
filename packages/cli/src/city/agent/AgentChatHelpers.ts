@@ -12,7 +12,7 @@
 import prompts from "@/city/tui/Prompts.js";
 import {
   RemoteAgent,
-  type SessionMessageMutation,
+  type SessionMutation,
 } from "@downcity/agent";
 import { emitCliBlock } from "@/shared/CliReporter.js";
 import { printResult } from "@/city/utils/cli/CliOutput.js";
@@ -437,9 +437,9 @@ export async function runSdkPromptTurn(params: {
   let emitted_visible_text = false;
   let final_text = "";
   let target_turn_id = "";
-  const pending_events: SessionMessageMutation[] = [];
+  const pending_events: SessionMutation[] = [];
 
-  const renderEvent = (event: SessionMessageMutation): void => {
+  const renderEvent = (event: SessionMutation): void => {
     if (params.interactiveRenderer) {
       params.interactiveRenderer.render_event(event);
       return;
@@ -466,7 +466,8 @@ export async function runSdkPromptTurn(params: {
       pending_events.push(event);
       return;
     }
-    if (event.turn_id && event.turn_id !== target_turn_id) return;
+    const event_turn_id = "turn_id" in event ? event.turn_id : undefined;
+    if (event_turn_id && event_turn_id !== target_turn_id) return;
     renderEvent(event);
   });
 
@@ -477,7 +478,8 @@ export async function runSdkPromptTurn(params: {
     params.interactiveRenderer?.attach_turn_id(target_turn_id);
 
     for (const event of pending_events) {
-      if (event.turn_id && event.turn_id !== target_turn_id) continue;
+      const event_turn_id = "turn_id" in event ? event.turn_id : undefined;
+      if (event_turn_id && event_turn_id !== target_turn_id) continue;
       renderEvent(event);
     }
 

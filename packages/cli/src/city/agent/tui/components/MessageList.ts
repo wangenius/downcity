@@ -26,6 +26,8 @@ import { UserMessageComponent } from "@/city/agent/tui/components/UserMessage.js
 export interface MessageListOptions {
   /** 获取当前可视区高度（行数）。 */
   get_viewport_height: () => number;
+  /** 滚动位置变化回调，用于同步底部阅读状态。 */
+  on_scroll_change?: (scroll_offset: number) => void;
 }
 
 /**
@@ -38,6 +40,7 @@ export class MessageListComponent implements Component {
   private scroll_offset = 0;
   private last_rendered_line_count = 0;
   private get_viewport_height_fn: () => number;
+  private on_scroll_change?: MessageListOptions["on_scroll_change"];
 
   /**
    * 全局 tool output 展开状态。
@@ -53,6 +56,7 @@ export class MessageListComponent implements Component {
    */
   constructor(options: MessageListOptions) {
     this.get_viewport_height_fn = options.get_viewport_height;
+    this.on_scroll_change = options.on_scroll_change;
   }
 
   /**
@@ -110,7 +114,7 @@ export class MessageListComponent implements Component {
     entry.streaming = streaming;
     const component = this.components.get(entry_id);
     if (component instanceof AssistantMessageComponent) {
-      component.update_content(text);
+      component.update_content(text, streaming);
     }
   }
 
@@ -119,18 +123,42 @@ export class MessageListComponent implements Component {
    *
    * @param tool_call_id tool 调用唯一标识。
    * @param result tool 返回结果。
+   * @param status 工具最终状态。
    */
-  update_tool_result(tool_call_id: string, result: unknown): void {
+  update_tool_result(
+    tool_call_id: string,
+    result: unknown,
+    status: "success" | "error" = "success",
+  ): void {
     for (const entry of this.entries) {
       if (entry.kind === "tool-call" && entry.tool_call_id === tool_call_id) {
         entry.result = result;
-        entry.status = "success";
+        entry.status = status;
         const component = this.components.get(entry.id);
         if (component instanceof ToolCallBlockComponent) {
-          component.update_result(result);
+          component.update_result(result, status);
         }
         return;
       }
+    }
+  }
+
+  /**
+   * 标记指定工具正在等待用户审批。
+   *
+   * @param tool_call_id 工具调用 ID。
+   * @param approval_id 审批请求 ID。
+   */
+  require_tool_approval(tool_call_id: string, approval_id: string): void {
+    for (const entry of this.entries) {
+      if (entry.kind !== "tool-call" || entry.tool_call_id !== tool_call_id) continue;
+      entry.status = "approval-required";
+      entry.approval_id = approval_id;
+      const component = this.components.get(entry.id);
+      if (component instanceof ToolCallBlockComponent) {
+        component.require_approval(approval_id);
+      }
+      return;
     }
   }
 
@@ -141,7 +169,7 @@ export class MessageListComponent implements Component {
     this.entries = [];
     this.components.clear();
     this.inner.clear();
-    this.scroll_offset = 0;
+    this.set_scroll_offset(0);
   }
 
   /**
@@ -157,14 +185,14 @@ export class MessageListComponent implements Component {
    * @param delta 正数向上（看历史），负数向下（回底部方向）。
    */
   scroll_by(delta: number): void {
-    this.scroll_offset = Math.max(0, this.scroll_offset + delta);
+    this.set_scroll_offset(Math.max(0, this.scroll_offset + delta));
   }
 
   /**
    * 滚动到底部（follow-tail）。
    */
   scroll_to_bottom(): void {
-    this.scroll_offset = 0;
+    this.set_scroll_offset(0);
   }
 
   /**
@@ -173,7 +201,7 @@ export class MessageListComponent implements Component {
    * @returns 切换后是否贴底。
    */
   toggle_follow_tail(): boolean {
-    this.scroll_offset = this.scroll_offset === 0 ? 1 : 0;
+    this.set_scroll_offset(this.scroll_offset === 0 ? 1 : 0);
     return this.scroll_offset === 0;
   }
 
@@ -191,15 +219,15 @@ export class MessageListComponent implements Component {
 
     // 用户已向上滚动且内容变长时，增加偏移以保持视口顶部内容稳定。
     if (line_count_delta > 0 && this.scroll_offset > 0) {
-      this.scroll_offset += line_count_delta;
+      this.set_scroll_offset(this.scroll_offset + line_count_delta);
     }
 
     if (viewport_height <= 0 || all_lines.length <= viewport_height) {
-      this.scroll_offset = 0;
+      this.set_scroll_offset(0);
       return all_lines;
     }
     const max_offset = all_lines.length - viewport_height;
-    this.scroll_offset = Math.min(this.scroll_offset, max_offset);
+    this.set_scroll_offset(Math.min(this.scroll_offset, max_offset));
     const start = Math.max(0, all_lines.length - viewport_height - this.scroll_offset);
     return all_lines.slice(start, start + viewport_height);
   }
@@ -216,8 +244,8 @@ export class MessageListComponent implements Component {
       case "user":
         return new UserMessageComponent(entry.text);
       case "assistant": {
-        const component = new AssistantMessageComponent(true);
-        component.update_content(entry.text);
+        const component = new AssistantMessageComponent(true, entry.streaming);
+        component.update_content(entry.text, entry.streaming);
         return component;
       }
       case "tool-call":
@@ -231,9 +259,16 @@ export class MessageListComponent implements Component {
       case "status":
         return new StatusMessageComponent(entry.text);
       case "error":
-        return new NoticeMessageComponent(entry.text);
+        return new NoticeMessageComponent("Error", entry.text);
       default:
         return new GutterContainer(CHROME_GUTTER, CHROME_GUTTER);
     }
+  }
+
+  /** 更新滚动位置并仅在值变化时通知外部状态栏。 */
+  private set_scroll_offset(scroll_offset: number): void {
+    if (this.scroll_offset === scroll_offset) return;
+    this.scroll_offset = scroll_offset;
+    this.on_scroll_change?.(scroll_offset);
   }
 }

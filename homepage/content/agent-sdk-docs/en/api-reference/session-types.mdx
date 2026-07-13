@@ -13,7 +13,7 @@ The most common input and output objects are:
 - `AgentSessionPromptInput`
 - `AgentSessionTurnHandle`
 - `AgentSessionTurnResult`
-- `AgentSessionEvent`
+- `SessionMutation`
 - `AgentSessionInfo`
 
 ## `AgentSessionPromptInput`
@@ -40,4 +40,4 @@ Core fields:
 - `text`
 - `assistantMessage` (usually available on local sessions)
 
-For most users, `text` is the field they consume most directly. Use `assistantMessage` when you need the final structured assistant payload, and `session.subscribe()` when you need real-time UI updates before `finished` resolves.
+For most users, `text` is the field they consume most directly. Use `assistantMessage` when you need the final structured assistant payload, and the `SessionMutation` values from `session.subscribe()` for real-time UI updates before `finished` resolves.

@@ -9,11 +9,7 @@
 
 import { extractTextFromParts, extractTextFromUiMessage } from "@/executor/messages/UIMessageTransformer.js";
 import type { Executor } from "@executor/Executor.js";
-import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
-import type {
-  AgentSessionSubscriber,
-  AgentSessionUnsubscribe,
-} from "@/types/sdk/AgentSessionEvent.js";
+import type { SessionMutation } from "@/types/session/SessionMutation.js";
 import { isAgentSessionPromptInputEmpty } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
@@ -118,15 +114,8 @@ export class SessionTurnService {
   /**
    * 发布一条 session 事件。
    */
-  publish_event(event: AgentSessionEvent): void {
-    this.event_hub.publish(event);
-  }
-
-  /**
-   * 订阅当前 session 的未来事件。
-   */
-  subscribe(subscriber: AgentSessionSubscriber): AgentSessionUnsubscribe {
-    return this.event_hub.subscribe(subscriber);
+  publish_event(mutation: SessionMutation): void {
+    this.event_hub.publish(mutation);
   }
 
   /**

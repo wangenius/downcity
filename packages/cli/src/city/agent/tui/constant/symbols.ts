@@ -17,17 +17,6 @@ export const SELECT_POINTER = "❯";
 export const CURRENT_MARK = "← current";
 
 /**
- * 状态消息前缀，用于 assistant / tool / system 消息。
- * 使用 U+25CF 而非 U+23FA，避免终端把它当 emoji 渲染。
- */
-export const STATUS_BULLET = "● ";
-
-/**
- * 用户消息前缀。Kimi Code 使用 ✨。
- */
-export const USER_MESSAGE_BULLET = "✨ ";
-
-/**
  * 成功标记。
  */
 export const SUCCESS_MARK = "✓ ";

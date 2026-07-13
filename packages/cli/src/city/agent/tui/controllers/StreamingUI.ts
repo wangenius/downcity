@@ -8,7 +8,7 @@
  * - flush 节拍合并高频 text-delta，降低终端重绘开销。
  */
 
-import type { SessionMessageMutation } from "@downcity/agent";
+import type { SessionMutation } from "@downcity/agent";
 
 import { AssistantMessageComponent } from "@/city/agent/tui/components/AssistantMessage.js";
 import type { MessageListComponent } from "@/city/agent/tui/components/MessageList.js";
@@ -80,10 +80,10 @@ export class StreamingUIController {
   /**
    * 处理单个 session 事件。
    *
-   * @param event AgentSessionEvent。
+   * @param event Session Mutation。
    */
-  handle_event(event: SessionMessageMutation): void {
-    const event_turn_id = event.turn_id || "";
+  handle_event(event: SessionMutation): void {
+    const event_turn_id = "turn_id" in event ? event.turn_id || "" : "";
     if (event_turn_id && this.active_turn_id && event_turn_id !== this.active_turn_id) {
       return;
     }
@@ -100,7 +100,7 @@ export class StreamingUIController {
       ) this.finalize_assistant();
       return;
     }
-    if (event.type !== "tool") return;
+    if (event.variant !== "part" || event.type !== "tool") return;
     const part = event.part;
     this.finalize_assistant();
     if (!this.tool_call_ids.has(part.tool_call_id)) {
@@ -111,13 +111,17 @@ export class StreamingUIController {
         part.input || {},
       );
     }
+    if (part.state === "approval-required" && part.approval_id) {
+      this.message_list.require_tool_approval(part.tool_call_id, part.approval_id);
+    }
     if (part.state === "completed") {
-      this.message_list.update_tool_result(part.tool_call_id, part.output);
+      this.message_list.update_tool_result(part.tool_call_id, part.output, "success");
     }
     if (part.state === "failed") {
       this.message_list.update_tool_result(
         part.tool_call_id,
         part.error || "Tool failed",
+        "error",
       );
     }
   }

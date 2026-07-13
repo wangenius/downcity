@@ -102,6 +102,7 @@ export async function compact_session_recorder_messages(input: {
     summary_through_message_id: boundary.message_id,
     parts: [{
       part_id: `summary-text:${generateId()}`,
+      sequence: 1,
       type: "text",
       text: summary,
       state: "done",

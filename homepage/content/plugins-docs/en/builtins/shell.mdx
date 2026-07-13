@@ -45,16 +45,18 @@ Unrestricted execution always requires user approval. Missing `reason` is reject
 
 ## Approval API
 
-Clients approve shell requests through the Agent SDK:
+Clients approve shell requests through the Session that started the tool call:
 
 ```ts
-const pending = await agent.approvals();
+const pending = await session.approvals();
 
-await agent.approve({ approval_id: pending[0].approval_id });
-await agent.deny({ approval_id: pending[0].approval_id });
+await session.resolve_approval({
+  approval_id: pending[0].approval_id,
+  decision: "approved",
+});
 ```
 
-`RemoteAgent` exposes the same API over the Downcity Agent HTTP gateway.
+Local and remote Sessions expose the same API. A live UI can also call `reply.approval({ decision })` when `session.subscribe()` receives an approval-required Tool Part.
 
 ## Session Approval Mode
 
@@ -64,14 +66,11 @@ Shell approval mode is scoped to the current session:
 - `always-allow`: automatically approves shell approvals in the current session.
 
 ```ts
-const modes = agent.approval_modes();
-
-agent.set_approval_mode({
-  session_id: "consoleui",
+await session.set_approval_mode({
   mode: "always-allow",
 });
 
-const current = agent.approval_mode({ session_id: "consoleui" });
+const current = await session.approval_mode();
 ```
 
 `always-allow` does not change the sandbox mode. It only records new unrestricted requests as approved instead of creating pending approvals. Existing pending approvals are not auto-approved.
@@ -79,7 +78,7 @@ const current = agent.approval_mode({ session_id: "consoleui" });
 ## Semantics
 
 - Shell is owned by `@downcity/shell`, not `@downcity/plugins`.
-- Agent only mounts the Shell tools and forwards session events.
+- Agent only mounts Shell tools; approvals and live Mutations belong to a specific Session.
 - Safe Sandbox commands can read and write the project and use the configured sandbox directory.
 - Unrestricted commands execute outside the Safe Sandbox only after per-request approval.
 - `always-allow` only affects new approval requests in the current session, not other sessions.

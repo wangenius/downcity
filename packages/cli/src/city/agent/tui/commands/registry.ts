@@ -24,7 +24,7 @@ export const BUILTIN_SLASH_COMMANDS: readonly SlashCommand[] = [
     name: "clear",
     aliases: [],
     description: "Clear the transcript",
-    availability: "always",
+    availability: "idle-only",
   },
   {
     name: "new",

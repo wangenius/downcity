@@ -24,25 +24,20 @@ import type {
   RemoteAgentPluginActionInput,
   RemoteAgentPluginActionResult,
 } from "@/types/agent/RemoteAgentPluginAction.js";
-import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
+import type { SessionMutation } from "@/types/session/SessionMutation.js";
+import type {
+  ResolveSessionApprovalInput,
+  SessionApproval,
+  SessionApprovalModeSnapshot,
+  SessionApprovalResult,
+  SetSessionApprovalModeInput,
+} from "@/types/session/SessionApproval.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type {
   ListSessionMessagesInput,
   SessionMessagePage,
 } from "@/types/session/SessionMessage.js";
-import type {
-  ListSessionMessageChangesInput,
-  SessionMessageMutationPage,
-} from "@/types/session/SessionMessageMutation.js";
-import type {
-  ShellApprovalMode,
-  ShellApprovalDecisionResult,
-  ShellApprovalModeUpdateResult,
-  ShellApprovalModeOption,
-  ShellSessionApprovalModeView,
-  ShellApprovalView,
-} from "@downcity/shell";
 
 /**
  * Transport 持有的事件订阅句柄。
@@ -71,7 +66,7 @@ export type RemoteSessionTransport = {
   subscribe(params: {
     session_id: string;
     on_ready: () => void;
-    on_event: (event: AgentSessionEvent) => void;
+    on_event: (mutation: SessionMutation) => void;
     /** 底层事件连接结束后的通知；主动关闭不触发。 */
     on_close: (error?: unknown) => void;
   }): Promise<TransportSubscription>;
@@ -80,11 +75,6 @@ export type RemoteSessionTransport = {
     session_id: string,
     input?: ListSessionMessagesInput,
   ): Promise<SessionMessagePage>;
-  /** 读取增量 Message Mutation。 */
-  message_changes(
-    session_id: string,
-    input: ListSessionMessageChangesInput,
-  ): Promise<SessionMessageMutationPage>;
   /** 读取 system snapshot。 */
   system(session_id: string): Promise<AgentSessionSystemSnapshot>;
   /** 分叉 session。 */
@@ -92,6 +82,20 @@ export type RemoteSessionTransport = {
     session_id: string,
     input?: AgentSessionForkInput | string,
   ): Promise<AgentSessionInfo>;
+  /** 列出指定 Session 的 pending 工具审批。 */
+  approvals(session_id: string): Promise<SessionApproval[]>;
+  /** 读取指定 Session 的工具审批模式。 */
+  approval_mode(session_id: string): Promise<SessionApprovalModeSnapshot>;
+  /** 更新指定 Session 的工具审批模式。 */
+  set_approval_mode(
+    session_id: string,
+    input: SetSessionApprovalModeInput,
+  ): Promise<SessionApprovalModeSnapshot>;
+  /** 处理指定 Session 的 pending 工具审批。 */
+  resolve_approval(
+    session_id: string,
+    input: ResolveSessionApprovalInput,
+  ): Promise<SessionApprovalResult>;
 };
 
 /**
@@ -112,21 +116,6 @@ export type RemoteAgentTransport = RemoteSessionTransport & {
   run_plugin_action(
     input: RemoteAgentPluginActionInput,
   ): Promise<RemoteAgentPluginActionResult>;
-  /** 列出 shell approvals。 */
-  approvals(): Promise<ShellApprovalView[]>;
-  /** 列出 shell approval modes。 */
-  approval_modes(): Promise<ShellApprovalModeOption[]>;
-  /** 读取 shell approval mode。 */
-  approval_mode(input: { session_id: string }): Promise<ShellSessionApprovalModeView>;
-  /** 设置 shell approval mode。 */
-  set_approval_mode(input: {
-    session_id: string;
-    mode: ShellApprovalMode;
-  }): Promise<ShellApprovalModeUpdateResult>;
-  /** 批准 shell approval。 */
-  approve(input: { approval_id: string }): Promise<ShellApprovalDecisionResult>;
-  /** 拒绝 shell approval。 */
-  deny(input: { approval_id: string }): Promise<ShellApprovalDecisionResult>;
   /** 关闭 transport 持有的长期连接。 */
   close?(): Promise<void>;
 };

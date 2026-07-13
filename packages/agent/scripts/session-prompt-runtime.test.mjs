@@ -135,7 +135,7 @@ test("SessionPromptRuntime merges queued prompts at the next step boundary", asy
   assert.equal(secondTurn.result, result);
   assert.deepEqual(
     events.map((event) => event.type),
-    ["turn-start", "turn-finish"],
+    ["start", "finish"],
   );
 });
 
@@ -192,7 +192,7 @@ test("SessionPromptRuntime moves unmerged prompts into the next turn", async () 
   assert.equal(secondResult.text, "done:second");
   assert.deepEqual(
     events.map((event) => event.type),
-    ["turn-start", "turn-finish", "turn-start", "turn-finish"],
+    ["start", "finish", "start", "finish"],
   );
 });
 
@@ -253,7 +253,7 @@ test("SessionPromptRuntime stops current turn and cancels unmerged queued prompt
   );
   assert.deepEqual(
     events.map((event) => event.type),
-    ["turn-start", "turn-start", "turn-finish", "turn-finish"],
+    ["start", "start", "finish", "finish"],
   );
 });
 

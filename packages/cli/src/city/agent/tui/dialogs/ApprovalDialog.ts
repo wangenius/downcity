@@ -1,9 +1,9 @@
 /**
- * unrestricted sandbox 审批选择器弹窗。
+ * unrestricted sandbox 内联审批面板。
  *
  * 关键点（中文）
- * - 当模型请求 unrestricted sandbox 时自动弹出，让用户选择 Approve / Deny。
- * - 上下方向键选择，Enter 确认，Esc / Ctrl+C 取消（保持 pending）。
+ * - 当模型请求 unrestricted sandbox 时显示在输入框上方，让用户选择 Approve / Deny。
+ * - 上下方向键选择，Enter 确认，Esc / Ctrl+C 按安全语义拒绝请求。
  * - 与 SessionPicker 风格一致：primary 色边框、指针、底部 hint。
  */
 
@@ -24,12 +24,12 @@ const ELLIPSIS = "…";
 /**
  * 审批决策结果。
  */
-export type ApprovalDecision = "approve" | "deny" | "cancel";
+export type ApprovalDecision = "approve" | "deny";
 
 /**
- * 审批选择器弹窗。
+ * 内联审批选择面板。
  */
-export class ApprovalDialogComponent implements Component, Focusable {
+export class ApprovalPanelComponent implements Component, Focusable {
   private readonly approval_id: string;
   private readonly tool_name: string;
   private readonly cmd: string;
@@ -41,7 +41,7 @@ export class ApprovalDialogComponent implements Component, Focusable {
   focused = false;
 
   /**
-   * @param params 弹窗参数。
+   * @param params 面板参数。
    */
   constructor(params: {
     approval_id: string;
@@ -78,13 +78,13 @@ export class ApprovalDialogComponent implements Component, Focusable {
       matchesKey(data, "ctrl+c") ||
       matchesKey(data, "ctrl+d")
     ) {
-      this.on_decide("cancel");
+      this.on_decide("deny");
       return;
     }
   }
 
   /**
-   * 渲染审批弹窗。
+   * 渲染审批面板。
    *
    * @param width 可用宽度。
    * @returns 渲染后的行数组。
@@ -119,7 +119,7 @@ export class ApprovalDialogComponent implements Component, Focusable {
    * 无缓存需要清理。
    */
   invalidate(): void {
-    // 弹窗内容不变，无需刷新。
+    // 面板内容不变，无需刷新。
   }
 
   private render_title(inner_width: number): string {
@@ -148,7 +148,7 @@ export class ApprovalDialogComponent implements Component, Focusable {
   }
 
   private render_hint(inner_width: number): string {
-    const hint = "↑↓ navigate · Enter confirm · Esc cancel";
+    const hint = "↑↓ navigate · Enter confirm · Esc deny";
     return " " + truncateToWidth(current_theme.dim_fg("textMuted", hint), inner_width, ELLIPSIS);
   }
 }

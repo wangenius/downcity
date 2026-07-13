@@ -58,7 +58,13 @@ then execution fails because the session has no default model.
 
 ## What about remote sessions
 
-Remote sessions do not currently support setting the model this way from the client side.
+Remote sessions reject a local model instance, but can request a server-side model by stable ID:
+
+```ts
+await remote_session.set({ modelId: "quality" });
+```
+
+The server Agent must provide `resolve_model` to resolve that ID.
 
 ## What about Downcity Agent projects
 

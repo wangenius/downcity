@@ -20,7 +20,7 @@ The same directory also contains:
 and the in-progress assistant snapshot:
 
 ```text
-<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/inflight.json
+<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/assistant_message.json
 ```
 
 ## Why storage is partitioned by `agentId`
@@ -38,9 +38,9 @@ This is also one of the reasons why `id` should not be treated as a casual displ
 - session metadata
 - archive directories
 
-`messages.jsonl` stores stable history.
+Each line in `messages.jsonl` stores a complete `SessionMessage` snapshot. Action state changes append a new snapshot with the same `message_id` and a higher `revision`; readers keep only the latest revision.
 
-`inflight.json` stores the current unfinished assistant UIMessage. During multi-step tool execution, the SDK keeps rewriting this snapshot so already-produced text and tool parts survive interruptions. When execution finishes normally, the final assistant message is committed into `messages.jsonl` and `inflight.json` is removed.
+`assistant_message.json` stores the current unfinished Assistant Message. Streaming `part` and `delta` changes only update this atomic snapshot and never enter `messages.jsonl`. On normal completion the final Assistant is appended to history and the draft is removed; after an interrupted process, the SDK finalizes the draft as a `stopped` history message.
 
 If you are troubleshooting, replaying history, or running multi-agent experiments, this persisted data is extremely useful.
 

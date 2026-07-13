@@ -25,14 +25,10 @@ import type {
   SessionMessagePage,
 } from "@/types/session/SessionMessage.js";
 import type {
-  ListSessionMessageChangesInput,
-  SessionMessageMutationPage,
-} from "@/types/session/SessionMessageMutation.js";
-import type {
   RemoteAgentPluginActionInput,
   RemoteAgentPluginActionResult,
 } from "@/types/agent/RemoteAgentPluginAction.js";
-import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
+import type { SessionMutation } from "@/types/session/SessionMutation.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import { RpcClient, parse_rpc_url } from "@/rpc/Client.js";
@@ -41,13 +37,12 @@ import type {
   TransportSubscription,
 } from "@/agent/remote/RemoteTransport.js";
 import type {
-  ShellApprovalMode,
-  ShellApprovalDecisionResult,
-  ShellApprovalModeUpdateResult,
-  ShellApprovalModeOption,
-  ShellSessionApprovalModeView,
-  ShellApprovalView,
-} from "@downcity/shell";
+  ResolveSessionApprovalInput,
+  SessionApproval,
+  SessionApprovalModeSnapshot,
+  SessionApprovalResult,
+  SetSessionApprovalModeInput,
+} from "@/types/session/SessionApproval.js";
 
 /**
  * 本机 RPC transport。
@@ -91,7 +86,7 @@ export class RpcRemoteAgentTransport implements RemoteAgentTransport {
   async subscribe(params: {
     session_id: string;
     on_ready: () => void;
-    on_event: (event: AgentSessionEvent) => void;
+    on_event: (event: SessionMutation) => void;
     on_close: (error?: unknown) => void;
   }): Promise<TransportSubscription> {
     const subscription = await this.client.subscribe_session({
@@ -115,13 +110,6 @@ export class RpcRemoteAgentTransport implements RemoteAgentTransport {
       session_id,
       input,
     });
-  }
-
-  async message_changes(
-    session_id: string,
-    input: ListSessionMessageChangesInput,
-  ): Promise<SessionMessageMutationPage> {
-    return await this.client.get_session_message_changes({ session_id, input });
   }
 
   async system(session_id: string): Promise<AgentSessionSystemSnapshot> {
@@ -172,31 +160,26 @@ export class RpcRemoteAgentTransport implements RemoteAgentTransport {
     });
   }
 
-  async approvals(): Promise<ShellApprovalView[]> {
-    return await this.client.list_shell_approvals();
+  async approvals(session_id: string): Promise<SessionApproval[]> {
+    return await this.client.get_session_approvals(session_id);
   }
 
-  async approval_modes(): Promise<ShellApprovalModeOption[]> {
-    return await this.client.list_shell_approval_modes();
+  async approval_mode(session_id: string): Promise<SessionApprovalModeSnapshot> {
+    return await this.client.get_session_approval_mode(session_id);
   }
 
-  async approval_mode(input: { session_id: string }): Promise<ShellSessionApprovalModeView> {
-    return await this.client.get_shell_approval_mode(input.session_id);
+  async set_approval_mode(
+    session_id: string,
+    input: SetSessionApprovalModeInput,
+  ): Promise<SessionApprovalModeSnapshot> {
+    return await this.client.set_session_approval_mode(session_id, input);
   }
 
-  async set_approval_mode(input: {
-    session_id: string;
-    mode: ShellApprovalMode;
-  }): Promise<ShellApprovalModeUpdateResult> {
-    return await this.client.set_shell_approval_mode(input);
-  }
-
-  async approve(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
-    return await this.client.approve_shell_approval(input.approval_id);
-  }
-
-  async deny(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
-    return await this.client.deny_shell_approval(input.approval_id);
+  async resolve_approval(
+    session_id: string,
+    input: ResolveSessionApprovalInput,
+  ): Promise<SessionApprovalResult> {
+    return await this.client.resolve_session_approval(session_id, input);
   }
 
   async close(): Promise<void> {

@@ -30,32 +30,31 @@ description: 远程 Agent 客户端的核心公开接口
 
 ```ts
 await agent.runPluginAction({
-  plugin: "shell",
-  action: "approve",
+  plugin: "example",
+  action: "refresh",
   payload: {
-    approvalId: "ap_xxx",
+    scope: "current-session",
   },
 });
 ```
 
-对于 unrestricted shell 审批流程，前端订阅 session event，遇到 `tool-approval-request` 后调用 approve 或 deny：
+Shell 审批属于具体远程 Session，不属于 `RemoteAgent` 顶层。可以查询后处理：
 
 ```ts
-session.subscribe(async (event) => {
-  if (event.type !== "tool-approval-request") return;
+const approvals = await session.approvals();
+await session.resolve_approval({
+  approval_id: approvals[0].approval_id,
+  decision: "approved",
+});
+```
 
-  const displayText = event.operation === "write"
-    ? event.inputPreview || event.cmd
-    : event.cmd;
-  const approved = window.confirm(`${displayText}\n\n${event.reason}`);
+也可以在统一 Mutation 流里处理 `approval-required` Tool Part：
 
-  await agent.runPluginAction({
-    plugin: "shell",
-    action: approved ? "approve" : "deny",
-    payload: {
-      approvalId: event.approvalId,
-    },
-  });
+```ts
+session.subscribe(async (mutation, reply) => {
+  if (mutation.variant === "part" && mutation.type === "tool" && mutation.part.state === "approval-required") {
+    await reply.approval({ decision: "approved" });
+  }
 });
 ```
 
@@ -65,7 +64,7 @@ session.subscribe(async (event) => {
 
 ```ts
 new RemoteAgent({
-  url: "http://127.0.0.1:5314/agents/repo-helper",
+  url: "http://127.0.0.1:5314",
 });
 ```
 
@@ -85,7 +84,7 @@ new RemoteAgent({
 
 ## 一个重要限制
 
-远程 session 当前不支持客户端直接传本地模型实例。
+远程 session 不支持客户端直接传本地模型实例，但支持 `session.set({ modelId })`。
 
 也就是说：
 

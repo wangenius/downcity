@@ -11,7 +11,7 @@ import type { Logger } from "@downcity/agent";
 import type { AgentContext } from "@downcity/agent";
 import type { ChatQueueWorkerConfig } from "@/chat/types/ChatQueueWorker.js";
 import type { ChatQueueItem } from "@/chat/types/ChatQueue.js";
-import type { SessionMessageMutation } from "@downcity/agent";
+import type { SessionMutation } from "@downcity/agent";
 import type { AgentSessionTurnResult } from "@downcity/agent";
 import {
   getSharedChatQueueStore,
@@ -332,9 +332,9 @@ export class ChatQueueWorker {
 
   private async handleLaneSessionEvent(
     lane: LaneState,
-    event: SessionMessageMutation,
+    event: SessionMutation,
   ): Promise<void> {
-    const turn_id = String(event.turn_id || "").trim();
+    const turn_id = String("turn_id" in event ? event.turn_id || "" : "").trim();
     if (!turn_id) return;
     const observation = lane.turnObservers.get(turn_id);
     if (!observation) return;

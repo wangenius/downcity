@@ -5,7 +5,7 @@ description: HTTP transport layer for local Agent — exposes session access ove
 
 # AgentHTTP
 
-`AgentHTTP` is the HTTP transport for a local `Agent`. It exposes the agent's session and control surfaces over HTTP endpoints, making it accessible from browser clients, curl, or any HTTP-capable tool.
+`AgentHTTP` is the HTTP transport for a local `Agent`. It exposes the RemoteAgent session API, remote plugin actions, and Shell approval operations over HTTP.
 
 Only available when you install `@downcity/server`:
 
@@ -49,7 +49,7 @@ const binding = await http.server().listen({
 });
 ```
 
-Returns `AgentHttpBinding` with server info, and `AgentHttpServerHandle` which you can use to read the raw Hono app for custom route additions.
+Returns `AgentHttpBinding` with the server URL, host, and port. Use `router()` before startup when you need to mount the transport on your own Hono app.
 
 ### `close()`
 

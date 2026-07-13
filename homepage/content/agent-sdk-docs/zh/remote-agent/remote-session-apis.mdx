@@ -10,8 +10,10 @@ description: RemoteAgent 下 session 可用的核心方法和能力边界
 - `get_info()`
 - `prompt()`
 - `subscribe()`
-- `records()`
+- `messages()`
 - `system()`
+- `approvals()` / `resolve_approval()`
+- `approval_mode()` / `set_approval_mode()`
 - `fork()`
 
 这些 API 尽量和本地 session 的使用面保持一致，方便你在本地和远程模式之间复用同一套心智模型。
@@ -47,10 +49,12 @@ const unsubscribe = session.subscribe((event) => {
 unsubscribe();
 ```
 
+订阅会收到 `message | part | delta | turn | session` 五类 Mutation。审批请求表现为状态为 `approval-required` 的 Tool Part，可通过回调第二个参数的 `reply.approval(...)` 直接处理。
+
 ## 历史消息
 
 ```ts
-const records = await session.records({
+const messages = await session.messages({
   limit: 50,
 });
 ```

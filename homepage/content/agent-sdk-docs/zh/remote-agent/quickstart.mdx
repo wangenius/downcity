@@ -21,7 +21,7 @@ description: 连接一个已经由 Downcity 通过 HTTP 暴露，或由 Agent RP
 downcity agent start
 ```
 
-### 方式 2：服务端启动 RPC
+### 方式 2：服务端启动独立 RPC 或 HTTP
 
 ```ts
 import { Agent } from "@downcity/agent";
@@ -42,7 +42,7 @@ await rpc.listen({ host: "127.0.0.1", port: 15314 });
 import { RemoteAgent } from "@downcity/agent";
 
 const agent = new RemoteAgent({
-  url: "http://127.0.0.1:5314/agents/repo-helper",
+  url: "http://127.0.0.1:5314",
 });
 
 const session = await agent.sessions.create();
@@ -65,13 +65,19 @@ const agent = new RemoteAgent({
 
 ## 一个重要限制
 
-远程 session 当前不支持：
+远程 session 不支持传本地模型实例：
 
 ```ts
 await session.set({ model });
 ```
 
-模型应该留在服务端本地持有。
+但是可以按服务端已注册的稳定 ID 切换模型：
+
+```ts
+await session.set({ modelId: "quality" });
+```
+
+模型实例始终留在服务端，并由服务端 Agent 的 `resolve_model` 解析。
 
 如果你是纯 SDK 模式，应该在服务端本地 `Agent` 或本地 `session` 上设置模型。
 

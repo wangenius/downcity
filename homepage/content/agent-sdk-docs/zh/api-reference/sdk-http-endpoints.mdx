@@ -14,12 +14,18 @@ description: Downcity 为 RemoteAgent 暴露的最小 HTTP session 接口集合
 - `GET /api/sdk/sessions`
 - `POST /api/sdk/sessions`
 - `GET /api/sdk/sessions/:sessionId`
-- `GET /api/sdk/sessions/:sessionId/records`
+- `PUT /api/sdk/sessions/:sessionId/model`
 - `POST /api/sdk/sessions/:sessionId/prompt`
 - `GET /api/sdk/sessions/:sessionId/events`
 - `GET /api/sdk/sessions/:sessionId/messages`
 - `GET /api/sdk/sessions/:sessionId/system`
+- `GET /api/sdk/sessions/:sessionId/approvals`
+- `GET` / `POST /api/sdk/sessions/:sessionId/approval-mode`
+- `POST /api/sdk/sessions/:sessionId/approval`
 - `POST /api/sdk/sessions/:sessionId/fork`
+- `POST /api/sdk/sessions/:sessionId/archive`
+- `GET` / `DELETE /api/sdk/archived-sessions`
+- `POST /api/plugins/action`
 
 ## 设计目标
 

@@ -1,5 +1,5 @@
 /**
- * Session 模型选择器弹窗。
+ * Session 模型内联选择器。
  *
  * 关键点（中文）
  * - 展示 Federation 当前可用于 Agent 对话的模型。
@@ -25,7 +25,7 @@ import { resolve_tui_visible_scroll } from "@/shared/tui/TuiText.js";
 const BORDER_HORIZONTAL = "─";
 const ELLIPSIS = "…";
 
-/** 模型选择器。 */
+/** 输入框下方的模型选择器。 */
 export class ModelPickerComponent implements Component, Focusable {
   private readonly models: AgentChatModelChoice[];
   private filtered_models: AgentChatModelChoice[];

@@ -23,7 +23,8 @@ await session.set({ model });
 ## 推荐做法
 
 - 在服务端本地 Agent 上配置模型
-- 或在 Downcity 集成模式里，通过 `execution.modelId` 绑定 `Federation AIService` 模型
+- 或按服务端已经配置的稳定 ID 调用 `await session.set({ modelId })`
+- 在 Downcity 集成模式里，通过 `execution.modelId` 绑定 `Federation AIService` 模型
 - 客户端只做远程调用
 
 如果你把模型控制逻辑也放到客户端，就很容易和当前能力边界冲突。

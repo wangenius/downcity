@@ -58,10 +58,14 @@ test("RemoteSession reconnects the event pump after transport close", async () =
   const second_turn = await session.prompt({ query: "second" });
   assert.equal(subscriptions.length, 2);
   subscriptions[1].on_event({
-    type: "turn-finish",
-    turnId: second_turn.id,
+    mutation_id: "turn-finish-2",
+    variant: "turn",
+    type: "finish",
+    session_id: "session_test",
+    turn_id: second_turn.id,
+    status: "completed",
+    created_at: Date.now(),
     text: "done",
-    success: true,
   });
   assert.equal((await second_turn.finished).text, "done");
 });

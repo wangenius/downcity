@@ -1,15 +1,25 @@
 ---
 title: session.subscribe()
-description: 订阅本地或远程 Session 后续产生的 Session turn 事件
+description: 订阅本地或远程 Session 的统一实时 Mutation
 ---
 
 # `session.subscribe()`
 
-`session.subscribe()` 通过回调暴露 session 级未来事件流。
+`session.subscribe()` 是 Session 唯一的实时订阅入口。它同时暴露 Message、Assistant Part、文本增量、Turn 生命周期和 Session 状态变化。
 
 ```ts
-const unsubscribe = session.subscribe((event) => {
-  console.log(event);
+const unsubscribe = session.subscribe(async (mutation, reply) => {
+  if (mutation.variant === "delta" && mutation.type === "text") {
+    process.stdout.write(mutation.delta);
+  }
+
+  if (
+    mutation.variant === "part" &&
+    mutation.type === "tool" &&
+    mutation.part.state === "approval-required"
+  ) {
+    await reply.approval({ decision: "approved" });
+  }
 });
 ```
 
@@ -17,12 +27,6 @@ const unsubscribe = session.subscribe((event) => {
 
 ```ts
 const session = await agent.sessions.get("repo-analysis");
-
-const unsubscribe = session.subscribe((event) => {
-  if (event.type === "text-delta") {
-    process.stdout.write(event.text);
-  }
-});
 
 const turn = await session.prompt({
   query: "分析这个仓库",
@@ -37,20 +41,32 @@ await turn.finished;
 unsubscribe();
 ```
 
-## 事件模型
+## Mutation 模型
 
-当前本地 Session actor 暴露的最小 turn 事件集合包括：
+Mutation 分成五类：
 
-- `turn-start`
-- `text-delta`
-- `reasoning-delta`
-- `tool-call`
-- `tool-result`
-- `turn-finish`
+- `variant: "message"`：完整 user、assistant、action 或 error Message 快照
+- `variant: "part"`：assistant 的完整 part 快照，例如 tool call / tool result
+- `variant: "delta"`：`text` 或 `reasoning` 的新增片段
+- `variant: "turn"`：Turn 的开始与最终状态
+- `variant: "session"`：Session 自身状态变化，例如标题更新
 
-`subscribe()` 不负责历史回放。
+`message`、`part` 和 `delta` 都在对应 Message 或 Assistant 草稿持久化成功后发布；`turn` 与 `session` 描述实时运行状态。Mutation 本身不写入历史日志，也不负责历史回放或断线补拉；初始加载与重连恢复使用 `messages()` 和 `get_info()`。
 
-如果你要读过去的消息，请继续使用 `session.records({ limit })`。
+```ts
+const page = await session.messages({ limit: 100 });
+const unsubscribe = session.subscribe(apply_mutation);
+```
+
+## Tool 审批
+
+Tool Part 按同一个 `part_id` 原地更新：
+
+```text
+ready -> approval-required -> running | failed
+```
+
+收到 `approval-required` Part 时，可以通过当前回调的 `reply.approval()` 直接回复，也可以稍后调用 `session.resolve_approval(...)`。`reply.approval()` 只能用于当前审批 Mutation，其他 Mutation 调用会失败。
 
 ## 为什么选择回调订阅
 

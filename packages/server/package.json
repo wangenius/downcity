@@ -1,6 +1,6 @@
 {
   "name": "@downcity/server",
-  "version": "0.1.67",
+  "version": "0.1.70",
   "type": "module",
   "description": "Downcity Server — local transport layer for Agent runtimes",
   "main": "./bin/index.js",
@@ -36,7 +36,7 @@
     "build": "rm -rf bin tsconfig.tsbuildinfo && tsc && tsc-alias -f",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
-    "test:session-model": "pnpm -C ../agent build && pnpm build && node --test scripts/session-model.test.mjs",
+    "test:session-model": "pnpm -C ../agent build && pnpm build && node --test scripts/*.test.mjs",
     "prepack": "npm run build && node ../../scripts/rewrite-workspace-dependencies.mjs prepare ./package.json",
     "postpack": "node ../../scripts/rewrite-workspace-dependencies.mjs restore ./package.json"
   },

@@ -106,6 +106,8 @@ export class Shell {
       approval_id: item.approvalId,
       shell_id: item.shellId,
       ...(item.ownerContextId ? { session_id: item.ownerContextId } : {}),
+      ...(item.turnId ? { turn_id: item.turnId } : {}),
+      ...(item.toolCallId ? { tool_call_id: item.toolCallId } : {}),
       tool_name: item.toolName,
       cmd: item.cmd,
       operation: item.operation,
@@ -274,8 +276,8 @@ export class Shell {
       session: emit_event
         ? {
             get: (target_session_id) => ({
-              publishEvent: (event) => {
-                emit_event({
+              publishEvent: async (event) => {
+                await emit_event({
                   ...event,
                   session_id: String(target_session_id || session_id || "").trim(),
                 });

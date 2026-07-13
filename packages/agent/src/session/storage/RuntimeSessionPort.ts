@@ -11,12 +11,9 @@ import type { SessionHistoryStore } from "@/executor/store/history/SessionHistor
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type {
-  AgentSessionEvent,
-} from "@/types/sdk/AgentSessionEvent.js";
-import type {
-  SessionMessageMutationSubscriber,
-  SessionMessageMutationUnsubscribe,
-} from "@/types/session/SessionMessageMutation.js";
+  SessionMutationSubscriber,
+  SessionMutationUnsubscribe,
+} from "@/types/session/SessionMutation.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 
 /**
@@ -43,12 +40,12 @@ export interface CreateRuntimeSessionPortParams {
    * 订阅当前 session 的 future 事件。
    */
   subscribe: (
-    subscriber: SessionMessageMutationSubscriber,
-  ) => SessionMessageMutationUnsubscribe;
+    subscriber: SessionMutationSubscriber,
+  ) => SessionMutationUnsubscribe;
   /**
    * 发布一条 session runtime 事件。
    */
-  publishEvent: (event: AgentSessionEvent) => void;
+  publishEvent: SessionPort["publishEvent"];
   /**
    * 追加 user 消息到底层历史。
    */
@@ -92,8 +89,8 @@ export function createRuntimeSessionPort(
     subscribe: (subscriber) => {
       return params.subscribe(subscriber);
     },
-    publishEvent: (event) => {
-      params.publishEvent(event);
+    publishEvent: async (event) => {
+      await params.publishEvent(event);
     },
     append_user_message: async (messageParams) => {
       await params.append_user_message(messageParams);

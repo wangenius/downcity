@@ -1,0 +1,20 @@
+---
+title: session.messages()
+description: Read paginated persisted Message snapshots for a Session
+---
+
+# `session.messages()`
+
+`session.messages()` returns persisted Message snapshots ordered by `sequence`.
+
+```ts
+const page = await session.messages({ limit: 100 });
+
+for (const message of page.items) {
+  render_message(message);
+}
+```
+
+The page contains `items`, `total`, `has_more`, and an optional `next_cursor`. It accepts `limit`, `cursor`, `before_sequence`, `through_sequence`, and `include_internal`.
+
+Use `session.subscribe()` for live updates after the subscription is established. After reconnecting, reload a `messages()` snapshot and subscribe again.

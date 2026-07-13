@@ -49,15 +49,28 @@ export type {
   SessionUserMessagePart,
 } from "./types/session/SessionMessage.js";
 export {
-  is_session_message_mutation,
-} from "./types/session/SessionMessageMutation.js";
+  is_session_mutation,
+} from "./types/session/SessionMutation.js";
 export type {
-  ListSessionMessageChangesInput,
+  SessionDeltaMutation,
   SessionMessageMutation,
-  SessionMessageMutationPage,
-  SessionMessageMutationSubscriber,
-  SessionMessageMutationUnsubscribe,
-} from "./types/session/SessionMessageMutation.js";
+  SessionMutation,
+  SessionMutationReply,
+  SessionMutationSubscriber,
+  SessionMutationUnsubscribe,
+  SessionPartMutation,
+  SessionStateMutation,
+  SessionTurnMutation,
+} from "./types/session/SessionMutation.js";
+export type {
+  ResolveSessionApprovalInput,
+  SessionApproval,
+  SessionApprovalDecision,
+  SessionApprovalMode,
+  SessionApprovalModeSnapshot,
+  SessionApprovalResult,
+  SetSessionApprovalModeInput,
+} from "./types/session/SessionApproval.js";
 export type {
   AgentOptions,
   AgentSessionConstructor,
@@ -74,11 +87,6 @@ export type {
   RemoteAgentPluginActionInput,
   RemoteAgentPluginActionResult,
 } from "./types/agent/RemoteAgentPluginAction.js";
-export type {
-  AgentSessionEvent,
-  AgentSessionSubscriber,
-  AgentSessionUnsubscribe,
-} from "./types/sdk/AgentSessionEvent.js";
 export type {
   AgentSessionActionCallback,
   AgentSessionActionEvent,

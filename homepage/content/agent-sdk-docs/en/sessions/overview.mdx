@@ -15,11 +15,13 @@ In the SDK, the thing that actually executes work is the session.
 const session = await agent.sessions.create();
 await session.set({ model });
 
-const turn = await session.prompt({ query: "Continue" });
-
-const unsubscribe = session.subscribe((event) => {
-  console.log(event);
+const unsubscribe = session.subscribe((mutation) => {
+  if (mutation.variant === "delta" && mutation.type === "text") {
+    process.stdout.write(mutation.delta);
+  }
 });
+
+const turn = await session.prompt({ query: "Continue" });
 
 await turn.finished;
 ```
@@ -41,8 +43,10 @@ await turn.finished;
 - `prompt`
 - `stop`
 - `subscribe`
-- `history`
+- `messages`
 - `system`
+- `approvals` / `resolve_approval`
+- `approval_mode` / `set_approval_mode`
 - `fork`
 
 If you remember only one thing, remember this: the real working object in the SDK is not `Agent` itself, but the `session`.

@@ -29,14 +29,10 @@ import type { SessionHistoryStore } from "@/executor/store/history/SessionHistor
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type {
-  AgentSessionEvent,
-  AgentSessionSubscriber,
-  AgentSessionUnsubscribe,
-} from "@/types/sdk/AgentSessionEvent.js";
-import type {
-  SessionMessageMutationSubscriber,
-  SessionMessageMutationUnsubscribe,
-} from "@/types/session/SessionMessageMutation.js";
+  SessionMutationSubscriber,
+  SessionMutationUnsubscribe,
+} from "@/types/session/SessionMutation.js";
+import type { SessionApprovalRuntimeEvent } from "@/types/session/SessionApproval.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 
 /**
@@ -140,8 +136,8 @@ export interface SessionPort {
    * - 当前 Message snapshot 通过公开 SDK `session.messages()` 读取。
    */
   subscribe(
-    subscriber: SessionMessageMutationSubscriber,
-  ): SessionMessageMutationUnsubscribe;
+    subscriber: SessionMutationSubscriber,
+  ): SessionMutationUnsubscribe;
   /**
    * 发布一条 session runtime 事件。
    *
@@ -149,7 +145,7 @@ export interface SessionPort {
    * - plugin runtime 用它把审批、外部进度等非模型 chunk 事件推送给订阅方。
    * - 历史消息持久化仍由 append_user_message / append_assistant_message 负责。
    */
-  publishEvent(event: AgentSessionEvent): void;
+  publishEvent(event: SessionApprovalRuntimeEvent): Promise<void>;
   /**
    * 追加一条 user 消息。
    */

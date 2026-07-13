@@ -1,75 +1,24 @@
 ---
 title: Agent Lifecycle
-description: The lifecycle of an Agent instance from creation to shutdown
+description: Construct, ready, execute, and dispose an Agent
 ---
 
 # Agent Lifecycle
 
-An Agent instance moves through a simple lifecycle: create, start, execute, stop.
-
-## 1. Create
-
-Instantiate the Agent with constructor options:
+`new Agent(options)` starts plugin lifecycle and ActionSchedule during construction. There is no `agent.start()` or `agent.stop()`.
 
 ```ts
-const agent = new Agent({
-  id: "my-agent",
-  model: myModel,
-  tools: [myTool],
-  plugins: [myPlugin],
-});
+const agent = new Agent({ id: "my-agent", path: process.cwd(), model });
+
+await agent.ready();
+
+const session = await agent.sessions.create();
+const turn = await session.prompt({ query: "Start" });
+await turn.finished;
+
+await agent.dispose();
 ```
 
-At this stage, the Agent is configured but not running. No plugins are loaded, no sessions exist, and no HTTP server is listening.
+Sessions wait for Agent readiness before their first execution, so `ready()` is an optional explicit barrier. It is useful before reading plugin state or exposing a transport. `dispose()` stops plugin lifecycle, ActionSchedule, and Shell resources; callers must separately close transports created by `AgentHTTP` or `AgentRPC`.
 
-## 2. Start
-
-```ts
-await agent.start();
-```
-
-During startup, the Agent will:
-
-- validate the project directory (if `path` is provided)
-- merge host env with project `.env`
-- initialize all plugins (call their `init` hooks)
-- start the HTTP server (if configured in `start`)
-
-After `start()`, the Agent is ready to accept messages and tasks.
-
-## 3. Execute
-
-Once running, the Agent can be entered through multiple surfaces:
-
-- HTTP requests (if the HTTP server is enabled)
-- Direct SDK calls (`agent.session(...)`)
-- Plugin-driven events (chat messages, scheduled tasks)
-
-All paths converge on the same session and executor core.
-
-## 4. Stop
-
-```ts
-await agent.stop();
-```
-
-During shutdown, the Agent will:
-
-- stop accepting new requests
-- gracefully close all active sessions
-- call `destroy` hooks on all plugins
-- stop the HTTP server (if running)
-- persist any pending state
-
-## Recovery
-
-If the process exits unexpectedly, the next `start()` will:
-
-- restore persisted sessions from `.downcity/`
-- reinitialize plugins
-- resume any scheduled tasks
-
-Continue with:
-
-- [Agent SDK](/en/docs/agent/sdk)
-- [Agent SDK Reference](/en/agent-sdk-docs)
+Continue with the [Agent SDK docs](/en/agent-sdk-docs).

@@ -30,7 +30,7 @@ export interface SessionMessageBase {
   turn_id?: string;
   /** Message 的线性位置；创建后永远不变。 */
   sequence: number;
-  /** Message 版本号；每次 Mutation 后递增。 */
+  /** Message 版本号；每次对外发布的消息变化后递增。 */
   revision: number;
   /** 当前 Message 是否默认对用户可见。 */
   visibility: SessionMessageVisibility;
@@ -100,6 +100,8 @@ export interface SessionUserMessage extends SessionMessageBase {
 export interface SessionAssistantTextPart {
   /** Assistant Message 内稳定的 part 标识。 */
   part_id: string;
+  /** Assistant Part 在当前 Message 中的不可变线性顺序，从 1 开始。 */
+  sequence: number;
   /** part 是可见文本或推理文本。 */
   type: "text" | "reasoning";
   /** 当前已经累计的完整文本。 */
@@ -112,6 +114,8 @@ export interface SessionAssistantTextPart {
 export interface SessionAssistantToolPart {
   /** Assistant Message 内稳定的 part 标识。 */
   part_id: string;
+  /** Assistant Part 在当前 Message 中的不可变线性顺序，从 1 开始。 */
+  sequence: number;
   /** part 类型固定为 tool。 */
   type: "tool";
   /** 模型工具调用稳定标识。 */
@@ -119,7 +123,7 @@ export interface SessionAssistantToolPart {
   /** 工具注册名称。 */
   tool_name: string;
   /** 工具当前生命周期状态。 */
-  state: "input-streaming" | "approval-required" | "running" | "completed" | "failed";
+  state: "input-streaming" | "ready" | "approval-required" | "running" | "completed" | "failed";
   /** 流式接收中的参数原文。 */
   input_text?: string;
   /** 收敛后的结构化输入。 */
@@ -136,6 +140,8 @@ export interface SessionAssistantToolPart {
 export interface SessionAssistantFilePart {
   /** Assistant Message 内稳定的 part 标识。 */
   part_id: string;
+  /** Assistant Part 在当前 Message 中的不可变线性顺序，从 1 开始。 */
+  sequence: number;
   /** part 类型固定为 file。 */
   type: "file";
   /** 文件 MIME 类型。 */
@@ -150,6 +156,8 @@ export interface SessionAssistantFilePart {
 export interface SessionAssistantDataPart {
   /** Assistant Message 内稳定的 part 标识。 */
   part_id: string;
+  /** Assistant Part 在当前 Message 中的不可变线性顺序，从 1 开始。 */
+  sequence: number;
   /** part 类型固定为 data。 */
   type: "data";
   /** 对应 AI SDK 的 data-* 类型名称。 */
@@ -242,6 +250,4 @@ export interface SessionMessagePage {
   next_cursor?: string;
   /** 是否仍有更多 Message。 */
   has_more: boolean;
-  /** 当前 snapshot 已包含的最大 commit_sequence。 */
-  latest_commit_sequence: number;
 }

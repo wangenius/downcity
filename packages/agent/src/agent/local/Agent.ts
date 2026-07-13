@@ -15,12 +15,6 @@ import type { AgentModel } from "@/model/CityModelAdapter.js";
 import type { AgentOptions } from "@/types/agent/AgentOptions.js";
 import type { AgentSessions as AgentSessionsApi } from "@/types/agent/SessionActor.js";
 import type {
-  ShellApprovalMode,
-  ShellApprovalDecisionResult,
-  ShellApprovalModeUpdateResult,
-  ShellApprovalModeOption,
-  ShellSessionApprovalModeView,
-  ShellApprovalView,
   Shell,
 } from "@downcity/shell";
 import { Logger } from "@/utils/logger/Logger.js";
@@ -123,55 +117,6 @@ export class Agent {
   }
 
   /**
-   * 列出当前 shell pending approvals。
-   */
-  approvals(): ShellApprovalView[] {
-    return this.shell?.approvals() || [];
-  }
-
-  /**
-   * 列出当前 shell 显式设置过的 approval 模式。
-   */
-  approval_modes(): ShellApprovalModeOption[] {
-    return this.shell?.approval_modes() || [];
-  }
-
-  /**
-   * 读取当前 shell 指定 session 的 approval 模式。
-   */
-  approval_mode(input: { session_id: string }): ShellSessionApprovalModeView {
-    if (!this.shell) throw new Error("Agent shell is not configured");
-    return this.shell.approval_mode(input);
-  }
-
-  /**
-   * 设置当前 shell 指定 session 的 approval 模式。
-   */
-  set_approval_mode(input: {
-    session_id: string;
-    mode: ShellApprovalMode;
-  }): ShellApprovalModeUpdateResult {
-    if (!this.shell) throw new Error("Agent shell is not configured");
-    return this.shell.set_approval_mode(input);
-  }
-
-  /**
-   * 批准当前 shell pending approval。
-   */
-  async approve(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
-    if (!this.shell) throw new Error("Agent shell is not configured");
-    return await this.shell.approve(input);
-  }
-
-  /**
-   * 拒绝当前 shell pending approval。
-   */
-  async deny(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
-    if (!this.shell) throw new Error("Agent shell is not configured");
-    return await this.shell.deny(input);
-  }
-
-  /**
    * 更新当前 SDK Agent 的静态基础指令。
    */
   setInstruction(input: string | string[]): void {
@@ -260,6 +205,7 @@ export class Agent {
       tools: this.tools || assembly.tools,
       logger: this.logger || assembly.logger,
       get_agent_context: () => this.agentContext ?? assembly.agent_context,
+      get_shell: () => this.shell,
       get_instruction: () => this.instruction,
       ensure_agent_ready: async () => {
         await this.backgroundService.ready();

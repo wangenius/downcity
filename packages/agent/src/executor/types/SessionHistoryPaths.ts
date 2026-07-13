@@ -32,7 +32,7 @@ export type SessionHistoryPathOverrides = {
   archiveDirPath?: string;
 
   /**
-   * 运行中 assistant 快照路径（通常是 `.../messages/inflight.json`）。
+   * 运行中 assistant 快照路径（通常是 `.../messages/assistant_message.json`）。
    */
   inflightFilePath?: string;
 };

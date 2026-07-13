@@ -1,8 +1,8 @@
 /**
- * Session 选择器弹窗。
+ * Session 内联选择器。
  *
  * 关键点（中文）
- * - 对齐 Kimi Code DESIGN.md 的列表 dialog 规范。
+ * - 位于输入框下方，不遮挡 transcript。
  * - 顶部/底部使用 primary 色平直边框 `─`。
  * - 选中指针为 `❯ `，当前项行尾标记 ` ← current`。
  * - 支持实时搜索：有 query 时显示 Search 行，Esc 先清 query 再取消。
@@ -151,7 +151,7 @@ export class SessionPickerComponent implements Component, Focusable {
   }
 
   /**
-   * 渲染选择器弹窗。
+   * 渲染内联选择器。
    *
    * @param width 可用宽度。
    * @returns 渲染后的行数组。

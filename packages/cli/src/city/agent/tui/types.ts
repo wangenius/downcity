@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 定义消息流中各种展示单元的统一结构。
- * - 与 @downcity/agent 的 AgentSessionEvent 解耦，便于 UI 侧独立渲染与测试。
+ * - 与 @downcity/agent 的 SessionMutation 解耦，便于 UI 侧独立渲染与测试。
  */
 
 /**
@@ -66,12 +66,31 @@ export interface ToolCallEntry extends BaseEntry {
   /**
    * tool 执行状态。
    * - `pending`：已调用，等待结果。
+   * - `approval-required`：等待用户审批高风险操作。
    * - `success`：已返回结果。
    * - `error`：执行失败。
    */
-  status?: "pending" | "success" | "error";
+  status?: "pending" | "approval-required" | "success" | "error";
+  /** 当前工具等待的审批 ID，仅 approval-required 状态存在。 */
+  approval_id?: string;
   /** 当前卡片是否展开显示完整结果。 */
   expanded?: boolean;
+}
+
+/** Agent Chat 审批面板所需的规范化请求详情。 */
+export interface AgentChatApprovalView {
+  /** 当前审批所属 Session 标识。 */
+  session_id: string;
+  /** 稳定审批 ID。 */
+  approval_id: string;
+  /** 发起审批的工具名称。 */
+  tool_name: string;
+  /** 待执行命令或输入内容。 */
+  cmd: string;
+  /** 待执行操作的工作目录。 */
+  cwd: string;
+  /** 申请 unrestricted 执行的业务原因。 */
+  reason: string;
 }
 
 /**
@@ -154,4 +173,10 @@ export interface AppState {
 
   /** 当前状态栏提示文本。 */
   status_text: string;
+
+  /**
+   * Transcript 相对最新内容向上偏移的行数。
+   * 0 表示跟随最新消息，大于 0 表示用户正在查看历史。
+   */
+  transcript_scroll_offset: number;
 }

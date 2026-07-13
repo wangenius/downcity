@@ -8,7 +8,7 @@
  */
 
 import chalk from "chalk";
-import type { SessionMessageMutation } from "@downcity/agent";
+import type { SessionMutation } from "@downcity/agent";
 import type {
   AgentChatInteractiveRenderSnapshot,
   AgentChatInteractiveRendererPort,
@@ -61,8 +61,8 @@ export class AgentChatInteractiveRenderer implements AgentChatInteractiveRendere
   /**
    * 渲染单个 session 事件。
    */
-  render_event(event: SessionMessageMutation): void {
-    const event_turn_id = event.turn_id || "";
+  render_event(event: SessionMutation): void {
+    const event_turn_id = "turn_id" in event ? event.turn_id || "" : "";
     if (event_turn_id && this.active_turn_id && event_turn_id !== this.active_turn_id) {
       return;
     }
@@ -79,7 +79,7 @@ export class AgentChatInteractiveRenderer implements AgentChatInteractiveRendere
       ) this.stop_spinner();
       return;
     }
-    if (event.type !== "tool") return;
+    if (event.variant !== "part" || event.type !== "tool") return;
     const part = event.part;
     if (!this.tool_call_ids.has(part.tool_call_id)) {
       this.tool_call_ids.add(part.tool_call_id);

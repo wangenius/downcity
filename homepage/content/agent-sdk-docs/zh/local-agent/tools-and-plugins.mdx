@@ -40,13 +40,17 @@ const agent = new Agent({
 
 这会挂载 `shell_exec` 和 `shell_session`。`shell_exec` 适合一次性非交互命令；`shell_session` 适合长任务和需要 stdin 的 PTY 交互式会话。
 
-Unrestricted sandbox 请求通过 Agent 审批：
+Unrestricted sandbox 请求归属发起工具调用的 Session：
 
 ```ts
-const approvals = await agent.approvals();
-await agent.approve({ approval_id: approvals[0].approval_id });
-await agent.deny({ approval_id: approvals[0].approval_id });
+const approvals = await session.approvals();
+await session.resolve_approval({
+  approval_id: approvals[0].approval_id,
+  decision: "approved",
+});
 ```
+
+实时 UI 也可以在 `session.subscribe((mutation, reply) => {})` 收到 `approval-required` Tool Part 时调用 `reply.approval(...)`。
 
 ## plugin 实例
 

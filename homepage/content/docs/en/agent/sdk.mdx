@@ -1,145 +1,45 @@
 ---
 title: Agent SDK
-description: How to use the Agent SDK directly in your code
+description: Embed the Downcity Agent runtime in a Node application
 ---
 
 # Agent SDK
 
-The Agent SDK (`@downcity/agent`) is the core runtime for executing agent work. Everything else — the CLI, the console, the plugins — sits on top of it or connects to it.
-
-## Creating an Agent
+Use `@downcity/agent` to create an Agent, manage Sessions, and execute model calls in the same process. See the [Agent SDK docs](/en/agent-sdk-docs) for the complete API.
 
 ```ts
 import { Agent } from "@downcity/agent";
 
 const agent = new Agent({
   id: "repo-helper",
-  path: "/path/to/project",
-  model: myModel,
-  tools: [myTool],
-  plugins: [myPlugin],
-  env: { ... },
+  path: process.cwd(),
+  model,
+  tools: { search: search_tool },
+  plugins: [plugin],
+  env: { API_KEY: process.env.API_KEY ?? "" },
 });
+
+const session = await agent.sessions.create();
+const turn = await session.prompt({ query: "Inspect this project" });
+const result = await turn.finished;
+
+await agent.dispose();
 ```
 
-## Constructor options
+Construction starts plugin lifecycle and background work. Use `await agent.ready()` when an explicit readiness barrier is needed, and `await agent.dispose()` to release resources. HTTP and RPC are supplied by `AgentHTTP` and `AgentRPC` from `@downcity/server`.
 
-- `id` — stable agent identifier. Used for session storage and runtime directories.
-- `path` — project directory. The Agent reads `.env` here and stores `.downcity` runtime data.
-- `model` — the live model instance. Passed directly, not looked up from a catalog.
-- `tools` — array of tool instances available to the agent.
-- `plugins` — array of plugin instances to load at startup.
-- `env` — host-provided environment variables, overlaid with project `.env`.
-- `config` — Agent config supplied explicitly by the host; the SDK does not read project config files.
-- `plugin_config` — host interface for persisting Plugin config; persistence actions fail explicitly when it is absent.
-- `start` — optional HTTP server config (port, host).
-- `execution` — optional execution binding config.
+## Streaming messages
 
-## Model
-
-The model is the most important dependency. It can be:
-
-- Passed directly to the constructor
-- Set per-session via `session.set({ model })`
-- Resolved from agent config in the CLI global DB when the CLI manages the project
-
-## Tools
-
-Tools are functions the Agent can call during execution. They are attached explicitly:
+`subscribe()` returns the unified live Session Mutation stream:
 
 ```ts
-const agent = new Agent({
-  tools: [searchTool, calculatorTool],
-});
-```
-
-## Plugins
-
-Plugins extend the Agent with capabilities like chat, tasks, memory, and shell. They are attached explicitly:
-
-```ts
-const agent = new Agent({
-  plugins: [chatPlugin, memoryPlugin],
-});
-```
-
-## Environment variables
-
-The Agent merges two env layers at startup:
-
-1. Host-provided env (from `new Agent({ env })` or the CLI runtime).
-2. Project-root `.env` (overlays the host layer).
-
-Runtime metadata vars such as `DC_AGENT_ID`, `DC_AGENT_PATH`, and `DC_SESSION_ID` are injected for the current command context.
-
-## Starting the Agent
-
-```ts
-await agent.start();
-```
-
-This loads plugins, initializes sessions, and starts the HTTP server if configured.
-
-## Stopping the Agent
-
-```ts
-await agent.stop();
-```
-
-This gracefully shuts down plugins, persists state, and cleans up resources.
-
-## Session messages and streaming
-
-A Session exposes one linear Message sequence. The only top-level types are `user`, `assistant`, `action`, and `error`; text, reasoning, tool calls, and files remain ordered parts of an assistant Message.
-
-```ts
-const session = await agent.sessions.get("main");
-
 const unsubscribe = session.subscribe((mutation) => {
-  if (
-    mutation.variant === "delta" &&
-    mutation.type === "text"
-  ) {
+  if (mutation.variant === "delta" && mutation.type === "text") {
     process.stdout.write(mutation.delta);
   }
 });
-
-const turn = await session.prompt({ query: "Inspect this project" });
-const result = await turn.finished;
-unsubscribe();
 ```
 
-Every Mutation delivered by `subscribe()` has already been committed to the Session's `messages.jsonl`. Use `message_id`, `sequence`, and `revision` to apply live changes to the same Message. Use `commit_sequence` to detect gaps and resume after a disconnect.
+Use `session.messages()` for a history snapshot. After a disconnect, reload the snapshot and establish a new subscription.
 
-Read the current Message snapshot:
-
-```ts
-const page = await session.messages({ limit: 100 });
-
-for (const message of page.items) {
-  console.log(message.sequence, message.type);
-}
-```
-
-Resume from the last observed commit:
-
-```ts
-const changes = await session.message_changes({
-  after_commit_sequence: last_commit_sequence,
-  limit: 200,
-});
-
-last_commit_sequence = changes.next_commit_sequence;
-```
-
-The same reducer can consume live `subscribe()` Mutations and values returned by `message_changes()`. Apply Mutations by `commit_sequence`, locate Messages by `message_id`, and render Messages by `sequence`. Do not match streaming output by role counts or array positions.
-
-The HTTP API uses the same protocol:
-
-- `GET /api/sdk/sessions/:sessionId/messages`
-- `GET /api/sdk/sessions/:sessionId/message-changes?after_commit_sequence=0`
-
-Continue with:
-
-- [Agent Lifecycle](/en/docs/agent/lifecycle)
-- [Agent SDK Reference](/en/agent-sdk-docs)
+Continue with the [full Agent SDK docs](/en/agent-sdk-docs).

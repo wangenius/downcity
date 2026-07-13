@@ -58,14 +58,4 @@ console.log(result.success); // false
 console.log(result.error);   // "Turn stopped"
 ```
 
-订阅方也会收到 `turn-finish`：
-
-```ts
-const unsubscribe = session.subscribe((event) => {
-  if (event.type === "turn-finish" && !event.success) {
-    console.log(event.error);
-  }
-});
-```
-
 `turn.finished` 仍然会 resolve，不会因为 stop 而 reject。

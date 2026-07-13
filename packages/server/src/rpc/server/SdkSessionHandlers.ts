@@ -71,10 +71,28 @@ export async function handleSdkSessionRpcRequest(params: {
       write_success(request.id, { messages });
       return true;
     }
-    case "sdk.sessions.message_changes": {
+    case "sdk.sessions.approvals": {
       const session = await options.sessions.get(request.params.sessionId);
-      const changes = await session.message_changes(request.params.input);
-      write_success(request.id, { changes });
+      write_success(request.id, { approvals: await session.approvals() });
+      return true;
+    }
+    case "sdk.sessions.approvalMode": {
+      const session = await options.sessions.get(request.params.sessionId);
+      write_success(request.id, { approval_mode: await session.approval_mode() });
+      return true;
+    }
+    case "sdk.sessions.setApprovalMode": {
+      const session = await options.sessions.get(request.params.sessionId);
+      write_success(request.id, {
+        approval_mode: await session.set_approval_mode(request.params.input),
+      });
+      return true;
+    }
+    case "sdk.sessions.resolveApproval": {
+      const session = await options.sessions.get(request.params.sessionId);
+      write_success(request.id, {
+        result: await session.resolve_approval(request.params.input),
+      });
       return true;
     }
     case "sdk.sessions.system": {
@@ -95,7 +113,7 @@ export async function handleSdkSessionRpcRequest(params: {
         Date.now(),
         Math.random().toString(36).slice(2, 10),
       ].join(":");
-      const unsubscribe = session.subscribe_transport((event) => {
+      const unsubscribe = session.subscribe((event) => {
         write_event({
           type: "event",
           subscriptionId: subscription_id,

@@ -1,68 +1,24 @@
 ---
 title: Remote Session API
-description: The core session methods available under RemoteAgent and their capability boundaries
+description: Core RemoteAgent Session methods and their boundaries
 ---
 
 # Remote Session API
 
-After you obtain a session from `RemoteAgent`, the most common methods are:
-
-- `get_info()`
-- `prompt()`
-- `subscribe()`
-- `records()`
-- `system()`
-- `fork()`
-
-These APIs stay intentionally close to the local session surface so you can reuse nearly the same mental model across local and remote modes.
-
-## Get a session
+Remote Sessions provide `get_info()`, `set({ modelId })`, `prompt()`, `stop()`, `subscribe()`, `messages()`, `system()`, approval methods, and `fork()`.
 
 ```ts
 const session = await agent.sessions.create();
-```
+await session.set({ modelId: "quality" });
 
-To continue an existing remote conversation:
-
-```ts
-const session = await agent.sessions.get("repo-analysis");
-```
-
-That lets you switch to a known remote session instead of always starting over.
-
-## Prompt a turn
-
-```ts
+const unsubscribe = session.subscribe(apply_mutation);
 const turn = await session.prompt({ query: "Continue" });
 await turn.finished;
-```
 
-## Subscribe to future events
-
-```ts
-const unsubscribe = session.subscribe((event) => {
-  console.log(event);
-});
-
+const page = await session.messages({ limit: 50 });
 unsubscribe();
 ```
 
-## Message history
+The subscription emits `message | part | delta | turn | session`. An approval request is an approval-required Tool Part and can be resolved with the callback's `reply.approval(...)` or with `session.resolve_approval(...)`.
 
-```ts
-const records = await session.records({
-  limit: 50,
-});
-```
-
-## System prompts
-
-```ts
-const system = await session.system();
-```
-
-## Fork
-
-```ts
-const next = await session.fork();
-```
+Remote clients cannot send a local model instance. The server resolves `modelId` and owns the resulting model instance.

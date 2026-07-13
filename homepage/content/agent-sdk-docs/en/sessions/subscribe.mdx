@@ -1,60 +1,30 @@
 ---
 title: session.subscribe()
-description: Subscribe to future Session turn events from a local or remote Session
+description: Subscribe to the unified live Mutation stream of a local or remote Session
 ---
 
 # `session.subscribe()`
 
-`session.subscribe()` gives you a session-level future event sequence through a callback.
+`session.subscribe()` is the only live subscription entry point for a Session. It emits Message snapshots, Assistant Parts, text deltas, Turn lifecycle, and Session state changes.
 
 ```ts
-const unsubscribe = session.subscribe((event) => {
-  console.log(event);
-});
-```
+const unsubscribe = session.subscribe(async (mutation, reply) => {
+  if (mutation.variant === "delta" && mutation.type === "text") {
+    process.stdout.write(mutation.delta);
+  }
 
-## Example
-
-```ts
-const session = await agent.sessions.get("repo-analysis");
-
-const unsubscribe = session.subscribe((event) => {
-  if (event.type === "text-delta") {
-    process.stdout.write(event.text);
+  if (
+    mutation.variant === "part" &&
+    mutation.type === "tool" &&
+    mutation.part.state === "approval-required"
+  ) {
+    await reply.approval({ decision: "approved" });
   }
 });
-
-const turn = await session.prompt({
-  query: "Analyze this repository",
-});
-
-await session.prompt({
-  query: "Only look at the Downcity path",
-});
-
-await turn.finished;
-
-unsubscribe();
 ```
 
-## Event model
+Mutations have five variants: `message`, `part`, `delta`, `turn`, and `session`. Message-backed Mutations are published after the corresponding Message or Assistant draft is persisted. Turn and Session Mutations describe live runtime state.
 
-The local Session actor currently emits a minimal turn-oriented event set:
+Mutations are a live protocol, not the history format. They do not replay history or recover a disconnected stream; reload `messages()` and `get_info()` after reconnecting.
 
-- `turn-start`
-- `text-delta`
-- `reasoning-delta`
-- `tool-call`
-- `tool-result`
-- `action`
-- `turn-finish`
-
-`subscribe()` does not replay history.
-
-If you need past messages, use `session.records({ limit })`.
-
-Action events are also written to the Session JSONL file as `type: "action"` records. Each action keeps one record and updates its `state` directly. The Agent filters action records out before sending messages to the LLM.
-
-## Why callback-based
-
-For embedded runtimes, desktop apps, agent hosts, and remote HTTP clients, a session-level callback subscription is usually simpler than creating a separate per-prompt output object.
+An approval-required Tool Part keeps the same `part_id` while moving through `ready -> approval-required -> running | failed`. Reply in the callback with `reply.approval({ decision: "approved" })`, or resolve it later with `session.resolve_approval(...)`.

@@ -1,14 +1,14 @@
 ---
 title: 例子：实时 UI
-description: 用 session.subscribe() 实时渲染 Agent 输出
+description: 用 session.subscribe() 实时渲染 Message Mutation
 ---
 
 # 例子：实时 UI
 
 ```ts
-const unsubscribe = session.subscribe((event) => {
-  if (event.type === "text-delta") {
-    render(event.text);
+const unsubscribe = session.subscribe((mutation) => {
+  if (mutation.variant === "delta" && mutation.type === "text") {
+    render(mutation.delta);
   }
 });
 
@@ -20,10 +20,11 @@ await turn.finished;
 unsubscribe();
 ```
 
-如果你还想显示工具过程，可以继续处理：
+如果你还想显示工具过程，可以处理：
 
-- `tool-call`
-- `tool-result`
-- `turn-finish`
+- `variant: "part"` 的 tool call / tool result part
+- `variant: "message"` 的 assistant、action 与 error Message
+- `variant: "turn"` 的开始与完成状态
+- `variant: "session"` 的标题等 Session 状态
 
 这个模式特别适合终端实时输出和网页实时聊天 UI。

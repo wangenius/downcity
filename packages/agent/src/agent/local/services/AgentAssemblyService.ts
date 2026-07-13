@@ -32,7 +32,7 @@ import {
 } from "@executor/tools/plugin/PluginToolDefinition.js";
 import type { AgentManagedSession } from "@/types/session/SessionOptions.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
-import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
+import type { SessionApprovalRuntimeEvent } from "@/types/session/SessionApproval.js";
 
 type AgentAssemblyServiceOptions = {
   /**
@@ -215,10 +215,12 @@ export class AgentAssemblyService {
         env,
         agent_id: id,
         logger,
-        emit_event: (event) => {
+        emit_event: async (event) => {
           const session_id = String(event.session_id || "").trim();
           if (!session_id) return;
-      agent_context!.session.get(session_id).publishEvent(event as unknown as AgentSessionEvent);
+          const approval_event = normalize_approval_runtime_event(event);
+          if (!approval_event) return;
+          await agent_context!.session.get(session_id).publishEvent(approval_event);
         },
       });
       Object.assign(tools, shell.tools);
@@ -268,4 +270,38 @@ export class AgentAssemblyService {
     }
     return false;
   }
+}
+
+function normalize_approval_runtime_event(
+  event: Record<string, unknown>,
+): SessionApprovalRuntimeEvent | null {
+  if (event.type === "tool-approval-request") {
+    return {
+      type: "tool-approval-request",
+      turn_id: String(event.turnId || ""),
+      tool_call_id: String(event.toolCallId || ""),
+      tool_name: String(event.toolName || "unknown"),
+      approval_id: String(event.approvalId || ""),
+      command: String(event.cmd || ""),
+      cwd: String(event.cwd || ""),
+      reason: String(event.reason || ""),
+      operation:
+        event.operation === "start" || event.operation === "write"
+          ? event.operation
+          : "exec",
+    };
+  }
+  if (event.type === "tool-approval-result") {
+    const decision = event.decision === "approved" || event.decision === "denied"
+      ? event.decision
+      : "expired";
+    return {
+      type: "tool-approval-result",
+      turn_id: String(event.turnId || ""),
+      tool_call_id: String(event.toolCallId || ""),
+      approval_id: String(event.approvalId || ""),
+      decision,
+    };
+  }
+  return null;
 }

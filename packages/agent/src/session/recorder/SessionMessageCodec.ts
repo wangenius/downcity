@@ -109,6 +109,7 @@ export function from_ui_assistant_parts(
     if (type === "text" || type === "reasoning") {
       return [{
         part_id: `${type}:${index + 1}`,
+        sequence: index + 1,
         type: type as "text" | "reasoning",
         text: String(candidate.text || ""),
         state: "done" as const,
@@ -117,6 +118,7 @@ export function from_ui_assistant_parts(
     if (type === "file") {
       return [{
         part_id: `file:${index + 1}`,
+        sequence: index + 1,
         type: "file" as const,
         url: String(candidate.url || ""),
         media_type: String(candidate.mediaType || "application/octet-stream"),
@@ -127,6 +129,7 @@ export function from_ui_assistant_parts(
       const state = String(candidate.state || "");
       return [{
         part_id: String(candidate.toolCallId || `tool:${index + 1}`),
+        sequence: index + 1,
         type: "tool" as const,
         tool_call_id: String(candidate.toolCallId || `tool:${index + 1}`),
         tool_name:
@@ -142,7 +145,9 @@ export function from_ui_assistant_parts(
                 ? "approval-required" as const
                 : state === "input-streaming"
                   ? "input-streaming" as const
-                  : "running" as const,
+                  : state === "input-available"
+                    ? "ready" as const
+                    : "running" as const,
         ...(candidate.input !== undefined
           ? { input: to_json_value(candidate.input) }
           : {}),

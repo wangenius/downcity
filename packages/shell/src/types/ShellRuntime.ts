@@ -74,7 +74,7 @@ export interface ShellOptions {
   /**
    * Shell 事件出口。Agent 会把这些事件转成 session event。
    */
-  emit_event?: (event: ShellEvent) => void;
+  emit_event?: (event: ShellEvent) => void | Promise<void>;
   /**
    * 读取当前 tool 调用所属的 session/turn 上下文。
    *
@@ -111,6 +111,10 @@ export interface ShellApprovalView {
    * 归属的 agent session id。
    */
   session_id?: string;
+  /** 当前审批所属 Turn 标识。 */
+  turn_id?: string;
+  /** 当前审批对应的工具调用标识。 */
+  tool_call_id?: string;
   /**
    * 来源工具名称。
    */

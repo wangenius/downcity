@@ -17,7 +17,7 @@ export type ShellSessionEventPublisher = {
   /**
    * 发布宿主 session event。
    */
-  publishEvent(event: Record<string, unknown>): void;
+  publishEvent(event: Record<string, unknown>): Promise<void>;
 };
 
 export type ShellHostSessionAccessor = {

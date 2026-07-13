@@ -1,4 +1,4 @@
-import type { SessionMessageMutation } from "@downcity/agent";
+import type { SessionMutation } from "@downcity/agent";
 
 /**
  * `city agent chat` 交互式渲染相关类型。
@@ -30,7 +30,7 @@ export interface AgentChatInteractiveRendererPort {
   attach_turn_id: (turn_id: string) => void;
 
   /** 渲染单个 session 事件。 */
-  render_event: (event: SessionMessageMutation) => void;
+  render_event: (event: SessionMutation) => void;
 
   /**
    * 当 unrestricted sandbox 审批请求到达时触发。

@@ -23,6 +23,7 @@ import type {
 } from "@/types/agent/SessionTypes.js";
 import type { AgentSession } from "@/types/agent/SessionActor.js";
 import {
+  getSdkAgentSessionAssistantMessagePath,
   getSdkAgentSessionDirPath,
 } from "@/session/storage/Paths.js";
 import { resolveSystemTimezone } from "@/session/storage/Metadata.js";
@@ -30,15 +31,18 @@ import { createRuntimeSessionPort } from "@/session/storage/RuntimeSessionPort.j
 import { SessionSystemBuilder } from "@/session/SessionSystemBuilder.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import type {
-  AgentSessionSubscriber,
-  AgentSessionUnsubscribe,
-} from "@/types/sdk/AgentSessionEvent.js";
+  SessionMutation,
+  SessionMutationSubscriber,
+  SessionMutationUnsubscribe,
+} from "@/types/session/SessionMutation.js";
 import type {
-  ListSessionMessageChangesInput,
-  SessionMessageMutationPage,
-  SessionMessageMutationSubscriber,
-  SessionMessageMutationUnsubscribe,
-} from "@/types/session/SessionMessageMutation.js";
+  ResolveSessionApprovalInput,
+  SessionApproval,
+  SessionApprovalModeSnapshot,
+  SessionApprovalResult,
+  SetSessionApprovalModeInput,
+  SessionApprovalRuntimeEvent,
+} from "@/types/session/SessionApproval.js";
 import type {
   ListSessionMessagesInput,
   SessionMessagePage,
@@ -47,7 +51,6 @@ import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js"
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 import { SessionEventHub } from "@/session/runtime/SessionEventHub.js";
-import { SessionMessageEventHub } from "@/session/runtime/SessionMessageEventHub.js";
 import { SessionStateService } from "@/session/services/SessionStateService.js";
 import { SessionTurnService } from "@/session/services/SessionTurnService.js";
 import { SessionViewService } from "@/session/services/SessionViewService.js";
@@ -83,8 +86,11 @@ export class Session implements AgentSession {
   private readonly recorder: SessionRecorder;
   private readonly historyComposer: SessionHistoryComposer;
   private readonly executor: Executor;
-  private readonly eventHub = new SessionEventHub();
-  private readonly messageEventHub = new SessionMessageEventHub();
+  private readonly eventHub: SessionEventHub;
+  private readonly list_approvals: SessionOptions["list_approvals"];
+  private readonly get_approval_mode: SessionOptions["get_approval_mode"];
+  private readonly set_approval_mode_hook: SessionOptions["set_approval_mode"];
+  private readonly resolve_approval_hook: SessionOptions["resolve_approval"];
   private readonly localState: SessionLocalState;
   private readonly stateService: SessionStateService;
   private readonly turnService: SessionTurnService;
@@ -102,6 +108,10 @@ export class Session implements AgentSession {
     this.getPluginSystemBlocks = options.getPluginSystemBlocks;
     this.ensureConfiguredHook = options.ensureConfigured;
     this.composers = options.composers;
+    this.list_approvals = options.list_approvals;
+    this.get_approval_mode = options.get_approval_mode;
+    this.set_approval_mode_hook = options.set_approval_mode;
+    this.resolve_approval_hook = options.resolve_approval;
     if (!this.id) {
       throw new Error("Session requires a non-empty sessionId");
     }
@@ -112,12 +122,20 @@ export class Session implements AgentSession {
       throw new Error("Session requires a non-empty projectRoot");
     }
 
+    this.eventHub = new SessionEventHub({
+      create_reply: (mutation) => ({
+        approval: async ({ decision }) => {
+          const approval_id = require_approval_id(mutation);
+          return await this.resolve_approval({ approval_id, decision });
+        },
+      }),
+    });
     this.messageStore = this.create_message_store();
     this.recorder = new SessionRecorder({
       session_id: this.id,
       store: this.messageStore,
       publish: (mutation) => {
-        this.messageEventHub.publish(mutation);
+        this.eventHub.publish(mutation);
       },
     });
     this.historyStore = this.create_history_store();
@@ -229,19 +247,44 @@ export class Session implements AgentSession {
    * 订阅当前 Session 的未来事件。
    */
   subscribe(
-    subscriber: SessionMessageMutationSubscriber,
-  ): SessionMessageMutationUnsubscribe {
-    return this.messageEventHub.subscribe(subscriber);
+    subscriber: SessionMutationSubscriber,
+  ): SessionMutationUnsubscribe {
+    return this.eventHub.subscribe(subscriber);
   }
 
-  /** 订阅远程 transport 所需的 Message 与 lifecycle 事件。 */
-  subscribe_transport(subscriber: AgentSessionSubscriber): AgentSessionUnsubscribe {
-    const unsubscribe_message = this.messageEventHub.subscribe(subscriber);
-    const unsubscribe_lifecycle = this.turnService.subscribe(subscriber);
-    return () => {
-      unsubscribe_message();
-      unsubscribe_lifecycle();
-    };
+  /** 列出当前 Session 的 pending 工具审批。 */
+  async approvals(): Promise<SessionApproval[]> {
+    return await this.list_approvals(this.id);
+  }
+
+  /** 读取当前 Session 的工具审批模式。 */
+  async approval_mode(): Promise<SessionApprovalModeSnapshot> {
+    return await this.get_approval_mode(this.id);
+  }
+
+  /** 更新当前 Session 的工具审批模式。 */
+  async set_approval_mode(input: SetSessionApprovalModeInput): Promise<SessionApprovalModeSnapshot> {
+    return await this.set_approval_mode_hook(this.id, input);
+  }
+
+  /** 处理当前 Session 的 pending 工具审批。 */
+  async resolve_approval(input: ResolveSessionApprovalInput): Promise<SessionApprovalResult> {
+    return await this.resolve_approval_hook(this.id, input);
+  }
+
+  private async apply_runtime_event(event: SessionApprovalRuntimeEvent): Promise<void> {
+    if (event.type === "tool-approval-request") {
+      await this.recorder.require_tool_approval({
+        tool_call_id: event.tool_call_id,
+        approval_id: event.approval_id,
+      });
+      return;
+    }
+    await this.recorder.resolve_tool_approval({
+      tool_call_id: event.tool_call_id,
+      approval_id: event.approval_id,
+      decision: event.decision,
+    });
   }
 
   /**
@@ -280,13 +323,6 @@ export class Session implements AgentSession {
     return await this.recorder.list_messages(input);
   }
 
-  /** 读取当前 Session 的增量 Message Mutation。 */
-  async message_changes(
-    input: ListSessionMessageChangesInput,
-  ): Promise<SessionMessageMutationPage> {
-    return await this.recorder.list_message_changes(input);
-  }
-
   /**
    * 读取当前 session 生效的 system 快照。
    */
@@ -319,8 +355,8 @@ export class Session implements AgentSession {
       prompt: async (input) => await this.prompt(input),
       stop: async () => await this.stop(),
       subscribe: (subscriber) => this.subscribe(subscriber),
-      publishEvent: (event) => {
-        this.eventHub.publish(event);
+      publishEvent: async (event) => {
+        await this.apply_runtime_event(event);
       },
       append_user_message: async (message_params) => {
         await this.stateService.append_user_message(message_params);
@@ -356,6 +392,10 @@ export class Session implements AgentSession {
       getPluginSystemBlocks: this.getPluginSystemBlocks,
       ensureConfigured: this.ensureConfiguredHook,
       composers: this.composers,
+      list_approvals: this.list_approvals,
+      get_approval_mode: this.get_approval_mode,
+      set_approval_mode: this.set_approval_mode_hook,
+      resolve_approval: this.resolve_approval_hook,
     });
   }
 
@@ -383,6 +423,11 @@ export class Session implements AgentSession {
     return new JsonlSessionMessageStore({
       session_id: this.id,
       file_path: `${messages_dir_path}/messages.jsonl`,
+      assistant_message_file_path: getSdkAgentSessionAssistantMessagePath(
+        this.projectRoot,
+        this.agentId,
+        this.id,
+      ),
     });
   }
 
@@ -504,4 +549,16 @@ export class Session implements AgentSession {
     }
     return input;
   }
+}
+
+function require_approval_id(mutation: SessionMutation): string {
+  if (
+    mutation.variant === "part" &&
+    mutation.type === "tool" &&
+    mutation.part.state === "approval-required" &&
+    mutation.part.approval_id
+  ) {
+    return mutation.part.approval_id;
+  }
+  throw new Error("Current Session Mutation is not an approval-required Tool Part");
 }

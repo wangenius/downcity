@@ -1,0 +1,20 @@
+---
+title: session.messages()
+description: 分页读取 Session 已持久化的 Message 快照
+---
+
+# `session.messages()`
+
+`session.messages()` 返回当前 Session 已持久化的 Message 快照，按 `sequence` 排序。
+
+```ts
+const page = await session.messages({ limit: 100 });
+
+for (const message of page.items) {
+  render_message(message);
+}
+```
+
+返回值包含 `items`、`total`、`has_more` 与可选的 `next_cursor`。可传入 `limit`、`cursor`、`before_sequence`、`through_sequence` 和 `include_internal`。
+
+实时更新使用 `session.subscribe()`。它只观察订阅建立后的 Mutation；重新连接时应重新读取 `messages()` 快照并重新订阅。

@@ -12,6 +12,7 @@ import http from "node:http";
 import { Hono } from "hono";
 import type { Agent } from "@downcity/agent";
 import { registerSdkSessionRoutes } from "@/http/routes/SessionRoutes.js";
+import { registerRuntimeRoutes } from "@/http/routes/RuntimeRoutes.js";
 import { createNodeHttpServer } from "@/http/NodeHttpAdapter.js";
 import type {
   AgentHttpBinding,
@@ -55,6 +56,7 @@ export class AgentHTTP {
     if (this.cached_router) return this.cached_router;
     const router = new Hono();
     registerSdkSessionRoutes(router, this.agent.sessions);
+    registerRuntimeRoutes(router, this.agent);
     this.cached_router = router;
     return router;
   }

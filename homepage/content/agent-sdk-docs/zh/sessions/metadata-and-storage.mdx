@@ -20,7 +20,7 @@ SDK session 默认落盘到：
 以及运行中的 assistant 快照：
 
 ```text
-<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/inflight.json
+<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/messages/assistant_message.json
 ```
 
 ## 为什么要按 `agentId` 分区
@@ -38,9 +38,9 @@ SDK session 默认落盘到：
 - session metadata
 - 归档目录
 
-`messages.jsonl` 保存稳定历史。
+`messages.jsonl` 每行保存一条完整 `SessionMessage` 快照。Action 状态变化会以相同 `message_id` 和更高 `revision` 追加新快照；读取时只取最新 revision。
 
-`inflight.json` 保存当前尚未完成的 assistant UIMessage。多 step tool 调用过程中，SDK 会持续重写这份快照；如果执行顺利结束，最终 assistant 会写回 `messages.jsonl`，并删除 `inflight.json`。如果中途崩溃，仍然可以从 `inflight.json` 恢复已经生成的过程内容。
+`assistant_message.json` 保存当前尚未完成的完整 Assistant Message。流式 `part` 和 `delta` 只更新这份原子快照，不进入 `messages.jsonl`。正常结束时最终 Assistant 会追加到历史并删除草稿；进程中断后，SDK 会把草稿收口为 `stopped` 历史消息。
 
 如果你在排障、做历史回放或多 agent 实验，这些落盘信息都很有价值。
 

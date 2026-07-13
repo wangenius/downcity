@@ -13,7 +13,7 @@ import type {
   SessionRecordV1,
   SessionMessageRecordV1,
 } from "@/executor/types/SessionRecords.js";
-import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
+import type { SessionMutation } from "@/types/session/SessionMutation.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type {
@@ -89,7 +89,7 @@ export interface SessionPromptRuntimeOptions {
   /**
    * 广播 session 事件。
    */
-  publish: (event: AgentSessionEvent) => void;
+  publish: (mutation: SessionMutation) => void;
 
   /**
    * 构造并持久化一条 user 消息。
@@ -226,8 +226,13 @@ export class SessionPromptRuntime {
       const activeTurn = createActiveTurnState(turnId);
       this.activeTurn = activeTurn;
       this.publish({
-        type: "turn-start",
-        turnId,
+        mutation_id: nanoid(),
+        variant: "turn",
+        type: "start",
+        session_id: this.sessionId,
+        turn_id: turnId,
+        status: "running",
+        created_at: Date.now(),
       });
       current.deferredHandle.resolve(createTurnHandle(activeTurn));
 
@@ -255,10 +260,14 @@ export class SessionPromptRuntime {
         };
         activeTurn.result = finalResult;
         this.publish({
-          type: "turn-finish",
-          turnId,
+          mutation_id: nanoid(),
+          variant: "turn",
+          type: "finish",
+          session_id: this.sessionId,
+          turn_id: turnId,
+          status: stopped ? "stopped" : finalResult.success ? "completed" : "failed",
+          created_at: Date.now(),
           text: finalResult.text,
-          success: finalResult.success,
           ...(finalResult.error ? { error: finalResult.error } : {}),
         });
         activeTurn.deferredFinished.resolve(finalResult);
@@ -286,16 +295,16 @@ export class SessionPromptRuntime {
           } catch {
             // Error Message 写入失败不能阻止 turn handle 收口。
           }
-          this.publish({
-            type: "error",
-            message,
-          });
         }
         this.publish({
-          type: "turn-finish",
-          turnId,
+          mutation_id: nanoid(),
+          variant: "turn",
+          type: "finish",
+          session_id: this.sessionId,
+          turn_id: turnId,
+          status: activeTurn.abortController.signal.aborted ? "stopped" : "failed",
+          created_at: Date.now(),
           text: "",
-          success: false,
           error: message,
         });
         activeTurn.deferredFinished.resolve(finalResult);
@@ -326,14 +335,23 @@ export class SessionPromptRuntime {
       cancelledTurn.result = finalResult;
       cancelledTurn.deferredFinished.resolve(finalResult);
       this.publish({
-        type: "turn-start",
-        turnId,
+        mutation_id: nanoid(),
+        variant: "turn",
+        type: "start",
+        session_id: this.sessionId,
+        turn_id: turnId,
+        status: "running",
+        created_at: Date.now(),
       });
       this.publish({
-        type: "turn-finish",
-        turnId,
+        mutation_id: nanoid(),
+        variant: "turn",
+        type: "finish",
+        session_id: this.sessionId,
+        turn_id: turnId,
+        status: "failed",
+        created_at: Date.now(),
         text: "",
-        success: false,
         error: QUEUED_PROMPT_CANCELLED_MESSAGE,
       });
       item.deferredHandle.resolve(createTurnHandle(cancelledTurn));

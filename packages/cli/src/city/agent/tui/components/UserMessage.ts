@@ -2,13 +2,13 @@
  * 用户消息组件。
  *
  * 关键点（中文）
- * - 使用 roleUser 色渲染子弹前缀与文本。
- * - 文本按可用宽度自动换行，保持子弹对齐。
+ * - 使用独立角色标签建立对话层级，正文保持高可读中性色。
+ * - 文本按可用宽度自动换行，并与角色标签保持稳定缩进。
  */
 
-import { Spacer, Text, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
+import { Spacer, Text, truncateToWidth, type Component } from "@earendil-works/pi-tui";
 
-import { USER_MESSAGE_BULLET } from "@/city/agent/tui/constant/symbols.js";
+import { MESSAGE_INDENT } from "@/city/agent/tui/constant/rendering.js";
 import { current_theme } from "@/city/agent/tui/theme/index.js";
 
 /**
@@ -45,10 +45,6 @@ export class UserMessageComponent implements Component {
       return [""];
     }
 
-    const bullet = current_theme.bold_fg("roleUser", USER_MESSAGE_BULLET);
-    const bullet_width = visibleWidth(bullet);
-    const content_width = Math.max(1, safe_width - bullet_width);
-
     const lines: string[] = [];
 
     // 关键点（中文）：对齐 Kimi Code，组件顶部自带 1 行间距。
@@ -56,11 +52,12 @@ export class UserMessageComponent implements Component {
       lines.push(line);
     }
 
-    const colored_text = current_theme.bold_fg("roleUser", this.text);
-    const text_lines = new Text(colored_text, 0, 0).render(content_width);
-    for (let i = 0; i < text_lines.length; i += 1) {
-      const prefix = i === 0 ? bullet : " ".repeat(bullet_width);
-      lines.push(prefix + text_lines[i]);
+    lines.push(current_theme.bold_fg("roleUser", "You"));
+    const content_width = Math.max(1, safe_width - MESSAGE_INDENT.length);
+    const text_lines = new Text(current_theme.fg("textStrong", this.text), 0, 0)
+      .render(content_width);
+    for (const line of text_lines) {
+      lines.push(MESSAGE_INDENT + line);
     }
 
     return lines.map((line) => truncateToWidth(line, safe_width, "…"));

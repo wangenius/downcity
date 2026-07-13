@@ -25,10 +25,6 @@ import type {
   ListSessionMessagesInput,
   SessionMessagePage,
 } from "@/types/session/SessionMessage.js";
-import type {
-  ListSessionMessageChangesInput,
-  SessionMessageMutationPage,
-} from "@/types/session/SessionMessageMutation.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
@@ -42,7 +38,14 @@ import type {
   PluginControlResult,
   PluginSnapshot,
 } from "@/types/plugin/PluginState.js";
-import type { AgentSessionEvent } from "@/types/sdk/AgentSessionEvent.js";
+import type { SessionMutation } from "@/types/session/SessionMutation.js";
+import type {
+  ResolveSessionApprovalInput,
+  SessionApproval,
+  SessionApprovalModeSnapshot,
+  SessionApprovalResult,
+  SetSessionApprovalModeInput,
+} from "@/types/session/SessionApproval.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type {
   RpcClientEndpoint,
@@ -51,14 +54,6 @@ import type {
   RpcSessionSubscription,
   RpcSystemPromptPayload,
 } from "@/types/rpc/RpcProtocol.js";
-import type {
-  ShellApprovalMode,
-  ShellApprovalDecisionResult,
-  ShellApprovalModeUpdateResult,
-  ShellApprovalModeOption,
-  ShellSessionApprovalModeView,
-  ShellApprovalView,
-} from "@downcity/shell";
 
 export type {
   RpcClientEndpoint,
@@ -73,7 +68,7 @@ type PendingRequest = {
 
 type RpcSubscription = {
   on_ready: () => void;
-  on_event: (event: AgentSessionEvent) => void;
+  on_event: (event: SessionMutation) => void;
   /** 底层 RPC 连接结束后的通知。 */
   on_close: (error?: unknown) => void;
 };
@@ -239,21 +234,6 @@ export class RpcClient {
     return data.messages;
   }
 
-  /** 读取指定 cursor 后的 Session Message Mutation。 */
-  async get_session_message_changes(params: {
-    session_id: string;
-    input: ListSessionMessageChangesInput;
-  }): Promise<SessionMessageMutationPage> {
-    const data = await this.request<{ changes: SessionMessageMutationPage }>({
-      method: "sdk.sessions.message_changes",
-      params: {
-        sessionId: params.session_id,
-        input: params.input,
-      },
-    });
-    return data.changes;
-  }
-
   /**
    * 读取 system snapshot。
    */
@@ -265,6 +245,44 @@ export class RpcClient {
       },
     });
     return data.system;
+  }
+
+  async get_session_approvals(session_id: string): Promise<SessionApproval[]> {
+    const data = await this.request<{ approvals: SessionApproval[] }>({
+      method: "sdk.sessions.approvals",
+      params: { sessionId: session_id },
+    });
+    return data.approvals;
+  }
+
+  async get_session_approval_mode(session_id: string): Promise<SessionApprovalModeSnapshot> {
+    const data = await this.request<{ approval_mode: SessionApprovalModeSnapshot }>({
+      method: "sdk.sessions.approvalMode",
+      params: { sessionId: session_id },
+    });
+    return data.approval_mode;
+  }
+
+  async set_session_approval_mode(
+    session_id: string,
+    input: SetSessionApprovalModeInput,
+  ): Promise<SessionApprovalModeSnapshot> {
+    const data = await this.request<{ approval_mode: SessionApprovalModeSnapshot }>({
+      method: "sdk.sessions.setApprovalMode",
+      params: { sessionId: session_id, input },
+    });
+    return data.approval_mode;
+  }
+
+  async resolve_session_approval(
+    session_id: string,
+    input: ResolveSessionApprovalInput,
+  ): Promise<SessionApprovalResult> {
+    const data = await this.request<{ result: SessionApprovalResult }>({
+      method: "sdk.sessions.resolveApproval",
+      params: { sessionId: session_id, input },
+    });
+    return data.result;
   }
 
   /**
@@ -290,7 +308,7 @@ export class RpcClient {
   async subscribe_session(params: {
     session_id: string;
     on_ready: () => void;
-    on_event: (event: AgentSessionEvent) => void;
+    on_event: (event: SessionMutation) => void;
     on_close: (error?: unknown) => void;
   }): Promise<RpcSessionSubscription> {
     const data = await this.request<{ subscriptionId: string }>({
@@ -472,78 +490,6 @@ export class RpcClient {
   }
 
   /**
-   * 列出 shell approvals。
-   */
-  async list_shell_approvals(): Promise<ShellApprovalView[]> {
-    const data = await this.request<{ approvals: ShellApprovalView[] }>({
-      method: "internal.shell.approvals",
-    });
-    return Array.isArray(data.approvals) ? data.approvals : [];
-  }
-
-  /**
-   * 列出 shell approval 模式。
-   */
-  async list_shell_approval_modes(): Promise<ShellApprovalModeOption[]> {
-    const data = await this.request<{ modes: ShellApprovalModeOption[] }>({
-      method: "internal.shell.approvalModes",
-    });
-    return Array.isArray(data.modes) ? data.modes : [];
-  }
-
-  /**
-   * 读取 shell approval 模式。
-   */
-  async get_shell_approval_mode(session_id: string): Promise<ShellSessionApprovalModeView> {
-    return await this.request<ShellSessionApprovalModeView>({
-      method: "internal.shell.approvalMode",
-      params: {
-        sessionId: session_id,
-      },
-    });
-  }
-
-  /**
-   * 设置 shell approval 模式。
-   */
-  async set_shell_approval_mode(input: {
-    session_id: string;
-    mode: ShellApprovalMode;
-  }): Promise<ShellApprovalModeUpdateResult> {
-    return await this.request<ShellApprovalModeUpdateResult>({
-      method: "internal.shell.setApprovalMode",
-      params: {
-        sessionId: input.session_id,
-        mode: input.mode,
-      },
-    });
-  }
-
-  /**
-   * 批准 shell approval。
-   */
-  async approve_shell_approval(approval_id: string): Promise<ShellApprovalDecisionResult> {
-    return await this.request<ShellApprovalDecisionResult>({
-      method: "internal.shell.approve",
-      params: {
-        approvalId: approval_id,
-      },
-    });
-  }
-
-  /**
-   * 拒绝 shell approval。
-   */
-  async deny_shell_approval(approval_id: string): Promise<ShellApprovalDecisionResult> {
-    return await this.request<ShellApprovalDecisionResult>({
-      method: "internal.shell.deny",
-      params: {
-        approvalId: approval_id,
-      },
-    });
-  }
-
-  /**
    * 关闭底层连接。
    */
   async close(): Promise<void> {
@@ -690,10 +636,6 @@ export class RpcClient {
 
   private fail_all_subscriptions(message: string): void {
     for (const subscription of this.subscriptions.values()) {
-      subscription.on_event({
-        type: "error",
-        message,
-      });
       subscription.on_close(new Error(message));
     }
     this.subscriptions.clear();

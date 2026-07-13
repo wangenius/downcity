@@ -19,7 +19,8 @@ description: 理解 @downcity/agent 提供的本地 Agent、远程 Agent、Sessi
 这种模式下，宿主自己持有模型实例：
 
 - `new Agent({ model })`
-- 或 `await session.set({ model })`
+- `await session.set({ model })`
+- 或由宿主传入 `model_id` 与 `resolve_model`
 
 适合：
 
@@ -75,11 +76,7 @@ import { Agent } from "@downcity/agent";
 import { RemoteAgent } from "@downcity/agent";
 ```
 
-然后通过：
-
-```ts
-new RemoteAgent({ url: "http://127.0.0.1:15314" })
-```
+独立 `AgentHTTP` 使用根地址，例如 `http://127.0.0.1:5314`；Downcity gateway 则使用它公开的 Agent 路径。
 
 去连接它。
 
@@ -95,13 +92,13 @@ new RemoteAgent({ url: "http://127.0.0.1:15314" })
 
 无论是本地还是远程，SDK 的核心使用面都围绕 session：
 
-- `create_session()`
-- `getSession()`
-- `list_sessions()`
+- `agent.sessions.create()`
+- `agent.sessions.get(session_id)`
+- `agent.sessions.list()`
 - `get_info()`
 - `prompt()`
 - `subscribe()`
-- `records()`
+- `messages()`
 - `system()`
 - `fork()`
 
@@ -144,9 +141,7 @@ await session.set({ model })
 
 ### 远程 SDK session
 
-远程 session 当前不支持直接传本地模型实例。
-
-这是因为远程模式下，模型实例应该留在服务端本地持有，而不是由客户端携带。
+远程 session 不接受本地模型实例，但可以传稳定 ID：`await session.set({ modelId: "quality" })`。实际模型始终由服务端的 `resolve_model` 解析并持有。
 
 ## 推荐阅读顺序
 

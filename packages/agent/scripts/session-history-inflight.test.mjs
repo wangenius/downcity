@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 直接覆盖 JSONL history store 的落盘语义，确保运行中不中断丢失过程。
  * - `messages.jsonl` 仍保持一轮一条 assistant 的正式历史语义。
- * - 运行中快照放在 `inflight.json`，浏览层读取时也应可见。
+ * - 运行中快照放在 `assistant_message.json`，浏览层读取时也应可见。
  */
 
 import test from "node:test";
@@ -93,7 +93,7 @@ test("JsonlSessionHistoryStore exposes inflight assistant during execution and f
     "sessions",
     "session_test",
     "messages",
-    "inflight.json",
+    "assistant_message.json",
   );
   const inflight_exists = await fs
     .access(inflight_path)

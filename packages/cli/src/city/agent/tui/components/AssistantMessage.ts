@@ -3,13 +3,12 @@
  *
  * 关键点（中文）
  * - 完全对齐 Kimi Code AssistantMessageComponent：使用 pi-tui Markdown 渲染助手文本。
- * - 前缀使用状态子弹，文本为空时不渲染。
- * - 支持 set_show_bullet 动态切换 bullet 显示。
+ * - 使用 Assistant 角色标题与执行状态建立稳定层级。
+ * - 流式阶段展示 working 状态，完成后自动收敛为普通角色标题。
  */
 
-import { Container, Markdown, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
+import { Container, Markdown, truncateToWidth, type Component } from "@earendil-works/pi-tui";
 
-import { STATUS_BULLET } from "@/city/agent/tui/constant/symbols.js";
 import { MESSAGE_INDENT } from "@/city/agent/tui/constant/rendering.js";
 import { current_theme } from "@/city/agent/tui/theme/index.js";
 import { createMarkdownTheme } from "@/city/agent/tui/theme/pi-tui-theme.js";
@@ -21,12 +20,14 @@ export class AssistantMessageComponent implements Component {
   private content_container: Container;
   private last_text = "";
   private show_bullet: boolean;
+  private streaming = false;
 
   /**
    * @param show_bullet 是否在首行显示状态子弹。
    */
-  constructor(show_bullet: boolean = true) {
+  constructor(show_bullet: boolean = true, streaming: boolean = false) {
     this.show_bullet = show_bullet;
+    this.streaming = streaming;
     this.content_container = new Container();
   }
 
@@ -44,12 +45,13 @@ export class AssistantMessageComponent implements Component {
    *
    * @param text 助手文本。
    */
-  update_content(text: string): void {
+  update_content(text: string, streaming: boolean = this.streaming): void {
     const display_text = text;
-    if (display_text === this.last_text) {
+    if (display_text === this.last_text && streaming === this.streaming) {
       return;
     }
     this.last_text = display_text;
+    this.streaming = streaming;
     this.content_container.clear();
     if (display_text.trim().length > 0) {
       this.content_container.addChild(
@@ -87,17 +89,16 @@ export class AssistantMessageComponent implements Component {
       return [""];
     }
 
-    const prefix = this.show_bullet ? STATUS_BULLET : MESSAGE_INDENT;
-    const content_width = Math.max(1, safe_width - visibleWidth(prefix));
+    const content_width = Math.max(1, safe_width - MESSAGE_INDENT.length);
     const content_lines = this.content_container.render(content_width);
 
-    const lines: string[] = [""];
-    for (let i = 0; i < content_lines.length; i += 1) {
-      const is_first_line = i === 0 && this.show_bullet;
-      const bullet = is_first_line
-        ? current_theme.fg("text", STATUS_BULLET)
-        : MESSAGE_INDENT;
-      lines.push(bullet + content_lines[i]);
+    const role = current_theme.bold_fg("primary", "Assistant");
+    const state = this.streaming
+      ? current_theme.dim_fg("primary", " · working")
+      : "";
+    const lines: string[] = ["", this.show_bullet ? `${role}${state}` : state.trimStart()];
+    for (const content_line of content_lines) {
+      lines.push(MESSAGE_INDENT + content_line);
     }
 
     return lines.map((line) => truncateToWidth(line, safe_width, "…"));

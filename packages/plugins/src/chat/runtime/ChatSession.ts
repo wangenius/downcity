@@ -62,6 +62,11 @@ type ChatSessionOptions = {
   getTools: () => Record<string, Tool>;
 
   /**
+   * 读取当前 chat session effective Agent env。
+   */
+  getEnv: () => Record<string, string>;
+
+  /**
    * 当前 session 绑定的 chat context composer。
    */
   contextComposer: ChatSessionContextComposer;
@@ -93,6 +98,7 @@ export class ChatSession extends Executor {
       compactionComposer: options.compactionComposer,
       systemComposer: options.systemComposer,
       getTools: options.getTools,
+      getEnv: options.getEnv,
       contextComposer,
     });
     this.contextComposer = contextComposer;

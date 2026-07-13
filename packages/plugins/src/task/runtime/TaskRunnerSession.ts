@@ -163,6 +163,7 @@ export function createTaskSessionRuntimePort(params: {
         contextComposer,
         systemComposer,
         getTools: () => shell_tools,
+        getEnv: () => ({ ...context.env }),
       });
       runtimesBySessionId.set(key, created);
       return created;

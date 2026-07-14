@@ -13,16 +13,19 @@ import {
   type ServiceInstallContext,
 } from "@downcity/city";
 import { rawAll, rawFirst, rawRun } from "./raw.js";
+import { BalanceOperationStore } from "./operations.js";
 import { registerBalanceRoutes } from "./routes.js";
 import {
   ACCOUNT_TABLE,
   CHARGE_TABLE,
   LEDGER_TABLE,
+  OPERATION_TABLE,
   REDEEM_CODE_TABLE,
   TOPUP_TABLE,
   balanceAccounts,
   balanceCharges,
   balanceLedger,
+  balanceOperations,
   balanceRedeemCodes,
   balanceTopups,
 } from "./schema.js";
@@ -95,15 +98,22 @@ export class BalanceService extends InstallableService {
     topups: balanceTopups,
     redeem_codes: balanceRedeemCodes,
     charges: balanceCharges,
+    operations: balanceOperations,
   };
 
   private readonly initCredits: number;
+  /** 余额、流水与业务状态的原子写入存储。 */
+  private readonly operation_store: BalanceOperationStore;
 
   constructor(options: BalanceServiceOptions = {}) {
     super();
     this.initCredits = readNonNegativeCredits({
       credits: options.init_credits ?? 0,
     }, "init");
+    this.operation_store = new BalanceOperationStore(
+      () => this.resolveRaw(),
+      this.initCredits,
+    );
     this.instruction = [
       "提供用户级全局余额、余额流水、充值单与 redeem_code 能力。",
       "内部账务与管理端的 `credits` / `credits_delta` / `credits_after` 字段均使用 credits 整数；用户侧 `/me` 返回 credits 主字段并附带 USD 展示。",
@@ -239,41 +249,20 @@ export class BalanceService extends InstallableService {
     const metadata = input.metadata ?? input.meta;
     const now = new Date().toISOString();
 
-    await this.applyDelta(user_id, -credits, "charge", {
-      note,
-      ref,
-      meta: {
-        ...(metadata ?? {}),
-        charge_id,
-      },
-    });
-
-    const charge: BalanceCharge = {
+    return await this.operation_store.charge({
       charge_id,
       user_id,
       credits,
-      status: "settled",
       note,
       ref,
       metadata_json: stringifyMeta(metadata),
+      ledger_metadata_json: stringifyMeta({
+        ...(metadata ?? {}),
+        charge_id,
+      }),
       created_at: now,
-    };
-
-    await rawRun(this.resolveRaw(), [
-      `INSERT INTO ${CHARGE_TABLE} (charge_id, user_id, credits, status, note, ref, metadata_json, created_at)`,
-      "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    ].join(" "), [
-      charge.charge_id,
-      charge.user_id,
-      charge.credits,
-      charge.status,
-      charge.note,
-      charge.ref,
-      charge.metadata_json,
-      charge.created_at,
-    ]);
-
-    return charge;
+      idempotency_key: input.idempotency_key,
+    });
   }
 
   /**
@@ -343,40 +332,15 @@ export class BalanceService extends InstallableService {
    */
   async finishTopup(topup_id: string, extra: BalanceExtra = {}): Promise<BalanceTopup> {
     const current = await this.readTopupRequired(topup_id);
-    if (current.status !== "pending") {
-      throw httpError(409, `topup is already ${current.status}`);
-    }
-
-    const now = new Date().toISOString();
-    const changed = await rawRun(this.resolveRaw(), [
-      `UPDATE ${TOPUP_TABLE}`,
-      "SET status = ?, updated_at = ?, note = ?, ref = ?, metadata_json = ?",
-      "WHERE topup_id = ? AND status = ?",
-    ].join(" "), [
-      "paid",
-      now,
-      normalizeText(extra.note) || current.note,
-      normalizeText(extra.ref) || current.ref,
-      mergeMetaJSON(current.metadata_json, extra.meta),
-      topup_id,
-      "pending",
-    ]);
-
-    if (changed === 0) {
-      throw httpError(409, "topup is no longer pending");
-    }
-
-    await this.applyDelta(current.user_id, current.credits, "topup", {
+    return await this.operation_store.finish_topup(topup_id, {
       note: normalizeText(extra.note) || current.note || "topup",
       ref: normalizeText(extra.ref) || topup_id,
-      meta: {
-        ...(parseMetaJSON(current.metadata_json)),
+      metadata_json: stringifyMeta({
+        ...parseMetaJSON(current.metadata_json),
         ...(extra.meta ?? {}),
         topup_id,
-      },
+      }),
     });
-
-    return await this.readTopupRequired(topup_id);
   }
 
   /**
@@ -473,47 +437,16 @@ export class BalanceService extends InstallableService {
       throw httpError(404, "redeem_code not found");
     }
 
-    if (current.status !== "active") {
-      throw httpError(409, `redeem_code is already ${current.status}`);
-    }
-
-    const now = new Date().toISOString();
-    const changed = await rawRun(this.resolveRaw(), [
-      `UPDATE ${REDEEM_CODE_TABLE}`,
-      "SET status = ?, redeemed_by_user_id = ?, redeemed_at = ?, updated_at = ?, note = ?, ref = ?, metadata_json = ?",
-      "WHERE redeem_code_id = ? AND status = ?",
-    ].join(" "), [
-      "redeemed",
-      normalizedUserId,
-      now,
-      now,
-      normalizeText(extra.note) || current.note,
-      normalizeText(extra.ref) || current.ref,
-      mergeMetaJSON(current.metadata_json, extra.meta),
-      current.redeem_code_id,
-      "active",
-    ]);
-
-    if (changed === 0) {
-      const latest = await this.readRedeemCodeRequired(current.redeem_code_id);
-      throw httpError(409, `redeem_code is already ${latest.status}`);
-    }
-
-    const account = await this.applyDelta(normalizedUserId, current.credits, "redeem", {
+    return await this.operation_store.redeem_code(current, normalizedUserId, {
       note: normalizeText(extra.note) || current.note || "redeem_code",
       ref: normalizeText(extra.ref) || current.redeem_code_id,
-      meta: {
-        ...(parseMetaJSON(current.metadata_json)),
+      metadata_json: stringifyMeta({
+        ...parseMetaJSON(current.metadata_json),
         ...(extra.meta ?? {}),
         redeem_code_id: current.redeem_code_id,
         code_mask: current.code_mask,
-      },
+      }),
     });
-
-    return {
-      account,
-      redeem_code: await this.readRedeemCodeRequired(current.redeem_code_id),
-    };
   }
 
   /**
@@ -665,62 +598,21 @@ export class BalanceService extends InstallableService {
       throw new TypeError("delta must be a non-zero integer");
     }
 
-    await this.ensureAccount(user_id);
-    const now = new Date().toISOString();
-
-    if (delta > 0) {
-      await rawRun(this.resolveRaw(), [
-        `UPDATE ${ACCOUNT_TABLE}`,
-        "SET credits = credits + ?, updated_at = ?",
-        "WHERE user_id = ?",
-      ].join(" "), [delta, now, user_id]);
-    } else {
-      const spend = Math.abs(delta);
-      await rawRun(this.resolveRaw(), [
-        `UPDATE ${ACCOUNT_TABLE}`,
-        "SET credits = credits - ?, updated_at = ?",
-        "WHERE user_id = ?",
-      ].join(" "), [spend, now, user_id]);
-    }
-
-    const account = await this.readAccountRequired(user_id);
-    await this.insertLedger({
-      entry_id: `bal_${randomId()}`,
+    return await this.operation_store.apply_delta({
       user_id,
-      kind,
       credits_delta: delta,
-      credits_after: account.credits,
+      ledger_kind: kind,
       note: normalizeText(extra.note),
       ref: normalizeText(extra.ref),
       metadata_json: stringifyMeta(extra.meta),
-      created_at: now,
     });
-    return account;
   }
 
   /**
    * 首次见到某用户时自动开户。
    */
   private async ensureAccount(user_id: string): Promise<void> {
-    const now = new Date().toISOString();
-    const inserted = await rawRun(this.resolveRaw(), [
-      `INSERT OR IGNORE INTO ${ACCOUNT_TABLE} (user_id, credits, created_at, updated_at)`,
-      "VALUES (?, ?, ?, ?)",
-    ].join(" "), [user_id, this.initCredits, now, now]);
-
-    if (inserted > 0 && this.initCredits > 0) {
-      await this.insertLedger({
-        entry_id: `bal_${randomId()}`,
-        user_id,
-        kind: "init",
-        credits_delta: this.initCredits,
-        credits_after: this.initCredits,
-        note: "initial balance",
-        ref: "",
-        metadata_json: "{}",
-        created_at: now,
-      });
-    }
+    await this.operation_store.ensure_account(user_id);
   }
 
   /**
@@ -786,26 +678,6 @@ export class BalanceService extends InstallableService {
           code_hash: String(row.code_hash),
         }
       : undefined;
-  }
-
-  /**
-   * 写入流水。
-   */
-  private async insertLedger(entry: BalanceLedgerEntry): Promise<void> {
-    await rawRun(this.resolveRaw(), [
-      `INSERT INTO ${LEDGER_TABLE} (entry_id, user_id, kind, credits_delta, credits_after, note, ref, metadata_json, created_at)`,
-      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    ].join(" "), [
-      entry.entry_id,
-      entry.user_id,
-      entry.kind,
-      entry.credits_delta,
-      entry.credits_after,
-      entry.note,
-      entry.ref,
-      entry.metadata_json,
-      entry.created_at,
-    ]);
   }
 
   /**

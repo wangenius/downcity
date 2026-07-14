@@ -93,7 +93,8 @@ async function readDaemonMeta(projectRoot: string): Promise<DaemonMeta | null> {
     if (!startedAt) return null;
     const command = String((value as { command?: unknown })?.command || "").trim();
     const project = String((value as { projectRoot?: unknown })?.projectRoot || "").trim();
-    if (!command || !project) return null;
+    const instance_id = String((value as { instanceId?: unknown })?.instanceId || "").trim();
+    if (!command || !project || !instance_id) return null;
     return value as DaemonMeta;
   } catch {
     return null;
@@ -182,7 +183,14 @@ async function buildEntry(projectRoot: string): Promise<ManagedAgentRegistryEntr
   const project_root = normalizeProjectRoot(projectRoot);
   const daemon_pid = await readDaemonPid(project_root);
   const meta = await readDaemonMeta(project_root);
-  const running = Boolean(daemon_pid && isProcessAlive(daemon_pid));
+  const running = Boolean(
+    daemon_pid
+    && meta
+    && meta.pid === daemon_pid
+    && normalizeProjectRoot(meta.projectRoot) === project_root
+    && meta.instanceId
+    && isProcessAlive(daemon_pid),
+  );
   return {
     projectRoot: project_root,
     pid: daemon_pid ?? meta?.pid ?? 0,

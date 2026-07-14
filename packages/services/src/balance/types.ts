@@ -429,6 +429,13 @@ export interface BalanceChargeInput extends BalanceExtra {
    * BalanceService 不解析这些业务字段。
    */
   metadata?: Record<string, unknown>;
+
+  /**
+   * 可选稳定幂等键。
+   *
+   * 同一个幂等键重复提交时返回首次成功的扣费记录，不会再次扣减余额。
+   */
+  idempotency_key?: string;
 }
 
 /**

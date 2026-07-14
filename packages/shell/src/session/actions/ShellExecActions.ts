@@ -15,9 +15,9 @@ import type {
 } from "@/types/ShellAction.js";
 import {
   buildActionResponse,
-  clampWaitMsWithOptions,
   createOutputChunk,
   isTerminalStatus,
+  normalize_exec_timeout_ms,
   nowMs,
   resolveSession,
 } from "../ShellActionRuntimeSupport.js";
@@ -46,14 +46,7 @@ export async function execShellCommand(
   context: ShellHostContext,
   request: ShellExecRequest,
 ): Promise<ShellActionResponse> {
-  const timeoutMs = Math.max(
-    120_000,
-    clampWaitMsWithOptions(
-      state.options,
-      request.timeoutMs,
-      state.options.defaultExecTimeoutMs,
-    ),
-  );
+  const timeoutMs = normalize_exec_timeout_ms(state.options, request.timeoutMs);
   const started = await startShellSession(state, context, {
     cmd: request.cmd,
     ...(request.cwd ? { cwd: request.cwd } : {}),

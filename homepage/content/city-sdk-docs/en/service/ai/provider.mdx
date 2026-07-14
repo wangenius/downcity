@@ -435,7 +435,7 @@ AIService owns job storage, Queue scheduling, state caching, final result persis
 
 Use `bill(ctx, output)` when a provider or a specific model needs to turn a finished AI call into a charge draft. `bill` does not deduct balance by itself. AIService reads the returned charge line and calls `balance.charge()` through the configured `BalanceService` bridge. The wallet can go negative after this post-success charge; the next model-consuming AI request is blocked by AIService's balance precheck.
 
-For image jobs, `bill(ctx, output)` is called only when background `image/fetch` first advances the job to `status: "succeeded"` and writes `result_json`. `image_create()` never bills. User `image_result()` only reads the `async_jobs` cache, does not call the Provider, and does not bill again. If Queue consumption runs without a user context, return `user_id` in the charge line from the stored job owner.
+Background `image/fetch` atomically claims an image job so only one worker calls the Provider at a time. After the Provider succeeds, AIService completes billing with a stable job idempotency key before writing `status: "succeeded"` and `result_json`. A billing failure leaves the job retryable, and a repeated attempt does not debit twice. `image_create()` never bills, and user `image_result()` only reads the `async_jobs` cache. If Queue consumption runs without a user context, return `user_id` in the charge line from the stored job owner.
 
 The usual priority is:
 

@@ -77,16 +77,34 @@ export class TableApi implements CityTableApi {
     const cond = buildCondition(this.schema, input.where);
     if (!cond) throw new TypeError("update() where cannot be empty");
     // Drizzle update 返回类型因方言而异
-    const result = await this.db.update(this.schema as unknown).set(input.values).where(cond) as { changes?: number; length?: number };
-    return typeof result.changes === "number" ? result.changes : Array.isArray(result) ? result.length : 0;
+    const result = await this.db.update(this.schema as unknown).set(input.values).where(cond);
+    return read_mutation_count(result);
   }
 
   async delete(where: Record<string, unknown>): Promise<number> {
     const cond = buildCondition(this.schema, where);
     if (!cond) throw new TypeError("delete() where cannot be empty");
-    const result = await this.db.delete(this.schema as unknown).where(cond) as { changes?: number; length?: number };
-    return typeof result.changes === "number" ? result.changes : Array.isArray(result) ? result.length : 0;
+    const result = await this.db.delete(this.schema as unknown).where(cond);
+    return read_mutation_count(result);
   }
+}
+
+/**
+ * 读取不同 Drizzle 方言的变更行数。
+ *
+ * better-sqlite3 返回 `changes`，D1 返回 `meta.changes`，Postgres 常见驱动返回
+ * `rowCount`；统一归一后，上层才能可靠实现 compare-and-set。
+ */
+function read_mutation_count(result: unknown): number {
+  if (Array.isArray(result)) return result.length;
+  if (!result || typeof result !== "object") return 0;
+  const record = result as {
+    changes?: unknown;
+    rowCount?: unknown;
+    meta?: { changes?: unknown };
+  };
+  const value = record.changes ?? record.rowCount ?? record.meta?.changes;
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
 // ===========================================================================

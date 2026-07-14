@@ -346,6 +346,8 @@ export async function resolveApproval(params: {
   if (!approval) return false;
   params.state.approvals.delete(params.approvalId);
   clearTimeout(approval.timer);
+  // 关键点（中文）：先兑现等待中的命令，事件发布或审计 I/O 不能让审批 Promise 悬挂。
+  approval.resolve(params.decision);
   await publishApprovalResult({
     context: params.context,
     ownerContextId: approval.ownerContextId,
@@ -356,8 +358,6 @@ export async function resolveApproval(params: {
     decision: params.decision,
     toolCallId: approval.toolCallId,
   });
-  approval.resolve(params.decision);
-
   await appendAudit({
     context: params.context,
     record: {

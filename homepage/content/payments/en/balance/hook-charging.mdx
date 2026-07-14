@@ -87,6 +87,7 @@ this.action("pdf", async (ctx) => {
   await balance.charge({
     user_id: ctx.user!.user_id,
     credits: 10_000,
+    idempotency_key: `pdf_export:${output.id}`,
     note: "pdf export",
     metadata: {
       city_id: ctx.city?.city_id,
@@ -96,6 +97,8 @@ this.action("pdf", async (ctx) => {
   return output;
 });
 ```
+
+Pass a stable `idempotency_key` when a charge can be repeated by queue redelivery, a network timeout, or process recovery. Later `charge()` calls with the same key return the first charge record without debiting again. The balance, ledger, and charge record are committed in one atomic database operation.
 
 ## AIService
 

@@ -1689,12 +1689,16 @@ test("AIService charges image jobs only after provider result succeeds", async (
     process.chdir(tempDir)
     const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
     const charges = []
+    let charge_attempts = 0
+    let fetch_calls = 0
     const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
     const queueMessages = useMemoryQueue(base)
 
     const ai = new AIService({
       balance: {
         async charge(input) {
+          charge_attempts += 1
+          if (charge_attempts === 1) throw new Error("temporary balance failure")
           charges.push(input)
         },
       },
@@ -1723,18 +1727,22 @@ test("AIService charges image jobs only after provider result succeeds", async (
           job_id: "img_priced_1",
           status: "running",
         }),
-        image_fetch: async (ctx) => ({
-          job_id: String(ctx.input.job_id),
-          status: "succeeded",
-          result: {
-            id: "msg_priced_image",
-            role: "assistant",
-            parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,abc" }],
-          },
-          metadata: {
-            user_id: "user_1",
-          },
-        }),
+        image_fetch: async (ctx) => {
+          fetch_calls += 1
+          await new Promise((resolve) => setTimeout(resolve, 20))
+          return {
+            job_id: String(ctx.input.job_id),
+            status: "succeeded",
+            result: {
+              id: "msg_priced_image",
+              role: "assistant",
+              parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,abc" }],
+            },
+            metadata: {
+              user_id: "user_1",
+            },
+          }
+        },
       },
     })
     base.use(ai)
@@ -1772,7 +1780,12 @@ test("AIService charges image jobs only after provider result succeeds", async (
     const body = await response.json()
     assert.equal(body.job_id, "img_priced_1")
     assert.deepEqual(charges, [])
-    await base.queue.call(queueMessages.shift())
+    const fetch_message = queueMessages.shift()
+    await assert.rejects(base.queue.call(fetch_message), /temporary balance failure/)
+    await Promise.all([
+      base.queue.call(fetch_message),
+      base.queue.call(fetch_message),
+    ])
 
     const resultResponse = await base.fetch(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",
@@ -1786,6 +1799,7 @@ test("AIService charges image jobs only after provider result succeeds", async (
     assert.equal(resultResponse.status, 200)
     assert.deepEqual(charges, [{
       user_id: "user_1",
+      idempotency_key: `ai_image:${body.job_id}`,
       credits: 777,
       note: "AI image result",
       ref: body.job_id,
@@ -1797,6 +1811,8 @@ test("AIService charges image jobs only after provider result succeeds", async (
         image_count: 1,
       },
     }])
+    assert.equal(charge_attempts, 2)
+    assert.equal(fetch_calls, 2)
 
     const cachedResponse = await base.fetch(new Request("http://localhost/v1/ai/image/result", {
       method: "POST",

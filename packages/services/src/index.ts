@@ -46,7 +46,7 @@ export type {
   OAuthAccountsProviderOptions,
 } from "./accounts/types.js";
 
-export { balanceAccounts, balanceCharges, balanceLedger, balanceRedeemCodes, balanceTopups } from "./balance/schema.js";
+export { balanceAccounts, balanceCharges, balanceLedger, balanceOperations, balanceRedeemCodes, balanceTopups } from "./balance/schema.js";
 export { BalanceService } from "./balance/service.js";
 export type {
   BalanceAccount,

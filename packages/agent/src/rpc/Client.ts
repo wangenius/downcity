@@ -50,6 +50,7 @@ import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js"
 import type {
   RpcClientEndpoint,
   RpcClientFrame,
+  RpcInternalStatus,
   RpcRequest,
   RpcSessionSubscription,
   RpcSystemPromptPayload,
@@ -356,8 +357,8 @@ export class RpcClient {
   /**
    * 读取 Agent 内部状态。
    */
-  async get_internal_status(): Promise<{ status: string }> {
-    return await this.request<{ status: string }>({
+  async get_internal_status(): Promise<RpcInternalStatus> {
+    return await this.request<RpcInternalStatus>({
       method: "internal.status.get",
     });
   }

@@ -19,6 +19,8 @@ export const DAEMON_META_FILENAME = "downcity.daemon.json";
 export interface DaemonMeta {
   /** 当前 daemon 进程的操作系统 pid。 */
   pid: number;
+  /** 每次 daemon 启动生成的唯一实例 ID，用于识别 PID 复用。 */
+  instanceId: string;
   /** daemon 所属 agent 项目的绝对路径。 */
   projectRoot: string;
   /** daemon 启动时间（ISO 时间字符串）。 */
@@ -33,6 +35,16 @@ export interface DaemonMeta {
   platform: NodeJS.Platform;
 }
 
+/** daemon 通过本机 RPC 返回的运行身份。 */
+export interface DaemonRuntimeIdentity {
+  /** RPC 服务所属进程的操作系统 pid。 */
+  pid: number;
+  /** RPC 服务所属 agent 项目的绝对路径。 */
+  projectRoot: string;
+  /** 当前 daemon 启动实例的唯一 ID。 */
+  instanceId: string;
+}
+
 /**
  * daemon 进入 stale 状态的诊断项。
  */
@@ -43,7 +55,8 @@ export interface DaemonStaleReason {
     | "meta_missing"
     | "meta_invalid"
     | "meta_pid_mismatch"
-    | "meta_project_mismatch";
+    | "meta_project_mismatch"
+    | "meta_instance_missing";
   /** 面向用户展示的原因说明。 */
   message: string;
 }

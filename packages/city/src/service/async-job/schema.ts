@@ -18,7 +18,7 @@ export const sqliteAsyncJobs = sqliteTable(DEFAULT_ASYNC_JOBS_TABLE, {
   job_id: sqliteText("job_id").primaryKey(),
   /** 任务类型，例如 `ai.image.generate`。 */
   job_type: sqliteText("job_type").notNull(),
-  /** 任务状态：queued / running / succeeded / failed。 */
+  /** 任务状态：queued / running / fetching / succeeded / failed。 */
   status: sqliteText("status").notNull(),
   /** 原始任务输入，JSON 字符串。 */
   input_json: sqliteText("input_json").notNull(),
@@ -54,7 +54,7 @@ export const pgAsyncJobs = pgTable(DEFAULT_ASYNC_JOBS_TABLE, {
   job_id: pgText("job_id").primaryKey(),
   /** 任务类型，例如 `ai.image.generate`。 */
   job_type: pgText("job_type").notNull(),
-  /** 任务状态：queued / running / succeeded / failed。 */
+  /** 任务状态：queued / running / fetching / succeeded / failed。 */
   status: pgText("status").notNull(),
   /** 原始任务输入，JSON 字符串。 */
   input_json: pgText("input_json").notNull(),

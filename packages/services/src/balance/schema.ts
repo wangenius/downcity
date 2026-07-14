@@ -13,6 +13,7 @@ export const LEDGER_TABLE = "service_balance_ledger";
 export const TOPUP_TABLE = "service_balance_topups";
 export const REDEEM_CODE_TABLE = "service_balance_redeem_codes";
 export const CHARGE_TABLE = "service_balance_charges";
+export const OPERATION_TABLE = "service_balance_operations";
 
 /**
  * SQLite 余额账户表。
@@ -247,4 +248,29 @@ export const balanceCharges = sqliteTable(CHARGE_TABLE, {
    * 创建时间。
    */
   created_at: text("created_at").notNull(),
+});
+
+/**
+ * SQLite 账务原子操作表。
+ *
+ * 每次余额变化先声明一个 pending 操作，余额、流水和业务记录只处理 pending 操作，
+ * 最后在同一事务中把它收口为 applied，从而同时提供原子性与幂等性。
+ */
+export const balanceOperations = sqliteTable(OPERATION_TABLE, {
+  /** 调用方提供或服务生成的稳定操作 ID。 */
+  operation_id: text("operation_id").primaryKey(),
+  /** 操作类型，例如 charge / topup / redeem / delta。 */
+  kind: text("kind").notNull(),
+  /** 当前操作关联的业务记录 ID。 */
+  record_id: text("record_id").notNull(),
+  /** 当前操作影响的用户 ID。 */
+  user_id: text("user_id").notNull(),
+  /** 本次余额变化值，正数入账、负数扣款。 */
+  credits_delta: integer("credits_delta").notNull(),
+  /** 操作状态：pending / applied。 */
+  status: text("status").notNull(),
+  /** 操作创建时间。 */
+  created_at: text("created_at").notNull(),
+  /** 操作完成时间；pending 时为空字符串。 */
+  applied_at: text("applied_at").notNull(),
 });

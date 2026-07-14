@@ -53,6 +53,11 @@ import type {
   AIResolvedAction,
   AIResolvedRoutingPlan,
 } from "../../types/AIRouting.js";
+import {
+  claim_image_job,
+  finish_image_job_fetch,
+  release_image_job_claim,
+} from "./image-job-store.js";
 
 /** AIService 直接暴露的 SDK 通路模态列表。图片只通过 image/create + image/result 暴露。 */
 const MODALITIES = ["text", "stream", "video", "tts", "asr"] as const;
@@ -161,7 +166,7 @@ function normalizePositiveNumber(value: unknown, fallback: number): number {
  * 读取任务状态。
  */
 function readJobStatus(value: unknown): AsyncJobStatus {
-  return value === "queued" || value === "running" || value === "succeeded" || value === "failed"
+  return value === "queued" || value === "running" || value === "fetching" || value === "succeeded" || value === "failed"
     ? value
     : "failed";
 }
@@ -548,12 +553,18 @@ export class AIService extends Service {
    * 后台抓取图片任务状态，并根据结果更新 async_jobs。
    */
   private async fetchImageJob(ctx: Context): Promise<AIImageProviderFetchResult> {
-    const job = await this.requireImageJob(ctx);
+    let claim: Awaited<ReturnType<typeof claim_image_job>> = null;
+    const initial_job = await this.requireImageJob(ctx);
     try {
-      if (this.isTerminalImageJob(job)) return this.imageJobToResult(job);
+      if (this.isTerminalImageJob(initial_job)) return this.imageJobToResult(initial_job);
+      const table = ctx.db.async_jobs;
+      if (!table) throw httpError(500, "AI async_jobs table is not initialized");
+      claim = await claim_image_job(table, initial_job);
+      if (!claim) return this.imageJobToResult(await this.requireImageJob(ctx));
+      const job = claim.record;
       if (this.isImageJobPendingTimedOut(job)) {
         const output = this.createImageJobPendingTimeoutResult(job);
-        await this.updateImageJobFromFetch(ctx, job, output);
+        await finish_image_job_fetch(table, claim, output);
         return output;
       }
 
@@ -575,17 +586,17 @@ export class AIService extends Service {
       const should_charge = output.status === "succeeded" && Boolean(output.result) && !job.result_json;
       if (should_charge) {
         this.attachOutputMetering(ctx, stored_output.result, "image", started_at);
-      }
-      await this.updateImageJobFromFetch(ctx, job, stored_output);
-      if (should_charge) {
         const charge = model.bill?.(ctx, stored_output);
-        await this.handleCharge(ctx, charge, isPromiseLike(charge));
+        await this.handleCharge(ctx, charge, false, `ai_image:${job.job_id}`);
       }
+      await finish_image_job_fetch(table, claim, stored_output);
       if (stored_output.status === "queued" || stored_output.status === "running") {
         await this.enqueueImageFetch(ctx, job.job_id, stored_output.poll_after_ms);
       }
       return stored_output;
     } catch (error) {
+      const table = ctx.db.async_jobs;
+      if (table && claim) await release_image_job_claim(table, claim);
       throw imageActionError(error, "image_fetch action failed");
     }
   }
@@ -601,7 +612,7 @@ export class AIService extends Service {
    * 判断图片任务是否超过平台允许的 pending 时间。
    */
   private isImageJobPendingTimedOut(job: AsyncJobRecord): boolean {
-    if (job.status !== "queued" && job.status !== "running") return false;
+    if (job.status !== "queued" && job.status !== "running" && job.status !== "fetching") return false;
     const created_at = Date.parse(job.created_at);
     if (!Number.isFinite(created_at)) return false;
     return Date.now() - created_at >= this.image_max_pending_duration_ms;
@@ -764,33 +775,13 @@ export class AIService extends Service {
   private imageJobToResult(job: AsyncJobRecord): AIImageProviderResult {
     return {
       job_id: job.job_id,
-      status: job.status,
+      status: job.status === "fetching" ? "running" : job.status,
       result: job.status === "succeeded" ? parseImageMessage(job.result_json) : undefined,
       error: job.error ?? undefined,
       message: job.message ?? undefined,
       poll_after_ms: readOptionalNumber(job.poll_after_ms),
       metadata: parseRecordJson(job.state_json),
     };
-  }
-
-  /**
-   * 按 provider fetch 输出更新图片任务。
-   */
-  private async updateImageJobFromFetch(ctx: Context, job: AsyncJobRecord, output: AIImageProviderFetchResult): Promise<void> {
-    const table = ctx.db.async_jobs;
-    if (!table) throw httpError(500, "AI async_jobs table is not initialized");
-    await table.update({
-      where: { job_id: job.job_id, job_type: IMAGE_GENERATE_JOB_TYPE },
-      values: {
-        status: output.status,
-        state_json: JSON.stringify(output.metadata ?? parseRecordJson(job.state_json)),
-        result_json: output.result ? JSON.stringify(output.result) : job.result_json ?? null,
-        error: output.error ?? null,
-        message: output.message ?? null,
-        poll_after_ms: output.poll_after_ms ? String(output.poll_after_ms) : null,
-        updated_at: new Date().toISOString(),
-      },
-    });
   }
 
   // ========== OpenAI 兼容通路 ==========
@@ -916,6 +907,7 @@ export class AIService extends Service {
     ctx: Context,
     charge: AIProviderChargeLine | Promise<AIProviderChargeLine | undefined> | undefined,
     defer: boolean,
+    idempotency_key?: string,
   ): Promise<void> {
     if (!charge || !this.balance) return;
     ctx.locals.ai_charge_handled = true;
@@ -931,6 +923,7 @@ export class AIService extends Service {
         await this.balance?.charge({
           ...line,
           user_id,
+          ...(idempotency_key ? { idempotency_key } : {}),
         });
       })
       .catch((error) => {

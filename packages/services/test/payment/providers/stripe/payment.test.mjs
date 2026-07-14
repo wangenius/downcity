@@ -190,7 +190,8 @@ test("paymentService creates checkout sessions and finishes topups through webho
         },
       },
     })
-    const webhookResponse = await base.fetch(new Request("http://localhost/v1/payment/webhook?provider=stripe", {
+    balance.failNextFinish()
+    const failedWebhookResponse = await base.fetch(new Request("http://localhost/v1/payment/webhook?provider=stripe", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -198,8 +199,28 @@ test("paymentService creates checkout sessions and finishes topups through webho
       },
       body: completedPayload,
     }))
-    assert.equal(webhookResponse.status, 200)
-    assert.deepEqual(await webhookResponse.json(), {
+    assert.equal(failedWebhookResponse.status, 500)
+    assert.equal((await failedWebhookResponse.json()).sync_status, "failed")
+    assert.equal((await balance.read("user_1")).credits, 0)
+
+    balance.setFinishDelay(30)
+    const retryRequest = () => new Request("http://localhost/v1/payment/webhook?provider=stripe", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "stripe-signature": stripeSignature(completedPayload, "whsec_test"),
+      },
+      body: completedPayload,
+    })
+    const retryResponses = await Promise.all([
+      base.fetch(retryRequest()),
+      base.fetch(retryRequest()),
+    ])
+    assert.deepEqual(retryResponses.map((response) => response.status), [200, 200])
+    const retryBodies = await Promise.all(retryResponses.map((response) => response.json()))
+    assert.ok(retryBodies.some((item) => item.sync_status === "applied"))
+    assert.ok(retryBodies.some((item) => item.sync_status === "processing"))
+    assert.deepEqual(retryBodies.find((item) => item.sync_status === "applied"), {
       received: true,
       event_id: "stripe:evt_checkout_completed",
       provider: "stripe",
@@ -208,6 +229,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
 
     const afterTopup = await balance.read("user_1")
     assert.equal(afterTopup.credits, 50_000_000)
+    assert.equal(balance.finishCount(), 2)
 
     const repeatedWebhookResponse = await base.fetch(new Request("http://localhost/v1/payment/webhook?provider=stripe", {
       method: "POST",
@@ -595,6 +617,9 @@ async function createStripeStub() {
 function createBalanceBridge() {
   const topups = new Map()
   const balances = new Map()
+  let finish_delay_ms = 0
+  let finish_failures = 0
+  let finish_count = 0
 
   return {
     async createTopup(userId, credits, extra = {}) {
@@ -615,12 +640,29 @@ function createBalanceBridge() {
       return { ...topup }
     },
     async finishTopup(topupId) {
+      finish_count += 1
+      if (finish_delay_ms > 0) {
+        await new Promise((resolve) => setTimeout(resolve, finish_delay_ms))
+      }
+      if (finish_failures > 0) {
+        finish_failures -= 1
+        throw new Error("temporary finish topup failure")
+      }
       const topup = topups.get(topupId)
       if (!topup) throw new Error(`topup not found: ${topupId}`)
       if (topup.status !== "pending") throw new Error(`topup is already ${topup.status}`)
       topup.status = "paid"
       balances.set(topup.user_id, (balances.get(topup.user_id) || 0) + topup.credits)
       return { ...topup }
+    },
+    failNextFinish() {
+      finish_failures += 1
+    },
+    setFinishDelay(delayMs) {
+      finish_delay_ms = delayMs
+    },
+    finishCount() {
+      return finish_count
     },
     async read(userId) {
       const balance = balances.get(userId) || 0

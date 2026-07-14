@@ -43,7 +43,13 @@ export async function handleInternalRpcRequest(params: {
 
   switch (request.method) {
     case "internal.status.get": {
-      write_success(request.id, { status: "ok" });
+      const context = requireAgentContext(options);
+      write_success(request.id, {
+        status: "ok",
+        pid: process.pid,
+        projectRoot: context.rootPath,
+        instanceId: String(process.env.DOWNCITY_DAEMON_INSTANCE_ID || "").trim(),
+      });
       return true;
     }
     case "internal.sessions.clear_messages": {

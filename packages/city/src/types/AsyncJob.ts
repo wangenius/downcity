@@ -6,7 +6,7 @@
  */
 
 /** 通用异步任务状态。 */
-export type AsyncJobStatus = "queued" | "running" | "succeeded" | "failed";
+export type AsyncJobStatus = "queued" | "running" | "fetching" | "succeeded" | "failed";
 
 /**
  * 通用异步任务表行。

@@ -31,17 +31,23 @@ test("balanceService charges users with generic metadata", async () => {
       body: { city_id: city.city_id, user_id: "user_1" },
     }))).json()
 
-    const charge = await balance.charge({
+    const charge_input = {
       user_id: "user_1",
       credits: 123_456,
+      idempotency_key: "test:req_1",
       note: "test charge",
       ref: "req_1",
       metadata: {
         service_id: "demo",
         action_id: "run",
       },
-    })
+    }
+    const [charge, duplicate_charge] = await Promise.all([
+      balance.charge(charge_input),
+      balance.charge(charge_input),
+    ])
 
+    assert.equal(duplicate_charge.charge_id, charge.charge_id)
     assert.equal(charge.credits, 123_456)
     assert.equal(charge.ref, "req_1")
     assert.deepEqual(JSON.parse(charge.metadata_json), {
@@ -51,6 +57,14 @@ test("balanceService charges users with generic metadata", async () => {
 
     const account = await balance.read("user_1")
     assert.equal(account.credits, 876_544)
+    await assert.rejects(
+      balance.charge({
+        ...charge_input,
+        credits: 123_457,
+      }),
+      /idempotency_key was already used for a different charge/,
+    )
+    assert.equal((await balance.read("user_1")).credits, 876_544)
 
     const chargesResponse = await base.fetch(adminRequest(adminSecret, {
       path: "/v1/balance/charges?limit=10",

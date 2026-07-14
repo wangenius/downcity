@@ -50,8 +50,12 @@ type EventTable = {
   update(input: {
     where: Partial<PaymentEventRecord>;
     values: Partial<PaymentEventRecord>;
-  }): Promise<unknown>;
+  }): Promise<number>;
 };
+
+/** webhook 单次处理租约，避免并发重复入账，同时允许进程中断后恢复。 */
+const PAYMENT_EVENT_PROCESSING_LEASE_MS = 5 * 60 * 1000;
+const PAYMENT_EVENT_LEASE_PREFIX = "lease:";
 
 /**
  * PaymentService 暴露给 routes 的最小能力。
@@ -206,25 +210,36 @@ export function installPaymentRoutes(service: PaymentServiceLike, ctx: ServiceIn
 
       const eventProvider = provider ?? readProvider(providers, webhookEvent.meta?.provider);
       const eventId = `${eventProvider.id}:${normalizeRequired(webhookEvent.event_id, "payment event id")}`;
-      const existing = (await events.select({ event_id: eventId }))[0];
-      if (existing) {
+      let event_record = (await events.select({ event_id: eventId }))[0];
+      if (!event_record) {
+        const pending_event: PaymentEventRecord = {
+          event_id: eventId,
+          provider: eventProvider.id,
+          type: webhookEvent.type,
+          payload_json: JSON.stringify(webhookEvent.payload),
+          sync_status: "pending",
+          sync_error: "",
+          created_at: new Date().toISOString(),
+        };
+        try {
+          await events.insert(pending_event);
+          event_record = pending_event;
+        } catch (error) {
+          // 并发重复 webhook 可能同时通过首次查询，主键冲突后重新读取即可。
+          event_record = (await events.select({ event_id: eventId }))[0];
+          if (!event_record) throw error;
+        }
+      }
+
+      const claim = await claimPaymentEvent(events, event_record);
+      if (!claim.claimed) {
         return requestCtx.jsonResponse({
           received: true,
           event_id: eventId,
           provider: eventProvider.id,
-          sync_status: existing.sync_status,
+          sync_status: claim.record.sync_status,
         });
       }
-
-      await events.insert({
-        event_id: eventId,
-        provider: eventProvider.id,
-        type: webhookEvent.type,
-        payload_json: JSON.stringify(webhookEvent.payload),
-        sync_status: "pending",
-        sync_error: "",
-        created_at: new Date().toISOString(),
-      });
 
       try {
         const syncStatus = await syncPaymentEvent({
@@ -233,7 +248,7 @@ export function installPaymentRoutes(service: PaymentServiceLike, ctx: ServiceIn
           payments,
           service,
         });
-        await updateEvent(events, eventId, syncStatus, "");
+        await finishClaimedPaymentEvent(events, claim.record, syncStatus, "");
         return requestCtx.jsonResponse({
           received: true,
           event_id: eventId,
@@ -242,7 +257,7 @@ export function installPaymentRoutes(service: PaymentServiceLike, ctx: ServiceIn
         });
       } catch (error) {
         const message = errorMessage(error);
-        await updateEvent(events, eventId, "failed", message);
+        await finishClaimedPaymentEvent(events, claim.record, "failed", message);
         return requestCtx.jsonResponse({
           received: true,
           event_id: eventId,
@@ -281,6 +296,82 @@ export function installPaymentRoutes(service: PaymentServiceLike, ctx: ServiceIn
       }));
     },
   });
+}
+
+/**
+ * 原子 claim 一个可处理 webhook 事件。
+ *
+ * 关键说明（中文）
+ * - applied / ignored 是终态，不再执行。
+ * - pending / failed 可立即重试。
+ * - processing 只有租约过期后才能恢复，避免两个请求同时完成同一笔入账。
+ */
+async function claimPaymentEvent(
+  events: EventTable,
+  input: PaymentEventRecord,
+): Promise<{ claimed: boolean; record: PaymentEventRecord }> {
+  let current = input;
+  if (current.sync_status === "applied" || current.sync_status === "ignored") {
+    return { claimed: false, record: current };
+  }
+
+  if (current.sync_status === "processing") {
+    const lease_expires_at = readPaymentEventLease(current.sync_error);
+    if (lease_expires_at > Date.now()) {
+      return { claimed: false, record: current };
+    }
+    const reset = await events.update({
+      where: {
+        event_id: current.event_id,
+        sync_status: "processing",
+        sync_error: current.sync_error,
+      },
+      values: {
+        sync_status: "failed",
+        sync_error: "processing lease expired",
+      },
+    });
+    if (reset === 0) {
+      const latest = (await events.select({ event_id: current.event_id }))[0] ?? current;
+      return { claimed: false, record: latest };
+    }
+    current = {
+      ...current,
+      sync_status: "failed",
+      sync_error: "processing lease expired",
+    };
+  }
+
+  const lease = `${PAYMENT_EVENT_LEASE_PREFIX}${Date.now() + PAYMENT_EVENT_PROCESSING_LEASE_MS}`;
+  const changed = await events.update({
+    where: {
+      event_id: current.event_id,
+      sync_status: current.sync_status,
+    },
+    values: {
+      sync_status: "processing",
+      sync_error: lease,
+    },
+  });
+  if (changed === 0) {
+    const latest = (await events.select({ event_id: current.event_id }))[0] ?? current;
+    return { claimed: false, record: latest };
+  }
+  return {
+    claimed: true,
+    record: {
+      ...current,
+      sync_status: "processing",
+      sync_error: lease,
+    },
+  };
+}
+
+/** 读取 processing 状态中保存的租约截止时间。 */
+function readPaymentEventLease(value: string): number {
+  if (!value.startsWith(PAYMENT_EVENT_LEASE_PREFIX)) return 0;
+  const parsed = Number(value.slice(PAYMENT_EVENT_LEASE_PREFIX.length));
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 /**
@@ -395,19 +486,26 @@ async function updatePayment(
 /**
  * 更新事件同步状态。
  */
-async function updateEvent(
+async function finishClaimedPaymentEvent(
   events: EventTable,
-  eventId: string,
+  claimed_record: PaymentEventRecord,
   syncStatus: PaymentEventSyncStatus,
   syncError: string,
 ): Promise<void> {
-  await events.update({
-    where: { event_id: eventId },
+  const changed = await events.update({
+    where: {
+      event_id: claimed_record.event_id,
+      sync_status: "processing",
+      sync_error: claimed_record.sync_error,
+    },
     values: {
       sync_status: syncStatus,
       sync_error: syncError.trim(),
     },
   });
+  if (changed === 0) {
+    throw new Error(`Payment event lease lost: ${claimed_record.event_id}`);
+  }
 }
 
 /**

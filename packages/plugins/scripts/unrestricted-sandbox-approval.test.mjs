@@ -164,6 +164,33 @@ test("shell_exec unrestricted approved executes in unrestricted sandbox", async 
   }
 });
 
+test("closing shell runtime expires a pending approval", async () => {
+  const fixture = await create_fixture();
+  const state = createShellRuntimeState({ defaultApprovalTimeoutMs: 10_000 });
+  try {
+    const pending_result = startShellSession(state, fixture.context, {
+      cmd: "printf should-not-run",
+      cwd: fixture.root_path,
+      shell: "/bin/sh",
+      login: false,
+      sandbox: "unrestricted",
+      reason: "测试 runtime 销毁会兑现 pending approval。",
+      ownerContextId: "session_dispose",
+    });
+    await wait_for_approval(state);
+
+    await closeAllShellSessions(state, true);
+    const result = await pending_result;
+
+    assert.equal(result.shell.approvalStatus, "expired");
+    assert.equal(result.shell.status, "expired");
+    assert.equal(state.approvals.size, 0);
+  } finally {
+    await closeAllShellSessions(state, true);
+    await fs.rm(fixture.root_path, { recursive: true, force: true });
+  }
+});
+
 test("shell_write unrestricted requires reason", async () => {
   const fixture = await create_fixture();
   const state = createShellRuntimeState({

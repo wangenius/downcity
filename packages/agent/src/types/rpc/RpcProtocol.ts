@@ -407,6 +407,18 @@ export interface RpcClientEndpoint {
   port: number;
 }
 
+/** Agent 本机 internal.status.get 返回的进程身份。 */
+export interface RpcInternalStatus {
+  /** RPC 服务健康状态。 */
+  status: string;
+  /** RPC 服务所属进程的操作系统 pid。 */
+  pid: number;
+  /** 当前 Agent 项目的绝对路径。 */
+  projectRoot: string;
+  /** daemon 启动实例 ID；非 daemon 前台进程返回空字符串。 */
+  instanceId: string;
+}
+
 /**
  * RPC Session 订阅句柄。
  */

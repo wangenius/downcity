@@ -27,6 +27,8 @@ const agent = new Agent({
 
 `shell_exec` 用于一次性非交互命令；`shell_session` 用于 PTY 交互式会话，支持 `start`、`send`、`read`、`list`、`stop` action。
 
+`shell_exec` 的 `timeout_ms` 是命令总执行时长。显式传入较短值会按该值超时并终止进程；长任务应改用 `shell_session`，不要依赖 `shell_exec` 持续等待。
+
 ## Sandbox 模式
 
 Shell tools 默认进入 Safe Sandbox。
@@ -83,7 +85,7 @@ const current = await session.approval_mode();
 - Unrestricted 命令只有在逐次审批通过后才会离开 Safe Sandbox 执行。
 - `always-allow` 只影响当前 session 的新 approval 请求，不影响其它 session。
 - 对 unrestricted `shell_session` 会话执行的每一次 `send` 也需要审批。
-- `agent.dispose()` 会释放 Shell sessions。
+- `agent.dispose()` 会释放 Shell sessions，并把仍在等待的 approval 兑现为过期，调用不会永久挂起。
 
 ## 相关文档
 

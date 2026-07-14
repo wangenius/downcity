@@ -27,7 +27,12 @@ export type PaymentStatus = "pending" | "paid" | "expired" | "failed" | "cancele
 /**
  * 统一 webhook 同步状态。
  */
-export type PaymentEventSyncStatus = "pending" | "applied" | "ignored" | "failed";
+export type PaymentEventSyncStatus =
+  | "pending"
+  | "processing"
+  | "applied"
+  | "ignored"
+  | "failed";
 
 /**
  * 充值单最小只读视图。

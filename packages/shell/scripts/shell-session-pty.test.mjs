@@ -80,3 +80,26 @@ test("shell_session uses PTY while shell_exec stays non-interactive", async () =
     await fs.rm(fixture.root_path, { recursive: true, force: true });
   }
 });
+
+test("shell_exec honors an explicit short total timeout", async () => {
+  const fixture = await create_context();
+  const state = createShellRuntimeState({ defaultExecTimeoutMs: 2000 });
+  const started_at = Date.now();
+  try {
+    await assert.rejects(
+      execShellCommand(state, fixture.context, {
+        cmd: "sleep 2",
+        cwd: fixture.root_path,
+        shell: "/bin/sh",
+        login: false,
+        timeoutMs: 80,
+        sandbox: "safe",
+      }),
+      /shell\.exec timed out after 80ms/,
+    );
+    assert.ok(Date.now() - started_at < 1500);
+  } finally {
+    await closeAllShellSessions(state, true);
+    await fs.rm(fixture.root_path, { recursive: true, force: true });
+  }
+});

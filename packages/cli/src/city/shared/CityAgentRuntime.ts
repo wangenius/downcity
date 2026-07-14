@@ -38,6 +38,7 @@ export async function resolveRunningManagedAgents(_params?: {
   const views: ManagedAgentProcessView[] = [];
 
   for (const entry of entries) {
+    if (entry.status !== "running") continue;
     const project_root = resolve(String(entry.projectRoot || "").trim() || ".");
     const daemon_pid = await readDaemonPid(project_root);
     if (!daemon_pid || !isDaemonProcessAlive(daemon_pid)) {

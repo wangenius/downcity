@@ -36,6 +36,8 @@ export interface AIProviderChargeLine {
 export interface AIBalanceChargeInput extends AIProviderChargeLine {
   /** 当前用户 ID。 */
   user_id: string;
+  /** 可选幂等键；相同键的重复提交必须只产生一次扣费。 */
+  idempotency_key?: string;
 }
 
 /**

@@ -15,13 +15,17 @@
 import fs from "fs-extra";
 import path from "path";
 import { spawn } from "child_process";
+import { execFile as execFileCb } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { createConnection } from "node:net";
+import { promisify } from "node:util";
 import { getDowncityDebugDirPath } from "@/city/config/Paths.js";
 import {
   DAEMON_LOG_FILENAME,
   DAEMON_META_FILENAME,
   DAEMON_PID_FILENAME,
   type DaemonMeta,
+  type DaemonRuntimeIdentity,
   type DaemonStaleReason,
 } from "@/city/process/daemon/Types.js";
 import {
@@ -40,6 +44,7 @@ const sleep = async (ms: number): Promise<void> =>
 const DAEMON_READY_TIMEOUT_MS = 15_000;
 const DAEMON_READY_CONNECT_TIMEOUT_MS = 300;
 const DAEMON_READY_POLL_INTERVAL_MS = 200;
+const execFileAsync = promisify(execFileCb);
 
 /**
  * 计算 daemon pid 文件路径。
@@ -113,7 +118,10 @@ export const readDaemonMeta = async (
     const project = String(
       (value as { projectRoot?: unknown })?.projectRoot || "",
     ).trim();
-    if (!command || !project) return null;
+    const instanceId = String(
+      (value as { instanceId?: unknown })?.instanceId || "",
+    ).trim();
+    if (!command || !project || !instanceId) return null;
     return value as DaemonMeta;
   } catch {
     return null;
@@ -155,6 +163,13 @@ export const diagnoseDaemonStaleReasons = async (
 
   const parsedMeta = await readDaemonMeta(projectRoot);
   if (!parsedMeta) {
+    const raw_meta = await fs.readJson(metaPath).catch(() => null) as { instanceId?: unknown } | null;
+    if (!String(raw_meta?.instanceId || "").trim()) {
+      reasons.push({
+        code: "meta_instance_missing",
+        message: "daemon meta file is missing instanceId",
+      });
+    }
     reasons.push({
       code: "meta_invalid",
       message: "daemon meta file has invalid structure",
@@ -252,23 +267,24 @@ function parsePortLike(input: string | number | undefined): number | undefined {
 }
 
 /**
- * 尝试建立 TCP 连接。
+ * 通过本机 RPC 读取 daemon 运行身份。
  *
  * 关键点（中文）
- * - 这里只验证 RPC 端口已监听，不耦合 `@downcity/agent` 的具体协议实现。
+ * - 必须收到 internal.status.get 的完整身份，单纯端口可连接不代表目标 daemon 正确。
  */
-async function canConnectTcp(params: {
+async function read_daemon_runtime_identity(params: {
   host: string;
   port: number;
   timeoutMs?: number;
-}): Promise<boolean> {
+}): Promise<DaemonRuntimeIdentity | null> {
   return new Promise((resolve) => {
     let settled = false;
-    const finish = (success: boolean): void => {
+    let buffered = "";
+    const finish = (identity: DaemonRuntimeIdentity | null): void => {
       if (settled) return;
       settled = true;
       socket.destroy();
-      resolve(success);
+      resolve(identity);
     };
 
     const socket = createConnection({
@@ -276,10 +292,65 @@ async function canConnectTcp(params: {
       port: params.port,
     });
     socket.setTimeout(params.timeoutMs ?? DAEMON_READY_CONNECT_TIMEOUT_MS);
-    socket.once("connect", () => finish(true));
-    socket.once("error", () => finish(false));
-    socket.once("timeout", () => finish(false));
+    socket.once("connect", () => {
+      socket.write(`${JSON.stringify({ id: "daemon-identity", method: "internal.status.get" })}\n`);
+    });
+    socket.on("data", (chunk) => {
+      buffered += chunk.toString("utf8");
+      const newline_index = buffered.indexOf("\n");
+      if (newline_index < 0) return;
+      try {
+        const frame = JSON.parse(buffered.slice(0, newline_index)) as {
+          success?: unknown;
+          data?: Partial<DaemonRuntimeIdentity>;
+        };
+        const data = frame.data;
+        const pid = Number(data?.pid);
+        const projectRoot = String(data?.projectRoot || "").trim();
+        const instanceId = String(data?.instanceId || "").trim();
+        finish(frame.success === true && Number.isInteger(pid) && pid > 0 && projectRoot && instanceId
+          ? { pid, projectRoot, instanceId }
+          : null);
+      } catch {
+        finish(null);
+      }
+    });
+    socket.once("error", () => finish(null));
+    socket.once("timeout", () => finish(null));
   });
+}
+
+/** 判断 RPC 返回身份是否与 daemon meta 完全一致。 */
+function daemon_identity_matches(
+  meta: Pick<DaemonMeta, "pid" | "projectRoot" | "instanceId">,
+  identity: DaemonRuntimeIdentity,
+): boolean {
+  return identity.pid === meta.pid
+    && path.resolve(identity.projectRoot) === path.resolve(meta.projectRoot)
+    && identity.instanceId === meta.instanceId;
+}
+
+/** 读取指定 PID 的操作系统命令行。 */
+async function read_process_command(pid: number): Promise<string | null> {
+  if (process.platform === "win32") return null;
+  try {
+    const { stdout } = await execFileAsync("ps", ["-p", String(pid), "-o", "command="]);
+    return String(stdout || "").replace(/\s+/g, " ").trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+/** RPC 失联时，严格确认 OS 命令行属于 meta 描述的当前项目 daemon。 */
+async function command_matches_daemon_meta(meta: DaemonMeta): Promise<boolean> {
+  const command = await read_process_command(meta.pid);
+  if (!command) return false;
+  const cli_path = path.resolve(String(meta.args[0] || ""));
+  return Boolean(cli_path)
+    && command.includes(cli_path)
+    && command.includes("agent start")
+    && command.includes("--foreground true")
+    && command.includes(path.resolve(meta.projectRoot));
 }
 
 /**
@@ -287,6 +358,8 @@ async function canConnectTcp(params: {
  */
 async function waitForDaemonReady(params: {
   pid: number;
+  projectRoot: string;
+  instanceId: string;
   args: string[];
   timeoutMs?: number;
 }): Promise<void> {
@@ -307,12 +380,12 @@ async function waitForDaemonReady(params: {
       );
     }
 
-    if (
-      await canConnectTcp({
-        host: rpc_host,
-        port: rpc_port,
-      })
-    ) {
+    const identity = await read_daemon_runtime_identity({ host: rpc_host, port: rpc_port });
+    if (identity && daemon_identity_matches({
+      pid: params.pid,
+      instanceId: params.instanceId,
+      projectRoot: params.projectRoot,
+    }, identity)) {
       return;
     }
 
@@ -362,13 +435,33 @@ export const startDaemonProcess = async (params: {
   args: string[];
 }): Promise<{ pid: number; logPath: string }> => {
   const { projectRoot, cliPath, args } = params;
+  const instanceId = randomUUID();
 
   await fs.ensureDir(getDowncityDebugDirPath(projectRoot));
   await cleanupStaleDaemonFiles(projectRoot);
 
   const existingPid = await readDaemonPid(projectRoot);
   if (existingPid && isProcessAlive(existingPid)) {
-    throw new Error(`Daemon already running (pid: ${existingPid})`);
+    const existing_meta = await readDaemonMeta(projectRoot);
+    const existing_rpc_port = existing_meta
+      ? parsePortLike(pickArgValue(existing_meta.args, "--rpc-port"))
+      : undefined;
+    const existing_identity = existing_rpc_port
+      ? await read_daemon_runtime_identity({ host: "127.0.0.1", port: existing_rpc_port })
+      : null;
+    const confirmed_existing = Boolean(
+      existing_meta
+      && existing_meta.pid === existingPid
+      && path.resolve(existing_meta.projectRoot) === path.resolve(projectRoot)
+      && (existing_identity
+        ? daemon_identity_matches(existing_meta, existing_identity)
+        : await command_matches_daemon_meta(existing_meta)),
+    );
+    if (confirmed_existing) {
+      throw new Error(`Daemon already running (pid: ${existingPid})`);
+    }
+    await fs.remove(getDaemonPidPath(projectRoot));
+    await fs.remove(getDaemonMetaPath(projectRoot));
   }
 
   const logPath = getDaemonLogPath(projectRoot);
@@ -377,6 +470,7 @@ export const startDaemonProcess = async (params: {
   const childEnv: NodeJS.ProcessEnv = {
     ...mergeProcessEnvWithPlatformGlobalEnv(process.env),
     DOWNCITY_DAEMON: "1",
+    DOWNCITY_DAEMON_INSTANCE_ID: instanceId,
   };
 
   // 关键注释：daemon 进程必须 detached + unref 才能在父进程退出后继续运行。
@@ -396,6 +490,7 @@ export const startDaemonProcess = async (params: {
 
   await writeDaemonFiles(projectRoot, {
     pid: child.pid,
+    instanceId,
     projectRoot,
     startedAt: new Date().toISOString(),
     command: process.execPath,
@@ -408,6 +503,8 @@ export const startDaemonProcess = async (params: {
   try {
     await waitForDaemonReady({
       pid: child.pid,
+      projectRoot,
+      instanceId,
       args,
     });
 
@@ -448,6 +545,30 @@ export const stopDaemonProcess = async (params: {
   if (!pid) return { stopped: false };
 
   if (!isProcessAlive(pid)) {
+    await fs.remove(getDaemonPidPath(projectRoot));
+    await fs.remove(getDaemonMetaPath(projectRoot));
+    return { stopped: false, pid };
+  }
+
+  const meta = await readDaemonMeta(projectRoot);
+  if (
+    !meta
+    || meta.pid !== pid
+    || path.resolve(meta.projectRoot) !== path.resolve(projectRoot)
+  ) {
+    await fs.remove(getDaemonPidPath(projectRoot));
+    await fs.remove(getDaemonMetaPath(projectRoot));
+    return { stopped: false, pid };
+  }
+
+  const rpc_port = parsePortLike(pickArgValue(meta.args, "--rpc-port"));
+  const identity = rpc_port
+    ? await read_daemon_runtime_identity({ host: "127.0.0.1", port: rpc_port })
+    : null;
+  const confirmed = identity
+    ? daemon_identity_matches(meta, identity)
+    : await command_matches_daemon_meta(meta);
+  if (!confirmed) {
     await fs.remove(getDaemonPidPath(projectRoot));
     await fs.remove(getDaemonMetaPath(projectRoot));
     return { stopped: false, pid };

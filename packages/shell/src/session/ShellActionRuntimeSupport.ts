@@ -173,6 +173,21 @@ export function clampWaitMsWithOptions(
   return Math.min(options.maxWaitMs, Math.max(options.minWaitMs, raw));
 }
 
+/**
+ * 归一化 shell.exec 的总执行时长。
+ *
+ * 总执行时长与单次 wait 的 min/max 边界无关；调用方显式传入的短超时必须保留。
+ */
+export function normalize_exec_timeout_ms(
+  options: ResolvedShellRuntimeOptions,
+  value: number | undefined,
+): number {
+  const raw = typeof value === "number" && Number.isFinite(value)
+    ? Math.floor(value)
+    : options.defaultExecTimeoutMs;
+  return Math.max(1, raw);
+}
+
 function normalizeOutputChunk(raw: string): string {
   if (!raw) return "";
   return raw

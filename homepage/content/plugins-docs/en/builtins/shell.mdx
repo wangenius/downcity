@@ -27,6 +27,8 @@ Mounting `shell: new Shell()` adds these model tools:
 
 `shell_exec` is for one-shot non-interactive commands. `shell_session` is for interactive PTY sessions and supports `start`, `send`, `read`, `list`, and `stop` actions.
 
+`timeout_ms` on `shell_exec` is the total command runtime. An explicitly short value is honored and terminates the process at that deadline. Use `shell_session` for long-running work instead of keeping `shell_exec` open.
+
 ## Sandbox Modes
 
 Shell tools run in the Safe Sandbox by default.
@@ -83,7 +85,7 @@ const current = await session.approval_mode();
 - Unrestricted commands execute outside the Safe Sandbox only after per-request approval.
 - `always-allow` only affects new approval requests in the current session, not other sessions.
 - Every `send` to an unrestricted `shell_session` also requires approval.
-- `agent.dispose()` disposes Shell sessions.
+- `agent.dispose()` disposes Shell sessions and expires pending approvals so waiting calls do not remain unresolved.
 
 ## Related Docs
 

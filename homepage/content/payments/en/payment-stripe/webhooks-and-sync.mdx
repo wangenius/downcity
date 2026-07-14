@@ -81,6 +81,8 @@ Webhook handling must be idempotent at two levels:
 
 In practice, inspect the stored payment status first, then let `balance.finishTopup()` be the single wallet-crediting path.
 
+Event processing uses a leased `processing` state. Concurrent deliveries of the same `event_id` allow only one sync attempt. A failed attempt is stored as `failed` and a later Stripe redelivery retries it. If the process exits mid-sync, a later redelivery can take over after the lease expires without deleting the event record manually.
+
 ## Common scenarios
 
 ### Scenario 1: payment succeeded but balance is still not credited

@@ -139,8 +139,9 @@ test("SessionPromptRuntime merges queued prompts at the next step boundary", asy
   );
 });
 
-test("SessionPromptRuntime applies config and steer in queue order before the next model turn", async () => {
+test("SessionPromptRuntime applies config and steer in queue order at the same step checkpoint", async () => {
   const lifecycle = [];
+  const applied_turn_ids = [];
   const execution_finished = createDeferred();
   let step_merge = null;
 
@@ -167,8 +168,9 @@ test("SessionPromptRuntime applies config and steer in queue order before the ne
   runtime.enqueue_config({
     mutation_id: "config-1",
     scope: "agent",
-    apply: async ({ model_turn_index }) => {
-      lifecycle.push(`config:1:${String(model_turn_index)}`);
+    apply: async ({ turn_id }) => {
+      applied_turn_ids.push(turn_id);
+      lifecycle.push("config:1");
     },
   });
   const first_turn = await runtime.prompt({ query: "first" });
@@ -176,8 +178,9 @@ test("SessionPromptRuntime applies config and steer in queue order before the ne
   runtime.enqueue_config({
     mutation_id: "config-2",
     scope: "session",
-    apply: async ({ model_turn_index }) => {
-      lifecycle.push(`config:2:${String(model_turn_index)}`);
+    apply: async ({ turn_id }) => {
+      applied_turn_ids.push(turn_id);
+      lifecycle.push("config:2");
     },
   });
   const second_turn_promise = runtime.prompt({ query: "second" });
@@ -191,11 +194,12 @@ test("SessionPromptRuntime applies config and steer in queue order before the ne
     ["second"],
   );
   assert.deepEqual(lifecycle, [
-    "config:1:1",
+    "config:1",
     "prompt:first",
-    "config:2:2",
+    "config:2",
     "steer:second",
   ]);
+  assert.deepEqual(applied_turn_ids, [first_turn.id, first_turn.id]);
 
   execution_finished.resolve();
   await first_turn.finished;

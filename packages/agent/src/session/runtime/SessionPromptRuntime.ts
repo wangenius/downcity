@@ -42,7 +42,7 @@ type QueuedPrompt = {
 };
 
 /**
- * 等待在模型 turn 边界提交的配置队列项。
+ * 等待在 Session step 检查点提交的配置队列项。
  */
 type QueuedConfigMutation = {
   /** 当前队列项固定为配置 mutation。 */
@@ -55,7 +55,7 @@ type QueuedConfigMutation = {
 /**
  * Session actor 的统一有序输入。
  */
-type QueuedSessionInput = QueuedPrompt | QueuedConfigMutation;
+type SessionQueuedInput = QueuedPrompt | QueuedConfigMutation;
 
 /**
  * Promise 延迟控制器。
@@ -95,9 +95,6 @@ interface ActiveTurnState {
    * 当前 turn 的取消控制器。
    */
   abortController: AbortController;
-
-  /** 当前公开 turn 已开始的模型 turn 数量。 */
-  model_turn_index: number;
 }
 
 /**
@@ -162,7 +159,7 @@ export class SessionPromptRuntime {
   private readonly appendErrorMessage: SessionPromptRuntimeOptions["appendErrorMessage"];
   private readonly executeTurn: SessionPromptRuntimeOptions["executeTurn"];
   private readonly stopTurn: SessionPromptRuntimeOptions["stopTurn"];
-  private readonly queue: QueuedSessionInput[] = [];
+  private readonly queue: SessionQueuedInput[] = [];
   private processingPromise: Promise<void> | null = null;
   private activeTurn: ActiveTurnState | null = null;
 
@@ -203,7 +200,7 @@ export class SessionPromptRuntime {
   }
 
   /**
-   * 判断是否存在等待并入模型 turn 的 prompt。
+   * 判断是否存在等待并入下一 Session step 的 prompt。
    */
   has_pending_prompt(): boolean {
     return this.queue.some((item) => item.type === "prompt");
@@ -414,12 +411,11 @@ export class SessionPromptRuntime {
   }
 
   /**
-   * 在下一模型 turn 开始前按入队顺序提交配置并持久化 steer。
+   * 在下一 Session step 检查点按入队顺序提交配置并持久化 steer。
    */
   private async drain_queued_inputs(
     activeTurn: ActiveTurnState,
   ): Promise<SessionUserMessageV1[]> {
-    activeTurn.model_turn_index += 1;
     if (this.queue.length <= 0) return [];
     const drained = this.queue.splice(0, this.queue.length);
     const merged: SessionUserMessageV1[] = [];
@@ -430,7 +426,6 @@ export class SessionPromptRuntime {
         try {
           await item.mutation.apply({
             turn_id: activeTurn.turnId,
-            model_turn_index: activeTurn.model_turn_index,
           });
         } catch {
           // 配置实现负责写 failed action；单条失败不能吞掉后续 steer 或配置。
@@ -464,12 +459,10 @@ export class SessionPromptRuntime {
     active_turn: ActiveTurnState,
   ): Promise<void> {
     if (mutations.length <= 0) return;
-    active_turn.model_turn_index += 1;
     for (const item of mutations) {
       try {
         await item.mutation.apply({
           turn_id: active_turn.turnId,
-          model_turn_index: active_turn.model_turn_index,
         });
       } catch {
         // 配置实现负责写 failed action；单条失败不能阻断当前 prompt。
@@ -516,7 +509,6 @@ function createActiveTurnState(turnId: string): ActiveTurnState {
     result: null,
     deferredFinished: createDeferred<AgentSessionTurnResult>(),
     abortController: new AbortController(),
-    model_turn_index: 0,
   };
 }
 

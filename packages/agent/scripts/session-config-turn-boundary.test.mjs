@@ -1,10 +1,10 @@
 /**
- * @file 验证 Agent 配置在运行中修改后统一于下一模型 turn 生效。
+ * @file 验证 Agent 配置与 steer 在 Session step 检查点统一生效。
  *
  * 关键点（中文）
- * - 第一轮 provider 请求保持阻塞，用来制造真实的运行中配置修改窗口。
+ * - 第一次 provider 请求保持阻塞，用来制造真实的运行中配置修改窗口。
  * - instruction、env 与 plugin registry 修改不能改变已经开始的请求。
- * - 下一模型 turn 统一提交配置，并通过 Session action message 表达生效。
+ * - config 与 steer 在同一个 Session step 检查点提交，并继续使用同一个 turn id。
  */
 
 import test from "node:test";
@@ -58,33 +58,39 @@ function create_stream_text_result(text) {
   };
 }
 
-test("running Agent config changes become effective together at the next model turn", async () => {
+test("running Agent config changes and steer apply at the same Session step checkpoint", async () => {
   const agent_path = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-agent-config-turn-boundary-"),
   );
-  const first_model_turn_started = create_deferred();
-  const release_first_model_turn = create_deferred();
+  const first_provider_request_started = create_deferred();
+  const release_first_provider_request = create_deferred();
   const provider_prompts = [];
-  let provider_turn_count = 0;
+  let provider_request_count = 0;
+  let plugin_stop_count = 0;
 
   const model = new MockLanguageModelV3({
     modelId: "config-turn-boundary-model",
     doStream: async (options) => {
       const has_tools = Array.isArray(options.tools) && options.tools.length > 0;
       if (!has_tools) return create_stream_text_result("Session title");
-      provider_turn_count += 1;
+      provider_request_count += 1;
       provider_prompts.push(JSON.stringify(options.prompt));
-      if (provider_turn_count === 1) {
-        first_model_turn_started.resolve();
-        await release_first_model_turn.promise;
+      if (provider_request_count === 1) {
+        first_provider_request_started.resolve();
+        await release_first_provider_request.promise;
       }
-      return create_stream_text_result(`done:${String(provider_turn_count)}`);
+      return create_stream_text_result(`done:${String(provider_request_count)}`);
     },
   });
   const runtime_plugin = createPlugin({
     name: "runtime-config",
     title: "Runtime Config",
     description: "Provides a system block for turn-boundary tests",
+    lifecycle: {
+      stop: async () => {
+        plugin_stop_count += 1;
+      },
+    },
     system: (context) => `plugin-env:${context.env.TURN_ENV || "missing"}`,
     actions: {
       ping: createAction({
@@ -107,22 +113,25 @@ test("running Agent config changes become effective together at the next model t
       sessionId: "config_turn_boundary_session",
     });
     const first_turn = await session.prompt({ query: "first" });
-    await first_model_turn_started.promise;
+    await first_provider_request_started.promise;
 
     agent.setInstruction(["instruction:new"]);
     agent.patchEnv({ TURN_ENV: "new" });
     await agent.plugins.unregister("runtime-config");
+    const steer_turn_promise = session.prompt({ query: "steer" });
 
+    assert.equal(plugin_stop_count, 0);
     assert.equal(provider_prompts.length, 1);
     assert.match(provider_prompts[0], /instruction:old/);
     assert.match(provider_prompts[0], /plugin-env:old/);
     assert.doesNotMatch(provider_prompts[0], /instruction:new/);
 
-    release_first_model_turn.resolve();
+    release_first_provider_request.resolve();
+    const steer_turn = await steer_turn_promise;
     assert.equal((await first_turn.finished).success, true);
-
-    const second_turn = await session.prompt({ query: "second" });
-    assert.equal((await second_turn.finished).success, true);
+    assert.equal(steer_turn.id, first_turn.id);
+    assert.equal((await steer_turn.finished).success, true);
+    assert.equal(plugin_stop_count, 1);
     assert.equal(provider_prompts.length, 2);
     assert.match(provider_prompts[1], /instruction:new/);
     assert.doesNotMatch(provider_prompts[1], /instruction:old/);
@@ -138,14 +147,14 @@ test("running Agent config changes become effective together at the next model t
       "Agent plugin runtime-config unregistered",
     ]);
   } finally {
-    release_first_model_turn.resolve();
+    release_first_provider_request.resolve();
     await agent.dispose();
   }
 });
 
-test("running session model changes keep the current provider and switch the next model turn", async () => {
+test("running session model changes apply with steer at the next Session step", async () => {
   const agent_path = await fs.mkdtemp(
-    path.join(os.tmpdir(), "downcity-session-model-turn-boundary-"),
+    path.join(os.tmpdir(), "downcity-session-step-boundary-"),
   );
   const old_model_started = create_deferred();
   const release_old_model = create_deferred();
@@ -183,7 +192,7 @@ test("running session model changes keep the current provider and switch the nex
     },
   });
   const agent = new Agent({
-    id: "session_model_turn_boundary_agent",
+    id: "session_step_boundary_agent",
     path: agent_path,
     model: old_model,
     plugins: [runtime_plugin],
@@ -191,20 +200,20 @@ test("running session model changes keep the current provider and switch the nex
 
   try {
     const session = await agent.sessions.create({
-      sessionId: "session_model_turn_boundary_session",
+      sessionId: "session_step_boundary_session",
     });
     const first_turn = await session.prompt({ query: "first" });
     await old_model_started.promise;
 
     await session.set({ model: new_model });
+    const steer_turn_promise = session.prompt({ query: "continue" });
     assert.deepEqual(model_calls, ["old-model"]);
 
     release_old_model.resolve();
+    const steer_turn = await steer_turn_promise;
     assert.equal((await first_turn.finished).success, true);
-    assert.deepEqual(model_calls, ["old-model"]);
-
-    const second_turn = await session.prompt({ query: "second" });
-    assert.equal((await second_turn.finished).success, true);
+    assert.equal(steer_turn.id, first_turn.id);
+    assert.equal((await steer_turn.finished).success, true);
     assert.deepEqual(model_calls, ["old-model", "new-model"]);
 
     const messages = await session.messages();
@@ -219,6 +228,51 @@ test("running session model changes keep the current provider and switch the nex
     );
   } finally {
     release_old_model.resolve();
+    await agent.dispose();
+  }
+});
+
+test("config remains effective when its action message cannot be persisted", async () => {
+  const agent_path = await fs.mkdtemp(
+    path.join(os.tmpdir(), "downcity-config-action-observability-"),
+  );
+  const model_calls = [];
+  const old_model = new MockLanguageModelV3({
+    modelId: "old-observability-model",
+    doStream: async () => {
+      model_calls.push("old");
+      return create_stream_text_result("old");
+    },
+  });
+  const new_model = new MockLanguageModelV3({
+    modelId: "new-observability-model",
+    doStream: async () => {
+      model_calls.push("new");
+      return create_stream_text_result("new");
+    },
+  });
+  const agent = new Agent({
+    id: "config_action_observability_agent",
+    path: agent_path,
+    model: old_model,
+  });
+
+  try {
+    const session = await agent.sessions.create({
+      sessionId: "config_action_observability_session",
+    });
+    session.stateService.emit_action_event = async () => {
+      throw new Error("action store unavailable");
+    };
+
+    await session.set({ model: new_model });
+    const turn = await session.prompt({ query: "use configured model" });
+    assert.equal((await turn.finished).success, true);
+    assert.deepEqual(model_calls, ["new", "new"]);
+
+    const messages = await session.messages();
+    assert.equal(messages.items.some((message) => message.type === "action"), false);
+  } finally {
     await agent.dispose();
   }
 });

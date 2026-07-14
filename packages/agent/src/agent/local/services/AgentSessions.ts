@@ -91,7 +91,7 @@ type AgentSessionsOptions = {
   /** 延迟读取当前 Agent configured env。 */
   get_agent_env: () => Record<string, string>;
 
-  /** 创建当前 configured Plugin registry 的模型 turn 执行视图。 */
+  /** 创建当前 configured Plugin registry 的 Session step 执行视图。 */
   get_agent_plugins: () => AgentPluginExecutionRuntime;
 
   /**

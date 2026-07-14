@@ -132,8 +132,9 @@ Key points:
 - `getEnv()` returns a shallow snapshot, so mutating it does not affect the agent
 - `patchEnv()` treats `null` / `undefined` as delete; other values are coerced to string
 - `setEnv()` clears the current env first and then writes the new values, keeping the same underlying reference
-- existing Sessions commit Agent instruction, env, and plugin changes before their next model turn
-- an in-flight provider request and its tool calls keep the env that was effective when that model turn began
+- existing Sessions commit Agent instruction, env, and plugin changes at the next Session step checkpoint
+- an in-flight provider request and its tool calls keep the env that was effective for the current step
+- if the current Session turn has no later step, the queued change is committed when the next Session turn starts
 - the Session timeline emits a completed action message when the change becomes effective
 - Runtime changes live in memory only; they are not written back to the project `.env` or to the system environment
 

@@ -313,3 +313,55 @@ test("PluginRegistry keeps plugin ready after action business failure", async ()
   assert.equal(retry.data.loaded, true);
   assert.equal(registry.status("skill").status, "ready");
 });
+
+test("PluginRegistry delays lifecycle stop until the active execution lease is released", async () => {
+  let lifecycle_active = false;
+  let stop_count = 0;
+  const plugin = createPlugin({
+    name: "leased-plugin",
+    title: "Leased Plugin",
+    description: "Keeps runtime resources alive for an active Session step",
+    lifecycle: {
+      start: async () => {
+        lifecycle_active = true;
+      },
+      stop: async () => {
+        lifecycle_active = false;
+        stop_count += 1;
+      },
+    },
+    actions: {
+      status: createAction({
+        description: "Read lifecycle state",
+        execute: async () => ({
+          success: lifecycle_active,
+          data: { lifecycle_active },
+        }),
+      }),
+    },
+  });
+  const registry = createAgentPluginRegistry({
+    plugins: [plugin],
+    plugin_instances: new Map(),
+    get_context: () => ({ rootPath: process.cwd() }),
+  });
+  await registry.startAll();
+  const lease = registry.execution_view().acquire();
+
+  assert.equal(await registry.unregister("leased-plugin"), true);
+  assert.equal(registry.has("leased-plugin"), false);
+  assert.equal(lifecycle_active, true);
+  assert.equal(stop_count, 0);
+
+  const result = await lease.runAction({
+    plugin: "leased-plugin",
+    action: "status",
+  });
+  assert.equal(result.success, true);
+  assert.equal(result.data.lifecycle_active, true);
+
+  await lease.release();
+  await lease.release();
+  assert.equal(lifecycle_active, false);
+  assert.equal(stop_count, 1);
+});

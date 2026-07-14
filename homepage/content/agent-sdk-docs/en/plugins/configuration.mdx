@@ -15,7 +15,7 @@ Plugin configuration is easiest to understand in three layers:
 
 Whether a plugin is active is determined by the Agent runtime registry.
 
-Registering a plugin makes it available; unregistering it stops and removes it.
+Registering a plugin makes it available. Unregistering removes it from the configured registry immediately and stops its lifecycle after active Session step leases release.
 
 ## 2. Plugin runtime options
 

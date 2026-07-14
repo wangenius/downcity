@@ -342,6 +342,7 @@ export class Executor implements SessionExecutor {
       );
       return result;
     } finally {
+      await this.release_step_plugins(run_context);
       this.recovery_policy.reset_run_state();
       if (this.abort_controller === abort_controller) {
         this.abort_controller = null;
@@ -364,6 +365,7 @@ export class Executor implements SessionExecutor {
       throw new Error("Executor.run requires historyComposer.sessionId");
     }
 
+    await this.refresh_step_runtime(run_context);
     const composed_context = await this.contextComposer.compose(run_context);
     const tools = this.bind_run_scope_to_tools(composed_context.tools, run_context);
     const system = await this.systemComposer.resolve(run_context);
@@ -458,47 +460,52 @@ export class Executor implements SessionExecutor {
     compacted: boolean;
     reason?: string;
   }> {
-    const model = this.resolveModelOrThrow();
-    const system = await this.systemComposer.resolve(run_context);
-    let compaction_action_id = "";
-    const emit_compaction_action = async (
-      action: SessionActionRecordV1,
-    ): Promise<void> => {
-      if (action.state === "running") compaction_action_id = action.id;
-      await this.emitAction(run_context, action);
-    };
+    await this.refresh_step_runtime(run_context);
     try {
-      const context_window = this.get_model_context_window?.();
-      return await this.compactionComposer.run({
-        historyStore: this.historyStore,
-        model,
-        ...(context_window !== undefined ? { context_window } : {}),
-        system,
-        retryCount: 0,
-        force: true,
-        onAction: emit_compaction_action,
-      });
-    } catch (error) {
-      await this.emitAction(run_context, {
-        type: "action",
-        id:
-          compaction_action_id ||
-          `compacting:${this.sessionId}:failed:${Date.now()}:${generateId()}`,
-        title: "Session records compact failed",
-        description: error instanceof Error ? error.message : String(error),
-        state: "failed",
-        metadata: {
-          v: 1,
-          ts: Date.now(),
-          sessionId: this.sessionId,
-        },
-      });
-      return { compacted: false, reason: "compact_failed" };
+      const model = this.resolveModelOrThrow();
+      const system = await this.systemComposer.resolve(run_context);
+      let compaction_action_id = "";
+      const emit_compaction_action = async (
+        action: SessionActionRecordV1,
+      ): Promise<void> => {
+        if (action.state === "running") compaction_action_id = action.id;
+        await this.emitAction(run_context, action);
+      };
+      try {
+        const context_window = this.get_model_context_window?.();
+        return await this.compactionComposer.run({
+          historyStore: this.historyStore,
+          model,
+          ...(context_window !== undefined ? { context_window } : {}),
+          system,
+          retryCount: 0,
+          force: true,
+          onAction: emit_compaction_action,
+        });
+      } catch (error) {
+        await this.emitAction(run_context, {
+          type: "action",
+          id:
+            compaction_action_id ||
+            `compacting:${this.sessionId}:failed:${Date.now()}:${generateId()}`,
+          title: "Session records compact failed",
+          description: error instanceof Error ? error.message : String(error),
+          state: "failed",
+          metadata: {
+            v: 1,
+            ts: Date.now(),
+            sessionId: this.sessionId,
+          },
+        });
+        return { compacted: false, reason: "compact_failed" };
+      }
+    } finally {
+      await this.release_step_plugins(run_context);
     }
   }
 
   /**
-   * 解析下一次 provider 请求实际使用的运行配置。
+   * 解析下一 Session step 实际使用的运行配置。
    *
    * 关键点（中文）
    * - 调用方必须先提交 Session 统一输入队列，再调用本方法。
@@ -510,13 +517,7 @@ export class Executor implements SessionExecutor {
     tools: SessionExecuteInput["tools"];
     context_window?: number;
   }> {
-    run_context.agentEnv = Object.freeze({ ...this.getEnv() });
-    if (this.get_systems) {
-      run_context.agentSystems = Object.freeze([...this.get_systems()]);
-    }
-    if (this.get_plugins) {
-      run_context.agentPlugins = this.get_plugins();
-    }
+    await this.refresh_step_runtime(run_context);
     const composed_context = await this.contextComposer.compose(run_context);
     const context_window = this.get_model_context_window?.();
     return {
@@ -528,6 +529,38 @@ export class Executor implements SessionExecutor {
       ),
       ...(context_window !== undefined ? { context_window } : {}),
     };
+  }
+
+  /**
+   * 刷新当前 Session step 的 effective Agent 运行视图。
+   */
+  private async refresh_step_runtime(
+    run_context: SessionRunContext,
+  ): Promise<void> {
+    await this.release_step_plugins(run_context);
+    run_context.agentEnv = Object.freeze({ ...this.getEnv() });
+    if (this.get_systems) {
+      run_context.agentSystems = Object.freeze([...this.get_systems()]);
+    } else {
+      delete run_context.agentSystems;
+    }
+    if (this.get_plugins) {
+      run_context.agentPlugins = this.get_plugins().acquire();
+    } else {
+      delete run_context.agentPlugins;
+    }
+  }
+
+  /**
+   * 释放当前 Session step 持有的 Plugin execution lease。
+   */
+  private async release_step_plugins(
+    run_context: SessionRunContext,
+  ): Promise<void> {
+    const plugins = run_context.agentPlugins;
+    if (!plugins) return;
+    delete run_context.agentPlugins;
+    await plugins.release();
   }
 
   /**
@@ -586,6 +619,9 @@ export class Executor implements SessionExecutor {
         : {}),
       ...(typeof input?.onStepCallback === "function"
         ? { onStepCallback: input.onStepCallback }
+        : {}),
+      ...(typeof input?.hasPendingStepInput === "function"
+        ? { hasPendingStepInput: input.hasPendingStepInput }
         : {}),
       ...(typeof input?.onAssistantStepCallback === "function"
         ? { onAssistantStepCallback: input.onAssistantStepCallback }

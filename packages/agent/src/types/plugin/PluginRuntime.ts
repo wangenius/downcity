@@ -95,11 +95,17 @@ export interface PluginAvailability {
 export interface AgentPlugins {
   /** 注册或替换一个 plugin。 */
   register(plugin: Plugin): Promise<PluginSnapshot>;
-  /** 卸载一个 plugin。 */
+  /**
+   * 从 configured registry 卸载一个 plugin。
+   *
+   * 关键点（中文）
+   * - 返回值表示 configured registry 是否发生删除。
+   * - 活跃 Session step 仍可使用已捕获的 execution lease，lifecycle.stop 在 lease 释放后执行。
+   */
   unregister(pluginName: string): Promise<boolean>;
   /** 启动全部已挂载 plugin lifecycle。 */
   startAll(): Promise<PluginSnapshot[]>;
-  /** 卸载全部 plugin。 */
+  /** 卸载全部 plugin，并等待所有 execution lease 释放后的 lifecycle.stop 完成。 */
   unregisterAll(): Promise<void>;
   /** 判断 plugin 是否已注册。 */
   has(pluginName: string): boolean;
@@ -146,9 +152,9 @@ export interface AgentPlugins {
 }
 
 /**
- * 单次模型 turn 可使用的 Plugin 能力视图。
+ * Plugin execution view 的只读调用能力。
  */
-export interface AgentPluginExecutionRuntime {
+export interface AgentPluginExecutionView {
   /** 读取当前视图中的 plugin/action metadata。 */
   read(params: {
     /** Plugin 名称（可选）。 */
@@ -169,6 +175,34 @@ export interface AgentPluginExecutionRuntime {
 
   /** 解析当前视图中捕获的 plugin system blocks。 */
   systemBlocks(): Promise<AgentSessionSystemBlock[]>;
+}
+
+/**
+ * 单次 Session step 持有的 Plugin 执行 lease。
+ */
+export interface AgentPluginExecutionLease extends AgentPluginExecutionView {
+  /**
+   * 释放当前 step 对捕获 Plugin lifecycle 的占用。
+   *
+   * 关键点（中文）
+   * - 必须幂等，重复释放不会重复停止 lifecycle。
+   * - 若 Plugin 已从 configured registry 移除，最后一个 lease 释放时完成延迟 stop。
+   */
+  release(): Promise<void>;
+}
+
+/**
+ * Session effective 配置持有的 Plugin 执行 runtime。
+ */
+export interface AgentPluginExecutionRuntime extends AgentPluginExecutionView {
+  /**
+   * 为当前 Session step 获取独立的 Plugin 执行 lease。
+   *
+   * 关键点（中文）
+   * - lease 只捕获创建 runtime 时存在的 Plugin records。
+   * - 已退休或 lifecycle 未就绪的 Plugin 不会进入新 lease。
+   */
+  acquire(): AgentPluginExecutionLease;
 }
 
 /**

@@ -18,11 +18,11 @@ await session.set({
 A successful `session.set()` means the configured value was written and queued for the Session. It does not replace an in-flight provider request.
 
 - the current stream and active tool execution keep using the previous model
-- the new model becomes effective before the next model turn, meaning the next `streamText()` call
+- the new model becomes effective at the next Session step checkpoint; if the current Session turn ends first, it takes effect when the next Session turn starts
 - config changes and steer prompts are committed in queue order
 - the Session timeline emits a completed action message when the switch becomes effective
 
-The config API reports whether the change succeeded. The action message reports when it became effective for model execution.
+The config API reports whether the change succeeded. The action message reports the Session turn and step where it became effective for model execution. Timeline persistence is observational: if writing that action fails, the effective configuration is not rolled back and the SDK records a warning.
 
 ## When you need it
 

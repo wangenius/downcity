@@ -12,7 +12,7 @@ Plugin 只属于 Agent。
 - 注册：plugin 成功进入 `agent.plugins`
 - 卸载：plugin 成功从 `agent.plugins` 移除
 
-宿主直接调用 `agent.plugins` 时会立即看到新的 configured registry。已有 Session 的模型执行视图则在下一模型 turn 开始前切换；当前 provider 请求继续使用本 turn 已捕获的 action、metadata 与 system 视图。切换完成后，Session timeline 会写入 completed action message。
+宿主直接调用 `agent.plugins` 时会立即看到新的 configured registry。已有 Session 的执行视图则在下一个 Session step 检查点切换；当前 provider 请求继续使用本 step 已捕获的 action、metadata 与 system 视图，execution lease 也会保证旧 plugin lifecycle 持续到本 step 及其工具调用结束。如果当前 Session turn 没有后续 step，则在下一个 Session turn 开始时切换。
 
 不再需要单独理解 start、stop、restart 或项目级 enabled 开关。
 
@@ -63,7 +63,7 @@ Plugin 仍然可以声明 lifecycle：
 规则很简单：
 
 - `register(plugin)` 时自动调用 `plugin.lifecycle?.start(context)`
-- `unregister(name)` 时自动调用 `plugin.lifecycle?.stop(context)`
+- `unregister(name)` 会立即从 configured registry 移除 plugin；活跃 Session step 的 lease 释放后再调用 `plugin.lifecycle?.stop(context)`
 - `agent.dispose()` 时会卸载全部 plugin
 
 适合 lifecycle 的场景包括：

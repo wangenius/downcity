@@ -234,7 +234,7 @@ export interface AgentContextOptions {
    *
    * 关键点（中文）
    * - 必须是 Agent 持有的同一个 mutable 引用，不要克隆后再传入。
-   * - Session 模型 turn 内优先读取队列已经提交的 effective env。
+   * - Session step 内优先读取队列已经提交的 effective env。
    */
   env: Record<string, string>;
   /** 当前生效的 system 文本集合。 */
@@ -306,7 +306,7 @@ export class AgentContext {
    * 读取当前调用链可见的 Agent env。
    *
    * 关键点（中文）
-   * - 模型 turn 内优先返回统一输入队列已经提交的 effective env。
+   * - Session step 内优先返回统一输入队列已经提交的 effective env。
    * - Session 运行外返回 Agent 配置 API 最近一次成功写入的 configured env。
    */
   get env(): Record<string, string> {

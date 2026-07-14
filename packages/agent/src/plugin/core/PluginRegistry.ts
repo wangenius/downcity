@@ -13,6 +13,7 @@ import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import type { PluginActionResult } from "@/types/plugin/PluginAction.js";
 import type {
   AgentPlugins,
+  AgentPluginExecutionLease,
   AgentPluginExecutionRuntime,
   PluginAvailability,
   PluginActionReadView,
@@ -46,6 +47,9 @@ function create_record(plugin: Plugin): PluginRuntimeRecord {
     updated_at: current_time,
     chain: Promise.resolve(),
     lifecycle_started: false,
+    active_execution_leases: 0,
+    retired: false,
+    retirement_started: false,
   };
 }
 
@@ -101,6 +105,8 @@ export class PluginRegistry implements AgentPlugins {
   private readonly pluginInstances: Map<string, Plugin>;
 
   private readonly records = new Map<string, PluginRuntimeRecord>();
+
+  private readonly retired_records = new Set<PluginRuntimeRecord>();
 
   private change_listener?: (input: {
     /** 当前修改是注册还是卸载。 */
@@ -183,7 +189,12 @@ export class PluginRegistry implements AgentPlugins {
   }
 
   /**
-   * 卸载指定 plugin。
+   * 从 configured registry 卸载指定 plugin。
+   *
+   * 关键点（中文）
+   * - configured registry、hooks 与直接调用入口立即移除。
+   * - lifecycle.stop 等当前活跃 Session step 的 execution lease 全部释放后执行。
+   * - 该方法返回配置修改结果，不等待仍在运行的 step 结束。
    */
   async unregister(pluginName: string): Promise<boolean> {
     const key = normalize_plugin_name(pluginName);
@@ -191,10 +202,10 @@ export class PluginRegistry implements AgentPlugins {
     const record = this.records.get(key);
     if (!record) return false;
 
-    await this.stop_record(record);
     this.unregister_hooks(key);
     this.records.delete(key);
     this.pluginInstances.delete(key);
+    this.retire_record(record);
     this.change_listener?.({ type: "unregister", plugin_name: key });
     return true;
   }
@@ -222,6 +233,10 @@ export class PluginRegistry implements AgentPlugins {
     for (const name of Array.from(this.records.keys())) {
       await this.unregister(name);
     }
+    const retirements = Array.from(this.retired_records)
+      .map((record) => record.retirement_promise)
+      .filter((promise): promise is Promise<void> => Boolean(promise));
+    await Promise.all(retirements);
   }
 
   /**
@@ -616,7 +631,7 @@ export class PluginRegistry implements AgentPlugins {
   }
 
   /**
-   * 创建当前 configured registry 的模型 turn 执行视图。
+   * 创建当前 configured registry 的 Session step 执行视图。
    */
   execution_view(): AgentPluginExecutionRuntime {
     const records = new Map(this.records);
@@ -626,6 +641,104 @@ export class PluginRegistry implements AgentPlugins {
         await this.run_action_from_records(records, params),
       systemBlocks: async () =>
         await this.system_blocks_from_records(records),
+      acquire: () => this.acquire_execution_view(records),
     };
+  }
+
+  /**
+   * 为单次 Session step 获取 Plugin execution lease。
+   */
+  private acquire_execution_view(
+    records: ReadonlyMap<string, PluginRuntimeRecord>,
+  ): AgentPluginExecutionLease {
+    const leased_records = new Map<string, PluginRuntimeRecord>();
+    for (const [name, record] of records) {
+      if (
+        record.retired ||
+        record.state !== "ready" ||
+        !record.lifecycle_started
+      ) {
+        continue;
+      }
+      record.active_execution_leases += 1;
+      leased_records.set(name, record);
+    }
+
+    let released = false;
+    return {
+      read: (params) => this.read_from_records(leased_records, params),
+      runAction: async (params) =>
+        await this.run_action_from_records(leased_records, params),
+      systemBlocks: async () =>
+        await this.system_blocks_from_records(leased_records),
+      release: async () => {
+        if (released) return;
+        released = true;
+        const retirements: Promise<void>[] = [];
+        for (const record of leased_records.values()) {
+          record.active_execution_leases = Math.max(
+            0,
+            record.active_execution_leases - 1,
+          );
+          this.try_finalize_retired_record(record);
+          if (record.retired && record.retirement_promise) {
+            retirements.push(record.retirement_promise);
+          }
+        }
+        await Promise.all(retirements);
+      },
+    };
+  }
+
+  /**
+   * 把已移出 configured registry 的 Plugin 标记为等待释放。
+   */
+  private retire_record(record: PluginRuntimeRecord): void {
+    if (record.retired) return;
+    record.retired = true;
+    let resolve_retirement!: () => void;
+    record.retirement_promise = new Promise<void>((resolve) => {
+      resolve_retirement = resolve;
+    });
+    record.resolve_retirement = resolve_retirement;
+    this.retired_records.add(record);
+    this.try_finalize_retired_record(record);
+  }
+
+  /**
+   * 在最后一个 execution lease 释放后停止退休 Plugin。
+   */
+  private try_finalize_retired_record(record: PluginRuntimeRecord): void {
+    if (
+      !record.retired ||
+      record.retirement_started ||
+      record.active_execution_leases > 0
+    ) {
+      return;
+    }
+    record.retirement_started = true;
+    void (async () => {
+      try {
+        await this.stop_record(record);
+      } catch (error) {
+        update_record_state(record, "error", String(error));
+        try {
+          await this.contextResolver().logger.log(
+            "error",
+            "[plugin] lifecycle.stop failed after execution release",
+            {
+              plugin: record.plugin.name,
+              error: String(error),
+            },
+          );
+        } catch {
+          // 退休清理不能因日志失败再次中断。
+        }
+      } finally {
+        this.retired_records.delete(record);
+        record.resolve_retirement?.();
+        delete record.resolve_retirement;
+      }
+    })();
   }
 }

@@ -253,7 +253,10 @@ export class SessionSystemBuilder implements SessionSystemComposer {
       timezone: this.getSessionTimezone(),
       getInstructionSystemBlocks: this.getInstructionSystemBlocks,
       getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
-      getPluginSystemBlocks: this.getPluginSystemBlocks,
+      getPluginSystemBlocks: async () =>
+        run_context.agentPlugins
+          ? await run_context.agentPlugins.systemBlocks()
+          : await this.getPluginSystemBlocks(),
     });
   }
 }

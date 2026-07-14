@@ -32,6 +32,16 @@ export interface PluginRuntimeRecord {
   chain: Promise<void>;
   /** lifecycle.start 是否已经执行成功。 */
   lifecycle_started: boolean;
+  /** 当前正在使用该 Plugin 的 Session step lease 数量。 */
+  active_execution_leases: number;
+  /** 当前 Plugin 是否已从 configured registry 移除并等待释放。 */
+  retired: boolean;
+  /** 当前 Plugin 的延迟 lifecycle.stop 是否已经开始。 */
+  retirement_started: boolean;
+  /** 当前 Plugin 完成延迟 lifecycle.stop 后兑现的 Promise。 */
+  retirement_promise?: Promise<void>;
+  /** 兑现当前 Plugin retirement Promise 的内部回调。 */
+  resolve_retirement?: () => void;
 }
 
 /**

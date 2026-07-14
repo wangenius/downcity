@@ -45,7 +45,7 @@ export interface ShellToolRunContext {
    */
   turnId?: string;
 
-  /** 当前模型 turn 已提交生效的 Agent env。 */
+  /** 当前 Session step 已提交生效的 Agent env。 */
   env?: Readonly<Record<string, string>>;
 }
 

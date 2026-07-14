@@ -274,7 +274,7 @@ export class Session implements AgentSession {
           this.effective_instruction_system_blocks = mutation
             .instruction_blocks
             .map((block) => ({ ...block }));
-          await this.stateService.emit_action_event({
+          await this.stateService.emit_config_action_event({
             id: `agent-instruction:${this.id}:${mutation.mutation_id}`,
             title: "Agent instruction updated",
             state: "completed",
@@ -284,7 +284,7 @@ export class Session implements AgentSession {
         }
         if (mutation.type === "env") {
           this.effective_agent_env = { ...mutation.env };
-          await this.stateService.emit_action_event({
+          await this.stateService.emit_config_action_event({
             id: `agent-env:${this.id}:${mutation.mutation_id}`,
             title: "Agent environment updated",
             state: "completed",
@@ -293,7 +293,7 @@ export class Session implements AgentSession {
           return;
         }
         this.effective_agent_plugins = mutation.plugins;
-        await this.stateService.emit_action_event({
+        await this.stateService.emit_config_action_event({
           id: `agent-plugins:${this.id}:${mutation.mutation_id}`,
           title: mutation.title,
           state: "completed",

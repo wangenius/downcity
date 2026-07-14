@@ -171,7 +171,7 @@ export class Agent {
    *
    * 关键点（中文）
    * - `null` / `undefined` 表示删除该 key；其他值会强制转字符串后写入。
-   * - configured env 原地更新；已有 Session 在下一模型 turn 提交 effective env。
+   * - configured env 原地更新；已有 Session 在下一 step 检查点提交 effective env。
    */
   patchEnv(patch: Record<string, string | null | undefined>): void {
     this.apply_env_patch(patch);

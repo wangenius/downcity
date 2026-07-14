@@ -12,7 +12,7 @@ The lifecycle can be simplified to two operations:
 - register: the plugin successfully enters `agent.plugins`
 - unregister: the plugin is successfully removed from `agent.plugins`
 
-Direct host calls through `agent.plugins` immediately observe the configured registry. Existing Sessions switch their model execution view before the next model turn. An in-flight provider request keeps the action metadata and system view captured for its current turn, and the Session timeline emits a completed action message when the new view becomes effective.
+Direct host calls through `agent.plugins` immediately observe the configured registry. Existing Sessions switch their execution view at the next Session step checkpoint. An in-flight provider request keeps the action metadata and system view captured for its current step. Its execution lease also keeps the old plugin lifecycle active until that step and its tool calls finish. If the current Session turn has no later step, the queued view change is applied when the next Session turn starts.
 
 You no longer need a separate start, stop, restart, or project-level enabled switch.
 
@@ -63,7 +63,7 @@ But they are no longer a public state machine.
 The rules are:
 
 - `register(plugin)` automatically calls `plugin.lifecycle?.start(context)`
-- `unregister(name)` automatically calls `plugin.lifecycle?.stop(context)`
+- `unregister(name)` removes the plugin from the configured registry immediately; `plugin.lifecycle?.stop(context)` runs after active Session step leases release
 - `agent.dispose()` unregisters all plugins
 
 Lifecycle is useful for:

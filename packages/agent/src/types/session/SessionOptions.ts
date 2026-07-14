@@ -90,11 +90,11 @@ export interface SessionOptions {
    *
    * 关键点（中文）
    * - Session 创建时用它建立初始 effective env。
-   * - 后续 Agent env 修改通过 Session 配置 mutation 在模型 turn 边界提交。
+   * - 后续 Agent env 修改通过 Session 配置 mutation 在 step 检查点提交。
    */
   getAgentEnv: () => Record<string, string>;
 
-  /** 创建当前 Agent configured plugin 的模型 turn 执行视图。 */
+  /** 创建当前 Agent configured plugin 的 Session step 执行视图。 */
   get_agent_plugins: () => AgentPluginExecutionRuntime;
 
   /**

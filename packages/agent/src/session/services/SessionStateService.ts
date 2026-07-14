@@ -121,7 +121,7 @@ type EmitActionInput = SessionActionRecordInputV1 | SessionActionRecordV1;
  */
 export interface SessionConfiguredMutationResult {
   /**
-   * 等待在下一模型 turn 提交的 mutation。
+   * 等待在下一 Session step 检查点提交的 mutation。
    *
    * 说明（中文）
    * - 输入未产生实际配置变化时为空。
@@ -320,7 +320,7 @@ export class SessionStateService {
           ...next_config,
         };
         if (!should_emit_model_switch_action) return;
-        await this.emit_action_event({
+        await this.emit_config_action_event({
           id: action_id,
           title: `Session model switched from ${previous_model_name} to ${next_model_name}`,
           state: "completed",
@@ -339,20 +339,7 @@ export class SessionStateService {
           mutation_id,
           scope: "session",
           apply: async ({ turn_id }) => {
-            try {
-              await apply_effective_config(turn_id);
-            } catch (error) {
-              if (should_emit_model_switch_action) {
-                await this.emit_action_event({
-                  id: action_id,
-                  title: `Session model switch from ${previous_model_name} to ${next_model_name} failed`,
-                  description: error instanceof Error ? error.message : String(error),
-                  state: "failed",
-                  turnId: turn_id,
-                });
-              }
-              throw error;
-            }
+            await apply_effective_config(turn_id);
           },
         },
       };
@@ -545,6 +532,27 @@ export class SessionStateService {
           : {}),
       },
     });
+  }
+
+  /**
+   * 尽力写入配置生效 action，不让 timeline 故障改变 effective state。
+   */
+  async emit_config_action_event(input: EmitActionInput): Promise<boolean> {
+    try {
+      await this.emit_action_event(input);
+      return true;
+    } catch (error) {
+      try {
+        await this.logger.log("warn", "[agent] config action persistence failed", {
+          sessionId: this.session_id,
+          actionId: String(input.id || ""),
+          error: error instanceof Error ? error.message : String(error),
+        });
+      } catch {
+        // 配置已经提交，日志失败也不能反向改变 effective state。
+      }
+      return false;
+    }
   }
 
   /**

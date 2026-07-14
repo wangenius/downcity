@@ -60,8 +60,6 @@ export interface ApplyBalanceChargeInput {
   metadata_json: string;
   /** 已序列化且包含 charge_id 的流水扩展信息。 */
   ledger_metadata_json: string;
-  /** 扣费创建时间。 */
-  created_at: string;
 }
 
 /** 原子业务入账附加信息。 */

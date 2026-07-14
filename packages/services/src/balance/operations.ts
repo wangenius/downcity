@@ -125,6 +125,8 @@ export class BalanceOperationStore {
   /** 原子执行一笔幂等扣费。 */
   async charge(input: ApplyBalanceChargeInput): Promise<BalanceCharge> {
     await this.ensure_account(input.user_id);
+    // 关键点（中文）：开户及 init 流水必须先完成，扣费时间不能早于首次开户时间。
+    const created_at = new Date().toISOString();
     const idempotency_key = normalize_idempotency_key(input.idempotency_key);
     const operation_id = idempotency_key
       ? `charge:${idempotency_key}`
@@ -137,7 +139,7 @@ export class BalanceOperationStore {
         record_id: input.charge_id,
         user_id: input.user_id,
         credits_delta: -input.credits,
-        created_at: input.created_at,
+        created_at,
       }),
       this.create_account_update_command(operation_id),
       {
@@ -155,7 +157,7 @@ export class BalanceOperationStore {
           input.note,
           input.ref,
           input.ledger_metadata_json,
-          input.created_at,
+          created_at,
           operation_id,
           "pending",
         ],
@@ -173,12 +175,12 @@ export class BalanceOperationStore {
           input.note,
           input.ref,
           input.metadata_json,
-          input.created_at,
+          created_at,
           operation_id,
           "pending",
         ],
       },
-      this.create_operation_complete_command(operation_id, input.created_at),
+      this.create_operation_complete_command(operation_id, created_at),
     ]);
 
     const operation = await this.read_operation(operation_id);

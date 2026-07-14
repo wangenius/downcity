@@ -247,8 +247,6 @@ export class BalanceService extends InstallableService {
     const note = normalizeText(input.note) || "charge";
     const ref = normalizeText(input.ref) || charge_id;
     const metadata = input.metadata ?? input.meta;
-    const now = new Date().toISOString();
-
     return await this.operation_store.charge({
       charge_id,
       user_id,
@@ -260,7 +258,6 @@ export class BalanceService extends InstallableService {
         ...(metadata ?? {}),
         charge_id,
       }),
-      created_at: now,
       idempotency_key: input.idempotency_key,
     });
   }

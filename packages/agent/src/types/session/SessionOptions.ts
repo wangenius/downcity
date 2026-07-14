@@ -12,7 +12,7 @@ import type { AgentSession } from "@/types/agent/SessionActor.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import type { AgentSessionSystemBlock } from "@/types/agent/SessionTypes.js";
 import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.js";
-import type { AgentSessionConfigMutation } from "@/types/session/SessionConfigMutation.js";
+import type { AgentSessionCommand } from "@/types/session/SessionQueueCommand.js";
 import type { SessionComposerOptions } from "@/types/session/SessionComposerOptions.js";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { AgentModel } from "@/model/CityModelAdapter.js";
@@ -44,10 +44,10 @@ export interface AgentManagedSession extends AgentSession {
   isExecuting(): boolean;
 
   /**
-   * 把 Agent configured state 修改加入当前 Session 的统一输入队列。
+   * 把 Agent configured state command 加入当前 Session 的统一输入队列。
    */
-  enqueue_agent_config(
-    mutation: AgentSessionConfigMutation,
+  enqueue_agent_command(
+    command: AgentSessionCommand,
   ): void;
 }
 
@@ -90,7 +90,7 @@ export interface SessionOptions {
    *
    * 关键点（中文）
    * - Session 创建时用它建立初始 effective env。
-   * - 后续 Agent env 修改通过 Session 配置 mutation 在 step 检查点提交。
+   * - 后续 Agent env 修改通过 Session command 在 step 检查点执行。
    */
   getAgentEnv: () => Record<string, string>;
 

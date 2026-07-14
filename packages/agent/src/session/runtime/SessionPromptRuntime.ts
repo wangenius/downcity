@@ -16,7 +16,7 @@ import type {
 import type { SessionMutation } from "@/types/session/SessionMutation.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
-import type { SessionRuntimeConfigMutation } from "@/types/session/SessionConfigMutation.js";
+import type { SessionQueueCommand } from "@/types/session/SessionQueueCommand.js";
 import type {
   AgentSessionTurnHandle,
   AgentSessionTurnResult,
@@ -26,7 +26,7 @@ const TURN_STOPPED_MESSAGE = "Turn stopped";
 const QUEUED_PROMPT_CANCELLED_MESSAGE =
   "Prompt cancelled because session was stopped";
 
-type QueuedPrompt = {
+type SessionQueuePrompt = {
   /** 当前队列项固定为 prompt。 */
   type: "prompt";
 
@@ -42,20 +42,9 @@ type QueuedPrompt = {
 };
 
 /**
- * 等待在 Session step 检查点提交的配置队列项。
+ * Session queue 的统一有序输入。
  */
-type QueuedConfigMutation = {
-  /** 当前队列项固定为配置 mutation。 */
-  type: "config";
-
-  /** 当前待提交的配置 mutation。 */
-  mutation: SessionRuntimeConfigMutation;
-};
-
-/**
- * Session actor 的统一有序输入。
- */
-type SessionQueuedInput = QueuedPrompt | QueuedConfigMutation;
+type SessionQueueInput = SessionQueuePrompt | SessionQueueCommand;
 
 /**
  * Promise 延迟控制器。
@@ -159,7 +148,7 @@ export class SessionPromptRuntime {
   private readonly appendErrorMessage: SessionPromptRuntimeOptions["appendErrorMessage"];
   private readonly executeTurn: SessionPromptRuntimeOptions["executeTurn"];
   private readonly stopTurn: SessionPromptRuntimeOptions["stopTurn"];
-  private readonly queue: SessionQueuedInput[] = [];
+  private readonly queue: SessionQueueInput[] = [];
   private processingPromise: Promise<void> | null = null;
   private activeTurn: ActiveTurnState | null = null;
 
@@ -190,13 +179,10 @@ export class SessionPromptRuntime {
   }
 
   /**
-   * 把一次已成功写入 configured state 的配置修改加入统一输入队列。
+   * 把一次已成功创建的 command 加入统一输入队列。
    */
-  enqueue_config(mutation: SessionRuntimeConfigMutation): void {
-    this.queue.push({
-      type: "config",
-      mutation,
-    });
+  enqueue_command(command: SessionQueueCommand): void {
+    this.queue.push(command);
   }
 
   /**
@@ -278,9 +264,9 @@ export class SessionPromptRuntime {
       current.deferredHandle.resolve(createTurnHandle(activeTurn));
 
       try {
-        await this.apply_config_mutations(
+        await this.execute_commands(
           queued_before_prompt.filter(
-            (item): item is QueuedConfigMutation => item.type === "config",
+            (item): item is SessionQueueCommand => item.type === "command",
           ),
           activeTurn,
         );
@@ -365,10 +351,10 @@ export class SessionPromptRuntime {
 
   private cancelQueuedPrompts(): number {
     const cancelled = this.queue.filter(
-      (item): item is QueuedPrompt => item.type === "prompt",
+      (item): item is SessionQueuePrompt => item.type === "prompt",
     );
     if (cancelled.length <= 0) return 0;
-    const retained = this.queue.filter((item) => item.type === "config");
+    const retained = this.queue.filter((item) => item.type === "command");
     this.queue.splice(0, this.queue.length, ...retained);
     for (const item of cancelled) {
       const turnId = `turn:${this.sessionId}:cancelled:${Date.now()}:${nanoid(6)}`;
@@ -422,13 +408,13 @@ export class SessionPromptRuntime {
 
     for (let index = 0; index < drained.length; index += 1) {
       const item = drained[index];
-      if (item.type === "config") {
+      if (item.type === "command") {
         try {
-          await item.mutation.apply({
+          await item.execute({
             turn_id: activeTurn.turnId,
           });
         } catch {
-          // 配置实现负责写 failed action；单条失败不能吞掉后续 steer 或配置。
+          // command 自己负责失败观测；单条失败不能吞掉后续 steer 或 command。
         }
         continue;
       }
@@ -452,20 +438,20 @@ export class SessionPromptRuntime {
   }
 
   /**
-   * 提交一组已经从统一队列截取的配置 mutation。
+   * 执行一组已经从统一队列截取的 command。
    */
-  private async apply_config_mutations(
-    mutations: QueuedConfigMutation[],
+  private async execute_commands(
+    commands: SessionQueueCommand[],
     active_turn: ActiveTurnState,
   ): Promise<void> {
-    if (mutations.length <= 0) return;
-    for (const item of mutations) {
+    if (commands.length <= 0) return;
+    for (const command of commands) {
       try {
-        await item.mutation.apply({
+        await command.execute({
           turn_id: active_turn.turnId,
         });
       } catch {
-        // 配置实现负责写 failed action；单条失败不能阻断当前 prompt。
+        // command 自己负责失败观测；单条失败不能阻断当前 prompt。
       }
     }
   }

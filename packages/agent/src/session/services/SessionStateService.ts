@@ -37,7 +37,7 @@ import type {
   SessionUserMessageV1,
 } from "@/executor/types/SessionRecords.js";
 import type { SessionLocalState } from "@/types/session/SessionLocalState.js";
-import type { SessionRuntimeConfigMutation } from "@/types/session/SessionConfigMutation.js";
+import type { SessionQueueCommand } from "@/types/session/SessionQueueCommand.js";
 import { generateId } from "@/utils/Id.js";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { AgentModel } from "@/model/CityModelAdapter.js";
@@ -119,15 +119,15 @@ type EmitActionInput = SessionActionRecordInputV1 | SessionActionRecordV1;
 /**
  * Session 配置成功写入后的队列提交结果。
  */
-export interface SessionConfiguredMutationResult {
+export interface SessionConfiguredCommandResult {
   /**
-   * 等待在下一 Session step 检查点提交的 mutation。
+   * 等待在下一 Session step 检查点执行的 command。
    *
    * 说明（中文）
    * - 输入未产生实际配置变化时为空。
-   * - fork 等内部初始化路径可以选择立即提交而不返回 mutation。
+   * - fork 等内部初始化路径可以选择立即提交而不返回 command。
    */
-  mutation?: SessionRuntimeConfigMutation;
+  command?: SessionQueueCommand;
 }
 
 /**
@@ -267,7 +267,7 @@ export class SessionStateService {
   async set(
     input: AgentSessionSetInput,
     options?: SessionSetOptions,
-  ): Promise<SessionConfiguredMutationResult> {
+  ): Promise<SessionConfiguredCommandResult> {
     const should_emit_action = options?.emit_action !== false;
     const previous_model_label = this.state.sessionConfig.modelLabel;
     const previous_model_id = String(
@@ -333,12 +333,13 @@ export class SessionStateService {
         return {};
       }
 
-      const mutation_id = generateId();
+      const command_id = generateId();
       return {
-        mutation: {
-          mutation_id,
+        command: {
+          type: "command",
+          command_id,
           scope: "session",
-          apply: async ({ turn_id }) => {
+          execute: async ({ turn_id }) => {
             await apply_effective_config(turn_id);
           },
         },

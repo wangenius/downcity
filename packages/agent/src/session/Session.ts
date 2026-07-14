@@ -55,7 +55,7 @@ import { SessionStateService } from "@/session/services/SessionStateService.js";
 import { SessionTurnService } from "@/session/services/SessionTurnService.js";
 import { SessionViewService } from "@/session/services/SessionViewService.js";
 import type { SessionLocalState } from "@/types/session/SessionLocalState.js";
-import type { AgentSessionConfigMutation } from "@/types/session/SessionConfigMutation.js";
+import type { AgentSessionCommand } from "@/types/session/SessionQueueCommand.js";
 import type {
   SessionComposerFactoryContext,
   SessionComposerInput,
@@ -243,8 +243,8 @@ export class Session implements AgentSession {
    */
   async set(input: AgentSessionSetInput): Promise<void> {
     const configured = await this.stateService.set(input);
-    if (configured.mutation) {
-      this.turnService.enqueue_config(configured.mutation);
+    if (configured.command) {
+      this.turnService.enqueue_command(configured.command);
     }
   }
 
@@ -263,39 +263,40 @@ export class Session implements AgentSession {
   }
 
   /**
-   * 把 Agent configured state 修改加入当前 Session 的统一输入队列。
+   * 把 Agent configured state command 加入当前 Session 的统一输入队列。
    */
-  enqueue_agent_config(mutation: AgentSessionConfigMutation): void {
-    this.turnService.enqueue_config({
-      mutation_id: mutation.mutation_id,
+  enqueue_agent_command(command: AgentSessionCommand): void {
+    this.turnService.enqueue_command({
+      type: "command",
+      command_id: command.command_id,
       scope: "agent",
-      apply: async ({ turn_id }) => {
-        if (mutation.type === "instruction") {
-          this.effective_instruction_system_blocks = mutation
+      execute: async ({ turn_id }) => {
+        if (command.type === "instruction") {
+          this.effective_instruction_system_blocks = command
             .instruction_blocks
             .map((block) => ({ ...block }));
           await this.stateService.emit_config_action_event({
-            id: `agent-instruction:${this.id}:${mutation.mutation_id}`,
+            id: `agent-instruction:${this.id}:${command.command_id}`,
             title: "Agent instruction updated",
             state: "completed",
             turnId: turn_id,
           });
           return;
         }
-        if (mutation.type === "env") {
-          this.effective_agent_env = { ...mutation.env };
+        if (command.type === "env") {
+          this.effective_agent_env = { ...command.env };
           await this.stateService.emit_config_action_event({
-            id: `agent-env:${this.id}:${mutation.mutation_id}`,
+            id: `agent-env:${this.id}:${command.command_id}`,
             title: "Agent environment updated",
             state: "completed",
             turnId: turn_id,
           });
           return;
         }
-        this.effective_agent_plugins = mutation.plugins;
+        this.effective_agent_plugins = command.plugins;
         await this.stateService.emit_config_action_event({
-          id: `agent-plugins:${this.id}:${mutation.mutation_id}`,
-          title: mutation.title,
+          id: `agent-plugins:${this.id}:${command.command_id}`,
+          title: command.title,
           state: "completed",
           turnId: turn_id,
         });

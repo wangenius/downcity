@@ -164,15 +164,15 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
   /**
    * 把 Agent instruction 修改广播到已有 Session 的统一输入队列。
    */
-  broadcast_instruction(instruction: string[], mutation_id: string): void {
+  broadcast_instruction(instruction: string[], command_id: string): void {
     const instruction_blocks = createInstructionSystemBlocks(
       instruction,
       this.project_root,
     );
     for (const session of this.sessions_by_id.values()) {
-      session.enqueue_agent_config({
+      session.enqueue_agent_command({
         type: "instruction",
-        mutation_id,
+        command_id,
         instruction_blocks,
       });
     }
@@ -181,11 +181,11 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
   /**
    * 把 Agent env 修改广播到已有 Session 的统一输入队列。
    */
-  broadcast_env(env: Record<string, string>, mutation_id: string): void {
+  broadcast_env(env: Record<string, string>, command_id: string): void {
     for (const session of this.sessions_by_id.values()) {
-      session.enqueue_agent_config({
+      session.enqueue_agent_command({
         type: "env",
-        mutation_id,
+        command_id,
         env: { ...env },
       });
     }
@@ -195,14 +195,14 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
    * 把 Plugin registry 修改广播到已有 Session 的统一输入队列。
    */
   broadcast_plugins(input: {
-    mutation_id: string;
+    command_id: string;
     title: string;
     plugins: AgentPluginExecutionRuntime;
   }): void {
     for (const session of this.sessions_by_id.values()) {
-      session.enqueue_agent_config({
+      session.enqueue_agent_command({
         type: "plugins",
-        mutation_id: input.mutation_id,
+        command_id: input.command_id,
         title: input.title,
         plugins: input.plugins,
       });

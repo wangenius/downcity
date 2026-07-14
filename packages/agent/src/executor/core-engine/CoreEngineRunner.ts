@@ -241,7 +241,7 @@ export class CoreEngineRunner {
       let compact_depth = 0;
 
       while (step_count < MAX_TOOL_LOOP_STEPS) {
-        // 关键点（中文）：steer 与配置 mutation 在同一个 Session step 检查点提交。
+        // 关键点（中文）：steer 与 command 在同一个 Session step 检查点执行。
         // 当前流与 tool callback 保持原执行视图，下一 step 再统一读取 effective 配置。
         await prepare_step_inputs({ messages: [] });
         const step_inputs = await input.resolve_step_inputs();

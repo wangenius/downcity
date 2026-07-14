@@ -22,7 +22,7 @@ import type {
 import { SessionEventHub } from "@/session/runtime/SessionEventHub.js";
 import { SessionPromptRuntime } from "@/session/runtime/SessionPromptRuntime.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
-import type { SessionRuntimeConfigMutation } from "@/types/session/SessionConfigMutation.js";
+import type { SessionQueueCommand } from "@/types/session/SessionQueueCommand.js";
 import { SessionStateService } from "@/session/services/SessionStateService.js";
 import {
   SessionAssistantMessageWriter,
@@ -138,10 +138,10 @@ export class SessionTurnService {
   }
 
   /**
-   * 把 configured state 修改加入当前 Session 的统一输入队列。
+   * 把 configured state command 加入当前 Session 的统一输入队列。
    */
-  enqueue_config(mutation: SessionRuntimeConfigMutation): void {
-    this.prompt_runtime.enqueue_config(mutation);
+  enqueue_command(command: SessionQueueCommand): void {
+    this.prompt_runtime.enqueue_command(command);
   }
 
   /**

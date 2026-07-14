@@ -60,7 +60,7 @@ export interface SessionRunContext {
    * 判断是否仍有等待并入下一 Session step 的 steer prompt。
    *
    * 关键点（中文）
-   * - 只检查 prompt，不把单独的配置 mutation 当成继续调用模型的理由。
+   * - 只检查 prompt，不把单独的 command 当成继续调用模型的理由。
    * - 真正的队列消费统一发生在 `onStepCallback`。
    */
   hasPendingStepInput?: () => boolean;

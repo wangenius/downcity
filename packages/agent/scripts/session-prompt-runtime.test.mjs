@@ -165,20 +165,22 @@ test("SessionPromptRuntime applies config and steer in queue order at the same s
     stopTurn: () => false,
   });
 
-  runtime.enqueue_config({
-    mutation_id: "config-1",
+  runtime.enqueue_command({
+    type: "command",
+    command_id: "config-1",
     scope: "agent",
-    apply: async ({ turn_id }) => {
+    execute: async ({ turn_id }) => {
       applied_turn_ids.push(turn_id);
       lifecycle.push("config:1");
     },
   });
   const first_turn = await runtime.prompt({ query: "first" });
   const merge = await waitUntil(() => step_merge);
-  runtime.enqueue_config({
-    mutation_id: "config-2",
+  runtime.enqueue_command({
+    type: "command",
+    command_id: "config-2",
     scope: "session",
-    apply: async ({ turn_id }) => {
+    execute: async ({ turn_id }) => {
       applied_turn_ids.push(turn_id);
       lifecycle.push("config:2");
     },
@@ -216,10 +218,11 @@ test("SessionPromptRuntime keeps config queued without starting a turn", async (
     stopTurn: () => false,
   });
 
-  runtime.enqueue_config({
-    mutation_id: "config-only",
+  runtime.enqueue_command({
+    type: "command",
+    command_id: "config-only",
     scope: "agent",
-    apply: async () => {
+    execute: async () => {
       apply_count += 1;
     },
   });

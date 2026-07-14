@@ -101,7 +101,7 @@ export class Agent {
       plugin_registry.set_change_listener(({ type, plugin_name }) => {
         const verb = type === "register" ? "registered" : "unregistered";
         this.local_sessions.broadcast_plugins({
-          mutation_id: generateId(),
+          command_id: generateId(),
           title: `Agent plugin ${plugin_name} ${verb}`,
           plugins: plugin_registry.execution_view(),
         });

@@ -37,7 +37,7 @@
       },
       "remote-deployment": {
         "question": "可以部署到远程服务器吗？",
-        "answer": "为保证安全与简洁，v1 主要支持本地运行。v2 会加入远程部署支持，并提供更完善的安全能力以适配团队与企业场景。",
+        "answer": "CLI 当前专注于本地 Agent 开发与执行。远程部署与托管运行已在路线图中，用于团队与企业场景。",
         "category": "deployment"
       },
       "comparison-copilot": {
@@ -52,7 +52,7 @@
       },
       "multi-agent": {
         "question": "可以同时运行多个 Agent 吗？",
-        "answer": "可以。你可以为不同项目或不同目的运行多个 Agent。每个 Agent 都有独立的配置、权限与沟通渠道。v3 将引入多 Agent 协作能力。",
+        "answer": "可以。Agent SDK 支持多个相互独立的 Agent，用于不同项目或不同目的。每个 Agent 都有独立的配置、插件与沟通渠道。",
         "category": "features"
       },
       "custom-services": {
@@ -74,88 +74,28 @@
     }
   },
   "roadmapPage": {
-    "phases": {
-      "current": "🚀 当前",
-      "planned": "📋 规划中",
-      "exploring": "✨ 探索中"
+    "description": "两条主线：先把产品运行时做透，再把它扩展成企业级生态。",
+    "product": {
+      "title": "产品",
+      "description": "Agent 产品的运行层。",
+      "items": {
+        "agentHarness": {
+          "title": "Agent Harness",
+          "desc": "在你自己的技术栈中运行、嵌入和运营 Agent。"
+        },
+        "cityInfra": {
+          "title": "City Infra",
+          "desc": "模型、服务、身份、用量、计费与部署统一为一条边界。"
+        }
+      }
     },
-    "versions": {
-      "v1": {
-        "title": "当前版本",
-        "description": "仓库原生 Agent Runtime 的基础能力。现在就把你的仓库作为 AI Agent 运行起来。",
-        "features": {
-          "coreRuntime": {
-            "name": "核心运行时",
-            "desc": "Agent 执行引擎"
-          },
-          "constitution": {
-            "name": "Agent 宪章",
-            "desc": "行为规则与指南"
-          },
-          "telegram": {
-            "name": "Telegram 集成",
-            "desc": "聊天界面"
-          },
-          "tasks": {
-            "name": "声明式任务",
-            "desc": "Cron 与事件驱动"
-          },
-          "docs": {
-            "name": "文档",
-            "desc": "完整指南"
-          }
-        }
-      },
-      "v2": {
-        "title": "团队协作",
-        "description": "面向团队工作流与多 Agent 场景的增强集成。",
-        "features": {
-          "slack": {
-            "name": "Slack 集成",
-            "desc": "企业聊天"
-          },
-          "snapshot": {
-            "name": "Agent 快照/回放",
-            "desc": "状态管理"
-          },
-          "githubApp": {
-            "name": "GitHub App",
-            "desc": "原生集成"
-          },
-          "multiAgent": {
-            "name": "多 Agent",
-            "desc": "Agent 协作"
-          },
-          "remoteDeploy": {
-            "name": "远程部署",
-            "desc": "云端托管"
-          }
-        }
-      },
-      "v3": {
-        "title": "生态扩展",
-        "description": "高级能力与 Agent 市场，支持分享与发现。",
-        "features": {
-          "marketplace": {
-            "name": "Agent 市场",
-            "desc": "分享与发现"
-          },
-          "remoteHosting": {
-            "name": "远程托管",
-            "desc": "托管运行时"
-          },
-          "webIde": {
-            "name": "Web IDE 集成",
-            "desc": "浏览器开发"
-          },
-          "sso": {
-            "name": "企业 SSO",
-            "desc": "单点登录"
-          },
-          "analytics": {
-            "name": "分析",
-            "desc": "使用洞察"
-          }
+    "ecosystem": {
+      "title": "生态",
+      "description": "Agent 基础设施的企业级规模化运营。",
+      "items": {
+        "enterprise": {
+          "title": "企业",
+          "desc": "SSO、治理、托管运行与跨团队协作。"
         }
       }
     },

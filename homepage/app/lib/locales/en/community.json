@@ -37,7 +37,7 @@
       },
       "remote-deployment": {
         "question": "Can I deploy to remote servers?",
-        "answer": "v1 primarily supports local runs for security and simplicity. v2 will add support for remote deployment with enhanced security features for team and enterprise use cases.",
+        "answer": "The CLI currently focuses on local Agent development and execution. Remote deployment and managed hosting are on the roadmap for teams and enterprise use cases.",
         "category": "deployment"
       },
       "comparison-copilot": {
@@ -52,7 +52,7 @@
       },
       "multi-agent": {
         "question": "Can I run multiple Agents?",
-        "answer": "Yes. You can run multiple Agents for different projects or purposes. Each Agent has its own configuration, permissions, and communication channels. v3 will introduce multi-agent collaboration features.",
+        "answer": "Yes. The Agent SDK supports multiple independent Agents for different projects or purposes. Each Agent has its own configuration, plugins, and communication channels.",
         "category": "features"
       },
       "custom-services": {
@@ -62,7 +62,7 @@
       },
       "pricing": {
         "question": "What's the pricing model?",
-        "answer": "Downcity is open source (MIT license) and free to use. You only pay for the LLM API costs, such as OpenAI or DeepSeek, that you choose to use. Enterprise editions with additional features and support will be available in the future.",
+        "answer": "Downcity is open source (Apache License 2.0) and free to use. You only pay for the LLM API costs, such as OpenAI or DeepSeek, that you choose to use. Enterprise editions with additional features and support will be available in the future.",
         "category": "general"
       }
     },
@@ -74,88 +74,28 @@
     }
   },
   "roadmapPage": {
-    "phases": {
-      "current": "🚀 Current",
-      "planned": "📋 Planned",
-      "exploring": "✨ Exploring"
+    "description": "Two tracks: build the product runtime, then scale it into the enterprise ecosystem.",
+    "product": {
+      "title": "Product",
+      "description": "The runtime layer for agent-powered products.",
+      "items": {
+        "agentHarness": {
+          "title": "Agent Harness",
+          "desc": "Run, embed, and operate agents inside your own stack."
+        },
+        "cityInfra": {
+          "title": "City Infra",
+          "desc": "Models, services, auth, usage, billing, and deployment as one boundary."
+        }
+      }
     },
-    "versions": {
-      "v1": {
-        "title": "Current Release",
-        "description": "Foundation for repo-native agent runtime. Ship your repository as an AI Agent today.",
-        "features": {
-          "coreRuntime": {
-            "name": "Core Runtime",
-            "desc": "Agent execution engine"
-          },
-          "constitution": {
-            "name": "Agent Constitution",
-            "desc": "Behavior rules & guidelines"
-          },
-          "telegram": {
-            "name": "Telegram Integration",
-            "desc": "Chat interface"
-          },
-          "tasks": {
-            "name": "Declarative Tasks",
-            "desc": "Cron & event-driven"
-          },
-          "docs": {
-            "name": "Documentation",
-            "desc": "Complete guides"
-          }
-        }
-      },
-      "v2": {
-        "title": "Team Collaboration",
-        "description": "Enhanced integrations for team workflows and multi-agent scenarios.",
-        "features": {
-          "slack": {
-            "name": "Slack Integration",
-            "desc": "Enterprise chat"
-          },
-          "snapshot": {
-            "name": "Agent Snapshot/Replay",
-            "desc": "State management"
-          },
-          "githubApp": {
-            "name": "GitHub App",
-            "desc": "Native integration"
-          },
-          "multiAgent": {
-            "name": "Multi-Agent",
-            "desc": "Agent collaboration"
-          },
-          "remoteDeploy": {
-            "name": "Remote Deployment",
-            "desc": "Cloud hosting"
-          }
-        }
-      },
-      "v3": {
-        "title": "Ecosystem Expansion",
-        "description": "Advanced features and the Agent Marketplace for sharing and discovery.",
-        "features": {
-          "marketplace": {
-            "name": "Agent Marketplace",
-            "desc": "Share & discover"
-          },
-          "remoteHosting": {
-            "name": "Remote Hosting",
-            "desc": "Managed runtime"
-          },
-          "webIde": {
-            "name": "Web IDE Integration",
-            "desc": "Browser-based dev"
-          },
-          "sso": {
-            "name": "Enterprise SSO",
-            "desc": "Single sign-on"
-          },
-          "analytics": {
-            "name": "Analytics",
-            "desc": "Usage insights"
-          }
+    "ecosystem": {
+      "title": "Ecosystem",
+      "description": "Enterprise-scale operation of agent infrastructure.",
+      "items": {
+        "enterprise": {
+          "title": "Enterprise",
+          "desc": "SSO, governance, managed hosting, and cross-team collaboration."
         }
       }
     },

@@ -20,6 +20,9 @@ export const Footer: FC = () => {
 
   const homePath = isZh ? "/zh" : "/";
   const productPath = isZh ? "/zh/product" : "/product";
+  const productSdkPath = isZh ? "/zh/product/sdk" : "/product/sdk";
+  const productAgentSdkPath = isZh ? "/zh/product/agent-sdk" : "/product/agent-sdk";
+  const productUiSdkPath = isZh ? "/zh/product/ui-sdk" : "/product/ui-sdk";
   const featuresPath = isZh ? "/zh/features" : "/features";
   const docsPath = isZh ? "/zh/docs" : "/en/docs";
   const citySdkDocsPath = isZh ? "/zh/city-sdk-docs" : "/en/city-sdk-docs";
@@ -44,9 +47,9 @@ export const Footer: FC = () => {
       links: [
         { label: t("footer.links.overview"), path: productPath },
         { label: t("footer.links.features"), path: featuresPath },
-        { label: "City SDK", path: productPath },
-        { label: "Agent SDK", path: productPath },
-        { label: "UI SDK", path: productPath },
+        { label: "City SDK", path: productSdkPath },
+        { label: "Agent SDK", path: productAgentSdkPath },
+        { label: "UI SDK", path: productUiSdkPath },
       ],
     },
     {
@@ -115,7 +118,7 @@ export const Footer: FC = () => {
                 <ul className="space-y-2">
                   {column.links.map((link) =>
                     "path" in link ? (
-                      <li key={link.path}>
+                      <li key={link.label}>
                         <Link
                           to={link.path}
                           className="text-sm text-text-soft transition-colors hover:text-foreground"
@@ -124,7 +127,7 @@ export const Footer: FC = () => {
                         </Link>
                       </li>
                     ) : (
-                      <li key={link.href}>
+                      <li key={link.label}>
                         <a
                           href={link.href}
                           target="_blank"

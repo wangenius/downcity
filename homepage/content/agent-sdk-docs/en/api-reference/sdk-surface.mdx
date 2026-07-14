@@ -16,6 +16,8 @@ The SDK is session-first. `Agent` owns local runtime assembly and `RemoteAgent` 
 
 Local plugin actions use `agent.plugins.runAction(...)`. HTTP and RPC transports are supplied by `AgentHTTP` and `AgentRPC` in `@downcity/server`.
 
+`agent.getLogger()` returns the logger owned by that Agent. For standalone integration code, `getLogger(project_root?)` creates a new independent logger instance; the package does not expose a process-global logger.
+
 ## `RemoteAgent`
 
 - `new RemoteAgent({ url, token? })`

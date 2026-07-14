@@ -87,6 +87,8 @@ await turn.finished;
 - 暴露 plugin 集成入口
 - 提供配置与日志这两个较窄的高级辅助能力
 
+`agent.getLogger()` 返回当前 Agent 自己持有的 logger。独立集成代码可以调用 `getLogger(project_root?)` 创建新的隔离实例；package 不再暴露进程级全局 logger。
+
 如果你需要 RPC 或 HTTP 暴露，请使用 [`@downcity/server`](/zh/agent-sdk-docs/local-agent/http-and-rpc) 提供的 `AgentRPC` / `AgentHTTP`。
 
 ## `RemoteAgent`

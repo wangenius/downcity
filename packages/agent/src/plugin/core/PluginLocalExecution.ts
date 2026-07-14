@@ -8,7 +8,7 @@
  */
 
 import path from "node:path";
-import { logger as defaultLogger } from "@/utils/logger/Logger.js";
+import { getLogger } from "@/utils/logger/Logger.js";
 import { resolve_agent_env } from "@/config/AgentEnv.js";
 import { findPluginByName } from "@/plugin/core/PluginCatalog.js";
 import {
@@ -45,12 +45,12 @@ export function createLocalPluginCommandContext(
     : input.config;
   const agent_id = String(config.id || "").trim() || path.basename(rootPath) || "agent";
 
-  defaultLogger.bindProjectRoot(rootPath);
+  const logger = getLogger(rootPath);
 
   return {
     cwd: rootPath,
     rootPath,
-    logger: defaultLogger,
+    logger,
     config,
     env,
     paths: createAgentPathRuntime(

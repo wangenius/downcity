@@ -247,7 +247,7 @@ export {
 export { assertProjectExecutionTarget } from "./config/ExecutionBinding.js";
 
 // 日志
-export { getLogger, logger, type Logger } from "./utils/logger/Logger.js";
+export { getLogger, type Logger } from "./utils/logger/Logger.js";
 export { generateId } from "./utils/Id.js";
 export {
   formatDateTimeInTimezone,

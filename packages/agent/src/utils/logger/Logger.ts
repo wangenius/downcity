@@ -202,11 +202,11 @@ export class Logger {
   }
 
   /**
-   * 绑定进程级 projectRoot。
+   * 绑定当前 logger 实例的 projectRoot。
    *
    * 关键点（中文）
-   * - 我们约束“一个进程只服务一个 projectRoot”。
-   * - Logger 作为单例存在，但落盘目录必须在启动入口初始化后才能确定。
+   * - 每个 Agent / workspace 持有独立 Logger，绑定只影响当前实例。
+   * - 落盘目录必须在实例初始化后明确指定。
    * - 未绑定 projectRoot 时，只打印到 console，不写入 `.downcity/logs/*`。
    */
   bindProjectRoot(projectRoot: string): void {
@@ -357,16 +357,16 @@ export class Logger {
   }
 }
 
-export const logger = new Logger();
-
 /**
- * 获取统一 logger。
+ * 创建独立 logger 实例。
  *
  * 说明（中文）
- * - 当前实现是“进程级单例 logger”（落盘路径依赖 runtime root）。
- * - 参数保留是为了兼容上层调用习惯：有些代码会传入 projectRoot / logLevel。
- * - 若未来需要“多实例 logger”，可以在这里集中改，不影响调用方。
+ * - 每次调用都返回独立实例，避免不同 Agent / workspace 互相覆盖落盘目录。
+ * - 提供 projectRoot 时立即绑定日志目录；未提供时仅输出到 console。
  */
-export function getLogger(_projectRoot?: string, _logLevel?: string): Logger {
+export function getLogger(project_root?: string, log_level?: string): Logger {
+  const logger = new Logger(log_level);
+  const root = String(project_root || "").trim();
+  if (root) logger.bindProjectRoot(root);
   return logger;
 }

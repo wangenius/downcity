@@ -13,7 +13,6 @@ import { logger } from "hono/logger";
 import http from "node:http";
 import { Readable } from "node:stream";
 import { finished } from "node:stream/promises";
-import { logger as serverLogger } from "@downcity/agent";
 import type { Hono as HonoType } from "hono";
 import { createExecuteRouter } from "@/city/agent/http/execute/execute.js";
 import { healthRouter } from "@/city/agent/http/health/health.js";
@@ -105,10 +104,11 @@ export async function startAgentHttpGateway(
 ): Promise<AgentHttpGatewayInstance> {
   const app = createAgentHttpGatewayApp(options);
   const server = createNodeServer(app, options);
+  const server_logger = options.getAgentContext().logger;
 
   await new Promise<void>((resolve) => {
     server.listen(options.port, options.host, () => {
-      serverLogger.info(
+      server_logger.info(
         `🚀 City Agent HTTP gateway started: http://${options.host}:${options.port}`,
       );
       resolve();
@@ -119,11 +119,11 @@ export async function startAgentHttpGateway(
     app,
     server,
     async stop(): Promise<void> {
-      await serverLogger.saveAllLogs();
+      await server_logger.saveAllLogs();
       await new Promise<void>((resolve) => {
         server.close(() => resolve());
       });
-      serverLogger.info("City Agent HTTP gateway stopped");
+      server_logger.info("City Agent HTTP gateway stopped");
     },
   };
 }

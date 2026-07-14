@@ -52,11 +52,13 @@ A Shell mounted on an Agent provides:
 | `shell_session` | Manage long-running or interactive PTY commands |
 | `grep` | Search project file contents directly with ripgrep |
 | `find` | Discover project files with POSIX glob patterns |
-| `read` | Read paginated text; binary files return metadata only |
+| `read` | Read paginated text and attach images to the model |
 | `write` | Create UTF-8 files or atomically replace them with `overwrite: true` |
 | `edit` | Apply unique, non-overlapping exact-text replacements to one file |
 
 `read` returns up to 500 lines by default, with a maximum of 2,000 lines or 256KB per call. Continue with `truncated` and `next_offset`. `write` accepts up to 1MB and creates parent directories automatically.
+
+For PNG, JPEG, GIF, WebP, and BMP files, `read` returns image metadata and a data URL. The Agent injects that data URL into the next model step as a temporary user image part. Other binary files return metadata only.
 
 `edit` accepts up to ten operations. Every operation is matched against the original file, and the file is written only when all operations are valid. Pass `read.sha256` as `edit.expected_sha256` to reject stale concurrent edits.
 

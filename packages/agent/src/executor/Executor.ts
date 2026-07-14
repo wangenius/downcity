@@ -32,6 +32,7 @@ import type { SessionExecutor } from "@/executor/types/SessionExecutor.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 import type { SessionToolExecutionContext } from "@/types/executor/SessionToolExecutionContext.js";
 import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.js";
+import { inject_read_image_user_message } from "@executor/tools/file/ReadImageToolBridge.js";
 import type {
   SessionExecuteInput,
   SessionRunResult,
@@ -575,9 +576,14 @@ export class Executor implements SessionExecutor {
       wrapped[name] = {
         ...tool,
         execute: async (args: unknown, options: ToolExecutionOptions) => {
-          return await original_execute(args, {
+          const output = await original_execute(args, {
             ...options,
             experimental_context: execution_context,
+          });
+          return inject_read_image_user_message({
+            tool_name: name,
+            output,
+            run_context,
           });
         },
       };

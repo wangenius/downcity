@@ -50,11 +50,13 @@ const agent = new Agent({
 | `shell_session` | 管理长运行或交互式 PTY 命令 |
 | `grep` | 底层直接使用 ripgrep 搜索项目文件内容 |
 | `find` | 使用 POSIX glob 模式发现项目文件 |
-| `read` | 按行分页读取文本；二进制文件只返回元数据 |
+| `read` | 按行分页读取文本，并把图片注入模型输入 |
 | `write` | 创建 UTF-8 文件，或在 `overwrite: true` 时原子覆盖 |
 | `edit` | 使用唯一、非重叠的 `old_text` 精确编辑一个文件 |
 
 `read` 默认最多返回 500 行，单次最多 2,000 行或 256KB。结果中的 `truncated` 和 `next_offset` 用于继续读取。`write` 单次最多写入 1MB，并自动创建父目录。
+
+对于 PNG、JPEG、GIF、WebP 和 BMP 文件，`read` 会返回图片元数据和 data URL，Agent 再把该 data URL 作为临时 user image part 注入下一个模型 step。其他二进制文件只返回元数据。
 
 `edit` 一次最多接受 10 个修改，所有修改都基于原始文件匹配并且全部成功后才写入。可以把 `read.sha256` 传给 `edit.expected_sha256`，防止覆盖并发修改。
 

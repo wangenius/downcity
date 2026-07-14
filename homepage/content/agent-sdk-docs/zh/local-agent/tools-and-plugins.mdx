@@ -44,11 +44,13 @@ const agent = new Agent({
 - `shell_session`：长任务和需要 stdin 的 PTY 交互式会话
 - `grep`：底层直接使用 ripgrep 的结构化项目内容搜索
 - `find`：使用 POSIX glob 模式发现项目文件
-- `read`：分页读取文本并识别二进制文件
+- `read`：分页读取文本并把图片注入模型输入
 - `write`：创建文件或显式原子覆盖完整文件
 - `edit`：通过唯一文本匹配原子编辑单个文件
 
 文件和搜索工具只允许访问 Agent 项目根目录。它们没有 unrestricted 模式；项目外操作仍然必须通过 Shell 的 unrestricted 审批流程。`grep` 和 `find` 会遵守 ignore 文件，默认最多返回 200 项，并允许通过 `max_results` 提高到 2,000 项。
+
+`read` 读取 PNG、JPEG、GIF、WebP 或 BMP 图片时，会把图片作为临时 user file part 注入下一个模型 step。其他二进制文件只返回元数据。
 
 `read` 会返回文件 SHA-256。文件可能被其他进程同时修改时，把该值作为 `edit.expected_sha256` 传入，可以阻止过期编辑覆盖新内容：
 

@@ -91,22 +91,26 @@ export interface ReadFileToolSuccess {
   file_path: string;
   /** 原始文件总字节数。 */
   total_bytes: number;
-  /** 文本文件总行数；二进制文件固定为 0。 */
+  /** 文本文件总行数；图片和其他二进制文件固定为 0。 */
   total_lines: number;
   /** 本次返回内容的 0-based 起始行。 */
   start_line: number;
   /** 本次返回内容的 0-based 结束行；没有返回行时小于 start_line。 */
   end_line: number;
-  /** 返回给模型的文本内容；二进制文件为空字符串。 */
+  /** 返回给模型的文本内容；图片和其他二进制文件为空字符串。 */
   content: string;
   /** 是否还有后续文本行未返回。 */
   truncated: boolean;
   /** 有后续文本时建议下一次使用的 offset。 */
   next_offset?: number;
-  /** 当前文件被识别为文本还是二进制。 */
-  type: "text" | "binary";
-  /** 基于文件扩展名识别的 MIME 类型。 */
+  /** 当前文件被识别为文本、图片还是其他二进制文件。 */
+  type: "text" | "image" | "binary";
+  /** 当前文件的 MIME 类型。 */
   mime_type?: string;
+  /** 图片文件读取后生成的 data URL，仅图片结果存在。 */
+  data_url?: string;
+  /** 图片是否已经作为 UserMessage file part 注入下一模型 step。 */
+  image_attached?: boolean;
   /** 文本文件实际采用的解码格式。 */
   encoding?: "utf-8" | "utf-16le" | "utf-16be";
   /** 原始文件内容的 SHA-256，可传给 edit 防止并发覆盖。 */

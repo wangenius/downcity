@@ -28,6 +28,7 @@ import {
   create_file_sha256,
   decode_text_file,
   detect_file_mime_type,
+  detect_image_file_mime_type,
   encode_text_file,
   is_binary_file,
   normalize_text_to_lf,
@@ -92,6 +93,23 @@ async function read_file_action(
     const buffer = await read_limited_file(file_path);
     const total_bytes = buffer.byteLength;
     const sha256 = create_file_sha256(buffer);
+    const image_mime_type = detect_image_file_mime_type(buffer);
+    if (image_mime_type) {
+      return {
+        success: true,
+        file_path,
+        total_bytes,
+        total_lines: 0,
+        start_line: 0,
+        end_line: -1,
+        content: "",
+        truncated: false,
+        type: "image",
+        mime_type: image_mime_type,
+        data_url: `data:${image_mime_type};base64,${buffer.toString("base64")}`,
+        sha256,
+      };
+    }
     const mime_type = detect_file_mime_type(file_path);
     if (is_binary_file(buffer)) {
       return {

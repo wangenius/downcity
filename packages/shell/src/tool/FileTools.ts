@@ -27,7 +27,7 @@ import {
 export function create_file_tools(runner: FileToolRunner): FileToolSet {
   const read = tool({
     description:
-      "Read a project file instead of using cat or sed. Text output is limited to 500 lines and 256KB by default; use offset and limit to continue. Binary files return metadata without raw bytes.",
+      "Read a project file instead of using cat or sed. Images are attached to the next model step. Text output is limited to 500 lines and 256KB by default; use offset and limit to continue. Other binary files return metadata only.",
     inputSchema: read_file_tool_input_schema,
     execute: async (input: ReadFileToolInput): Promise<ReadFileToolResult> => {
       return await runner.run_file_action({ action: "read", input }) as ReadFileToolResult;

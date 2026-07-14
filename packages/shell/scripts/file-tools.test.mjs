@@ -115,6 +115,27 @@ test("read identifies binary files without returning raw bytes", async (t) => {
   assert.equal(result.total_lines, 0);
 });
 
+test("read returns supported images as data URLs", async (t) => {
+  const fixture = await create_fixture(t);
+  const image = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    0x00, 0x01, 0x02, 0x03,
+  ]);
+  await fs.writeFile(path.join(fixture.root_path, "input.bin"), image);
+
+  const result = await execute_tool(fixture.shell, "read", {
+    file_path: "input.bin",
+  });
+  assert.equal(result.success, true);
+  assert.equal(result.type, "image");
+  assert.equal(result.mime_type, "image/png");
+  assert.equal(result.content, "");
+  assert.equal(
+    result.data_url,
+    `data:image/png;base64,${image.toString("base64")}`,
+  );
+});
+
 test("file tools reject project escapes and symbolic-link escapes", async (t) => {
   const fixture = await create_fixture(t);
   const direct_escape = await execute_tool(fixture.shell, "write", {

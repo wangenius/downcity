@@ -1,6 +1,6 @@
 {
   "name": "@downcity/shell",
-  "version": "0.1.98",
+  "version": "0.1.99",
   "type": "module",
   "description": "Downcity Shell — structured file tools, local command execution, sandboxing, shell sessions, and approvals",
   "main": "./bin/index.js",

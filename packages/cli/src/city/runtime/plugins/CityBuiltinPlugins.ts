@@ -4,12 +4,11 @@
  * 关键点（中文）
  * - City 运行期直接 new 每个 plugin，所有 constructor 参数都由 City 宿主层注入。
  * - `@downcity/plugins` 只提供 plugin class，不参与 City 全局账号、City 登录态或运行配置解析。
- * - 静态 CLI catalog 使用同一套 City 装配入口，但不注入需要 City 登录态的 image/asr/tts。
+ * - 静态 CLI catalog 使用同一套 City 装配入口，但不注入需要 City 登录态的 image/sound。
  */
 
 import type { BasePlugin, DowncityConfig } from "@downcity/agent";
 import {
-  AsrPlugin,
   ChatPlugin,
   ContactPlugin,
   FeishuChannel,
@@ -17,15 +16,19 @@ import {
   MemoryPlugin,
   QqChannel,
   SkillPlugin,
+  SoundPlugin,
   TaskPlugin,
   TelegramChannel,
-  TtsPlugin,
   WebPlugin,
   WorkboardPlugin,
 } from "@downcity/plugins";
-import type { ImagePluginModel, ImagePluginResolvedInput } from "@downcity/plugins";
-import type { AsrPluginInput } from "@downcity/plugins";
-import type { TtsPluginInput } from "@downcity/plugins";
+import type {
+  ImagePluginModel,
+  ImagePluginResolvedInput,
+  SoundPluginAsrInput,
+  SoundPluginModel,
+  SoundPluginTtsInput,
+} from "@downcity/plugins";
 import { CityUserManager } from "@/city/shared/CityUserManager.js";
 
 const city_user_manager = new CityUserManager();
@@ -135,15 +138,28 @@ export async function createCityBuiltinPlugins(input: {
       image_result: async (image_input) =>
         await client.ai.image_result(image_input),
     }),
-    new AsrPlugin({
-      asr: async (asr_input: AsrPluginInput) =>
+    new SoundPlugin({
+      list_models: async () => {
+        const catalog = await client.ai.listModels();
+        return catalog.all()
+          .filter((model) =>
+            model.modalities.includes("asr") || model.modalities.includes("tts")
+          )
+          .map((model): SoundPluginModel => ({
+            id: model.id,
+            name: model.name,
+            description: model.description,
+            modalities: model.modalities,
+            tags: model.tags,
+            meta: JSON.parse(JSON.stringify(model.meta ?? {})),
+          }));
+      },
+      asr: async (asr_input: SoundPluginAsrInput) =>
         await client.ai.asr({
           ...asr_input,
           model: require_model_id(asr_input, "asr"),
         }),
-    }),
-    new TtsPlugin({
-      tts: async (tts_input: TtsPluginInput) =>
+      tts: async (tts_input: SoundPluginTtsInput) =>
         await client.ai.tts({
           ...tts_input,
           model: require_model_id(tts_input, "tts"),

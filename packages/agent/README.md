@@ -90,7 +90,7 @@ src/
 - `src/plugin/`
   - 插件框架与内建插件
   - `core/` 负责注册、启用态、hook 调度、本地 action
-  - `builtins/` 放 `auth`、`chat`、`contact`、`memory`、`shell`、`skill`、`task`、`web`、`asr`、`tts`、`voice`、`workboard` 等内建插件
+  - `builtins/` 放 `auth`、`chat`、`contact`、`memory`、`shell`、`skill`、`task`、`web`、`sound`、`workboard` 等内建插件
   - `types/` 放插件公共协议类型
 
 - `src/runtime/`

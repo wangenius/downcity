@@ -9,8 +9,7 @@ The current built-in plugin capabilities in code include:
 
 - `skill`
 - `web`
-- `asr`
-- `tts`
+- `sound`
 - `workboard`
 - `chat`
 - `contact`
@@ -27,12 +26,11 @@ These are the ones most developers are likely to read first:
 
 - `skill`
 - `web`
-- `asr`
-- `tts`
+- `sound`
 - `workboard`
 - `chat`
 
-`asr` and `tts` require real AI capabilities through their constructors, so they are built-in classes but are not part of the default no-argument creation set.
+`sound` requires the FED model catalog plus ASR and TTS functions through its constructor, so it is a built-in class but is not part of the default no-argument creation set.
 
 These are the clearest examples for:
 
@@ -56,7 +54,7 @@ These plugins are usually read to understand how the platform is assembled, not 
 
 ## How to read this section
 
-- If you want user-facing capability plugins, start with `skill`, `web`, `asr`, `tts`, and `chat`
+- If you want user-facing capability plugins, start with `skill`, `web`, `sound`, and `chat`
 - If you want platform rule layers, read the built-in authorization capability in `chat`
 - If you want control-plane or status surfaces, read `workboard`
 - If you want infrastructure patterns, read `schedule`, `task`, `memory`, and `shell`
@@ -67,8 +65,7 @@ These plugins are usually read to understand how the platform is assembled, not 
 | --- | --- | --- |
 | `skill` | skill discovery and installation | action + system |
 | `web` | web methodology injection and dependency preparation | action + setup + system |
-| `asr` | speech input and augmentation with constructor-injected transcription | action + pipeline + system |
-| `tts` | text-to-speech generation with constructor-injected synthesis | action + system |
+| `sound` | FED speech-model discovery, ASR, TTS, and inbound auto-transcription | action + pipeline + system |
 | `workboard` | work snapshots and status surfaces | availability + runtime HTTP |
 | `chat` | channel runtime, queue worker, chat authorization, and role resolution | lifecycle + actions + hooks + resolves + system |
 | `contact` | peer-to-peer agent linking and sharing | action + system + remote protocol |

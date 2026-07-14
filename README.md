@@ -39,7 +39,7 @@ Downcity gives creators, indie builders, and teams one reusable runtime layer fo
 - Agent lifecycle: create, start, stop, restart, inspect, chat with, diagnose, and observe project agents.
 - City connection: use `downcity federation` to connect local Agents to the active City server; manage City models and Service resources with `city`.
 - City backend capabilities: reuse accounts, balance, usage, payment, env, auth, and Service routing across agents and products.
-- Built-in agent capabilities: `chat`, `task`, `memory`, `shell`, `contact`, `skill`, `web`, `asr`, `tts`, and `workboard`.
+- Built-in agent capabilities: `chat`, `task`, `memory`, `shell`, `contact`, `skill`, `web`, `sound`, and `workboard`.
 - Product surfaces: Downcity CLI, Agent SDK, City SDK, and UI SDK.
 
 ## Quick Start

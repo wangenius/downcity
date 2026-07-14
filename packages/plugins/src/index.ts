@@ -26,8 +26,7 @@ export { ImagePlugin } from "./image/ImagePlugin.js";
 export { ChatChannelAccountManager } from "./chat/accounts/ChannelAccountManager.js";
 export { SkillPlugin } from "./skill/Plugin.js";
 export { WebPlugin } from "./web/Plugin.js";
-export { AsrPlugin } from "./asr/Plugin.js";
-export { TtsPlugin } from "./tts/Plugin.js";
+export { SoundPlugin } from "./sound/Plugin.js";
 export { WorkboardPlugin } from "./workboard/Plugin.js";
 export { TaskPlugin } from "./task/TaskPlugin.js";
 export { MemoryPlugin } from "./memory/MemoryPlugin.js";
@@ -85,17 +84,16 @@ export type {
   MemoryWikiPageDraft,
 } from "./memory/types/Memory.js";
 export type {
-  AsrPluginInput,
-  AsrPluginOptions,
-  AsrPluginResult,
-} from "./asr/types/AsrPlugin.js";
-export type {
-  TtsPluginInput,
-  TtsPluginOptions,
-  TtsPluginResult,
-  TtsPluginSimpleAudioResult,
-  TtsPluginUiMessageResult,
-} from "./tts/types/TtsPlugin.js";
+  SoundPluginAsrInput,
+  SoundPluginAsrResult,
+  SoundPluginAsrSegment,
+  SoundPluginCapability,
+  SoundPluginModel,
+  SoundPluginModelsResult,
+  SoundPluginOptions,
+  SoundPluginTtsInput,
+  SoundPluginTtsResult,
+} from "./sound/types/SoundPlugin.js";
 export type {
   ImagePluginContent,
   ImagePluginDefaultModel,

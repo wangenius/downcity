@@ -65,16 +65,16 @@ description: Agent 对外 HTTP 接口与请求示例
 ### `POST /api/plugins/availability`
 
 ```json
-{ "pluginName": "asr" }
+{ "pluginName": "sound" }
 ```
 
 ### `POST /api/plugins/action`
 
 ```json
 {
-  "pluginName": "asr",
-  "actionName": "status",
-  "payload": {}
+  "pluginName": "sound",
+  "actionName": "models",
+  "payload": { "capability": "asr" }
 }
 ```
 
@@ -91,8 +91,8 @@ description: Agent 对外 HTTP 接口与请求示例
   "success": true,
   "plugins": [
     {
-      "name": "asr",
-      "actions": ["status", "on", "off"],
+      "name": "sound",
+      "actions": ["models", "asr", "tts"],
       "pipelines": ["chat.augmentInbound"],
       "guards": [],
       "effects": [],
@@ -107,9 +107,9 @@ description: Agent 对外 HTTP 接口与请求示例
       "config": {
         "actions": [
           {
-            "name": "status",
-            "supportsCommand": true,
-            "supportsApi": true,
+            "name": "models",
+            "supportsCommand": false,
+            "supportsApi": false,
             "apiMethod": "",
             "apiPath": ""
           }

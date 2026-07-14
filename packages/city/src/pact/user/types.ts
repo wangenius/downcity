@@ -71,12 +71,19 @@ export type UserTtsResult = UIMessage;
 export interface UserAsrResult {
   /** 转写后的文本。 */
   text: string;
-  /** Provider 可选返回语言标识，例如 `zh` 或 `en`。 */
+  /** 与 AI SDK `TranscriptionResult` 对齐的带时间信息转写分段。 */
+  segments?: Array<{
+    /** 当前时间片段识别得到的文本。 */
+    text: string;
+    /** 当前片段在音频中的开始时间，单位为秒。 */
+    startSecond: number;
+    /** 当前片段在音频中的结束时间，单位为秒。 */
+    endSecond: number;
+  }>;
+  /** Provider 可选返回的 ISO-639-1 语言标识，例如 `zh` 或 `en`。 */
   language?: string;
-  /** Provider 可选返回音频时长，单位秒。 */
-  duration?: number;
-  /** Provider 额外返回的 JSON 可序列化字段。 */
-  [key: string]: UserJsonValue | undefined;
+  /** 与 AI SDK `TranscriptionResult` 对齐的音频总时长，单位为秒。 */
+  durationInSeconds?: number;
 }
 export type {
   AIImageJobStatus as UserImageJobStatus,

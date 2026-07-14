@@ -16,11 +16,9 @@ import { ContactPlugin } from "@/contact/ContactPlugin.js";
 import { TaskPlugin } from "@/task/TaskPlugin.js";
 import { MemoryPlugin } from "@/memory/MemoryPlugin.js";
 import { ImagePlugin } from "@/image/ImagePlugin.js";
-import { AsrPlugin } from "@/asr/Plugin.js";
-import { TtsPlugin } from "@/tts/Plugin.js";
+import { SoundPlugin } from "@/sound/Plugin.js";
 import type { ImagePluginOptions } from "@/image/types/ImagePlugin.js";
-import type { AsrPluginOptions } from "@/asr/types/AsrPlugin.js";
-import type { TtsPluginOptions } from "@/tts/types/TtsPlugin.js";
+import type { SoundPluginOptions } from "@/sound/types/SoundPlugin.js";
 import type { TaskPluginOptions } from "@/task/types/TaskPluginOptions.js";
 import type { MemoryPluginOptions } from "@/memory/types/Memory.js";
 
@@ -32,7 +30,7 @@ export type BuiltinPluginClass<T extends BasePlugin = BasePlugin> = new () => T;
 /**
  * 可直接无参创建的内建 plugin classes。
  *
- * 关键点（中文）：image / asr / tts 需要宿主注入 City AI 能力，不能放入无参 class 列表。
+ * 关键点（中文）：image / sound 需要宿主注入 City AI 能力，不能放入无参 class 列表。
  */
 export const BUILTIN_PLUGIN_CLASSES: BuiltinPluginClass[] = [
   SkillPlugin,
@@ -54,14 +52,9 @@ export interface BuiltinPluginOptions {
   image?: ImagePluginOptions;
 
   /**
-   * 语音转写 plugin 的 City AI 能力注入。
+   * 统一语音 plugin 的 FED 模型目录、ASR 与 TTS 能力注入。
    */
-  asr?: AsrPluginOptions;
-
-  /**
-   * 文本转语音 plugin 的 City AI 能力注入。
-   */
-  tts?: TtsPluginOptions;
+  sound?: SoundPluginOptions;
 
   /**
    * task plugin 的定时任务运行参数。
@@ -89,11 +82,8 @@ export function createBuiltinPlugins(options: BuiltinPluginOptions = {}): BasePl
   if (options.image?.image_create && options.image?.image_result) {
     plugins.push(new ImagePlugin(options.image));
   }
-  if (options.asr?.asr) {
-    plugins.push(new AsrPlugin(options.asr));
-  }
-  if (options.tts?.tts) {
-    plugins.push(new TtsPlugin(options.tts));
+  if (options.sound) {
+    plugins.push(new SoundPlugin(options.sound));
   }
   return plugins;
 }

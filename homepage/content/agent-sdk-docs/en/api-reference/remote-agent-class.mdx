@@ -51,9 +51,14 @@ await session.resolve_approval({
 You can also handle an approval-required Tool Part through the unified Mutation stream:
 
 ```ts
-session.subscribe(async (mutation, reply) => {
-  if (mutation.variant === "part" && mutation.type === "tool" && mutation.part.state === "approval-required") {
-    await reply.approval({ decision: "approved" });
+session.subscribe((mutation) => {
+  if (
+    mutation.variant === "part" &&
+    mutation.type === "tool" &&
+    mutation.part.state === "approval-required" &&
+    mutation.part.approval
+  ) {
+    show_approval_request(mutation.part.approval);
   }
 });
 ```

@@ -230,6 +230,7 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
       ownerContextId: run_context.ownerContextId,
       turnId: run_context.turnId,
       env: run_context.env,
+      approval_gateway: run_context.approval_gateway,
       toolCallId: options.toolCallId,
     });
   }

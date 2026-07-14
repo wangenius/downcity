@@ -6,6 +6,7 @@
  */
 
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
+import type { SessionApproval } from "@/types/session/SessionApproval.js";
 
 /** Message 默认展示范围。 */
 export type SessionMessageVisibility = "visible" | "internal";
@@ -132,8 +133,8 @@ export interface SessionAssistantToolPart {
   output?: JsonValue;
   /** 工具失败信息。 */
   error?: string;
-  /** 工具审批请求标识。 */
-  approval_id?: string;
+  /** 当前 Tool 等待或已经处理过的完整审批快照。 */
+  approval?: SessionApproval;
 }
 
 /** Assistant 文件 part。 */

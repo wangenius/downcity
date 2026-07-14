@@ -79,7 +79,7 @@ await session.resolve_approval({
 });
 ```
 
-A live UI can also call `reply.approval(...)` when `session.subscribe((mutation, reply) => {})` receives an approval-required Tool Part.
+A live UI reads the complete request from `mutation.part.approval` when `session.subscribe((mutation) => {})` receives an approval-required Tool Part, then calls `session.resolve_approval(...)` after the user decides.
 
 ## plugins
 

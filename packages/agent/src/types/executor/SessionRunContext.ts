@@ -19,6 +19,8 @@ import type {
 import type { SessionUserMessageV1 } from "@/executor/types/SessionRecords.js";
 import type { FileUIPart } from "ai";
 import type { AgentPluginExecutionLease } from "@/types/plugin/PluginRuntime.js";
+import type { ShellApprovalGateway } from "@downcity/shell";
+import type { SessionToolInputReady } from "@/types/session/SessionToolRuntime.js";
 
 /**
  * 单次 session run 的运行上下文。
@@ -104,6 +106,12 @@ export interface SessionRunContext {
    * - 用于把底层模型 UI chunk 旁路输出到订阅流或 transport。
    */
   onUiMessageChunkCallback?: SessionUiMessageChunkCallback;
+
+  /** Tool 实现开始执行前提交完整输入的顺序屏障。 */
+  on_tool_input_ready?: (input: SessionToolInputReady) => Promise<void>;
+
+  /** 当前 Session 拥有的 unrestricted 审批网关。 */
+  shell_approval_gateway?: ShellApprovalGateway;
 
   /**
    * action 发布回调。

@@ -1,0 +1,25 @@
+/**
+ * Session JSON 值归一化工具。
+ *
+ * Session 持久化边界只接受 JSON 值；无法直接序列化的输入降级为字符串，
+ * 避免 Tool、User Data 等外部输入污染 canonical Message。
+ */
+
+import type { JsonValue } from "@/types/common/Json.js";
+
+/** 把任意运行时输入转换为可持久化的 JSON 值。 */
+export function to_session_json_value(input: unknown): JsonValue {
+  if (input === undefined || input === null) return null;
+  if (
+    typeof input === "string" ||
+    typeof input === "number" ||
+    typeof input === "boolean"
+  ) {
+    return input;
+  }
+  try {
+    return JSON.parse(JSON.stringify(input)) as JsonValue;
+  } catch {
+    return String(input);
+  }
+}

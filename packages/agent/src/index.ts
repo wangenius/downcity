@@ -63,7 +63,6 @@ export type {
   SessionDeltaMutation,
   SessionMessageMutation,
   SessionMutation,
-  SessionMutationReply,
   SessionMutationSubscriber,
   SessionMutationUnsubscribe,
   SessionPartMutation,

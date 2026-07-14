@@ -4,14 +4,15 @@
  * 完整 Message 与 Assistant 草稿先持久化，成功后再发布实时 Mutation。
  */
 
-import type { UIMessage, UIMessageChunk } from "ai";
+import type { UIMessage } from "ai";
 import { generateId } from "@/utils/Id.js";
+import { SessionAssistantMessageWriter } from "@/session/recorder/SessionAssistantMessageWriter.js";
+import { to_session_json_value } from "@/session/recorder/SessionJsonValue.js";
 import { JsonlSessionMessageStore } from "@/session/recorder/JsonlSessionMessageStore.js";
-import type { JsonObject, JsonValue } from "@/types/common/Json.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import type {
   ListSessionMessagesInput,
   SessionActionMessage,
-  SessionAssistantFilePart,
   SessionAssistantMessage,
   SessionAssistantMessagePart,
   SessionAssistantToolPart,
@@ -30,27 +31,9 @@ import type {
   SessionMessageStorageStats,
   SessionSegmentSummary,
 } from "@/types/session/SessionSegment.js";
+import type { SessionStreamingToolLocation } from "@/types/session/SessionToolRuntime.js";
 
-/** Shell 审批事件等待 Tool 输入完成落盘的最长时间。 */
-const TOOL_INPUT_READY_WAIT_TIMEOUT_MS = 5_000;
-
-/** 已进入当前流式 Assistant 的 Tool Part 定位结果。 */
-type StreamingToolLocation = {
-  /** Tool Part 所属 Assistant Message。 */
-  message_id: string;
-  /** 当前 Tool Part 快照。 */
-  part: SessionAssistantToolPart;
-};
-
-/** 等待指定 Tool Part 进入 ready 状态的回调。 */
-type StreamingToolWaiter = {
-  /** Tool 输入完成后返回稳定定位结果。 */
-  resolve: (tool: StreamingToolLocation) => void;
-  /** 等待超时后拒绝审批事件投影。 */
-  reject: (error: Error) => void;
-  /** 清理有界等待定时器。 */
-  timer: ReturnType<typeof setTimeout>;
-};
+export { SessionAssistantMessageWriter } from "@/session/recorder/SessionAssistantMessageWriter.js";
 
 /** SessionRecorder 构造参数。 */
 export interface SessionRecorderOptions {
@@ -142,7 +125,6 @@ export class SessionRecorder {
   private readonly store: JsonlSessionMessageStore;
   private readonly publish: SessionRecorderOptions["publish"];
   private readonly messages_by_id = new Map<string, SessionMessage>();
-  private readonly streaming_tool_waiters = new Map<string, Set<StreamingToolWaiter>>();
   private initialized = false;
 
   constructor(options: SessionRecorderOptions) {
@@ -506,9 +488,6 @@ export class SessionRecorder {
       part_id: next_part.part_id,
       part: next_part,
     } as SessionMutation, message);
-    if (next_part.type === "tool") {
-      this.resolve_streaming_tool_waiters(message_id, next_part);
-    }
   }
 
   /** @internal 收口 Assistant Message。 */
@@ -534,39 +513,6 @@ export class SessionRecorder {
     this.accept_message(message);
   }
 
-  /** @internal 将 Shell Runtime 审批请求更新到当前 Tool Part。 */
-  async require_tool_approval(input: {
-    tool_call_id: string;
-    approval_id: string;
-  }): Promise<void> {
-    // 关键点（中文）：Shell execute 与 UI chunk 落盘并发，审批事件可能先于 ready Tool Part 到达。
-    const tool = await this.wait_for_ready_streaming_tool(input.tool_call_id);
-    await this.update_assistant_part(tool.message_id, {
-      ...tool.part,
-      state: "approval-required",
-      approval_id: input.approval_id,
-    });
-  }
-
-  /** @internal 将审批结果更新到当前 Tool Part。 */
-  async resolve_tool_approval(input: {
-    tool_call_id: string;
-    approval_id: string;
-    decision: "approved" | "denied" | "expired";
-  }): Promise<void> {
-    const tool = this.require_streaming_tool(input.tool_call_id);
-    if (tool.part.approval_id && tool.part.approval_id !== input.approval_id) {
-      throw new Error(`Tool approval identity mismatch: ${input.approval_id}`);
-    }
-    await this.update_assistant_part(tool.message_id, {
-      ...tool.part,
-      state: input.decision === "approved" ? "running" : "failed",
-      ...(input.decision === "approved"
-        ? {}
-        : { error: input.decision === "expired" ? "Approval expired" : "Approval denied" }),
-    });
-  }
-
   private async create_message(
     factory: (sequence: number, created_at: number) => SessionMessage,
     draft = false,
@@ -589,7 +535,8 @@ export class SessionRecorder {
     return message;
   }
 
-  private find_streaming_tool(tool_call_id: string): StreamingToolLocation | undefined {
+  /** 读取当前流式 Assistant 中的指定 Tool Part。 */
+  find_streaming_tool(tool_call_id: string): SessionStreamingToolLocation | undefined {
     for (const message of this.messages_by_id.values()) {
       if (message.type !== "assistant" || message.status !== "streaming") continue;
       const part = message.parts.find(
@@ -599,56 +546,6 @@ export class SessionRecorder {
       if (part) return { message_id: message.message_id, part };
     }
     return undefined;
-  }
-
-  /** 读取已存在的流式 Tool Part，不存在时抛出稳定错误。 */
-  private require_streaming_tool(tool_call_id: string): StreamingToolLocation {
-    const tool = this.find_streaming_tool(tool_call_id);
-    if (tool) return tool;
-    throw new Error(`Streaming Tool Part not found: ${tool_call_id}`);
-  }
-
-  /**
-   * 等待 AI SDK 把完整 Tool 输入写入当前流式 Assistant。
-   *
-   * 审批事件不能绑定 `input-streaming` 占位，否则后续 ready 快照会覆盖审批状态。
-   */
-  private async wait_for_ready_streaming_tool(
-    tool_call_id: string,
-  ): Promise<StreamingToolLocation> {
-    const current = this.find_streaming_tool(tool_call_id);
-    if (current && current.part.state !== "input-streaming") return current;
-
-    return await new Promise<StreamingToolLocation>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        const waiters = this.streaming_tool_waiters.get(tool_call_id);
-        if (waiters) {
-          waiters.delete(waiter);
-          if (waiters.size === 0) this.streaming_tool_waiters.delete(tool_call_id);
-        }
-        reject(new Error(`Timed out waiting for Tool input: ${tool_call_id}`));
-      }, TOOL_INPUT_READY_WAIT_TIMEOUT_MS);
-      if (typeof timer.unref === "function") timer.unref();
-      const waiter: StreamingToolWaiter = { resolve, reject, timer };
-      const waiters = this.streaming_tool_waiters.get(tool_call_id) || new Set();
-      waiters.add(waiter);
-      this.streaming_tool_waiters.set(tool_call_id, waiters);
-    });
-  }
-
-  /** Tool 输入完成后兑现同一调用的全部审批等待者。 */
-  private resolve_streaming_tool_waiters(
-    message_id: string,
-    part: SessionAssistantToolPart,
-  ): void {
-    if (part.state === "input-streaming") return;
-    const waiters = this.streaming_tool_waiters.get(part.tool_call_id);
-    if (!waiters) return;
-    this.streaming_tool_waiters.delete(part.tool_call_id);
-    for (const waiter of waiters) {
-      clearTimeout(waiter.timer);
-      waiter.resolve({ message_id, part });
-    }
   }
 
   private build_message_mutation(
@@ -682,289 +579,6 @@ export class SessionRecorder {
   }
 
 }
-
-/** 单个 Assistant segment 的流式 writer。 */
-export class SessionAssistantMessageWriter {
-  readonly message_id: string;
-  private readonly recorder: SessionRecorder;
-  private readonly pending_text_parts = new Map<string, "text" | "reasoning">();
-  private readonly active_text_part_ids = new Map<string, string>();
-  private closed = false;
-
-  constructor(recorder: SessionRecorder, message_id: string) {
-    this.recorder = recorder;
-    this.message_id = message_id;
-  }
-
-  /** 应用一个原始 AI SDK UI chunk。 */
-  async apply_chunk(chunk: UIMessageChunk): Promise<void> {
-    if (this.closed) throw new Error("Assistant Message writer is closed");
-    const current = this.current_message();
-    switch (chunk.type) {
-      case "text-start":
-      case "reasoning-start": {
-        const type = chunk.type === "text-start" ? "text" : "reasoning";
-        const part_id = this.resolve_text_part_id(type, chunk.id);
-        if (!current.parts.some((part) => part.part_id === part_id)) {
-          this.pending_text_parts.set(part_id, type);
-        }
-        return;
-      }
-      case "text-delta":
-      case "reasoning-delta": {
-        const type = chunk.type === "text-delta" ? "text" : "reasoning";
-        const part_id = this.resolve_text_part_id(type, chunk.id);
-        await this.ensure_text_part(part_id, type);
-        await this.recorder.append_assistant_delta(
-          this.message_id,
-          part_id,
-          type,
-          chunk.delta,
-        );
-        return;
-      }
-      case "text-end":
-      case "reasoning-end": {
-        const type = chunk.type === "text-end" ? "text" : "reasoning";
-        const source_part_id = this.source_text_part_id(type, chunk.id);
-        const part_id = this.active_text_part_ids.get(source_part_id);
-        if (!part_id) return;
-        const part = current.parts.find((item) => item.part_id === part_id);
-        if (part?.type === "text" || part?.type === "reasoning") {
-          await this.upsert_part({ ...part, state: "done" });
-        } else {
-          this.pending_text_parts.delete(part_id);
-        }
-        this.active_text_part_ids.delete(source_part_id);
-        return;
-      }
-      case "tool-input-start":
-        await this.upsert_tool(chunk.toolCallId, {
-          tool_name: chunk.toolName,
-          state: "input-streaming",
-          input_text: "",
-        });
-        return;
-      case "tool-input-delta": {
-        const tool = this.find_tool(chunk.toolCallId);
-        await this.upsert_tool(chunk.toolCallId, {
-          tool_name: tool?.tool_name || "unknown",
-          state: "input-streaming",
-          input_text: `${tool?.input_text || ""}${chunk.inputTextDelta}`,
-        });
-        return;
-      }
-      case "tool-input-available":
-        await this.upsert_tool(chunk.toolCallId, {
-          tool_name: chunk.toolName,
-          state: "ready",
-          input: to_json_value(chunk.input),
-        });
-        return;
-      case "tool-input-error":
-        await this.upsert_tool(chunk.toolCallId, {
-          tool_name: chunk.toolName,
-          state: "failed",
-          input: to_json_value(chunk.input),
-          error: chunk.errorText,
-        });
-        return;
-      case "tool-approval-request": {
-        const tool = this.find_tool(chunk.toolCallId);
-        await this.upsert_tool(chunk.toolCallId, {
-          tool_name: tool?.tool_name || "unknown",
-          state: "approval-required",
-          approval_id: chunk.approvalId,
-        });
-        return;
-      }
-      case "tool-output-available": {
-        const tool = this.find_tool(chunk.toolCallId);
-        await this.upsert_tool(chunk.toolCallId, {
-          tool_name: tool?.tool_name || "unknown",
-          state: "completed",
-          output: to_json_value(chunk.output),
-        });
-        return;
-      }
-      case "tool-output-error":
-      case "tool-output-denied": {
-        const tool = this.find_tool(chunk.toolCallId);
-        await this.upsert_tool(chunk.toolCallId, {
-          tool_name: tool?.tool_name || "unknown",
-          state: "failed",
-          error:
-            chunk.type === "tool-output-error"
-              ? chunk.errorText
-              : "Tool output denied",
-        });
-        return;
-      }
-      case "file":
-        await this.append_file_part({
-          media_type: chunk.mediaType,
-          url: chunk.url,
-        });
-        return;
-      default:
-        return;
-    }
-  }
-
-  /** 写入一个完整 Assistant part。 */
-  async upsert_part(part: SessionAssistantMessagePart): Promise<void> {
-    await this.recorder.update_assistant_part(this.message_id, part);
-  }
-
-  /**
-   * 把最终结果中的文件补入当前 Assistant，并对流式已写入文件去重。
-   */
-  async append_file_part(
-    input: Pick<SessionAssistantFilePart, "filename" | "media_type" | "url">,
-  ): Promise<void> {
-    const filename = String(input.filename || "").trim();
-    const current = this.current_message();
-    const existing = current.parts.find(
-      (part) =>
-        part.type === "file" &&
-        part.url === input.url &&
-        part.media_type === input.media_type,
-    );
-    if (existing?.type === "file") {
-      if (filename && String(existing.filename || "").trim() !== filename) {
-        await this.upsert_part({ ...existing, filename });
-      }
-      return;
-    }
-    await this.upsert_part({
-      part_id: `file:${generateId()}`,
-      sequence: this.next_part_sequence(),
-      type: "file",
-      media_type: input.media_type,
-      url: input.url,
-      ...(filename ? { filename } : {}),
-    });
-  }
-
-  /** 当前实现逐 chunk 等待落盘，因此 flush 在返回时天然完成。 */
-  async flush(): Promise<void> {}
-
-  /** 正常完成当前 assistant segment。 */
-  async complete(): Promise<void> {
-    await this.close("completed");
-  }
-
-  /** 停止当前 assistant segment，并保留已有 parts。 */
-  async stop(): Promise<void> {
-    await this.close("stopped");
-  }
-
-  /** 以失败状态关闭当前 assistant segment。 */
-  async fail(_error: unknown): Promise<void> {
-    await this.close("failed");
-  }
-
-  private current_message(): SessionAssistantMessage {
-    const message = this.recorder.get_message(this.message_id);
-    if (!message || message.type !== "assistant") {
-      throw new Error(`Assistant Message not found: ${this.message_id}`);
-    }
-    return message;
-  }
-
-  private find_tool(tool_call_id: string): SessionAssistantToolPart | undefined {
-    return this.current_message().parts.find(
-      (part): part is SessionAssistantToolPart =>
-        part.type === "tool" && part.tool_call_id === tool_call_id,
-    );
-  }
-
-  private next_part_sequence(): number {
-    return this.current_message().parts.reduce(
-      (value, part) => Math.max(value, part.sequence + 1),
-      1,
-    );
-  }
-
-  /**
-   * 把 AI SDK 当前 stream 内的临时 chunk ID 映射为 Message 内唯一 Part ID。
-   *
-   * AI SDK 会在不同 `streamText()` 调用中重复使用 `txt-0`、`reasoning-0`
-   * 等 ID，因此这些 ID 只能用于关联当前尚未结束的文本片段。
-   */
-  private resolve_text_part_id(
-    type: "text" | "reasoning",
-    chunk_id: string,
-  ): string {
-    const source_part_id = this.source_text_part_id(type, chunk_id);
-    const active_part_id = this.active_text_part_ids.get(source_part_id);
-    if (active_part_id) return active_part_id;
-    const part_id = `${type}:${generateId()}`;
-    this.active_text_part_ids.set(source_part_id, part_id);
-    return part_id;
-  }
-
-  /** 构造当前流片段使用的临时关联键。 */
-  private source_text_part_id(
-    type: "text" | "reasoning",
-    chunk_id: string,
-  ): string {
-    return `${type}:${chunk_id}`;
-  }
-
-  /** 在首个有效 Delta 到达时才固定文本 Part 的真实顺序。 */
-  private async ensure_text_part(
-    part_id: string,
-    type: "text" | "reasoning",
-  ): Promise<void> {
-    const existing = this.current_message().parts.find(
-      (part) => part.part_id === part_id,
-    );
-    if (existing) {
-      if (existing.type !== type) {
-        throw new Error(`Assistant Part type changed: ${part_id}`);
-      }
-      return;
-    }
-    const pending_type = this.pending_text_parts.get(part_id);
-    if (pending_type && pending_type !== type) {
-      throw new Error(`Assistant pending Part type changed: ${part_id}`);
-    }
-    await this.upsert_part({
-      part_id,
-      sequence: this.next_part_sequence(),
-      type,
-      text: "",
-      state: "streaming",
-    });
-    this.pending_text_parts.delete(part_id);
-  }
-
-  private async upsert_tool(
-    tool_call_id: string,
-    changes: Pick<SessionAssistantToolPart, "tool_name" | "state"> &
-      Partial<Omit<SessionAssistantToolPart, "part_id" | "type" | "tool_call_id" | "tool_name" | "state">>,
-  ): Promise<void> {
-    const current = this.find_tool(tool_call_id);
-    await this.upsert_part({
-      ...(current || {}),
-      part_id: `tool:${tool_call_id}`,
-      sequence: current?.sequence || this.next_part_sequence(),
-      type: "tool",
-      tool_call_id,
-      ...changes,
-    });
-  }
-
-  private async close(status: "completed" | "stopped" | "failed"): Promise<void> {
-    if (this.closed) return;
-    this.pending_text_parts.clear();
-    this.active_text_part_ids.clear();
-    await this.recorder.complete_assistant_message(this.message_id, status);
-    this.closed = true;
-  }
-}
-
 /** 单个 Action Message 的生命周期 writer。 */
 export class SessionActionMessageWriter {
   readonly message_id: string;
@@ -1023,7 +637,7 @@ export function normalize_session_user_parts(
         part_id: `user-data:${index + 1}`,
         type: "data",
         data_type: String(candidate.type),
-        data: to_json_value(candidate.data),
+        data: to_session_json_value(candidate.data),
       }];
     }
     return [];
@@ -1052,16 +666,6 @@ function require_streaming_assistant(
     throw new Error(`Assistant Message is already closed: ${message.message_id}`);
   }
   return message;
-}
-
-function to_json_value(input: unknown): JsonValue {
-  if (input === undefined || input === null) return null;
-  if (typeof input === "string" || typeof input === "number" || typeof input === "boolean") return input;
-  try {
-    return JSON.parse(JSON.stringify(input)) as JsonValue;
-  } catch {
-    return String(input);
-  }
 }
 
 function resolve_import_id(map: Map<string, string>, source_id: string, prefix: string): string {

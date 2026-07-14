@@ -8,6 +8,7 @@
  */
 
 import type { UIMessage } from "ai";
+import { to_session_json_value } from "@/session/recorder/SessionJsonValue.js";
 import type {
   SessionAssistantMessage,
   SessionAssistantMessagePart,
@@ -90,7 +91,7 @@ export function from_ui_user_parts(
         part_id: `user-data:${index + 1}`,
         type: "data" as const,
         data_type: String(candidate.type),
-        data: to_json_value(candidate.data),
+        data: to_session_json_value(candidate.data),
       }];
     }
     return [];
@@ -149,10 +150,10 @@ export function from_ui_assistant_parts(
                     ? "ready" as const
                     : "running" as const,
         ...(candidate.input !== undefined
-          ? { input: to_json_value(candidate.input) }
+          ? { input: to_session_json_value(candidate.input) }
           : {}),
         ...(candidate.output !== undefined
-          ? { output: to_json_value(candidate.output) }
+          ? { output: to_session_json_value(candidate.output) }
           : {}),
         ...(candidate.errorText ? { error: String(candidate.errorText) } : {}),
       }];
@@ -244,7 +245,7 @@ function to_ui_assistant_parts(
         toolCallId: part.tool_call_id,
         state: "approval-requested",
         input,
-        approval: { id: part.approval_id || `approval:${part.tool_call_id}` },
+        approval: { id: part.approval?.approval_id || `approval:${part.tool_call_id}` },
       };
     }
     return {
@@ -264,21 +265,5 @@ function parse_json(input: string | undefined): unknown {
     return JSON.parse(value);
   } catch {
     return value;
-  }
-}
-
-function to_json_value(input: unknown) {
-  if (input === undefined || input === null) return null;
-  if (
-    typeof input === "string" ||
-    typeof input === "number" ||
-    typeof input === "boolean"
-  ) {
-    return input;
-  }
-  try {
-    return JSON.parse(JSON.stringify(input));
-  } catch {
-    return String(input);
   }
 }

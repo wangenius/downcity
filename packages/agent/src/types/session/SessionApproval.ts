@@ -17,9 +17,9 @@ export interface SessionApproval {
   /** 当前审批所属 Session 标识。 */
   session_id: string;
   /** 当前审批所属 Turn 标识。 */
-  turn_id?: string;
+  turn_id: string;
   /** 当前审批对应的工具调用标识。 */
-  tool_call_id?: string;
+  tool_call_id: string;
   /** 当前审批对应的工具注册名称。 */
   tool_name: string;
   /** 请求执行的命令或输入文本。 */
@@ -32,6 +32,8 @@ export interface SessionApproval {
   operation: "exec" | "start" | "write";
   /** 当前审批创建时间戳（ms）。 */
   created_at: number;
+  /** 当前审批自动过期时间戳（ms）。 */
+  expires_at: number;
 }
 
 /** 提交 Session 工具审批决策的参数。 */
@@ -65,44 +67,3 @@ export interface SetSessionApprovalModeInput {
   /** 需要设置的新审批模式。 */
   mode: SessionApprovalMode;
 }
-
-/** Shell Runtime 发给 Session 的工具审批请求。 */
-export interface SessionToolApprovalRequest {
-  /** Runtime 事件类型固定为工具审批请求。 */
-  type: "tool-approval-request";
-  /** 当前审批所属 Turn 标识。 */
-  turn_id: string;
-  /** 当前审批对应的工具调用标识。 */
-  tool_call_id: string;
-  /** 当前审批对应的工具注册名称。 */
-  tool_name: string;
-  /** 当前审批请求的稳定唯一标识。 */
-  approval_id: string;
-  /** 请求执行的命令或输入文本。 */
-  command: string;
-  /** 当前工具执行工作目录。 */
-  cwd: string;
-  /** 工具申请 unrestricted 权限的原因。 */
-  reason: string;
-  /** 当前审批对应的工具操作类型。 */
-  operation: "exec" | "start" | "write";
-}
-
-/** Shell Runtime 发给 Session 的工具审批结果。 */
-export interface SessionToolApprovalResult {
-  /** Runtime 事件类型固定为工具审批结果。 */
-  type: "tool-approval-result";
-  /** 当前审批所属 Turn 标识。 */
-  turn_id: string;
-  /** 当前审批对应的工具调用标识。 */
-  tool_call_id: string;
-  /** 当前审批请求的稳定唯一标识。 */
-  approval_id: string;
-  /** 当前审批的最终结果，超时由 Runtime 标记为 expired。 */
-  decision: SessionApprovalDecision | "expired";
-}
-
-/** Session 内部接收的工具审批 Runtime 事件。 */
-export type SessionApprovalRuntimeEvent =
-  | SessionToolApprovalRequest
-  | SessionToolApprovalResult;

@@ -35,15 +35,16 @@ await session.set({ model });
 const initial_page = await session.messages();
 render_messages(initial_page.items);
 
-const unsubscribe = session.subscribe(async (mutation, reply) => {
+const unsubscribe = session.subscribe((mutation) => {
   apply_mutation_to_ui(mutation);
 
   if (
     mutation.variant === "part" &&
     mutation.type === "tool" &&
-    mutation.part.state === "approval-required"
+    mutation.part.state === "approval-required" &&
+    mutation.part.approval
   ) {
-    await reply.approval({ decision: "approved" });
+    show_approval_request(mutation.part.approval);
   }
 });
 

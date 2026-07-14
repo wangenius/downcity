@@ -17,17 +17,23 @@ session.subscribe((mutation) => {
 
 The five variants are `message`, `part`, `delta`, `turn`, and `session`. All Mutations contain `mutation_id`, `session_id`, and `created_at`. Message-related Mutations also carry `message_id` and `revision` for safe snapshot updates.
 
-Reply to an approval-required Tool Part through the callback's second argument:
+An approval-required Tool Part carries the complete request. The subscription remains a data-only channel; submit a user decision through the Session command API:
 
 ```ts
-session.subscribe(async (mutation, reply) => {
+session.subscribe((mutation) => {
   if (
     mutation.variant === "part" &&
     mutation.type === "tool" &&
-    mutation.part.state === "approval-required"
+    mutation.part.state === "approval-required" &&
+    mutation.part.approval
   ) {
-    await reply.approval({ decision: "approved" });
+    show_approval_request(mutation.part.approval);
   }
+});
+
+await session.resolve_approval({
+  approval_id,
+  decision: "approved",
 });
 ```
 

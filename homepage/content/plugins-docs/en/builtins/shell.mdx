@@ -58,7 +58,7 @@ await session.resolve_approval({
 });
 ```
 
-Local and remote Sessions expose the same API. A live UI can also call `reply.approval({ decision })` when `session.subscribe()` receives an approval-required Tool Part.
+Local and remote Sessions expose the same API. A live UI reads the request from `mutation.part.approval` when `session.subscribe()` receives an approval-required Tool Part, then submits the decision with `session.resolve_approval(...)`.
 
 ## Session Approval Mode
 

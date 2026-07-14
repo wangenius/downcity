@@ -43,10 +43,6 @@ export interface CreateRuntimeSessionPortParams {
     subscriber: SessionMutationSubscriber,
   ) => SessionMutationUnsubscribe;
   /**
-   * 发布一条 session runtime 事件。
-   */
-  publishEvent: SessionPort["publishEvent"];
-  /**
    * 追加 user 消息到底层历史。
    */
   append_user_message: SessionPort["append_user_message"];
@@ -88,9 +84,6 @@ export function createRuntimeSessionPort(
     },
     subscribe: (subscriber) => {
       return params.subscribe(subscriber);
-    },
-    publishEvent: async (event) => {
-      await params.publishEvent(event);
     },
     append_user_message: async (messageParams) => {
       await params.append_user_message(messageParams);

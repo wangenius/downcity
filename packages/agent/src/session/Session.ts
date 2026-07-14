@@ -31,7 +31,6 @@ import { createRuntimeSessionPort } from "@/session/storage/RuntimeSessionPort.j
 import { SessionSystemBuilder } from "@/session/SessionSystemBuilder.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import type {
-  SessionMutation,
   SessionMutationSubscriber,
   SessionMutationUnsubscribe,
 } from "@/types/session/SessionMutation.js";
@@ -41,7 +40,6 @@ import type {
   SessionApprovalModeSnapshot,
   SessionApprovalResult,
   SetSessionApprovalModeInput,
-  SessionApprovalRuntimeEvent,
 } from "@/types/session/SessionApproval.js";
 import type {
   ListSessionMessagesInput,
@@ -67,6 +65,8 @@ import type { SessionHistoryComposer } from "@/executor/composer/history/Session
 import type { SessionSystemComposer } from "@/executor/composer/system/SessionSystemComposer.js";
 import type { SessionOptions } from "@/types/session/SessionOptions.js";
 import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.js";
+import { SessionToolRuntime } from "@/session/tool/SessionToolRuntime.js";
+import { SessionApprovalBroker } from "@/session/approval/SessionApprovalBroker.js";
 
 /**
  * SDK 本地 Session。
@@ -89,10 +89,8 @@ export class Session implements AgentSession {
   private readonly historyComposer: SessionHistoryComposer;
   private readonly executor: Executor;
   private readonly eventHub: SessionEventHub;
-  private readonly list_approvals: SessionOptions["list_approvals"];
-  private readonly get_approval_mode: SessionOptions["get_approval_mode"];
-  private readonly set_approval_mode_hook: SessionOptions["set_approval_mode"];
-  private readonly resolve_approval_hook: SessionOptions["resolve_approval"];
+  private readonly tool_runtime: SessionToolRuntime;
+  private readonly approval_broker: SessionApprovalBroker;
   private readonly localState: SessionLocalState;
   private readonly getAgentEnv: SessionOptions["getAgentEnv"];
   private readonly get_agent_plugins: SessionOptions["get_agent_plugins"];
@@ -122,10 +120,6 @@ export class Session implements AgentSession {
     this.getPluginSystemBlocks = options.getPluginSystemBlocks;
     this.ensureConfiguredHook = options.ensureConfigured;
     this.composers = options.composers;
-    this.list_approvals = options.list_approvals;
-    this.get_approval_mode = options.get_approval_mode;
-    this.set_approval_mode_hook = options.set_approval_mode;
-    this.resolve_approval_hook = options.resolve_approval;
     if (!this.id) {
       throw new Error("Session requires a non-empty sessionId");
     }
@@ -136,14 +130,7 @@ export class Session implements AgentSession {
       throw new Error("Session requires a non-empty projectRoot");
     }
 
-    this.eventHub = new SessionEventHub({
-      create_reply: (mutation) => ({
-        approval: async ({ decision }) => {
-          const approval_id = require_approval_id(mutation);
-          return await this.resolve_approval({ approval_id, decision });
-        },
-      }),
-    });
+    this.eventHub = new SessionEventHub();
     this.messageStore = this.create_message_store();
     this.recorder = new SessionRecorder({
       session_id: this.id,
@@ -151,6 +138,11 @@ export class Session implements AgentSession {
       publish: (mutation) => {
         this.eventHub.publish(mutation);
       },
+    });
+    this.tool_runtime = new SessionToolRuntime(this.recorder);
+    this.approval_broker = new SessionApprovalBroker({
+      session_id: this.id,
+      tool_runtime: this.tool_runtime,
     });
     this.historyStore = this.create_history_store();
     this.localState = this.create_local_state();
@@ -191,6 +183,8 @@ export class Session implements AgentSession {
       state_service: this.stateService,
       event_hub: this.eventHub,
       recorder: this.recorder,
+      tool_runtime: this.tool_runtime,
+      approval_broker: this.approval_broker,
     });
     this.viewService = new SessionViewService<this>({
       agent_id: this.agentId,
@@ -259,6 +253,7 @@ export class Session implements AgentSession {
    * 停止当前 turn，并取消尚未被吸收的排队 prompt。
    */
   async stop(): Promise<AgentSessionStopResult> {
+    await this.approval_broker.expire_all();
     return await this.turnService.stop();
   }
 
@@ -322,37 +317,22 @@ export class Session implements AgentSession {
 
   /** 列出当前 Session 的 pending 工具审批。 */
   async approvals(): Promise<SessionApproval[]> {
-    return await this.list_approvals(this.id);
+    return this.approval_broker.list();
   }
 
   /** 读取当前 Session 的工具审批模式。 */
   async approval_mode(): Promise<SessionApprovalModeSnapshot> {
-    return await this.get_approval_mode(this.id);
+    return this.approval_broker.get_mode();
   }
 
   /** 更新当前 Session 的工具审批模式。 */
   async set_approval_mode(input: SetSessionApprovalModeInput): Promise<SessionApprovalModeSnapshot> {
-    return await this.set_approval_mode_hook(this.id, input);
+    return this.approval_broker.set_mode(input.mode);
   }
 
   /** 处理当前 Session 的 pending 工具审批。 */
   async resolve_approval(input: ResolveSessionApprovalInput): Promise<SessionApprovalResult> {
-    return await this.resolve_approval_hook(this.id, input);
-  }
-
-  private async apply_runtime_event(event: SessionApprovalRuntimeEvent): Promise<void> {
-    if (event.type === "tool-approval-request") {
-      await this.recorder.require_tool_approval({
-        tool_call_id: event.tool_call_id,
-        approval_id: event.approval_id,
-      });
-      return;
-    }
-    await this.recorder.resolve_tool_approval({
-      tool_call_id: event.tool_call_id,
-      approval_id: event.approval_id,
-      decision: event.decision,
-    });
+    return await this.approval_broker.resolve(input);
   }
 
   /**
@@ -423,9 +403,6 @@ export class Session implements AgentSession {
       prompt: async (input) => await this.prompt(input),
       stop: async () => await this.stop(),
       subscribe: (subscriber) => this.subscribe(subscriber),
-      publishEvent: async (event) => {
-        await this.apply_runtime_event(event);
-      },
       append_user_message: async (message_params) => {
         await this.stateService.append_user_message(message_params);
       },
@@ -463,10 +440,6 @@ export class Session implements AgentSession {
         await this.effective_agent_plugins.systemBlocks(),
       ensureConfigured: this.ensureConfiguredHook,
       composers: this.composers,
-      list_approvals: this.list_approvals,
-      get_approval_mode: this.get_approval_mode,
-      set_approval_mode: this.set_approval_mode_hook,
-      resolve_approval: this.resolve_approval_hook,
     });
   }
 
@@ -635,16 +608,4 @@ export class Session implements AgentSession {
     }
     return input;
   }
-}
-
-function require_approval_id(mutation: SessionMutation): string {
-  if (
-    mutation.variant === "part" &&
-    mutation.type === "tool" &&
-    mutation.part.state === "approval-required" &&
-    mutation.part.approval_id
-  ) {
-    return mutation.part.approval_id;
-  }
-  throw new Error("Current Session Mutation is not an approval-required Tool Part");
 }

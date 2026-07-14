@@ -8,7 +8,7 @@ description: Consume the unified SessionMutation stream for streaming text, tool
 `session.subscribe()` is the only live Session entry point. It broadcasts only changes after subscription, with no cache, replay, or backpressure management.
 
 ```ts
-const unsubscribe = session.subscribe((mutation, reply) => {
+const unsubscribe = session.subscribe((mutation) => {
   apply_mutation(mutation);
 });
 

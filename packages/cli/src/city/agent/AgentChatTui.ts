@@ -9,10 +9,7 @@
 import { AgentChatTuiCoordinator } from "@/city/agent/tui/AgentChatTuiCoordinator.js";
 import type { AgentChatInteractiveRendererPort } from "@/city/types/AgentChatInteractive.js";
 import type { AgentChatSessionSummaryView } from "@/city/agent/AgentChatTypes.js";
-import type {
-  AgentChatApprovalView,
-  TranscriptEntry,
-} from "@/city/agent/tui/types.js";
+import type { TranscriptEntry } from "@/city/agent/tui/types.js";
 import type { AgentChatModelChoice } from "@/city/agent/tui/types/ModelPicker.js";
 
 /**
@@ -52,9 +49,6 @@ export async function run_agent_chat_tui(params: {
     text?: string;
   }>;
 
-  /** 按审批 ID 读取 Shell runtime 中的规范请求详情。 */
-  get_approval: (session_id: string, approval_id: string) => Promise<AgentChatApprovalView | undefined>;
-
   /** 处理指定 Session 的 unrestricted sandbox 审批请求。 */
   resolve_approval: (
     session_id: string,
@@ -72,7 +66,6 @@ export async function run_agent_chat_tui(params: {
     update_session_model: params.update_session_model,
     load_session_history: params.load_session_history,
     run_turn: params.run_turn,
-    get_approval: params.get_approval,
     resolve_approval: params.resolve_approval,
   });
 

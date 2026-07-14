@@ -119,8 +119,11 @@ export class StreamingUIController {
         part.input,
       );
     }
-    if (part.state === "approval-required" && part.approval_id) {
-      this.message_list.require_tool_approval(part.tool_call_id, part.approval_id);
+    if (part.state === "approval-required" && part.approval) {
+      this.message_list.require_tool_approval(
+        part.tool_call_id,
+        part.approval.approval_id,
+      );
     }
     if (part.state === "completed") {
       this.message_list.update_tool_result(part.tool_call_id, part.output, "success");

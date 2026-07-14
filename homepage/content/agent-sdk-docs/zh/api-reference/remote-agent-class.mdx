@@ -51,9 +51,14 @@ await session.resolve_approval({
 也可以在统一 Mutation 流里处理 `approval-required` Tool Part：
 
 ```ts
-session.subscribe(async (mutation, reply) => {
-  if (mutation.variant === "part" && mutation.type === "tool" && mutation.part.state === "approval-required") {
-    await reply.approval({ decision: "approved" });
+session.subscribe((mutation) => {
+  if (
+    mutation.variant === "part" &&
+    mutation.type === "tool" &&
+    mutation.part.state === "approval-required" &&
+    mutation.part.approval
+  ) {
+    show_approval_request(mutation.part.approval);
   }
 });
 ```

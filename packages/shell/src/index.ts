@@ -27,6 +27,7 @@ export type {
 } from "./types/ShellAction.js";
 export * from "./types/ShellRuntimeOptions.js";
 export * from "./types/ShellHostContext.js";
+export * from "./types/ShellApproval.js";
 export * from "./types/FileTool.js";
 export * from "./types/SearchTool.js";
 export * from "./Shell.js";

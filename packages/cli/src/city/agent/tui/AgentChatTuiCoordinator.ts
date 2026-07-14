@@ -86,9 +86,6 @@ export interface AgentChatTuiCoordinatorOptions {
     text?: string;
   }>;
 
-  /** 按审批 ID 读取 Shell runtime 中的规范请求详情。 */
-  get_approval: (session_id: string, approval_id: string) => Promise<AgentChatApprovalView | undefined>;
-
   /** 批准 unrestricted sandbox 审批请求。 */
   resolve_approval: (
     session_id: string,
@@ -277,22 +274,10 @@ export class AgentChatTuiCoordinator {
   }): void {
     if (this.stopped || this.received_approval_ids.has(params.approval_id)) return;
     this.received_approval_ids.add(params.approval_id);
-    void this.enqueue_approval_panel({
+    this.approval_queue.push({
       session_id: this.current_session_id,
       ...params,
     });
-  }
-
-  /** 使用 runtime 规范详情补全审批请求，再进入内联审批队列。 */
-  private async enqueue_approval_panel(params: AgentChatApprovalView): Promise<void> {
-    let canonical: AgentChatApprovalView | undefined;
-    try {
-      canonical = await this.options.get_approval(params.session_id, params.approval_id);
-    } catch {
-      // 远程详情读取失败时继续使用 Mutation 中的工具输入，审批能力不能因此中断。
-    }
-    if (this.stopped) return;
-    this.approval_queue.push({ ...params, ...canonical });
     this.ensure_approval_panel();
   }
 

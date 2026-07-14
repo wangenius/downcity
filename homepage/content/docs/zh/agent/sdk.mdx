@@ -40,6 +40,26 @@ const unsubscribe = session.subscribe((mutation) => {
 });
 ```
 
+Tool 生命周期统一使用 `variant: "part"`、`type: "tool"`。等待用户决定的 unrestricted 请求会在 `mutation.part.approval` 中携带完整审批信息；审批决定通过独立的 Session 命令提交，不通过事件回调回复：
+
+```ts
+const unsubscribe = session.subscribe((mutation) => {
+  if (
+    mutation.variant === "part" &&
+    mutation.type === "tool" &&
+    mutation.part.state === "approval-required" &&
+    mutation.part.approval
+  ) {
+    const { approval_id, command, cwd, reason } = mutation.part.approval;
+    show_approval({ approval_id, command, cwd, reason });
+  }
+});
+
+async function decide_approval(approval_id: string, decision: "approved" | "denied") {
+  await session.resolve_approval({ approval_id, decision });
+}
+```
+
 历史快照使用 `session.messages()`；连接断开后重新读取快照并建立新的订阅。
 
 继续阅读：[完整 Agent SDK 文档](/zh/agent-sdk-docs)。

@@ -2,42 +2,28 @@
  * Shell 对象入口。
  *
  * 关键点（中文）
- * - Shell 是 `@downcity/shell` 的主要对外对象，拥有 tools、sessions、sandbox 与 approvals。
+ * - Shell 是 `@downcity/shell` 的主要对外对象，拥有 tools、sessions 与 sandbox。
  * - Agent 只组合 Shell 实例，不再通过 Shell 间接调用 shell 能力。
  */
 
 import type { ShellHostContext } from "@/types/ShellHostContext.js";
 import type {
-  ShellApprovalDecisionResult,
-  ShellApprovalModeUpdateResult,
-  ShellApprovalModeOption,
-  ShellSessionApprovalModeView,
-  ShellApprovalView,
   ShellConfigureOptions,
   ShellOptions,
   ShellToolAction,
   ShellToolRunContext,
   ShellToolSet,
 } from "@/types/ShellRuntime.js";
-import type {
-  ShellActionResponse,
-  ShellApprovalMode,
-} from "@/types/ShellAction.js";
+import type { ShellActionResponse } from "@/types/ShellAction.js";
 import type { ShellRuntimeState } from "@/session/ShellRuntimeTypes.js";
 import {
-  approveShellApproval,
   closeAllShellSessions,
   closeShellSession,
   createShellRuntimeState,
-  denyShellApproval,
   execShellCommand,
-  getShellApprovalModeView,
   getShellSessionStatus,
   listShellSessions,
-  listShellApprovalModeViews,
-  listShellApprovals,
   readShellSession,
-  setShellApprovalModeView,
   startShellSession,
   waitShellSession,
   writeShellSession,
@@ -89,6 +75,7 @@ export class Shell {
             params.ownerContextId,
             params.turnId,
             params.env,
+            params.approval_gateway,
             params.toolCallId,
           ),
       }),
@@ -116,92 +103,6 @@ export class Shell {
       // 关键点（中文）：env 是宿主提供的动态对象引用，不能 clone 成快照。
       env: next_env,
       logger: options.logger || this.host_options.logger,
-      emit_event: options.emit_event || this.host_options.emit_event,
-    };
-  }
-
-  /**
-   * 列出 pending approvals。
-   */
-  approvals(): ShellApprovalView[] {
-    return listShellApprovals(this.state).map((item) => ({
-      approval_id: item.approvalId,
-      shell_id: item.shellId,
-      ...(item.ownerContextId ? { session_id: item.ownerContextId } : {}),
-      ...(item.turnId ? { turn_id: item.turnId } : {}),
-      ...(item.toolCallId ? { tool_call_id: item.toolCallId } : {}),
-      tool_name: item.toolName,
-      cmd: item.cmd,
-      operation: item.operation,
-      ...(item.inputPreview !== undefined ? { input_preview: item.inputPreview } : {}),
-      ...(typeof item.inputChars === "number" ? { input_chars: item.inputChars } : {}),
-      cwd: item.cwd,
-      reason: item.reason,
-      created_at: item.createdAt,
-    }));
-  }
-
-  /**
-   * 列出当前实例内所有显式设置过的 session approval 模式。
-   */
-  approval_modes(): ShellApprovalModeOption[] {
-    return listShellApprovalModeViews(this.state);
-  }
-
-  /**
-   * 读取指定 session 的 approval 模式。
-   */
-  approval_mode(input: { session_id: string }): ShellSessionApprovalModeView {
-    const session_id = String(input.session_id || "").trim();
-    if (!session_id) throw new Error("session_id is required");
-    return {
-      session_id,
-      mode: getShellApprovalModeView(this.state, session_id),
-    };
-  }
-
-  /**
-   * 设置指定 session 的 approval 模式。
-   */
-  set_approval_mode(input: {
-    session_id: string;
-    mode: ShellApprovalMode;
-  }): ShellApprovalModeUpdateResult {
-    const session_id = String(input.session_id || "").trim();
-    if (!session_id) throw new Error("session_id is required");
-    const mode = setShellApprovalModeView(this.state, session_id, input.mode);
-    return {
-      success: true,
-      session_id,
-      mode,
-    };
-  }
-
-  /**
-   * 批准 pending approval。
-   */
-  async approve(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
-    const approval_id = String(input.approval_id || "").trim();
-    if (!approval_id) throw new Error("approval_id is required");
-    const success = await approveShellApproval(this.state, this.create_host_context(), approval_id);
-    return {
-      success,
-      approval_id,
-      decision: "approved",
-    };
-  }
-
-  /**
-   * 拒绝 pending approval。
-   */
-  async deny(input: { approval_id: string }): Promise<ShellApprovalDecisionResult> {
-    const approval_id = String(input.approval_id || "").trim();
-    if (!approval_id) throw new Error("approval_id is required");
-    const success = await denyShellApproval(this.state, this.create_host_context(), approval_id);
-    return {
-      success,
-      approval_id,
-      decision: "denied",
     };
   }
 
@@ -216,8 +117,6 @@ export class Shell {
       }
     }
     this.state.sessions.clear();
-    this.state.approvals.clear();
-    this.state.approval_modes.clear();
     this.state.context = null;
   }
 
@@ -227,12 +126,14 @@ export class Shell {
     ownerContextId?: string,
     turnId?: string,
     env?: Readonly<Record<string, string>>,
+    approval_gateway?: ShellToolRunContext["approval_gateway"],
     toolCallId?: string,
   ): Promise<ShellActionResponse> {
     const context = this.create_host_context({
       ...(ownerContextId ? { ownerContextId } : {}),
       ...(turnId ? { turnId } : {}),
       ...(env ? { env } : {}),
+      ...(approval_gateway ? { approval_gateway } : {}),
     });
     const payload_with_context: Record<string, unknown> = {
       ...payload,
@@ -296,7 +197,6 @@ export class Shell {
     if (!root_path) {
       throw new Error("Shell requires root_path. Pass Shell through new Agent({ shell }) or construct Shell with root_path.");
     }
-    const emit_event = this.host_options.emit_event;
     const session_id = run_context.ownerContextId || "";
     const turn_id = run_context.turnId || "";
     return {
@@ -306,18 +206,7 @@ export class Shell {
         ...(this.host_options.agent_id ? { id: this.host_options.agent_id } : {}),
       },
       logger: this.host_options.logger,
-      session: emit_event
-        ? {
-            get: (target_session_id) => ({
-              publishEvent: async (event) => {
-                await emit_event({
-                  ...event,
-                  session_id: String(target_session_id || session_id || "").trim(),
-                });
-              },
-            }),
-          }
-        : undefined,
+      approval_gateway: run_context.approval_gateway,
       shellIntegration: {
         getRunContext: () => ({
           ...(session_id ? { sessionId: session_id } : {}),

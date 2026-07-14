@@ -75,15 +75,15 @@ export class PiTuiChatRenderer implements AgentChatInteractiveRendererPort {
       event.variant === "part" &&
       event.type === "tool" &&
       event.part.state === "approval-required" &&
-      event.part.approval_id
+      event.part.approval
     ) {
-      const approval_details = read_approval_details(event.part.input);
+      const approval = event.part.approval;
       this.on_approval_request?.({
-        approval_id: event.part.approval_id,
-        tool_name: event.part.tool_name,
-        cmd: approval_details.cmd,
-        cwd: approval_details.cwd,
-        reason: approval_details.reason,
+        approval_id: approval.approval_id,
+        tool_name: approval.tool_name,
+        cmd: approval.command,
+        cwd: approval.cwd,
+        reason: approval.reason,
       });
     }
   }
@@ -99,30 +99,4 @@ export class PiTuiChatRenderer implements AgentChatInteractiveRendererPort {
       emitted_visible_text: this.emitted_visible_text,
     };
   }
-}
-
-/** 从工具输入提取审批面板的即时回退详情。 */
-function read_approval_details(input: unknown): {
-  cmd: string;
-  cwd: string;
-  reason: string;
-} {
-  if (!input || typeof input !== "object" || Array.isArray(input)) {
-    return { cmd: "", cwd: "", reason: "Tool execution requires approval." };
-  }
-  const values = input as Record<string, unknown>;
-  const cmd = first_string(values, ["cmd", "command", "input"]);
-  const cwd = first_string(values, ["workdir", "cwd"]);
-  const reason = first_string(values, ["reason"])
-    || "Tool execution requires approval.";
-  return { cmd, cwd, reason };
-}
-
-/** 从候选字段中读取第一个非空字符串。 */
-function first_string(values: Record<string, unknown>, keys: string[]): string {
-  for (const key of keys) {
-    const value = values[key];
-    if (typeof value === "string" && value.trim()) return value;
-  }
-  return "";
 }

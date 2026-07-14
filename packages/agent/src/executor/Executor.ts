@@ -563,6 +563,9 @@ export class Executor implements SessionExecutor {
         ownerContextId: String(run_context.sessionId || "").trim() || undefined,
         turnId: String(run_context.turnId || "").trim() || undefined,
         ...(run_context.agentEnv ? { env: run_context.agentEnv } : {}),
+        ...(run_context.shell_approval_gateway
+          ? { approval_gateway: run_context.shell_approval_gateway }
+          : {}),
       },
     };
 
@@ -576,6 +579,14 @@ export class Executor implements SessionExecutor {
       wrapped[name] = {
         ...tool,
         execute: async (args: unknown, options: ToolExecutionOptions) => {
+          const tool_call_id = String(options.toolCallId || "").trim();
+          if (tool_call_id && run_context.on_tool_input_ready) {
+            await run_context.on_tool_input_ready({
+              tool_call_id,
+              tool_name: name,
+              input: args,
+            });
+          }
           const output = await original_execute(args, {
             ...options,
             experimental_context: execution_context,
@@ -597,40 +608,34 @@ export class Executor implements SessionExecutor {
   private createRunContext(
     input?: SessionRunContext,
   ): SessionRunContext {
+    const source = input || {
+      sessionId: this.sessionId,
+      injectedUserMessages: [],
+      deferredPersistedUserMessages: [],
+      pendingAssistantFileParts: [],
+    };
+    const {
+      sessionId,
+      projectRoot,
+      injectedUserMessages,
+      deferredPersistedUserMessages,
+      pendingAssistantFileParts,
+      ...runtime_context
+    } = source;
     return {
-      sessionId: String(input?.sessionId || this.sessionId).trim(),
-      ...(typeof input?.projectRoot === "string" && input.projectRoot.trim()
-        ? { projectRoot: input.projectRoot.trim() }
+      ...runtime_context,
+      sessionId: String(sessionId || this.sessionId).trim(),
+      ...(typeof projectRoot === "string" && projectRoot.trim()
+        ? { projectRoot: projectRoot.trim() }
         : {}),
-      ...(typeof input?.onStepCallback === "function"
-        ? { onStepCallback: input.onStepCallback }
-        : {}),
-      ...(typeof input?.hasPendingStepInput === "function"
-        ? { hasPendingStepInput: input.hasPendingStepInput }
-        : {}),
-      ...(typeof input?.consume_history_reload === "function"
-        ? { consume_history_reload: input.consume_history_reload }
-        : {}),
-      ...(typeof input?.onAssistantStepCallback === "function"
-        ? { onAssistantStepCallback: input.onAssistantStepCallback }
-        : {}),
-      ...(typeof input?.onUiMessageChunkCallback === "function"
-        ? { onUiMessageChunkCallback: input.onUiMessageChunkCallback }
-        : {}),
-      ...(typeof input?.onActionCallback === "function"
-        ? { onActionCallback: input.onActionCallback }
-        : {}),
-      ...(input?.abortSignal ? { abortSignal: input.abortSignal } : {}),
-      injectedUserMessages: Array.isArray(input?.injectedUserMessages)
-        ? [...input.injectedUserMessages]
+      injectedUserMessages: Array.isArray(injectedUserMessages)
+        ? [...injectedUserMessages]
         : [],
-      deferredPersistedUserMessages: Array.isArray(
-        input?.deferredPersistedUserMessages,
-      )
-        ? [...input.deferredPersistedUserMessages]
+      deferredPersistedUserMessages: Array.isArray(deferredPersistedUserMessages)
+        ? [...deferredPersistedUserMessages]
         : [],
-      pendingAssistantFileParts: Array.isArray(input?.pendingAssistantFileParts)
-        ? [...input.pendingAssistantFileParts]
+      pendingAssistantFileParts: Array.isArray(pendingAssistantFileParts)
+        ? [...pendingAssistantFileParts]
         : [],
     };
   }

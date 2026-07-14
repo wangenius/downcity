@@ -80,8 +80,20 @@ function create_fake_agent() {
               tool_call_id: "call-http-test",
               tool_name: "shell_exec",
               state: "approval-required",
-              approval_id: "approval-http-test",
               input: { cmd: "pwd" },
+              approval: {
+                approval_id: "approval-http-test",
+                session_id: info.sessionId,
+                turn_id: "turn-http-test",
+                tool_call_id: "call-http-test",
+                tool_name: "shell_exec",
+                command: "pwd",
+                cwd: "/tmp",
+                reason: "test",
+                operation: "exec",
+                created_at: Date.now(),
+                expires_at: Date.now() + 60_000,
+              },
             },
           });
           subscriber({
@@ -181,11 +193,19 @@ test("AgentHTTP resolves RemoteAgent turns and exposes plugin actions", async ()
     await http.server().listen({ host: "127.0.0.1", port });
     const session = await remote_agent.sessions.create();
     const mutations = [];
-    let approval_reply;
-    const unsubscribe = session.subscribe((mutation, reply) => {
+    let approval_decision;
+    const unsubscribe = session.subscribe((mutation) => {
       mutations.push(mutation);
-      if (mutation.variant === "part" && mutation.type === "tool") {
-        approval_reply = reply.approval({ decision: "approved" });
+      if (
+        mutation.variant === "part" &&
+        mutation.type === "tool" &&
+        mutation.part.state === "approval-required" &&
+        mutation.part.approval
+      ) {
+        approval_decision = session.resolve_approval({
+          approval_id: mutation.part.approval.approval_id,
+          decision: "approved",
+        });
       }
     });
     const turn = await session.prompt({ query: "test" });
@@ -196,7 +216,7 @@ test("AgentHTTP resolves RemoteAgent turns and exposes plugin actions", async ()
     assert.equal(result.text, "HTTP transport works");
     assert.deepEqual(mutations.map((mutation) => mutation.variant), ["turn", "delta", "part", "turn"]);
     assert.equal(mutations[1].delta, "HTTP transport works");
-    assert.deepEqual(await approval_reply, {
+    assert.deepEqual(await approval_decision, {
       success: true,
       approval_id: "approval-http-test",
       decision: "approved",

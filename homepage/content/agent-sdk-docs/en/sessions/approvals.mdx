@@ -14,28 +14,32 @@ ready -> approval-required -> running -> completed
                          \-> failed
 ```
 
-## Resolve directly in a live subscription
+## Display a live request and resolve it
 
-The callback's second argument is bound to the current Mutation. It is available only when the current Mutation is an approval-required Tool Part:
+An approval-required Tool Part carries the complete approval snapshot. The subscription only reports state; it does not expose a command channel:
 
 ```ts
-const unsubscribe = session.subscribe(async (mutation, reply) => {
+const unsubscribe = session.subscribe((mutation) => {
   if (
     mutation.variant !== "part" ||
     mutation.type !== "tool" ||
-    mutation.part.state !== "approval-required"
+    mutation.part.state !== "approval-required" ||
+    !mutation.part.approval
   ) {
     return;
   }
 
-  show_approval_request(mutation.part);
+  show_approval_request(mutation.part.approval);
+});
 
-  // After user confirmation:
-  await reply.approval({ decision: "approved" });
+// After user confirmation:
+await session.resolve_approval({
+  approval_id,
+  decision: "approved",
 });
 ```
 
-The only decisions are `approved` and `denied`. Calling `reply.approval()` for any other Mutation fails, so the UI must not show approval controls for every event.
+The only decisions are `approved` and `denied`. Keep `subscribe()` as a data-only stream and call `resolve_approval()` only in response to an explicit user action. The next Tool Part Mutation is the authoritative resulting state.
 
 ## Query first, resolve later
 

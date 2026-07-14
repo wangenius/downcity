@@ -5,7 +5,6 @@
  */
 
 import type { SessionAssistantMessagePart, SessionMessage } from "@/types/session/SessionMessage.js";
-import type { ResolveSessionApprovalInput, SessionApprovalResult } from "@/types/session/SessionApproval.js";
 
 /** 所有 Session Mutation 的公共字段。 */
 export interface SessionMutationBase {
@@ -108,19 +107,9 @@ export type SessionMutation =
   | SessionTurnMutation
   | SessionStateMutation;
 
-/** 当前 Mutation 可用的命令回复入口。 */
-export interface SessionMutationReply {
-  /**
-   * 回复当前 Tool Part 的审批请求。
-   * 只有 approval-required Tool Part Mutation 可以成功调用。
-   */
-  approval(input: Pick<ResolveSessionApprovalInput, "decision">): Promise<SessionApprovalResult>;
-}
-
 /** Session Mutation 订阅回调。 */
 export type SessionMutationSubscriber = (
   mutation: SessionMutation,
-  reply: SessionMutationReply,
 ) => void | Promise<void>;
 
 /** 取消 Session Mutation 订阅的函数。 */

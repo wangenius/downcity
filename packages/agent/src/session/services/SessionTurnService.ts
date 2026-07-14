@@ -31,6 +31,8 @@ import {
 } from "@/session/recorder/SessionRecorder.js";
 import { from_ui_assistant_parts } from "@/session/recorder/SessionMessageCodec.js";
 import { generateId } from "@/utils/Id.js";
+import type { SessionToolRuntime } from "@/session/tool/SessionToolRuntime.js";
+import type { SessionApprovalBroker } from "@/session/approval/SessionApprovalBroker.js";
 
 type SessionTurnServiceOptions = {
   /**
@@ -60,6 +62,12 @@ type SessionTurnServiceOptions = {
 
   /** 当前 Session Message Recorder。 */
   recorder: SessionRecorder;
+
+  /** 当前 Session Tool 生命周期协调器。 */
+  tool_runtime: SessionToolRuntime;
+
+  /** 当前 Session unrestricted 审批 Broker。 */
+  approval_broker: SessionApprovalBroker;
 };
 
 /**
@@ -72,6 +80,8 @@ export class SessionTurnService {
   private readonly state_service: SessionStateService;
   private readonly event_hub: SessionEventHub;
   private readonly recorder: SessionRecorder;
+  private readonly tool_runtime: SessionToolRuntime;
+  private readonly approval_broker: SessionApprovalBroker;
   private readonly prompt_runtime: SessionPromptRuntime;
   private active_run_context: SessionRunContext | null = null;
   private request_active_history_reload: (() => void) | null = null;
@@ -83,6 +93,8 @@ export class SessionTurnService {
     this.state_service = options.state_service;
     this.event_hub = options.event_hub;
     this.recorder = options.recorder;
+    this.tool_runtime = options.tool_runtime;
+    this.approval_broker = options.approval_broker;
     this.prompt_runtime = new SessionPromptRuntime({
       sessionId: this.session_id,
       publish: (event) => {
@@ -211,16 +223,23 @@ export class SessionTurnService {
     const assistant_writer_ref: {
       current: SessionAssistantMessageWriter | null;
     } = { current: null };
+    let assistant_writer_task: Promise<SessionAssistantMessageWriter> | null = null;
     let assistant_segment_index = 0;
     let history_reload_requested = false;
     const ensure_assistant_writer = async (): Promise<SessionAssistantMessageWriter> => {
       if (assistant_writer_ref.current) return assistant_writer_ref.current;
+      if (assistant_writer_task) return await assistant_writer_task;
       assistant_segment_index += 1;
-      assistant_writer_ref.current = await this.recorder.open_assistant_message({
+      assistant_writer_task = this.recorder.open_assistant_message({
         turn_id: input.turnId,
         segment_index: assistant_segment_index,
       });
-      return assistant_writer_ref.current;
+      try {
+        assistant_writer_ref.current = await assistant_writer_task;
+        return assistant_writer_ref.current;
+      } finally {
+        assistant_writer_task = null;
+      }
     };
     const run_context: SessionRunContext = {
       turnId: input.turnId,
@@ -252,6 +271,11 @@ export class SessionTurnService {
         const writer = await ensure_assistant_writer();
         await writer.apply_chunk(chunk);
       },
+      on_tool_input_ready: async (tool_input) => {
+        const writer = await ensure_assistant_writer();
+        await this.tool_runtime.prepare_input(writer, tool_input);
+      },
+      shell_approval_gateway: this.approval_broker,
       onActionCallback: async (event) => {
         await this.state_service.persist_action_event(event);
       },

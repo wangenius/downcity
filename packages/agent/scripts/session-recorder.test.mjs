@@ -10,6 +10,8 @@ import path from "node:path";
 
 import { JsonlSessionMessageStore } from "../bin/session/recorder/JsonlSessionMessageStore.js";
 import { SessionRecorder } from "../bin/session/recorder/SessionRecorder.js";
+import { SessionToolRuntime } from "../bin/session/tool/SessionToolRuntime.js";
+import { SessionApprovalBroker } from "../bin/session/approval/SessionApprovalBroker.js";
 import { SessionRecorderHistoryStore } from "../bin/session/recorder/SessionRecorderHistoryStore.js";
 import { SessionViewService } from "../bin/session/services/SessionViewService.js";
 import { MockLanguageModelV3 } from "ai/test";
@@ -110,26 +112,43 @@ test("delta 只更新 Assistant 草稿，完成后才写入 active.jsonl", async
   assert.equal(history.some((value) => "variant" in value), false);
 });
 
-test("Tool Part 在文本中间创建后，输入、审批和输出都保持原顺序", async () => {
+test("Tool Runtime 在文本中间保持输入、审批和输出的确定顺序", async () => {
   const { recorder, events, file_path } = await create_recorder("tool-order-test");
+  const tool_runtime = new SessionToolRuntime(recorder);
+  const approval_broker = new SessionApprovalBroker({
+    session_id: "tool-order-test",
+    tool_runtime,
+  });
   const writer = await recorder.open_assistant_message({ turn_id: "turn-1", segment_index: 1 });
   await writer.apply_chunk({ type: "text-start", id: "text-1" });
   await writer.apply_chunk({ type: "text-delta", id: "text-1", delta: "before" });
   await writer.apply_chunk({ type: "text-end", id: "text-1" });
-  await writer.apply_chunk({ type: "tool-input-start", toolCallId: "call-1", toolName: "search" });
+  await writer.apply_chunk({ type: "tool-input-start", toolCallId: "call-1", toolName: "shell_exec" });
   await writer.apply_chunk({
     type: "tool-input-available",
     toolCallId: "call-1",
-    toolName: "search",
-    input: { query: "downcity" },
+    toolName: "shell_exec",
+    input: { cmd: "pwd", sandbox: "unrestricted", reason: "Inspect directory" },
   });
   assert.equal(recorder.get_message(writer.message_id).parts[1].state, "ready");
-  await writer.apply_chunk({
-    type: "tool-approval-request",
-    toolCallId: "call-1",
-    approvalId: "approval-1",
+  const approval_handle = await approval_broker.request({
+    shell_id: "shell-1",
+    tool_call_id: "call-1",
+    tool_name: "shell_exec",
+    session_id: "tool-order-test",
+    turn_id: "turn-1",
+    command: "pwd",
+    cwd: "/workspace",
+    reason: "Inspect directory",
+    operation: "exec",
+    timeout_ms: 60_000,
   });
   assert.equal(recorder.get_message(writer.message_id).parts[1].state, "approval-required");
+  await approval_broker.resolve({
+    approval_id: approval_handle.approval_id,
+    decision: "approved",
+  });
+  assert.equal(await approval_handle.decision, "approved");
   await writer.apply_chunk({ type: "text-start", id: "text-2" });
   await writer.apply_chunk({ type: "text-delta", id: "text-2", delta: "after" });
   await writer.apply_chunk({ type: "text-end", id: "text-2" });
@@ -145,57 +164,77 @@ test("Tool Part 在文本中间创建后，输入、审批和输出都保持原�
     events
       .filter((event) => event.variant === "part" && event.type === "tool")
       .map((event) => [event.part.sequence, event.part.state]),
-    [[2, "input-streaming"], [2, "ready"], [2, "approval-required"], [2, "completed"]],
+    [
+      [2, "input-streaming"],
+      [2, "ready"],
+      [2, "approval-required"],
+      [2, "running"],
+      [2, "completed"],
+    ],
   );
 });
 
-test("审批事件先到时等待完整 Tool 输入并稳定进入 approval-required", async () => {
-  const { recorder, events } = await create_recorder("early-tool-approval-test");
+test("Approval Broker 只接受已经准备完整输入的 Tool", async () => {
+  const { recorder, events } = await create_recorder("tool-ready-barrier-test");
+  const tool_runtime = new SessionToolRuntime(recorder);
+  const approval_broker = new SessionApprovalBroker({
+    session_id: "tool-ready-barrier-test",
+    tool_runtime,
+  });
   const writer = await recorder.open_assistant_message({
-    turn_id: "turn-early-approval",
+    turn_id: "turn-ready-barrier",
     segment_index: 1,
   });
-  let approval_resolved = false;
-  const approval_task = recorder.require_tool_approval({
-    tool_call_id: "call-early-approval",
-    approval_id: "approval-early",
-  }).then(() => {
-    approval_resolved = true;
-  });
-
-  await writer.apply_chunk({
-    type: "tool-input-start",
-    toolCallId: "call-early-approval",
-    toolName: "shell_exec",
-  });
-  await Promise.resolve();
-  assert.equal(approval_resolved, false);
-  assert.equal(
-    recorder.get_message(writer.message_id).parts[0].state,
-    "input-streaming",
+  const approval_input = {
+    shell_id: "shell-ready-barrier",
+    tool_call_id: "call-ready-barrier",
+    tool_name: "shell_exec",
+    session_id: "tool-ready-barrier-test",
+    turn_id: "turn-ready-barrier",
+    command: "ls -la /Users/example/Desktop",
+    cwd: "/workspace",
+    reason: "Inspect requested desktop files",
+    operation: "exec",
+    timeout_ms: 60_000,
+  };
+  await assert.rejects(
+    approval_broker.request(approval_input),
+    /Streaming Tool Part not found/,
   );
+  assert.equal(approval_broker.list().length, 0);
 
-  await writer.apply_chunk({
-    type: "tool-input-available",
-    toolCallId: "call-early-approval",
-    toolName: "shell_exec",
+  await tool_runtime.prepare_input(writer, {
+    tool_call_id: "call-ready-barrier",
+    tool_name: "shell_exec",
     input: {
       cmd: "ls -la /Users/example/Desktop",
       sandbox: "unrestricted",
       reason: "Inspect requested desktop files",
     },
   });
-  await approval_task;
+  const approval_handle = await approval_broker.request(approval_input);
 
   const tool = recorder.get_message(writer.message_id).parts[0];
   assert.equal(tool.state, "approval-required");
-  assert.equal(tool.approval_id, "approval-early");
+  assert.equal(tool.approval.approval_id, approval_handle.approval_id);
+  assert.equal(tool.approval.command, approval_input.command);
   assert.equal(tool.input.cmd, "ls -la /Users/example/Desktop");
+  await approval_broker.resolve({
+    approval_id: approval_handle.approval_id,
+    decision: "denied",
+  });
+  assert.equal(await approval_handle.decision, "denied");
+  await writer.apply_chunk({
+    type: "tool-output-available",
+    toolCallId: "call-ready-barrier",
+    output: { success: false, approval_status: "denied" },
+  });
+  assert.equal(recorder.get_message(writer.message_id).parts[0].state, "failed");
   assert.deepEqual(
     events
       .filter((event) => event.variant === "part" && event.type === "tool")
       .map((event) => event.part.state),
-    ["input-streaming", "ready", "approval-required"],
+    ["ready", "approval-required", "failed"],
   );
 });
 

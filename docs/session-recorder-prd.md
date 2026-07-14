@@ -235,7 +235,7 @@ const page = await session.messages({ limit: 100 });
 实时订阅：
 
 ```ts
-const unsubscribe = session.subscribe((mutation, reply) => {
+const unsubscribe = session.subscribe((mutation) => {
   apply_mutation(mutation);
 });
 ```
@@ -257,17 +257,23 @@ const unsubscribe = session.subscribe((mutation, reply) => {
 ready -> approval-required -> running | failed
 ```
 
-实时客户端可以直接回复当前 Mutation：
+实时客户端从 Tool Part Mutation 读取完整审批快照，并通过 Session 命令提交决定：
 
 ```ts
-session.subscribe(async (mutation, reply) => {
+session.subscribe((mutation) => {
   if (
     mutation.variant === "part" &&
     mutation.type === "tool" &&
-    mutation.part.state === "approval-required"
+    mutation.part.state === "approval-required" &&
+    mutation.part.approval
   ) {
-    await reply.approval({ decision: "approved" });
+    show_approval_request(mutation.part.approval);
   }
+});
+
+await session.resolve_approval({
+  approval_id,
+  decision: "approved",
 });
 ```
 
@@ -283,7 +289,8 @@ session.subscribe(async (mutation, reply) => {
 - 最终 Assistant 必须直接由当前草稿收口。
 - JSONL 每一行必须是完整 Message，不允许出现 `variant` 字段。
 - Approval 必须校验归属 Session，不能处理其他 Session 的请求。
-- `reply.approval()` 只能绑定当前 `approval-required` Tool Part。
+- 审批详情必须随 `approval-required` Tool Part 一起发布，订阅端不做二次查询。
+- `subscribe()` 只传输事实，`resolve_approval()` 只提交命令，两者职责不混合。
 
 ## 9. 验收标准
 
@@ -293,6 +300,6 @@ session.subscribe(async (mutation, reply) => {
 - `text -> tool -> text` 在实时、草稿、完成历史和重启恢复后顺序完全一致。
 - Tool 从输入、审批到输出始终更新同一个 Part。
 - 本地与远程 Session 只暴露一个 `subscribe()`，并收到相同五类 Mutation。
-- `reply.approval()` 与 `session.resolve_approval()` 对同一审批产生一致结果。
+- 本地与远程 `resolve_approval()` 对同一审批产生一致结果。
 - Action 多 revision 读取时只返回最新快照。
 - 重启可把未完成 Assistant 收口为 `stopped`，不丢失已有内容。

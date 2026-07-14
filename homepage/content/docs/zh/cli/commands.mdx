@@ -62,7 +62,7 @@ downcity agent chat -m "hello"
 
 消息历史支持鼠标滚轮、空输入时的 `↑` / `↓`、`PageUp` / `PageDown`；`Ctrl+L` 可直接返回最新消息。工具执行默认折叠，使用 `Ctrl+O` 统一展开或收起参数与结果。
 
-当 unrestricted shell 操作需要审批时，Agent 会直接发起工具请求，由运行时在执行前暂停并显示审批面板，不需要先在聊天中重复确认。输入框上方的内联面板会显示命令、工作目录和申请原因；选择 Approve 或 Deny 后提交，`Esc` / `Ctrl+C` 按安全语义执行 Deny。远端提交失败时，请求会保留并重新显示，不会让当前轮次失去审批入口。
+当 unrestricted shell 操作需要审批时，Agent 会直接发起工具请求，由运行时在执行前暂停并显示审批面板，不需要先在聊天中重复确认。同一条 Tool 更新会携带完整命令、工作目录、申请原因和审批 ID，内联面板不需要再次请求详情；选择 Approve 或 Deny 后提交，`Esc` / `Ctrl+C` 按安全语义执行 Deny。远端提交失败时，请求会保留并重新显示，不会让当前轮次失去审批入口。
 
 Agent 执行期间仍可提交 `/approve`、`/deny`、`/help` 和 `/quit`。会改变会话或 transcript 的 `/model`、`/session`、`/new`、`/clear` 仅在空闲时可用；普通消息也不会并发开启第二个 turn。
 

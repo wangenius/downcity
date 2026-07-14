@@ -27,11 +27,3 @@ export {
 export {
   execShellCommand,
 } from "./actions/ShellExecActions.js";
-export {
-  approveShellApproval,
-  denyShellApproval,
-  getShellApprovalModeView,
-  listShellApprovalModeViews,
-  listShellApprovals,
-  setShellApprovalModeView,
-} from "./actions/ShellApprovalActions.js";

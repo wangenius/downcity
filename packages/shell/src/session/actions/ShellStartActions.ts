@@ -34,8 +34,6 @@ import {
 } from "../ShellActionRuntimeSupport.js";
 import { attachShellProcessEventHandlers } from "../ShellProcessEvents.js";
 import {
-  getShellApprovalMode,
-  recordAutoApprovedApproval,
   requestUnrestrictedApproval,
   validateUnrestrictedRequest,
 } from "../../approval/ShellApprovalRuntime.js";
@@ -89,46 +87,31 @@ export async function startShellSession(
   if (sandboxMode === "unrestricted") {
     const validationError = validateUnrestrictedRequest({ cmd, reason });
     if (validationError) throw new Error(validationError);
-    const approvalMode = getShellApprovalMode({ state, ownerContextId });
-    if (approvalMode === "always-allow") {
-      approvalStatus = "approved";
-      await recordAutoApprovedApproval({
-        context,
+    const approval = await requestUnrestrictedApproval({
+      context,
+      shellId,
+      toolName: request.approvalToolName || "shell_session",
+      cmd,
+      cwd,
+      reason,
+      ...(ownerContextId ? { ownerContextId } : {}),
+      ...(turnId ? { turnId } : {}),
+      ...(request.toolCallId ? { toolCallId: request.toolCallId } : {}),
+      timeoutMs: state.options.defaultApprovalTimeoutMs,
+    });
+    approvalId = approval.approvalId;
+    approvalStatus = approval.status;
+    if (approval.status !== "approved") {
+      return buildDeniedApprovalResponse({
         shellId,
-        toolName: request.approvalToolName || "shell_session",
+        ...(ownerContextId ? { ownerContextId } : {}),
         cmd,
         cwd,
+        shellPath,
+        approvalId: approval.approvalId,
         reason,
-        ...(ownerContextId ? { ownerContextId } : {}),
-        ...(request.toolCallId ? { toolCallId: request.toolCallId } : {}),
-      }).catch(() => undefined);
-    } else {
-      const approval = await requestUnrestrictedApproval({
-        state,
-        context,
-        shellId,
-        toolName: request.approvalToolName || "shell_session",
-        cmd,
-        cwd,
-        reason,
-        ...(ownerContextId ? { ownerContextId } : {}),
-        ...(turnId ? { turnId } : {}),
-        ...(request.toolCallId ? { toolCallId: request.toolCallId } : {}),
+        approvalStatus: approval.status,
       });
-      approvalId = approval.approvalId;
-      approvalStatus = approval.status;
-      if (approval.status !== "approved") {
-        return buildDeniedApprovalResponse({
-          shellId,
-          ...(ownerContextId ? { ownerContextId } : {}),
-          cmd,
-          cwd,
-          shellPath,
-          approvalId: approval.approvalId,
-          reason,
-          approvalStatus: approval.status,
-        });
-      }
     }
   }
 

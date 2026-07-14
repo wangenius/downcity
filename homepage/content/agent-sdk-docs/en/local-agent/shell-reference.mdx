@@ -40,7 +40,7 @@ When Shell is mounted through `Agent`, no path option is needed; the Agent confi
 
 `shell.dispose()` — Release shell resources.
 
-Approval requests appear as an `approval-required` Tool Part in `session.subscribe((mutation, reply) => {})`. At the application layer, use `reply.approval(...)`, or `session.approvals()` and `session.resolve_approval(...)`; do not call the Shell Runtime's internal approval methods directly.
+Approval requests appear as an `approval-required` Tool Part in `session.subscribe((mutation) => {})`. Read the complete request from `mutation.part.approval`, then submit the user's decision with `session.resolve_approval(...)`. A reconnected client can recover pending requests with `session.approvals()`. Do not call internal Shell Runtime approval methods directly.
 
 ## Model tools
 

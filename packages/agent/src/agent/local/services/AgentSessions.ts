@@ -39,8 +39,6 @@ import {
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import { createInstructionSystemBlocks } from "@/agent/local/AgentInstructions.js";
-import type { Shell } from "@downcity/shell";
-import type { SessionApproval } from "@/types/session/SessionApproval.js";
 import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.js";
 
 function decodeMaybe(input: string): string {
@@ -79,9 +77,6 @@ type AgentSessionsOptions = {
    * - 装配期通过 getter 拿到 context，避免循环引用。
    */
   get_agent_context: () => AgentContext;
-
-  /** 延迟读取当前 Agent 挂载的 Shell Runtime。 */
-  get_shell: () => Shell | undefined;
 
   /**
    * 当前静态 instruction 文本集合。
@@ -125,7 +120,6 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
   private readonly tools: Record<string, Tool>;
   private readonly logger: Logger;
   private readonly get_agent_context: AgentSessionsOptions["get_agent_context"];
-  private readonly get_shell: AgentSessionsOptions["get_shell"];
   private readonly get_instruction: AgentSessionsOptions["get_instruction"];
   private readonly get_agent_env: AgentSessionsOptions["get_agent_env"];
   private readonly get_agent_plugins: AgentSessionsOptions["get_agent_plugins"];
@@ -143,7 +137,6 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
     this.tools = options.tools;
     this.logger = options.logger;
     this.get_agent_context = options.get_agent_context;
-    this.get_shell = options.get_shell;
     this.get_instruction = options.get_instruction;
     this.get_agent_env = options.get_agent_env;
     this.get_agent_plugins = options.get_agent_plugins;
@@ -416,49 +409,9 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
         await this.apply_session_defaults(session);
       },
       ...(this.resolve_model ? { resolve_model: this.resolve_model } : {}),
-      list_approvals: async (session_id) => this.list_session_approvals(session_id),
-      get_approval_mode: async (session_id) => {
-        const shell = this.require_shell();
-        return shell.approval_mode({ session_id });
-      },
-      set_approval_mode: async (session_id, { mode }) => {
-        const shell = this.require_shell();
-        return shell.set_approval_mode({ session_id, mode });
-      },
-      resolve_approval: async (session_id, { approval_id, decision }) => {
-        const approval = this.list_session_approvals(session_id)
-          .find((item) => item.approval_id === approval_id);
-        if (!approval) return { success: false, approval_id, decision };
-        return decision === "approved"
-          ? await this.require_shell().approve({ approval_id })
-          : await this.require_shell().deny({ approval_id });
-      },
     });
     this.sessions_by_id.set(resolved_session_id, created);
     return created;
-  }
-
-  private require_shell(): Shell {
-    const shell = this.get_shell();
-    if (!shell) throw new Error("Session shell is not configured");
-    return shell;
-  }
-
-  private list_session_approvals(session_id: string): SessionApproval[] {
-    return (this.get_shell()?.approvals() || [])
-      .filter((approval) => approval.session_id === session_id)
-      .map((approval) => ({
-        approval_id: approval.approval_id,
-        session_id,
-        ...(approval.turn_id ? { turn_id: approval.turn_id } : {}),
-        ...(approval.tool_call_id ? { tool_call_id: approval.tool_call_id } : {}),
-        tool_name: approval.tool_name,
-        command: approval.cmd,
-        cwd: approval.cwd,
-        reason: approval.reason,
-        operation: approval.operation,
-        created_at: approval.created_at,
-      }));
   }
 
   private async apply_session_defaults(

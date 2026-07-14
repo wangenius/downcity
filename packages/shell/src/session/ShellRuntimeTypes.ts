@@ -10,81 +10,9 @@
 import type { ShellHostContext } from "@/types/ShellHostContext.js";
 import type { ShellProcessHandle } from "@/sandbox/types/SandboxRuntime.js";
 import type {
-  ShellApprovalMode,
-  ShellApprovalStatus,
-  ShellApprovalToolName,
   ShellSessionSnapshot,
 } from "@/types/ShellAction.js";
 import type { ResolvedShellRuntimeOptions } from "@/types/ShellRuntimeOptions.js";
-
-/**
- * unrestricted sandbox 审批运行态。
- */
-export type ShellApprovalRuntimeState = {
-  /**
-   * 当前审批请求 ID。
-   */
-  approvalId: string;
-  /**
-   * 关联的 shell_id。
-   */
-  shellId: string;
-  /**
-   * 所属 session/聊天上下文。
-   */
-  ownerContextId?: string;
-  /**
-   * 当前审批所属的 turn id；用于发布 approval 事件。
-   */
-  turnId?: string;
-  /**
-   * 当前审批对应的 AI SDK tool call id；用于对齐 tool-call / tool-result 事件。
-   */
-  toolCallId?: string;
-  /**
-   * 关联工具名。
-   */
-  toolName: ShellApprovalToolName;
-  /**
-   * 申请执行的命令。
-   *
-   * 说明（中文）
-   * - `shell_write` 使用该字段保存 stdin 写入预览，保持审批队列结构统一。
-   */
-  cmd: string;
-  /**
-   * 审批动作类型。
-   */
-  operation: "exec" | "start" | "write";
-  /**
-   * stdin 写入内容预览；仅 `shell_write` 审批存在。
-   */
-  inputPreview?: string;
-  /**
-   * stdin 写入字符数；仅 `shell_write` 审批存在。
-   */
-  inputChars?: number;
-  /**
-   * 命令执行目录。
-   */
-  cwd: string;
-  /**
-   * 申请原因。
-   */
-  reason: string;
-  /**
-   * 当前审批创建时间。
-   */
-  createdAt: number;
-  /**
-   * 审批超时定时器。
-   */
-  timer: NodeJS.Timeout;
-  /**
-   * 兑现审批结果。
-   */
-  resolve: (status: ShellApprovalStatus) => void;
-};
 
 /**
  * 单个 shell wait 调用挂起时注册的 waiter。
@@ -162,18 +90,6 @@ export type ShellRuntimeState = {
    * 当前实例持有的全部 in-memory shell session。
    */
   sessions: Map<string, ShellSessionRuntimeState>;
-  /**
-   * 当前实例持有的全部 pending unrestricted sandbox 审批。
-   */
-  approvals: Map<string, ShellApprovalRuntimeState>;
-  /**
-   * 当前实例内按 owner session 保存的 approval 模式。
-   *
-   * 说明（中文）
-   * - key 是 chat/session id，value 是当前 session 的 shell approval 策略。
-   * - 不存在时等价于默认 `ask`。
-   */
-  approval_modes: Map<string, ShellApprovalMode>;
   /**
    * 当前实例最近一次启动时绑定的 agent context。
    *

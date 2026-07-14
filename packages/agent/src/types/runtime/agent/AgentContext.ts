@@ -32,7 +32,6 @@ import type {
   SessionMutationSubscriber,
   SessionMutationUnsubscribe,
 } from "@/types/session/SessionMutation.js";
-import type { SessionApprovalRuntimeEvent } from "@/types/session/SessionApproval.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 
 /**
@@ -138,14 +137,6 @@ export interface SessionPort {
   subscribe(
     subscriber: SessionMutationSubscriber,
   ): SessionMutationUnsubscribe;
-  /**
-   * 发布一条 session runtime 事件。
-   *
-   * 关键点（中文）
-   * - plugin runtime 用它把审批、外部进度等非模型 chunk 事件推送给订阅方。
-   * - 历史消息持久化仍由 append_user_message / append_assistant_message 负责。
-   */
-  publishEvent(event: SessionApprovalRuntimeEvent): Promise<void>;
   /**
    * 追加一条 user 消息。
    */

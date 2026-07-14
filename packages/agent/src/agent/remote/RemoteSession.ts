@@ -80,16 +80,7 @@ export class RemoteSession implements RemoteAgentSession {
       ...(info.modelId ? { modelId: info.modelId } : {}),
       ...(info.modelLabel ? { modelLabel: info.modelLabel } : {}),
     };
-    this.event_hub = new SessionEventHub({
-      create_reply: (mutation) => ({
-        approval: async ({ decision }) => {
-          return await this.resolve_approval({
-            approval_id: require_approval_id(mutation),
-            decision,
-          });
-        },
-      }),
-    });
+    this.event_hub = new SessionEventHub();
   }
 
   /** 按稳定模型 ID 更新远程 Session 模型。 */
@@ -291,16 +282,4 @@ function create_turn_handle(lifecycle: RemoteTurnLifecycle): AgentSessionTurnHan
     },
     finished: lifecycle.deferred_finished.promise,
   };
-}
-
-function require_approval_id(mutation: SessionMutation): string {
-  if (
-    mutation.variant === "part" &&
-    mutation.type === "tool" &&
-    mutation.part.state === "approval-required" &&
-    mutation.part.approval_id
-  ) {
-    return mutation.part.approval_id;
-  }
-  throw new Error("Current Session Mutation is not an approval-required Tool Part");
 }

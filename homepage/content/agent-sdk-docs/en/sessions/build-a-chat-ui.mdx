@@ -15,12 +15,12 @@ Subscribe and buffer first, then load snapshots so startup cannot lose a Delta:
 const buffered: SessionMutation[] = [];
 let ready = false;
 
-const unsubscribe = session.subscribe(async (mutation, reply) => {
+const unsubscribe = session.subscribe(async (mutation) => {
   if (!ready) {
     buffered.push(mutation);
     return;
   }
-  await apply_live_mutation(mutation, reply);
+  await apply_live_mutation(mutation);
 });
 
 const [page, info] = await Promise.all([

@@ -19,8 +19,6 @@ import {
   resolveSession,
 } from "../ShellActionRuntimeSupport.js";
 import {
-  getShellApprovalMode,
-  recordAutoApprovedApproval,
   requestUnrestrictedApproval,
   validateUnrestrictedRequest,
 } from "../../approval/ShellApprovalRuntime.js";
@@ -66,49 +64,29 @@ export async function writeShellSession(
   if (session.snapshot.sandboxMode === "unrestricted") {
     const validationError = validateUnrestrictedRequest({ cmd: chars, reason });
     if (validationError) throw new Error(validationError);
-    const approvalMode = getShellApprovalMode({
-      state,
-      ownerContextId: session.snapshot.ownerContextId,
+    const approval = await requestUnrestrictedApproval({
+      context,
+      shellId,
+      toolName: "shell_write",
+      cmd: chars,
+      cwd: session.snapshot.cwd,
+      reason,
+      ...(session.snapshot.ownerContextId ? { ownerContextId: session.snapshot.ownerContextId } : {}),
+      ...(turnId ? { turnId } : {}),
+      inputPreview: chars,
+      inputChars: chars.length,
+      ...(request.toolCallId ? { toolCallId: request.toolCallId } : {}),
+      timeoutMs: state.options.defaultApprovalTimeoutMs,
     });
-    if (approvalMode === "always-allow") {
-      approvalStatus = "approved";
-      await recordAutoApprovedApproval({
-        context,
-        shellId,
-        toolName: "shell_write",
-        cmd: chars,
-        cwd: session.snapshot.cwd,
+    approvalId = approval.approvalId;
+    approvalStatus = approval.status;
+    if (approval.status !== "approved") {
+      return buildDeniedWriteApprovalResponse({
+        session,
+        approvalId: approval.approvalId,
         reason,
-        ...(session.snapshot.ownerContextId ? { ownerContextId: session.snapshot.ownerContextId } : {}),
-        inputPreview: chars,
-        inputChars: chars.length,
-        ...(request.toolCallId ? { toolCallId: request.toolCallId } : {}),
-      }).catch(() => undefined);
-    } else {
-      const approval = await requestUnrestrictedApproval({
-        state,
-        context,
-        shellId,
-        toolName: "shell_write",
-        cmd: chars,
-        cwd: session.snapshot.cwd,
-        reason,
-        ...(session.snapshot.ownerContextId ? { ownerContextId: session.snapshot.ownerContextId } : {}),
-        ...(turnId ? { turnId } : {}),
-        inputPreview: chars,
-        inputChars: chars.length,
-        ...(request.toolCallId ? { toolCallId: request.toolCallId } : {}),
+        approvalStatus: approval.status,
       });
-      approvalId = approval.approvalId;
-      approvalStatus = approval.status;
-      if (approval.status !== "approved") {
-        return buildDeniedWriteApprovalResponse({
-          session,
-          approvalId: approval.approvalId,
-          reason,
-          approvalStatus: approval.status,
-        });
-      }
     }
   }
   await session.child.write(chars);

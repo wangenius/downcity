@@ -233,7 +233,6 @@ export class Agent {
       tools: this.tools || assembly.tools,
       logger: this.logger || assembly.logger,
       get_agent_context: () => this.agentContext ?? assembly.agent_context,
-      get_shell: () => this.shell,
       get_instruction: () => this.instruction,
       get_agent_env: () => this.getEnv(),
       get_agent_plugins: () =>

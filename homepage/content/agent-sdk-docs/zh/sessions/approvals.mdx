@@ -14,28 +14,32 @@ ready -> approval-required -> running -> completed
                          \-> failed
 ```
 
-## 在实时订阅中直接处理
+## 展示实时请求并提交决定
 
-订阅回调的第二个参数绑定当前 Mutation。它只在当前 Mutation 是 `approval-required` Tool Part 时可用：
+`approval-required` Tool Part 会携带完整审批快照。订阅只报告状态，不提供命令通道：
 
 ```ts
-const unsubscribe = session.subscribe(async (mutation, reply) => {
+const unsubscribe = session.subscribe((mutation) => {
   if (
     mutation.variant !== "part" ||
     mutation.type !== "tool" ||
-    mutation.part.state !== "approval-required"
+    mutation.part.state !== "approval-required" ||
+    !mutation.part.approval
   ) {
     return;
   }
 
-  show_approval_request(mutation.part);
+  show_approval_request(mutation.part.approval);
+});
 
-  // 用户确认后：
-  await reply.approval({ decision: "approved" });
+// 用户确认后：
+await session.resolve_approval({
+  approval_id,
+  decision: "approved",
 });
 ```
 
-支持的决策只有 `approved` 与 `denied`。对其他 Mutation 调用 `reply.approval()` 会失败，UI 不应为所有事件都展示审批按钮。
+支持的决策只有 `approved` 与 `denied`。`subscribe()` 始终保持为纯数据流，只在用户明确操作后调用 `resolve_approval()`。后续 Tool Part Mutation 才是最终状态依据。
 
 ## 先查询，后处理
 

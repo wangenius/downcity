@@ -16,13 +16,6 @@ import type { AgentSessionCommand } from "@/types/session/SessionQueueCommand.js
 import type { SessionComposerOptions } from "@/types/session/SessionComposerOptions.js";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { AgentModel } from "@/model/CityModelAdapter.js";
-import type {
-  ResolveSessionApprovalInput,
-  SessionApproval,
-  SessionApprovalModeSnapshot,
-  SessionApprovalResult,
-  SetSessionApprovalModeInput,
-} from "@/types/session/SessionApproval.js";
 
 /**
  * Agent 可管理的本地 Session 实例。
@@ -114,24 +107,6 @@ export interface SessionOptions {
 
   /** 按稳定模型 ID 解析当前 Session 的运行时模型。 */
   resolve_model?: (model_id: string) => Promise<AgentModel>;
-
-  /** 列出当前 Session 的 pending 工具审批。 */
-  list_approvals: (session_id: string) => Promise<SessionApproval[]>;
-
-  /** 读取当前 Session 的工具审批模式。 */
-  get_approval_mode: (session_id: string) => Promise<SessionApprovalModeSnapshot>;
-
-  /** 更新当前 Session 的工具审批模式。 */
-  set_approval_mode: (
-    session_id: string,
-    input: SetSessionApprovalModeInput,
-  ) => Promise<SessionApprovalModeSnapshot>;
-
-  /** 处理当前 Session 的 pending 工具审批。 */
-  resolve_approval: (
-    session_id: string,
-    input: ResolveSessionApprovalInput,
-  ) => Promise<SessionApprovalResult>;
 
   /**
    * 当前 session 的 Composer 覆盖项。

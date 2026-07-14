@@ -6,25 +6,13 @@
  * - 不引用 agent 的 ShellHostContext，避免 shell 包反向绑定 agent session/runtime。
  */
 
+import type { ShellApprovalGateway } from "@/types/ShellApproval.js";
+
 export type ShellLogger = {
   /**
    * 输出 warning 日志。
    */
   warn(message: string, meta?: Record<string, unknown>): void;
-};
-
-export type ShellSessionEventPublisher = {
-  /**
-   * 发布宿主 session event。
-   */
-  publishEvent(event: Record<string, unknown>): Promise<void>;
-};
-
-export type ShellHostSessionAccessor = {
-  /**
-   * 通过 session id 取得可发布事件的 session 视图。
-   */
-  get(session_id: string): ShellSessionEventPublisher;
 };
 
 export type ShellRunContext = {
@@ -67,10 +55,8 @@ export type ShellHostContext = {
    * 可选日志器。
    */
   logger?: ShellLogger;
-  /**
-   * session event 发布器。
-   */
-  session?: ShellHostSessionAccessor;
+  /** 当前 Tool 执行上下文注入的 unrestricted 审批网关。 */
+  approval_gateway?: ShellApprovalGateway;
   /**
    * 宿主注入的 shell 集成能力。
    */

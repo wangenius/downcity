@@ -12,7 +12,6 @@ import {
   nowMs,
   updateSessionSnapshot,
 } from "../ShellActionRuntimeSupport.js";
-import { resolveApproval } from "../../approval/ShellApprovalRuntime.js";
 
 /**
  * 绑定当前 shell runtime 实例的 execution runtime。
@@ -31,21 +30,6 @@ export async function closeAllShellSessions(
   state: ShellRuntimeState,
   force = false,
 ): Promise<void> {
-  for (const approval of Array.from(state.approvals.values())) {
-    if (state.context) {
-      // 审批 Promise 会在 resolveApproval 的首个 await 前兑现；附属事件投影不应阻塞销毁。
-      void resolveApproval({
-        state,
-        context: state.context,
-        approvalId: approval.approvalId,
-        decision: "expired",
-      }).catch(() => undefined);
-      continue;
-    }
-    clearTimeout(approval.timer);
-    state.approvals.delete(approval.approvalId);
-    approval.resolve("expired");
-  }
   const closing = Array.from(state.sessions.values()).map(async (session) => {
     if (
       session.snapshot.status !== "running" &&

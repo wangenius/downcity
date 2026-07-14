@@ -40,6 +40,26 @@ const unsubscribe = session.subscribe((mutation) => {
 });
 ```
 
+Tool lifecycle updates use `variant: "part"` and `type: "tool"`. An unrestricted request that is waiting for a decision includes the complete approval details in `mutation.part.approval`; submit the decision through the Session command API rather than replying through the event callback:
+
+```ts
+const unsubscribe = session.subscribe((mutation) => {
+  if (
+    mutation.variant === "part" &&
+    mutation.type === "tool" &&
+    mutation.part.state === "approval-required" &&
+    mutation.part.approval
+  ) {
+    const { approval_id, command, cwd, reason } = mutation.part.approval;
+    show_approval({ approval_id, command, cwd, reason });
+  }
+});
+
+async function decide_approval(approval_id: string, decision: "approved" | "denied") {
+  await session.resolve_approval({ approval_id, decision });
+}
+```
+
 Use `session.messages()` for a history snapshot. After a disconnect, reload the snapshot and establish a new subscription.
 
 Continue with the [full Agent SDK docs](/en/agent-sdk-docs).

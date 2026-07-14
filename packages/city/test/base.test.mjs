@@ -3,12 +3,14 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
+import { sqliteTable, text } from "drizzle-orm/sqlite-core"
 
 import {
   Federation,
   AIService,
   Provider,
 } from "../bin/index.js"
+import { TableApi } from "../bin/store/table-api.js"
 import { createSqliteDb } from "./sqlite-db.mjs"
 
 function useMemoryQueue(base) {
@@ -20,6 +22,31 @@ function useMemoryQueue(base) {
   })
   return messages
 }
+
+test("TableApi reads postgres-js RowList count for compare-and-set updates", async () => {
+  const rows = []
+  Object.defineProperty(rows, "count", { value: 1 })
+  const schema = sqliteTable("cas_rows", {
+    id: text("id").primaryKey(),
+    status: text("status").notNull(),
+  })
+  const db = {
+    update() {
+      return {
+        set() {
+          return { where: async () => rows }
+        },
+      }
+    },
+  }
+  const table = new TableApi(db, schema)
+
+  const changed = await table.update({
+    where: { id: "row_1", status: "pending" },
+    values: { status: "processing" },
+  })
+  assert.equal(changed, 1)
+})
 
 test("Federation instruction aggregates built-in and service documentation", async () => {
   const cwd = process.cwd()
@@ -566,6 +593,63 @@ test("AIService charges explicit provider charge lines", async () => {
       note: "provider charge",
       metadata: { provider_id: "priced-provider" },
     }])
+  } finally {
+    process.chdir(cwd)
+    await fs.rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test("AIService keeps Node response streams open until deferred charge settles", async () => {
+  const cwd = process.cwd()
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-stream-charge-"))
+
+  try {
+    process.chdir(tempDir)
+    const db = createSqliteDb(path.join(tempDir, "test.sqlite"))
+    const charges = []
+    const base = new Federation({ db, dialect: "sqlite", raw: db.raw })
+    const ai = new AIService({
+      balance: {
+        async charge(input) {
+          await new Promise((resolve) => setTimeout(resolve, 30))
+          charges.push(input)
+        },
+      },
+    })
+    ai.use({
+      id: "stream-charge",
+      provider_id: "stream-provider",
+      name: "Stream Charge",
+      actions: {
+        stream: async () => ({
+          response: new Response("stream complete"),
+          charge: Promise.resolve({ credits: 321, note: "stream charge" }),
+        }),
+      },
+    })
+    base.use(ai)
+
+    await base.health()
+    const adminSecret = await readEnvValue(base, "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")
+    const city = await (await base.fetch(new Request("http://localhost/v1/cities/create", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${adminSecret}` },
+      body: JSON.stringify({ name: "Demo" }),
+    }))).json()
+    const tokenBody = await (await base.fetch(new Request("http://localhost/v1/cities/tokens/apply", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${adminSecret}` },
+      body: JSON.stringify({ city_id: city.city_id, user_id: "user_1" }),
+    }))).json()
+
+    const response = await base.fetch(new Request("http://localhost/v1/ai/stream", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${tokenBody.user_token}` },
+      body: JSON.stringify({ model: "stream-charge", prompt: "hi" }),
+    }))
+    assert.deepEqual(charges, [])
+    assert.equal(await response.text(), "stream complete")
+    assert.deepEqual(charges, [{ user_id: "user_1", credits: 321, note: "stream charge" }])
   } finally {
     process.chdir(cwd)
     await fs.rm(tempDir, { recursive: true, force: true })
@@ -1709,7 +1793,6 @@ test("AIService charges image jobs only after provider result succeeds", async (
       name: "Priced Image",
       bill(ctx, output) {
         return {
-          user_id: output.metadata.user_id,
           credits: 777,
           note: "AI image result",
           ref: output.job_id,

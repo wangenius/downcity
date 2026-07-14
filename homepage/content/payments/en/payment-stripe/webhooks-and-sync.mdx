@@ -83,6 +83,8 @@ In practice, inspect the stored payment status first, then let `balance.finishTo
 
 Event processing uses a leased `processing` state. Concurrent deliveries of the same `event_id` allow only one sync attempt. A failed attempt is stored as `failed` and a later Stripe redelivery retries it. If the process exits mid-sync, a later redelivery can take over after the lease expires without deleting the event record manually.
 
+If a webhook arrives before the local payment has finished filling its provider IDs, the event remains `pending` instead of becoming permanently `ignored`. A Stripe redelivery of the same `event_id` attempts the match and sync again.
+
 ## Common scenarios
 
 ### Scenario 1: payment succeeded but balance is still not credited

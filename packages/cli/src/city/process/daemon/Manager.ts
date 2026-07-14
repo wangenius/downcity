@@ -341,10 +341,31 @@ async function read_process_command(pid: number): Promise<string | null> {
   }
 }
 
+/** 读取 daemon 进程环境中的实例 ID，作为 RPC 失联时的强身份凭据。 */
+async function read_process_instance_id(pid: number): Promise<string | null> {
+  if (process.platform === "win32") return null;
+  try {
+    if (process.platform === "linux") {
+      const environ = await fs.readFile(`/proc/${pid}/environ`, "utf8");
+      const entry = environ.split("\0")
+        .find((item) => item.startsWith("DOWNCITY_DAEMON_INSTANCE_ID="));
+      return entry?.slice("DOWNCITY_DAEMON_INSTANCE_ID=".length).trim() || null;
+    }
+    const { stdout } = await execFileAsync("ps", ["eww", "-p", String(pid), "-o", "command="]);
+    const match = String(stdout || "").match(/(?:^|\s)DOWNCITY_DAEMON_INSTANCE_ID=([^\s]+)/);
+    return match?.[1]?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 /** RPC 失联时，严格确认 OS 命令行属于 meta 描述的当前项目 daemon。 */
 async function command_matches_daemon_meta(meta: DaemonMeta): Promise<boolean> {
-  const command = await read_process_command(meta.pid);
-  if (!command) return false;
+  const [command, instance_id] = await Promise.all([
+    read_process_command(meta.pid),
+    read_process_instance_id(meta.pid),
+  ]);
+  if (!command || instance_id !== meta.instanceId) return false;
   const cli_path = path.resolve(String(meta.args[0] || ""));
   return Boolean(cli_path)
     && command.includes(cli_path)
@@ -400,17 +421,43 @@ async function waitForDaemonReady(params: {
 /**
  * 回滚启动失败状态。
  */
-async function rollbackDaemonStartup(params: {
+async function rollback_daemon_startup(params: {
   projectRoot: string;
   pid: number;
+  instanceId: string;
 }): Promise<void> {
-  signalDetachedProcess(params.pid, "SIGTERM");
-  await sleep(300);
-  try {
-    if (isProcessAlive(params.pid)) signalDetachedProcess(params.pid, "SIGKILL");
-  } catch {
-    // ignore
+  const read_owned_meta = async (): Promise<DaemonMeta | null> => {
+    const meta = await readDaemonMeta(params.projectRoot);
+    return meta
+      && meta.pid === params.pid
+      && meta.instanceId === params.instanceId
+      && path.resolve(meta.projectRoot) === path.resolve(params.projectRoot)
+      ? meta
+      : null;
+  };
+  const confirm_process = async (meta: DaemonMeta): Promise<boolean> => {
+    if (!isProcessAlive(meta.pid)) return false;
+    const rpc_port = parsePortLike(pickArgValue(meta.args, "--rpc-port"));
+    const identity = rpc_port
+      ? await read_daemon_runtime_identity({ host: "127.0.0.1", port: rpc_port })
+      : null;
+    return identity
+      ? daemon_identity_matches(meta, identity)
+      : await command_matches_daemon_meta(meta);
+  };
+
+  const initial_meta = await read_owned_meta();
+  if (initial_meta && await confirm_process(initial_meta)) {
+    signalDetachedProcess(params.pid, "SIGTERM");
+    await sleep(300);
+    const kill_meta = await read_owned_meta();
+    if (kill_meta && await confirm_process(kill_meta)) {
+      signalDetachedProcess(params.pid, "SIGKILL");
+    }
   }
+
+  // 只有文件仍描述本次启动实例时才清理，避免覆盖并发启动的新 daemon 状态。
+  if (!await read_owned_meta()) return;
   await fs.remove(getDaemonPidPath(params.projectRoot));
   await fs.remove(getDaemonMetaPath(params.projectRoot));
   try {
@@ -516,9 +563,10 @@ export const startDaemonProcess = async (params: {
     });
   } catch (error) {
     // 回滚：无法 ready 或无法登记时立即停止 daemon 并清理状态文件。
-    await rollbackDaemonStartup({
+    await rollback_daemon_startup({
       projectRoot,
       pid: child.pid,
+      instanceId,
     });
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`${message}. Check daemon log: ${logPath}`);

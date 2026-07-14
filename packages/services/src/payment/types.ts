@@ -269,6 +269,20 @@ export interface PaymentRecord extends Record<string, unknown> {
 }
 
 /**
+ * PaymentService 内部的 Checkout 创建租约结果。
+ */
+export interface PaymentCheckoutCreationClaim {
+  /** 当前请求是否成功持有 Provider Checkout 创建租约。 */
+  claimed: boolean;
+  /** 当前记录是否已经包含可以直接返回的 Checkout 结果。 */
+  ready: boolean;
+  /** 租约对应的本地 payment 记录。 */
+  record: PaymentRecord;
+  /** 当前请求持有的租约 metadata JSON；完成或失败时用于 compare-and-set。 */
+  lease_metadata_json: string;
+}
+
+/**
  * 统一 webhook 事件记录。
  */
 export interface PaymentEventRecord extends Record<string, unknown> {

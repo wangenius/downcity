@@ -96,15 +96,17 @@ export class TableApi implements CityTableApi {
  * `rowCount`；统一归一后，上层才能可靠实现 compare-and-set。
  */
 function read_mutation_count(result: unknown): number {
-  if (Array.isArray(result)) return result.length;
   if (!result || typeof result !== "object") return 0;
   const record = result as {
     changes?: unknown;
+    count?: unknown;
     rowCount?: unknown;
     meta?: { changes?: unknown };
   };
-  const value = record.changes ?? record.rowCount ?? record.meta?.changes;
-  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+  // postgres-js 的 RowList 继承 Array；必须先读 count，不能把无 RETURNING 的结果按 length=0 处理。
+  const value = record.changes ?? record.count ?? record.rowCount ?? record.meta?.changes;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  return Array.isArray(result) ? result.length : 0;
 }
 
 // ===========================================================================

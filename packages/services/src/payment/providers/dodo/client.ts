@@ -59,6 +59,8 @@ export async function createDodoCheckoutSession(
       credits: String(input.topup.credits),
       usd_cents: String(readTopupAmountUsdCents(input.topup)),
     },
+  }, {
+    idempotencyKey: input.payment_id,
   });
 
   return {

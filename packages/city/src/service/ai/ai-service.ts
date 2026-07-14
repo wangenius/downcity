@@ -58,6 +58,7 @@ import {
   finish_image_job_fetch,
   release_image_job_claim,
 } from "./image-job-store.js";
+import { settle_response_charge } from "./charge-runtime.js";
 
 /** AIService 直接暴露的 SDK 通路模态列表。图片只通过 image/create + image/result 暴露。 */
 const MODALITIES = ["text", "stream", "video", "tts", "asr"] as const;
@@ -512,8 +513,15 @@ export class AIService extends Service {
       this.attachOutputMetering(ctx, output, modality, started_at);
       const resolved_charge = charge ?? resolved.model?.bill?.(ctx, output);
       const defer_charge = isResponse(output) || isPromiseLike(resolved_charge);
-      await this.handleCharge(ctx, resolved_charge, defer_charge);
-      if (isResponse(output)) return output;
+      const charged_response = await this.handleCharge(
+        ctx,
+        resolved_charge,
+        defer_charge,
+        undefined,
+        undefined,
+        isResponse(output) ? output : undefined,
+      );
+      if (isResponse(output)) return charged_response ?? output;
       return output;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -587,7 +595,13 @@ export class AIService extends Service {
       if (should_charge) {
         this.attachOutputMetering(ctx, stored_output.result, "image", started_at);
         const charge = model.bill?.(ctx, stored_output);
-        await this.handleCharge(ctx, charge, false, `ai_image:${job.job_id}`);
+        await this.handleCharge(
+          ctx,
+          charge,
+          false,
+          `ai_image:${job.job_id}`,
+          job.user_id ?? undefined,
+        );
       }
       await finish_image_job_fetch(table, claim, stored_output);
       if (stored_output.status === "queued" || stored_output.status === "running") {
@@ -805,8 +819,15 @@ export class AIService extends Service {
       this.attachOutputMetering(ctx, provider_output.output, "openai", started_at);
       const resolved_charge = provider_output.charge ?? resolved.model?.bill?.(ctx, provider_output.output);
       const defer_charge = isResponse(provider_output.output) || isPromiseLike(resolved_charge);
-      await this.handleCharge(ctx, resolved_charge, defer_charge);
-      if (isResponse(provider_output.output)) return provider_output.output;
+      const charged_response = await this.handleCharge(
+        ctx,
+        resolved_charge,
+        defer_charge,
+        undefined,
+        undefined,
+        isResponse(provider_output.output) ? provider_output.output : undefined,
+      );
+      if (isResponse(provider_output.output)) return charged_response ?? provider_output.output;
       return new Response(JSON.stringify(provider_output.output), { status: 200, headers: { "content-type": "application/json" } });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -908,8 +929,10 @@ export class AIService extends Service {
     charge: AIProviderChargeLine | Promise<AIProviderChargeLine | undefined> | undefined,
     defer: boolean,
     idempotency_key?: string,
-  ): Promise<void> {
-    if (!charge || !this.balance) return;
+    fallback_user_id?: string,
+    response?: Response,
+  ): Promise<Response | undefined> {
+    if (!charge || !this.balance) return response;
     ctx.locals.ai_charge_handled = true;
     let charge_line: AIProviderChargeLine | undefined;
     let charge_user_id: string | undefined;
@@ -917,7 +940,8 @@ export class AIService extends Service {
       .then(async (line) => {
         charge_line = line;
         if (!line || line.credits <= 0) return;
-        const user_id = line.user_id ?? ctx.user?.user_id;
+        // 图片队列没有请求用户上下文时，必须回退到任务创建者，不能静默跳过扣费。
+        const user_id = line.user_id ?? fallback_user_id ?? ctx.user?.user_id;
         charge_user_id = user_id;
         if (!user_id) return;
         await this.balance?.charge({
@@ -940,17 +964,20 @@ export class AIService extends Service {
       });
     if (!defer) {
       await promise;
-      return;
+      return response;
     }
     if (ctx.waitUntil) {
       try {
         ctx.waitUntil(promise);
-        return;
+        return response;
       } catch {
         // 非 Worker 测试环境可能没有真实 ExecutionContext，继续走普通异步结算。
       }
     }
-    void promise;
+    if (response) return await settle_response_charge(response, promise);
+    // Node 等无 ExecutionContext 环境下，普通异步计费必须在请求结束前可靠完成。
+    await promise;
+    return response;
   }
 
   // ========== 模型列表 ==========

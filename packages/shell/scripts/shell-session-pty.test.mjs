@@ -103,3 +103,38 @@ test("shell_exec honors an explicit short total timeout", async () => {
     await fs.rm(fixture.root_path, { recursive: true, force: true });
   }
 });
+
+test("shell dispose resolves approvals without waiting for event projection", async () => {
+  const fixture = await create_context();
+  const state = createShellRuntimeState();
+  state.context = {
+    ...fixture.context,
+    session: {
+      get: () => ({ publishEvent: () => new Promise(() => undefined) }),
+    },
+  };
+  let decision;
+  const timer = setTimeout(() => undefined, 60_000);
+  timer.unref();
+  state.approvals.set("ap_pending", {
+    approvalId: "ap_pending",
+    shellId: "sh_pending",
+    ownerContextId: "session_1",
+    toolName: "shell_exec",
+    cmd: "pwd",
+    operation: "exec",
+    cwd: fixture.root_path,
+    reason: "test dispose",
+    createdAt: Date.now(),
+    timer,
+    resolve: (status) => {
+      decision = status;
+    },
+  });
+
+  const started_at = Date.now();
+  await closeAllShellSessions(state, true);
+  assert.equal(decision, "expired");
+  assert.ok(Date.now() - started_at < 200);
+  await fs.rm(fixture.root_path, { recursive: true, force: true });
+});

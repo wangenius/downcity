@@ -131,7 +131,31 @@ test("paymentService creates checkout sessions and finishes topups through webho
     const topup = await balance.createTopup("user_1", 50_000_000, { note: "recharge" })
     assert.equal(topup.status, "pending")
 
-    const checkoutResponse = await base.fetch(userRequest({
+    const earlyPayload = JSON.stringify({
+      id: "evt_checkout_early",
+      type: "checkout.session.expired",
+      data: {
+        object: {
+          id: "cs_early",
+          client_reference_id: topup.topup_id,
+          metadata: { topup_id: topup.topup_id, user_id: "user_1" },
+        },
+      },
+    })
+    const sendEarlyWebhook = () => base.fetch(new Request("http://localhost/v1/payment/webhook?provider=stripe", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "stripe-signature": stripeSignature(earlyPayload, "whsec_test"),
+      },
+      body: earlyPayload,
+    }))
+    const earlyResponse = await sendEarlyWebhook()
+    assert.equal(earlyResponse.status, 200)
+    assert.equal((await earlyResponse.json()).sync_status, "pending")
+
+    stripeStub.setResponseDelay(40)
+    const checkoutRequest = () => base.fetch(userRequest({
       token: tokenBody.user_token,
       path: "/v1/payment/checkout/create",
       body: {
@@ -139,6 +163,9 @@ test("paymentService creates checkout sessions and finishes topups through webho
         topup_id: topup.topup_id,
       },
     }))
+    const checkoutResponses = await Promise.all([checkoutRequest(), checkoutRequest()])
+    assert.deepEqual(checkoutResponses.map((response) => response.status).sort(), [200, 409])
+    const checkoutResponse = checkoutResponses.find((response) => response.status === 200)
     assert.equal(checkoutResponse.status, 200)
     const checkout = await checkoutResponse.json()
     assert.equal(checkout.status, "pending")
@@ -148,6 +175,7 @@ test("paymentService creates checkout sessions and finishes topups through webho
     assert.equal(checkout.checkout_url, "https://checkout.stripe.test/cs_test_checkout")
     assert.equal(stripeStub.lastParams()?.get("success_url"), "https://base.example.com/v1/payment/redirect/success")
     assert.equal(stripeStub.lastParams()?.get("cancel_url"), "https://base.example.com/v1/payment/redirect/cancel")
+    assert.equal(stripeStub.requestCount(), 1)
 
     const duplicateCheckoutResponse = await base.fetch(userRequest({
       token: tokenBody.user_token,
@@ -160,6 +188,11 @@ test("paymentService creates checkout sessions and finishes topups through webho
     assert.equal(duplicateCheckoutResponse.status, 200)
     const duplicateCheckout = await duplicateCheckoutResponse.json()
     assert.equal(duplicateCheckout.payment_id, checkout.payment_id)
+    assert.equal(stripeStub.requestCount(), 1)
+
+    const recoveredEarlyResponse = await sendEarlyWebhook()
+    assert.equal(recoveredEarlyResponse.status, 200)
+    assert.equal((await recoveredEarlyResponse.json()).sync_status, "applied")
 
     const invalidWebhookResponse = await base.fetch(new Request("http://localhost/v1/payment/webhook?provider=stripe", {
       method: "POST",
@@ -568,9 +601,12 @@ async function createStripeStub() {
     payment_intent: "",
   }
   let lastParams = null
+  let request_count = 0
+  let response_delay_ms = 0
 
   const server = http.createServer(async (request, response) => {
     if (request.method === "POST" && request.url === "/checkout/sessions") {
+      request_count += 1
       const chunks = []
       for await (const chunk of request) chunks.push(chunk)
       const body = Buffer.concat(chunks).toString("utf8")
@@ -578,6 +614,9 @@ async function createStripeStub() {
       assert.equal(params.get("mode"), "payment")
       lastParams = new URLSearchParams(body)
       const current = nextSession
+      if (response_delay_ms > 0) {
+        await new Promise((resolve) => setTimeout(resolve, response_delay_ms))
+      }
       nextSession = {
         id: current.id,
         url: current.url,
@@ -604,6 +643,12 @@ async function createStripeStub() {
     baseURL: `http://127.0.0.1:${port}`,
     setNextSession(session) {
       nextSession = session
+    },
+    setResponseDelay(delay_ms) {
+      response_delay_ms = delay_ms
+    },
+    requestCount() {
+      return request_count
     },
     lastParams() {
       return lastParams ? new URLSearchParams(lastParams.toString()) : null

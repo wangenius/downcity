@@ -52,6 +52,7 @@ export async function createStripeCheckoutSession(
     headers: {
       authorization: `Bearer ${normalizeRequired(secret_key, "Stripe secret key")}`,
       "content-type": "application/x-www-form-urlencoded",
+      "idempotency-key": input.payment_id,
     },
     body,
   });

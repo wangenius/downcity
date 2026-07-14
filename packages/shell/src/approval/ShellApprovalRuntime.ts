@@ -27,6 +27,24 @@ const DANGEROUS_COMMAND_PATTERNS = [
   /\bsecurity\s+(?:add|delete|unlock|set|import|export)-/i,
   /(?:^|[\s;&|])(?:nohup\s+)?[^;&|\n]*(?:&)\s*$/,
 ];
+/** 审批结果投影与审计的最长等待时间，不能阻塞命令或 Shell 销毁。 */
+const APPROVAL_SIDE_EFFECT_TIMEOUT_MS = 1_000;
+
+/** 有界等待审批附属 I/O；超时后由原 Promise 自行收尾。 */
+async function wait_for_approval_side_effect(task: Promise<unknown>): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      task.catch(() => undefined),
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, APPROVAL_SIDE_EFFECT_TIMEOUT_MS);
+        if (typeof timer.unref === "function") timer.unref();
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 function isDangerousCommand(cmd: string): boolean {
   return DANGEROUS_COMMAND_PATTERNS.some((pattern) => pattern.test(cmd));
@@ -348,34 +366,36 @@ export async function resolveApproval(params: {
   clearTimeout(approval.timer);
   // 关键点（中文）：先兑现等待中的命令，事件发布或审计 I/O 不能让审批 Promise 悬挂。
   approval.resolve(params.decision);
-  await publishApprovalResult({
-    context: params.context,
-    ownerContextId: approval.ownerContextId,
-    turnId: approval.turnId,
-    approvalId: approval.approvalId,
-    shellId: approval.shellId,
-    toolName: approval.toolName,
-    decision: params.decision,
-    toolCallId: approval.toolCallId,
-  });
-  await appendAudit({
-    context: params.context,
-    record: {
-      event: "approval_resolved",
-      approval_id: approval.approvalId,
-      session_id: approval.ownerContextId || null,
-      tool_call_id: String(approval.toolCallId || approval.shellId || "").trim() || null,
-      agent_id: params.context.config?.id || null,
-      cmd: approval.cmd,
-      operation: approval.operation,
-      ...(approval.inputPreview !== undefined ? { input_preview: approval.inputPreview } : {}),
-      ...(typeof approval.inputChars === "number" ? { input_chars: approval.inputChars } : {}),
-      cwd: approval.cwd,
-      reason: approval.reason,
+  await Promise.all([
+    wait_for_approval_side_effect(publishApprovalResult({
+      context: params.context,
+      ownerContextId: approval.ownerContextId,
+      turnId: approval.turnId,
+      approvalId: approval.approvalId,
+      shellId: approval.shellId,
+      toolName: approval.toolName,
       decision: params.decision,
-      resolved_at: new Date(nowMs()).toISOString(),
-    },
-  }).catch(() => undefined);
+      toolCallId: approval.toolCallId,
+    })),
+    wait_for_approval_side_effect(appendAudit({
+      context: params.context,
+      record: {
+        event: "approval_resolved",
+        approval_id: approval.approvalId,
+        session_id: approval.ownerContextId || null,
+        tool_call_id: String(approval.toolCallId || approval.shellId || "").trim() || null,
+        agent_id: params.context.config?.id || null,
+        cmd: approval.cmd,
+        operation: approval.operation,
+        ...(approval.inputPreview !== undefined ? { input_preview: approval.inputPreview } : {}),
+        ...(typeof approval.inputChars === "number" ? { input_chars: approval.inputChars } : {}),
+        cwd: approval.cwd,
+        reason: approval.reason,
+        decision: params.decision,
+        resolved_at: new Date(nowMs()).toISOString(),
+      },
+    })),
+  ]);
 
   return true;
 }

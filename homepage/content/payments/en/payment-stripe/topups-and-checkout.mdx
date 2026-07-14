@@ -39,6 +39,12 @@ const checkout = await user.service("payment").action("checkout/create").invoke(
 
 The frontend then redirects to `checkout.checkout_url` and Stripe handles the hosted payment page.
 
+## Concurrent creation
+
+When several requests create Checkout for the same `topup_id + method_id`, PaymentService sends only one creation request to the provider. The first request holds a short lease; concurrent requests during that lease receive `409` and can retry shortly. Once Checkout exists, repeated requests return the same payment and `checkout_url`.
+
+The stable `payment_id` is also sent as Stripe's idempotency key. A retry that takes over after an interrupted network response does not create a second Stripe Checkout.
+
 ## Why not let the Stripe service own the credits
 
 If the frontend passes the credits directly into the Stripe service, several problems appear:

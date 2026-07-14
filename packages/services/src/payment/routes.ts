@@ -13,11 +13,11 @@ import {
   htmlResponse,
   normalizeOptionalText,
   normalizeRequired,
-  randomId,
   renderRedirectPage,
 } from "./helpers.js";
 import type {
   PaymentCheckoutCreateResult,
+  PaymentCheckoutCreationClaim,
   PaymentCreateCheckoutInput,
   PaymentEventRecord,
   PaymentEventSyncStatus,
@@ -38,7 +38,7 @@ type PaymentTable = {
   update(input: {
     where: Partial<PaymentRecord>;
     values: Partial<PaymentRecord>;
-  }): Promise<unknown>;
+  }): Promise<number>;
 };
 
 /**
@@ -56,6 +56,8 @@ type EventTable = {
 /** webhook 单次处理租约，避免并发重复入账，同时允许进程中断后恢复。 */
 const PAYMENT_EVENT_PROCESSING_LEASE_MS = 5 * 60 * 1000;
 const PAYMENT_EVENT_LEASE_PREFIX = "lease:";
+/** Checkout 创建租约，超时后允许其他请求使用同一 payment_id 接管。 */
+const PAYMENT_CHECKOUT_CREATION_LEASE_MS = 5 * 60 * 1000;
 
 /**
  * PaymentService 暴露给 routes 的最小能力。
@@ -113,10 +115,24 @@ export function installPaymentRoutes(service: PaymentServiceLike, ctx: ServiceIn
         return requestCtx.jsonResponse({ error: `Topup is already ${topup.status}` }, 409);
       }
 
-      const existing = await findActivePaymentByTopup(payments, provider.id, topup.topup_id);
-      if (existing) return requestCtx.jsonResponse(toCheckoutResult(existing));
+      const payment_id = await create_stable_payment_id(provider.id, topup.topup_id);
+      const reservation = await claim_checkout_creation({
+        payments,
+        payment_id,
+        provider: provider.id,
+        method_currency: method.currency,
+        topup,
+      });
+      if (reservation.ready) {
+        return requestCtx.jsonResponse(toCheckoutResult(reservation.record));
+      }
+      if (!reservation.claimed) {
+        return requestCtx.jsonResponse({
+          error: "Checkout creation is already in progress",
+          payment_id: reservation.record.payment_id,
+        }, 409);
+      }
 
-      const paymentId = `pay_${randomId()}`;
       const successURL = resolvePaymentRedirectURL({
         path: "/v1/payment/redirect/success",
         ctx,
@@ -128,38 +144,27 @@ export function installPaymentRoutes(service: PaymentServiceLike, ctx: ServiceIn
         request: requestCtx.request,
       });
 
-      const created = await provider.createCheckout({
-        payment_id: paymentId,
-        topup,
-        request: requestCtx.request,
-        ctx,
-        success_url: successURL,
-        cancel_url: cancelURL,
-      });
-      const now = new Date().toISOString();
-      const row: PaymentRecord = {
-        payment_id: paymentId,
-        provider: provider.id,
-        topup_id: topup.topup_id,
-        user_id: topup.user_id,
-        provider_session_id: normalizeOptionalText(created.provider_session_id),
-        provider_payment_id: normalizeOptionalText(created.provider_payment_id),
-        provider_order_id: normalizeOptionalText(created.provider_order_id),
-        credits: topup.credits,
-        amount_minor: readPaymentAmountMinor(topup),
-        currency: method.currency,
-        status: "pending",
-        checkout_url: created.checkout_url,
-        metadata_json: JSON.stringify({
-          note: topup.note,
+      try {
+        const created = await provider.createCheckout({
+          payment_id: reservation.record.payment_id,
+          topup,
+          request: requestCtx.request,
+          ctx,
+          success_url: successURL,
+          cancel_url: cancelURL,
+        });
+        const row = await finish_checkout_creation({
+          payments,
+          reservation,
+          created,
+          topup,
           provider: provider.id,
-          ...(created.metadata ?? {}),
-        }),
-        created_at: now,
-        updated_at: now,
-      };
-      await payments.insert(row);
-      return requestCtx.jsonResponse(toCheckoutResult(row));
+        });
+        return requestCtx.jsonResponse(toCheckoutResult(row));
+      } catch (error) {
+        await fail_checkout_creation(payments, reservation).catch(() => undefined);
+        throw error;
+      }
     },
   });
 
@@ -387,7 +392,8 @@ async function syncPaymentEvent(input: {
   if (event.status === "ignored") return "ignored";
 
   const payment = await findPaymentByWebhookEvent(payments, provider.id, event);
-  if (!payment) return "ignored";
+  // 本地 payment 可能尚未完成 Provider ID 回填；保留 pending，Provider 重发后可恢复。
+  if (!payment) return "pending";
   if (event.status === "paid" && payment.status === "paid") return "applied";
   if (payment.status !== "pending" && event.status !== "paid") return "ignored";
 
@@ -456,6 +462,170 @@ async function findActivePaymentByTopup(
 ): Promise<PaymentRecord | undefined> {
   const rows = sortPayments(await payments.select({ provider, topup_id: topupId }));
   return rows.find((row) => row.status === "pending");
+}
+
+/**
+ * 原子占用某个 topup/provider 的 Checkout 创建权。
+ *
+ * 关键说明（中文）
+ * - payment_id 由 provider + topup_id 稳定生成，数据库主键承担并发唯一约束。
+ * - 空 checkout_url 表示创建中；租约过期或失败记录可由下一次请求接管。
+ */
+async function claim_checkout_creation(input: {
+  payments: PaymentTable;
+  payment_id: string;
+  provider: string;
+  method_currency: string;
+  topup: PaymentTopupRecord;
+}): Promise<PaymentCheckoutCreationClaim> {
+  const existing_rows = sortPayments(await input.payments.select({
+    provider: input.provider,
+    topup_id: input.topup.topup_id,
+  }));
+  let current = existing_rows[0];
+  if (current?.status === "pending" && current.checkout_url) {
+    return { claimed: false, ready: true, record: current, lease_metadata_json: "" };
+  }
+  if (current?.status === "paid") {
+    return { claimed: false, ready: true, record: current, lease_metadata_json: "" };
+  }
+
+  const now = new Date().toISOString();
+  const lease_metadata_json = JSON.stringify({
+    checkout_lease: `${PAYMENT_EVENT_LEASE_PREFIX}${Date.now() + PAYMENT_CHECKOUT_CREATION_LEASE_MS}`,
+    provider: input.provider,
+  });
+  if (!current) {
+    const record: PaymentRecord = {
+      payment_id: input.payment_id,
+      provider: input.provider,
+      topup_id: input.topup.topup_id,
+      user_id: input.topup.user_id,
+      provider_session_id: "",
+      provider_payment_id: "",
+      provider_order_id: "",
+      credits: input.topup.credits,
+      amount_minor: readPaymentAmountMinor(input.topup),
+      currency: input.method_currency,
+      status: "pending",
+      checkout_url: "",
+      metadata_json: lease_metadata_json,
+      created_at: now,
+      updated_at: now,
+    };
+    try {
+      await input.payments.insert(record);
+      return { claimed: true, ready: false, record, lease_metadata_json };
+    } catch (error) {
+      current = (await input.payments.select({ payment_id: input.payment_id }))[0];
+      if (!current) throw error;
+    }
+  }
+
+  if (current.status === "pending" && !current.checkout_url) {
+    const updated_at = Date.parse(current.updated_at);
+    if (Number.isFinite(updated_at) && Date.now() - updated_at < PAYMENT_CHECKOUT_CREATION_LEASE_MS) {
+      return { claimed: false, ready: false, record: current, lease_metadata_json: "" };
+    }
+  }
+
+  const changed = await input.payments.update({
+    where: {
+      payment_id: current.payment_id,
+      status: current.status,
+      checkout_url: current.checkout_url,
+      metadata_json: current.metadata_json,
+    },
+    values: {
+      status: "pending",
+      checkout_url: "",
+      metadata_json: lease_metadata_json,
+      updated_at: now,
+    },
+  });
+  if (changed === 0) {
+    const latest = (await input.payments.select({ payment_id: current.payment_id }))[0] ?? current;
+    return {
+      claimed: false,
+      ready: latest.status === "paid" || Boolean(latest.checkout_url),
+      record: latest,
+      lease_metadata_json: "",
+    };
+  }
+  return {
+    claimed: true,
+    ready: false,
+    record: {
+      ...current,
+      status: "pending",
+      checkout_url: "",
+      metadata_json: lease_metadata_json,
+      updated_at: now,
+    },
+    lease_metadata_json,
+  };
+}
+
+/** 将 Provider 创建结果写回仍由当前请求持有的 payment 占位记录。 */
+async function finish_checkout_creation(input: {
+  payments: PaymentTable;
+  reservation: PaymentCheckoutCreationClaim;
+  created: Awaited<ReturnType<PaymentProvider["createCheckout"]>>;
+  topup: PaymentTopupRecord;
+  provider: string;
+}): Promise<PaymentRecord> {
+  const values: Partial<PaymentRecord> = {
+    provider_session_id: normalizeOptionalText(input.created.provider_session_id),
+    provider_payment_id: normalizeOptionalText(input.created.provider_payment_id),
+    provider_order_id: normalizeOptionalText(input.created.provider_order_id),
+    checkout_url: input.created.checkout_url,
+    metadata_json: JSON.stringify({
+      note: input.topup.note,
+      provider: input.provider,
+      ...(input.created.metadata ?? {}),
+    }),
+    updated_at: new Date().toISOString(),
+  };
+  const changed = await input.payments.update({
+    where: {
+      payment_id: input.reservation.record.payment_id,
+      metadata_json: input.reservation.lease_metadata_json,
+    },
+    values,
+  });
+  const latest = (await input.payments.select({ payment_id: input.reservation.record.payment_id }))[0];
+  if (changed === 0 || !latest) {
+    throw new Error(`Payment checkout lease lost: ${input.reservation.record.payment_id}`);
+  }
+  return latest;
+}
+
+/** Provider 创建失败时释放占位记录，使后续请求可立即重试。 */
+async function fail_checkout_creation(
+  payments: PaymentTable,
+  reservation: PaymentCheckoutCreationClaim,
+): Promise<void> {
+  await payments.update({
+    where: {
+      payment_id: reservation.record.payment_id,
+      status: "pending",
+      metadata_json: reservation.lease_metadata_json,
+    },
+    values: {
+      status: "failed",
+      updated_at: new Date().toISOString(),
+    },
+  });
+}
+
+/** 为 provider + topup 生成跨进程稳定的 payment 主键。 */
+async function create_stable_payment_id(provider: string, topup_id: string): Promise<string> {
+  const bytes = new TextEncoder().encode(`${provider}:${topup_id}`);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const suffix = Array.from(new Uint8Array(digest).slice(0, 16))
+    .map((value) => value.toString(16).padStart(2, "0"))
+    .join("");
+  return `pay_${suffix}`;
 }
 
 /**

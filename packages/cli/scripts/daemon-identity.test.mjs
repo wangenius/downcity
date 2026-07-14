@@ -59,3 +59,52 @@ test("daemon stop only cleans stale files when PID belongs to another process", 
     await fs.rm(project_root, { recursive: true, force: true })
   }
 })
+
+test("daemon stop terminates a process with matching command and instance identity", async () => {
+  const project_root = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-daemon-owned-"))
+  const cli_path = path.join(project_root, "fake-cli.mjs")
+  const instance_id = "owned-instance-id"
+  await fs.writeFile(cli_path, "setInterval(() => {}, 1000)\n", "utf8")
+  const args = [
+    cli_path,
+    "agent",
+    "start",
+    project_root,
+    "--foreground",
+    "true",
+  ]
+  const child = spawn(process.execPath, args, {
+    cwd: project_root,
+    env: { ...process.env, DOWNCITY_DAEMON_INSTANCE_ID: instance_id },
+    stdio: "ignore",
+  })
+
+  try {
+    assert.ok(child.pid)
+    await writeDaemonFiles(project_root, {
+      pid: child.pid,
+      instanceId: instance_id,
+      projectRoot: project_root,
+      startedAt: new Date().toISOString(),
+      command: process.execPath,
+      args,
+      node: process.version,
+      platform: process.platform,
+    })
+
+    const result = await stopDaemonProcess({ projectRoot: project_root, timeoutMs: 1000 })
+
+    assert.deepEqual(result, { stopped: true, pid: child.pid })
+    await assert.rejects(fs.stat(getDaemonPidPath(project_root)), /ENOENT/)
+    await assert.rejects(fs.stat(getDaemonMetaPath(project_root)), /ENOENT/)
+  } finally {
+    if (child.pid) {
+      try {
+        process.kill(child.pid, "SIGKILL")
+      } catch {
+        // 子进程已经由 stopDaemonProcess 终止。
+      }
+    }
+    await fs.rm(project_root, { recursive: true, force: true })
+  }
+})

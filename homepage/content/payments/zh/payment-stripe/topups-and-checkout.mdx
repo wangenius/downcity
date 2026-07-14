@@ -39,6 +39,12 @@ const checkout = await user.service("payment").action("checkout/create").invoke(
 
 前端跳转到 `checkout.checkout_url` 后，用户就在 Stripe 完成支付。
 
+## 并发创建行为
+
+同一个 `topup_id + method_id` 同时收到多个创建请求时，PaymentService 只会向 Provider 创建一次 Checkout。首个请求持有短租约；租约期间的并发请求返回 `409`，前端稍后重试即可。Checkout 已创建后，重复请求会返回同一笔 payment 和 `checkout_url`。
+
+服务会把稳定的 `payment_id` 作为 Stripe 幂等键。即使创建请求在网络返回前中断，后续接管也不会生成第二笔 Stripe Checkout。
+
 ## 为什么不让 Stripe 服务直接收金额
 
 如果让前端直接把金额传给 Stripe 服务，再由它独立发起支付，会有几个问题：

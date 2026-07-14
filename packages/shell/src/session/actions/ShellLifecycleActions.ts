@@ -33,7 +33,8 @@ export async function closeAllShellSessions(
 ): Promise<void> {
   for (const approval of Array.from(state.approvals.values())) {
     if (state.context) {
-      await resolveApproval({
+      // 审批 Promise 会在 resolveApproval 的首个 await 前兑现；附属事件投影不应阻塞销毁。
+      void resolveApproval({
         state,
         context: state.context,
         approvalId: approval.approvalId,

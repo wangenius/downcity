@@ -4,15 +4,13 @@
  * 关键点（中文）
  * - SDK 对外对象叫 `Session`，这里是内部执行层。
  * - 一个 Executor 只对应一个固定的 `sessionId`。
- * - 负责 history 写入、run scope、executing 状态、Composer 编排与 tool-loop 执行。
+ * - 负责 history 写入、显式运行上下文、executing 状态、Composer 编排与 tool-loop 执行。
  */
 
 import { streamText, type LanguageModel, type Tool, type ToolExecutionOptions } from "ai";
-import { withShellRunScope } from "@downcity/shell";
 import { SessionHistoryWriter } from "@executor/composer/history/SessionHistoryWriter.js";
 import type { SessionHistoryComposer } from "@executor/composer/history/SessionHistoryComposer.js";
 import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
-import { withSessionRunScope } from "@executor/SessionRunScope.js";
 import { buildSessionStepParts } from "@executor/messages/SessionStepEventMapper.js";
 import { JsonlSessionCompactionComposer } from "@executor/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
 import { LocalSessionContextComposer } from "@executor/composer/context/LocalSessionContextComposer.js";
@@ -32,6 +30,7 @@ import type {
 import { to_session_action_record } from "@/executor/types/SessionRecords.js";
 import type { SessionExecutor } from "@/executor/types/SessionExecutor.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
+import type { SessionToolExecutionContext } from "@/types/executor/SessionToolExecutionContext.js";
 import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.js";
 import type {
   SessionExecuteInput,
@@ -298,48 +297,33 @@ export class Executor implements SessionExecutor {
     this.executing = true;
     this.recovery_policy.reset_run_state();
     try {
-      const result = await withSessionRunScope(
-        {
-          runContext: run_context,
-        },
-        async () =>
-          await withShellRunScope(
-            {
-              run_context: {
-                session_id: run_context.sessionId,
-                ...(run_context.turnId ? { turn_id: run_context.turnId } : {}),
-              },
-            },
-            async () =>
-              await this.recovery_policy.run_with_retry({
-            query,
-            model: this.resolveModelOrThrow(),
-            run_context,
-            prepare_execute_input: async ({
-              query: next_query,
-              model,
-              run_context: next_run_context,
-              retry_count,
-            }) =>
-              await this.prepareExecuteInput(
-                next_query,
-                model,
-                next_run_context,
-                retry_count,
-              ),
-            execute_prepared_run: async ({
-              execute_input,
-              model,
-              run_context: next_run_context,
-            }) =>
-              await this.executePreparedRun(
-                execute_input,
-                model,
-                next_run_context,
-              ),
-              }),
+      const result = await this.recovery_policy.run_with_retry({
+        query,
+        model: this.resolveModelOrThrow(),
+        run_context,
+        prepare_execute_input: async ({
+          query: next_query,
+          model,
+          run_context: next_run_context,
+          retry_count,
+        }) =>
+          await this.prepareExecuteInput(
+            next_query,
+            model,
+            next_run_context,
+            retry_count,
           ),
-      );
+        execute_prepared_run: async ({
+          execute_input,
+          model,
+          run_context: next_run_context,
+        }) =>
+          await this.executePreparedRun(
+            execute_input,
+            model,
+            next_run_context,
+          ),
+      });
       return result;
     } finally {
       await this.release_step_plugins(run_context);
@@ -367,7 +351,7 @@ export class Executor implements SessionExecutor {
 
     await this.refresh_step_runtime(run_context);
     const composed_context = await this.contextComposer.compose(run_context);
-    const tools = this.bind_run_scope_to_tools(composed_context.tools, run_context);
+    const tools = this.bind_run_context_to_tools(composed_context.tools, run_context);
     const system = await this.systemComposer.resolve(run_context);
     let compaction_action_id = "";
 
@@ -521,7 +505,7 @@ export class Executor implements SessionExecutor {
     return {
       model: this.resolveModelOrThrow(),
       system: await this.systemComposer.resolve(run_context),
-      tools: this.bind_run_scope_to_tools(
+      tools: this.bind_run_context_to_tools(
         composed_context.tools,
         run_context,
       ),
@@ -562,19 +546,24 @@ export class Executor implements SessionExecutor {
   }
 
   /**
-   * 为所有 tool 的 execute callback 绑定 ShellRunScope。
+   * 为所有 tool execute callback 绑定显式 Session 运行上下文。
    *
    * 关键点（中文）
-   * - AI SDK 的 streamText 在并行执行 tool callback 时会丢失 AsyncLocalStorage。
-   * - 在 tool.execute 入口重新进入 withShellRunScope，确保 Shell 能读取到 session/turn 上下文。
+   * - 每个 step 使用独立包装工具，不会在并行 Session 间共享可变指针。
+   * - Agent 与 Shell 工具通过 ToolExecutionOptions.experimental_context 读取显式快照。
    */
-  private bind_run_scope_to_tools(
+  private bind_run_context_to_tools(
     tools: Record<string, Tool>,
     run_context: SessionRunContext,
   ): Record<string, Tool> {
-    const session_id = String(run_context.sessionId || "").trim();
-    const turn_id = String(run_context.turnId || "").trim();
-    if (!session_id && !turn_id) return tools;
+    const execution_context: SessionToolExecutionContext = {
+      session_run_context: run_context,
+      shell_run_context: {
+        ownerContextId: String(run_context.sessionId || "").trim() || undefined,
+        turnId: String(run_context.turnId || "").trim() || undefined,
+        ...(run_context.agentEnv ? { env: run_context.agentEnv } : {}),
+      },
+    };
 
     const wrapped: Record<string, Tool> = {};
     for (const [name, tool] of Object.entries(tools)) {
@@ -586,18 +575,10 @@ export class Executor implements SessionExecutor {
       wrapped[name] = {
         ...tool,
         execute: async (args: unknown, options: ToolExecutionOptions) => {
-          return await withShellRunScope(
-            {
-              run_context: {
-                ...(session_id ? { session_id } : {}),
-                ...(turn_id ? { turn_id } : {}),
-                ...(run_context.agentEnv
-                  ? { env: run_context.agentEnv }
-                  : {}),
-              },
-            },
-            async () => await original_execute(args, options),
-          );
+          return await original_execute(args, {
+            ...options,
+            experimental_context: execution_context,
+          });
         },
       };
     }

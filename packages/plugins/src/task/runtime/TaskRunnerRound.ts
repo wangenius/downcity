@@ -11,7 +11,6 @@ import fs from "fs-extra";
 import type { AgentContext } from "@downcity/agent";
 import { runSandboxCommand } from "@downcity/shell/sandbox/SandboxRunner.js";
 import type { ShellHostContext } from "@downcity/shell/types/ShellHostContext.js";
-import { withShellRunScope } from "@downcity/shell";
 import type { SessionRunResult } from "@downcity/agent";
 import type { SessionRunContext } from "@downcity/agent";
 import type { JsonObject } from "@downcity/agent";
@@ -22,7 +21,6 @@ import type {
   TaskSessionRuntimePort,
   UserSimulatorDecision,
 } from "@/task/runtime/TaskRunnerTypes.js";
-import { withSessionRunScope } from "@downcity/agent";
 import { appendTaskRoundUserMessage } from "./TaskRunnerSession.js";
 
 function stripTaskSecretEnv(env: NodeJS.ProcessEnv): void {
@@ -246,23 +244,12 @@ export async function runAgentRound(params: {
     // ignore
   }
 
-  const result = await withSessionRunScope(
-    {
+  const result = await params.taskSessionRuntime
+    .getExecutor(params.sessionId)
+    .run({
+      query: params.query,
       runContext: create_task_run_context(params.sessionId),
-    },
-    () =>
-      withShellRunScope(
-        {
-          run_context: {
-            session_id: params.sessionId,
-          },
-        },
-        () =>
-          params.taskSessionRuntime.getExecutor(params.sessionId).run({
-            query: params.query,
-          }),
-      ),
-  );
+    });
   const outputPick = pickAgentOutput(result.assistantMessage);
 
   if (!result.success) {
@@ -296,26 +283,21 @@ export async function runScriptTask(params: {
   const scriptAbs = path.join(params.runDirAbs, "task-script.sh");
   await fs.writeFile(scriptAbs, body.endsWith("\n") ? body : `${body}\n`, "utf-8");
 
-  const execResult = await withSessionRunScope(
-    { runContext: create_task_run_context(params.sessionId) },
-    () => {
-      const childEnv: NodeJS.ProcessEnv = {
-        ...process.env,
-        DC_SESSION_ID: params.sessionId,
-      };
-      stripTaskSecretEnv(childEnv);
-      return runSandboxCommand({
-        context: params.context as unknown as ShellHostContext,
-        executionId: `task-script:${params.sessionId}`,
-        executionDir: params.runDirAbs,
-        cmd: `sh "${scriptAbs.replace(/(["\\$`])/g, "\\$1")}"`,
-        cwd: params.runDirAbs,
-        shellPath: "/bin/sh",
-        login: false,
-        baseEnv: childEnv,
-      });
-    }
-  );
+  const childEnv: NodeJS.ProcessEnv = {
+    ...process.env,
+    DC_SESSION_ID: params.sessionId,
+  };
+  stripTaskSecretEnv(childEnv);
+  const execResult = await runSandboxCommand({
+    context: params.context as unknown as ShellHostContext,
+    executionId: `task-script:${params.sessionId}`,
+    executionDir: params.runDirAbs,
+    cmd: `sh "${scriptAbs.replace(/(["\\$`])/g, "\\$1")}"`,
+    cwd: params.runDirAbs,
+    shellPath: "/bin/sh",
+    login: false,
+    baseEnv: childEnv,
+  });
 
   const stdout = String(execResult.stdout || "").trim();
   const stderr = String(execResult.stderr || "").trim();

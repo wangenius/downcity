@@ -16,6 +16,7 @@ import type { PluginActionExample } from "@/types/plugin/PluginAction.js";
 import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import type { AgentSessionSystemBlock } from "@/types/agent/SessionTypes.js";
 import type { PluginSnapshot } from "@/types/plugin/PluginState.js";
+import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 
 /**
  * Plugin 概览视图。
@@ -134,9 +135,13 @@ export interface AgentPlugins {
     action: string;
     /** Action Payload（可选）。 */
     payload?: JsonValue;
+    /** 当前 action 所属的显式 Session run 上下文。 */
+    run_context?: SessionRunContext;
   }): Promise<PluginActionResult<JsonValue>>;
   /** 读取当前生效的 plugin system blocks。 */
-  systemBlocks(): Promise<AgentSessionSystemBlock[]>;
+  systemBlocks(
+    run_context?: SessionRunContext,
+  ): Promise<AgentSessionSystemBlock[]>;
   /** 运行 pipeline 点，按顺序链式变换值。 */
   pipeline<T = JsonValue>(pointName: string, value: T): Promise<T>;
   /** 运行 guard 点；任一插件抛错即终止。 */
@@ -171,10 +176,14 @@ export interface AgentPluginExecutionView {
     action: string;
     /** Action Payload（可选）。 */
     payload?: JsonValue;
+    /** 当前 action 所属的显式 Session run 上下文。 */
+    run_context?: SessionRunContext;
   }): Promise<PluginActionResult<JsonValue>>;
 
   /** 解析当前视图中捕获的 plugin system blocks。 */
-  systemBlocks(): Promise<AgentSessionSystemBlock[]>;
+  systemBlocks(
+    run_context?: SessionRunContext,
+  ): Promise<AgentSessionSystemBlock[]>;
 }
 
 /**

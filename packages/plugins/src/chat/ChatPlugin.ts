@@ -11,6 +11,7 @@
 import { BasePlugin } from "@downcity/agent";
 import type { PluginActions } from "@downcity/agent";
 import type { AgentContext } from "@downcity/agent";
+import type { PluginRunContext } from "@downcity/agent";
 import type { ChatChannelState } from "@/chat/types/ChatRuntime.js";
 import type { ChatQueueWorkerConfig } from "@/chat/types/ChatQueueWorker.js";
 import type {
@@ -87,8 +88,11 @@ export class ChatPlugin extends BasePlugin {
   /**
    * 当前 plugin 的 system 文本构建器。
    */
-  readonly system = async (context: AgentContext): Promise<string> => {
-    return await buildChatPluginSystem(context);
+  readonly system = async (
+    context: AgentContext,
+    run_context?: PluginRunContext,
+  ): Promise<string> => {
+    return await buildChatPluginSystem(context, run_context);
   };
 
   /**

@@ -58,10 +58,10 @@ export async function writeShellSession(
   let approvalStatus: ShellApprovalStatus | undefined;
   const reason = String(request.reason || "").trim();
   // 关键点（中文）
-  // - 优先使用显式传入的 turnId；未传入时保留 AsyncLocalStorage fallback。
+  // - turnId 由 tool action 显式传入。
   const turnId =
     String(
-      request.turnId || context.shellIntegration?.getRunContext?.()?.turnId || "",
+      request.turnId || "",
     ).trim() || undefined;
   if (session.snapshot.sandboxMode === "unrestricted") {
     const validationError = validateUnrestrictedRequest({ cmd: chars, reason });

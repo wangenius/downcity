@@ -13,13 +13,6 @@ import type { LanguageModel } from "ai";
 import { createCityAiAgentModel } from "@/city/runtime/city-model/CityAiServiceBinding.js";
 import type { StoredAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
 
-type ModelLogContext = {
-  /**
-   * 当前 session 标识，用于日志追踪。
-   */
-  sessionId?: string;
-};
-
 type RuntimeModelFactoryInput = {
   /**
    * 当前 agent 配置。
@@ -29,14 +22,6 @@ type RuntimeModelFactoryInput = {
    * - 模型能力目录来自 City AIService。
    */
   config: StoredAgentConfig;
-
-  /**
-   * 可选 session run scope。
-   *
-   * 关键点（中文）
-   * - 保留该字段是为了维持宿主调用契约；City AIService 请求日志由 City 侧负责。
-   */
-  getSessionRunScope?: () => ModelLogContext | undefined;
 
   /**
    * 宿主显式注入的运行时 env。
@@ -100,9 +85,6 @@ export async function createRuntimeModel(
     {
       kind: "city_ai_model_ready",
       modelId: execution.modelId,
-      ...(input.getSessionRunScope?.()?.sessionId
-        ? { sessionId: input.getSessionRunScope?.()?.sessionId }
-        : {}),
     },
   );
 

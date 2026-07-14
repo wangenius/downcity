@@ -25,10 +25,6 @@ import {
   materializeAssistantFileParts,
   resolveAgentFilePath,
 } from "@executor/messages/AssistantFileResource.js";
-import {
-  enqueueAssistantFileParts,
-  getSessionRunContext,
-} from "@executor/SessionRunScope.js";
 
 /**
  * 判断值是否为普通对象。
@@ -138,13 +134,15 @@ export async function invokePluginCallTool(
   }
 
   try {
-    const plugins = getSessionRunContext()?.agentPlugins || params.plugins;
+    const run_context = params.run_context;
+    const plugins = run_context.agentPlugins || params.plugins;
     const result = await plugins.runAction({
       plugin,
       action,
       payload,
+      run_context,
     });
-    const project_root = resolve_project_root(getSessionRunContext()?.projectRoot);
+    const project_root = resolve_project_root(run_context.projectRoot);
     const raw_file_parts = result.success
       ? extract_assistant_file_parts(result.data)
       : [];
@@ -157,7 +155,7 @@ export async function invokePluginCallTool(
         : [];
     const files = summarize_materialized_files(file_parts, project_root);
     if (file_parts.length > 0) {
-      enqueueAssistantFileParts(file_parts);
+      run_context.pendingAssistantFileParts.push(...file_parts);
     }
     const data = summarize_action_data(result.data);
     return {
@@ -192,7 +190,7 @@ export async function invokePluginReadTool(
 ): Promise<PluginReadToolResult> {
   const input: PluginReadInput = params.input;
   try {
-    const plugins = getSessionRunContext()?.agentPlugins || params.plugins;
+    const plugins = params.run_context.agentPlugins || params.plugins;
     const data = plugins.read({
       plugin: typeof input.plugin === "string" ? input.plugin : undefined,
       action: typeof input.action === "string" ? input.action : undefined,

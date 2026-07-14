@@ -7,7 +7,7 @@
  * - `lookup` 行为为无状态：由 action 读取 SKILL.md 后通过协议注入 user message
  */
 
-import { getSessionRunContext } from "@downcity/agent";
+import type { PluginRunContext } from "@downcity/agent";
 import { discoverSkillsSync } from "./Discovery.js";
 import { renderSkillsPromptSection } from "./Prompt.js";
 import { setSessionAvailableSkills } from "./Store.js";
@@ -17,11 +17,6 @@ type SkillSystemRuntime = {
   rootPath: string;
   options?: SkillPluginOptions | null;
 };
-
-function getCurrentSessionId(): string {
-  const run_context = getSessionRunContext();
-  return String(run_context?.sessionId || "").trim();
-}
 
 /**
  * 构建 skill plugin system 文本。
@@ -33,8 +28,9 @@ function getCurrentSessionId(): string {
  */
 export async function buildSkillsSystemText(
   runtime: SkillSystemRuntime,
+  run_context?: PluginRunContext,
 ): Promise<string> {
-  const sessionId = getCurrentSessionId();
+  const sessionId = String(run_context?.sessionId || "").trim();
   const discoveredSkills = discoverSkillsSync(
     runtime.rootPath,
     runtime.options,

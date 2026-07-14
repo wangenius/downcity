@@ -23,6 +23,7 @@ import type {
   PluginUsageDefinition,
 } from "@/types/plugin/PluginSetup.js";
 import type { StructuredConfig } from "@/types/runtime/agent/AgentContext.js";
+import type { PluginRunContext } from "@/types/plugin/PluginRunContext.js";
 
 /**
  * BasePlugin 抽象基类。
@@ -91,6 +92,9 @@ export abstract class BasePlugin implements Plugin {
   /**
    * Plugin system 文本提供器。
    */
-  system?(context: AgentContext): Promise<string> | string;
+  system?(
+    context: AgentContext,
+    run_context?: PluginRunContext,
+  ): Promise<string> | string;
 
 }

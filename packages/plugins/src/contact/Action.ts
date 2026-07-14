@@ -9,6 +9,7 @@
 import type { AgentContext } from "@downcity/agent";
 import type { JsonObject, JsonValue } from "@downcity/agent";
 import type { PluginActions } from "@downcity/agent";
+import type { PluginRunContext } from "@downcity/agent";
 import { createAction } from "@downcity/agent";
 import { z } from "zod";
 import type {
@@ -44,13 +45,18 @@ export type ContactActionHandlers = {
   /**
    * 生成一次性联系码。
    */
-  link: (context: AgentContext, payload: ContactLinkCommandPayload) => Promise<JsonValue>;
+  link: (
+    context: AgentContext,
+    payload: ContactLinkCommandPayload,
+    run_context?: PluginRunContext,
+  ) => Promise<JsonValue>;
   /**
    * 使用联系码建立 contact。
    */
   approve: (
     context: AgentContext,
     payload: ContactApproveCommandPayload,
+    run_context?: PluginRunContext,
   ) => Promise<JsonValue>;
   /**
    * 检查 contact 或 endpoint 可用性。
@@ -124,6 +130,7 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
         data: await handlers.link(
           params.context,
           params.input as ContactLinkCommandPayload,
+          params.run_context,
         ),
       }),
     }),
@@ -166,6 +173,7 @@ export function createContactActions(handlers: ContactActionHandlers): PluginAct
         data: await handlers.approve(
           params.context,
           params.input as unknown as ContactApproveCommandPayload,
+          params.run_context,
         ),
       }),
     }),

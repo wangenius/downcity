@@ -10,6 +10,7 @@ import type { Command } from "commander";
 import type { Context as HonoContext } from "hono";
 import type { z } from "zod";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { PluginRunContext } from "@/types/plugin/PluginRunContext.js";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 
 /**
@@ -147,6 +148,14 @@ export interface PluginAction<
   execute: (params: {
     /** 当前执行上下文。 */
     context: AgentContext;
+    /**
+     * 当前 action 所属的 Session run 上下文。
+     *
+     * 关键点（中文）
+     * - 模型 tool 调用时必定提供。
+     * - CLI、HTTP 或定时任务等非 Session 入口可能不提供。
+     */
+    run_context?: PluginRunContext;
     /** 已通过 schema 校验后的输入。 */
     input: P;
     /** 当前插件名称。 */

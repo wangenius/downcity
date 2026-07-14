@@ -110,7 +110,7 @@ const plugins = agent.plugins.list();
 - 同名 plugin 重复注册会直接报错
 - SDK 不会默认注册全部内建 plugin
 
-当前本地 SDK 会接通 plugin registry、`AgentContext.plugins`，并在 session prompt 中注入已注册 plugin 的 `system(context)` 文本。
+当前本地 SDK 会接通 plugin registry、`AgentContext.plugins`，并在 session prompt 中注入已注册 plugin 的 `system(context, run_context)` 文本。
 
 每个 `Agent` 都有独立的 plugin registry 和独立的 `plugin_read` / `plugin_call` tool 实例。即使同一个进程里同时创建多个 Agent，模型通过 `plugin_call` 触发 action 时，也只会访问当前 session 所属 Agent 的 registry。
 
@@ -154,9 +154,12 @@ const demo_plugin = createPlugin({
           payload: { text: "hello" },
         },
       ],
-      execute: async ({ input }) => ({
+      execute: async ({ input, run_context }) => ({
         success: true,
-        data: { text: input.text },
+        data: {
+          text: input.text,
+          session_id: run_context?.sessionId,
+        },
         message: "echoed",
       }),
     }),
@@ -170,7 +173,7 @@ const agent = new Agent({
 });
 ```
 
-`zod` schema 负责运行时校验；`json_schema` 和 `examples` 用于 `plugin_read` 返回给模型或 UI。旧的 `class extends BasePlugin` 写法仍然可用，也可以只在 `actions` 里逐步换成 `createAction(...)`。
+`zod` schema 负责运行时校验；`json_schema` 和 `examples` 用于 `plugin_read` 返回给模型或 UI。action 通过 session tool 执行时会收到 `run_context`；CLI、HTTP 或 scheduler 直接调用时该字段可能不存在。当前 Session step 已提交生效的 env 应读取 `run_context.agentEnv`，`context.env` 只表示 Agent 的配置基线。旧的 `class extends BasePlugin` 写法仍然可用，也可以只在 `actions` 里逐步换成 `createAction(...)`。
 
 ## ImagePlugin
 

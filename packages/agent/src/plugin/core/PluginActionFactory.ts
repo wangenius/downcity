@@ -36,6 +36,7 @@ import type {
 } from "@/types/plugin/PluginSetup.js";
 import type { PluginHttpDefinition } from "@/types/plugin/PluginHttp.js";
 import type { StructuredConfig } from "@/types/runtime/agent/AgentContext.js";
+import type { PluginRunContext } from "@/types/plugin/PluginRunContext.js";
 
 /**
  * 从 Zod schema 推导 JSON 输入类型。
@@ -64,6 +65,8 @@ export interface CreatePluginActionOptions<
   execute: (params: {
     /** 当前执行上下文。 */
     context: AgentContext;
+    /** 当前 action 的显式 Session run 上下文。 */
+    run_context?: PluginRunContext;
     /** 已通过 schema 校验后的输入。 */
     input: P;
     /** 当前插件名称。 */
@@ -96,7 +99,10 @@ export interface CreatePluginOptions<TActions extends PluginActions> {
   /** Plugin resolve 集合。 */
   resolves?: PluginResolves;
   /** Plugin system 文本构建器。 */
-  system?: (context: AgentContext) => string | Promise<string>;
+  system?: (
+    context: AgentContext,
+    run_context?: PluginRunContext,
+  ) => string | Promise<string>;
   /** Plugin 生命周期定义。 */
   lifecycle?: PluginLifecycle;
   /** Plugin 可用性检查。 */

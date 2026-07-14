@@ -80,6 +80,10 @@ export async function runTaskNow(params: {
   trigger: ShipTaskRunTriggerV1;
   executionId?: string;
   projectRoot?: string;
+  /** 发起该任务的 Session step 已提交生效的 env 快照。 */
+  agent_env?: Readonly<Record<string, string>>;
+  /** 发起该任务的 Session step 已提交生效的 instruction 快照。 */
+  agent_systems?: readonly string[];
 }): Promise<{
   ok: boolean;
   status: ShipTaskRunStatusV1;
@@ -160,6 +164,8 @@ export async function runTaskNow(params: {
     runDirAbs,
     runSessionId,
     userSimulatorSessionId,
+    ...(params.agent_env ? { agent_env: params.agent_env } : {}),
+    ...(params.agent_systems ? { agent_systems: params.agent_systems } : {}),
   });
 
   let ok = false;

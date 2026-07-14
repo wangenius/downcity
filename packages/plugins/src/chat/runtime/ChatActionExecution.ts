@@ -10,6 +10,7 @@
 import path from "node:path";
 import type { JsonObject } from "@downcity/agent";
 import type { AgentContext } from "@downcity/agent";
+import type { PluginRunContext } from "@downcity/agent";
 import type {
   ChatDeleteActionPayload,
   ChatHistoryActionPayload,
@@ -46,9 +47,11 @@ function toChatHistoryView(events: ChatHistoryEventV1[]): JsonObject[] {
 export async function executeChatContextAction(params: {
   context: AgentContext;
   payload: ChatSessionActionPayload;
+  run_context?: PluginRunContext;
 }) {
   const snapshot = resolveChatSessionSnapshot({
     context: params.context,
+    run_context: params.run_context,
     ...(params.payload.chatKey ? { chatKey: params.payload.chatKey } : {}),
     ...(params.payload.sessionId ? { sessionId: params.payload.sessionId } : {}),
   });
@@ -132,11 +135,13 @@ export async function executeChatListAction(params: {
 export async function executeChatInfoAction(params: {
   context: AgentContext;
   payload: ChatInfoActionPayload;
+  run_context?: PluginRunContext;
 }) {
   const explicitSessionId = String(params.payload.sessionId || "").trim();
   const explicitChatKey = String(params.payload.chatKey || "").trim();
   const snapshot = resolveChatSessionSnapshot({
     context: params.context,
+    run_context: params.run_context,
     ...(explicitSessionId ? { sessionId: explicitSessionId } : {}),
     ...(explicitChatKey ? { chatKey: explicitChatKey } : {}),
   });
@@ -192,10 +197,12 @@ export async function executeChatInfoAction(params: {
 export async function executeChatHistoryAction(params: {
   context: AgentContext;
   payload: ChatHistoryActionPayload;
+  run_context?: PluginRunContext;
 }) {
   const payload = params.payload;
   const snapshot = resolveChatSessionSnapshot({
     context: params.context,
+    run_context: params.run_context,
     ...(payload.chatKey ? { chatKey: payload.chatKey } : {}),
     ...(payload.sessionId ? { sessionId: payload.sessionId } : {}),
   });
@@ -242,10 +249,12 @@ export async function executeChatHistoryAction(params: {
 export async function executeChatSendAction(params: {
   context: AgentContext;
   payload: ChatSendActionPayload;
+  run_context?: PluginRunContext;
 }) {
   const chatKey = resolveChatKey({
     chatKey: params.payload.chatKey,
     context: params.context,
+    run_context: params.run_context,
   });
   if (!chatKey) {
     return {
@@ -270,6 +279,7 @@ export async function executeChatSendAction(params: {
     ...(typeof params.payload.messageId === "string" && params.payload.messageId.trim()
       ? { messageId: params.payload.messageId.trim() }
       : {}),
+    run_context: params.run_context,
   });
   if (!result.success) {
     return {
@@ -291,10 +301,12 @@ export async function executeChatSendAction(params: {
 export async function executeChatReactAction(params: {
   context: AgentContext;
   payload: ChatReactActionPayload;
+  run_context?: PluginRunContext;
 }) {
   const chatKey = resolveChatKey({
     chatKey: params.payload.chatKey,
     context: params.context,
+    run_context: params.run_context,
   });
   if (!chatKey) {
     return {
@@ -337,9 +349,11 @@ export async function executeChatReactAction(params: {
 export async function executeChatDeleteAction(params: {
   context: AgentContext;
   payload: ChatDeleteActionPayload;
+  run_context?: PluginRunContext;
 }) {
   const result = await deleteChatByChatKey({
     context: params.context,
+    run_context: params.run_context,
     ...(params.payload.chatKey ? { chatKey: params.payload.chatKey } : {}),
     ...(params.payload.sessionId ? { sessionId: params.payload.sessionId } : {}),
   });

@@ -37,7 +37,6 @@ export * from "./session/ShellActionRuntime.js";
 export * from "./session/ShellActionResponse.js";
 export * from "./session/ShellRuntimeEnvironment.js";
 export * from "./session/ShellRuntimeTypes.js";
-export * from "./session/ShellRunScope.js";
 export * from "./approval/ShellApprovalRuntime.js";
 export * from "./tool/ShellTools.js";
 export * from "./tool/ShellToolSchemas.js";

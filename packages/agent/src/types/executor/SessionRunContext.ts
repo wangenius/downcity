@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 这里承载本轮执行过程中需要在多个组件间透传的运行期数据。
  * - 业务侧上下文优先通过该对象显式传递，避免分散读取隐式全局状态。
- * - tool 深层回调等无法直接传参的场景，才通过 run scope 间接读取这个对象。
+ * - tool 回调通过单次 tool execution context 显式读取该对象。
  */
 
 import type {
@@ -79,7 +79,7 @@ export interface SessionRunContext {
    *
    * 关键点（中文）
    * - 由 Session 统一输入队列在 step 检查点更新。
-   * - tool/plugin 深层调用通过 run scope 读取，避免看到刚写入但尚未生效的 env。
+   * - tool/plugin 调用通过显式 run_context 读取，避免看到刚写入但尚未生效的 env。
    */
   agentEnv?: Readonly<Record<string, string>>;
 

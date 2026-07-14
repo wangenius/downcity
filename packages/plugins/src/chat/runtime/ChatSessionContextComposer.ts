@@ -8,9 +8,9 @@
  */
 
 import type { ModelMessage, Tool } from "ai";
-import { drainInjectedUserMessages } from "@downcity/agent";
 import { LocalSessionContextComposer } from "@downcity/agent";
 import type { SessionRecordV1 } from "@downcity/agent";
+import type { SessionRunContext } from "@downcity/agent";
 import type { SessionSystemMessage } from "@downcity/agent";
 import type { ChatSessionTurnState } from "@/chat/runtime/ChatSessionTypes.js";
 
@@ -51,6 +51,7 @@ export class ChatSessionContextComposer extends LocalSessionContextComposer {
       appendMergedUserMessages: (
         messages: SessionRecordV1[],
       ) => Promise<ModelMessage[]>;
+      runContext: SessionRunContext;
     },
   ): (input: { messages?: ModelMessage[] }) => Promise<{
     system: SessionSystemMessage[];
@@ -64,7 +65,8 @@ export class ChatSessionContextComposer extends LocalSessionContextComposer {
       system: SessionSystemMessage[];
       messages?: ModelMessage[];
     }> => {
-      const injectedMessages = drainInjectedUserMessages();
+      const injectedMessages = [...input.runContext.injectedUserMessages];
+      input.runContext.injectedUserMessages = [];
       const turnState = this.getTurnState();
       const onStepCallback = turnState?.onStepCallback;
       if (

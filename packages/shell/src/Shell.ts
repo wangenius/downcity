@@ -43,7 +43,6 @@ import {
   writeShellSession,
 } from "@/session/ShellActionRuntime.js";
 import { createShellTools } from "@/tool/ShellTools.js";
-import { getShellRunContext } from "@/session/ShellRunScope.js";
 
 /**
  * Shell 运行时对象。
@@ -68,13 +67,13 @@ export class Shell {
     this.host_options = { ...options };
     this.state = createShellRuntimeState();
     this.tools = createShellTools({
-      getRunContext: () => this.resolve_run_context(),
       run_action: async (params) =>
         await this.run_action(
           params.action,
           params.payload,
           params.ownerContextId,
           params.turnId,
+          params.env,
           params.toolCallId,
         ),
     });
@@ -94,7 +93,6 @@ export class Shell {
       env: next_env,
       logger: options.logger || this.host_options.logger,
       emit_event: options.emit_event || this.host_options.emit_event,
-      get_run_context: options.get_run_context || this.host_options.get_run_context,
     };
   }
 
@@ -204,9 +202,14 @@ export class Shell {
     payload: Record<string, unknown>,
     ownerContextId?: string,
     turnId?: string,
+    env?: Readonly<Record<string, string>>,
     toolCallId?: string,
   ): Promise<ShellActionResponse> {
-    const context = this.create_host_context();
+    const context = this.create_host_context({
+      ...(ownerContextId ? { ownerContextId } : {}),
+      ...(turnId ? { turnId } : {}),
+      ...(env ? { env } : {}),
+    });
     const payload_with_context: Record<string, unknown> = {
       ...payload,
       ...(ownerContextId ? { ownerContextId } : {}),
@@ -236,36 +239,16 @@ export class Shell {
   }
 
   /**
-   * 解析当前 tool 调用所需的 session/turn 上下文。
-   *
-   * 关键点（中文）
-   * - 优先使用 Agent 显式注入的 `get_run_context`。
-   * - 未注入时回退到 AsyncLocalStorage（兼容旧集成）。
+   * 根据单次 action 的显式运行上下文构建宿主上下文。
    */
-  private resolve_run_context(): ShellToolRunContext {
-    const explicit = this.host_options.get_run_context?.();
-    if (explicit?.ownerContextId || explicit?.turnId) {
-      return {
-        ownerContextId: String(explicit.ownerContextId || "").trim() || undefined,
-        turnId: String(explicit.turnId || "").trim() || undefined,
-        ...(explicit.env ? { env: explicit.env } : {}),
-      };
-    }
-    const from_scope = getShellRunContext();
-    return {
-      ownerContextId: String(from_scope?.session_id || "").trim() || undefined,
-      turnId: String(from_scope?.turn_id || "").trim() || undefined,
-      ...(from_scope?.env ? { env: from_scope.env } : {}),
-    };
-  }
-
-  private create_host_context(): ShellHostContext {
+  private create_host_context(
+    run_context: ShellToolRunContext = {},
+  ): ShellHostContext {
     const root_path = String(this.host_options.root_path || "").trim();
     if (!root_path) {
       throw new Error("Shell requires root_path. Pass Shell through new Agent({ shell }) or construct Shell with root_path.");
     }
     const emit_event = this.host_options.emit_event;
-    const run_context = this.resolve_run_context();
     const session_id = run_context.ownerContextId || "";
     const turn_id = run_context.turnId || "";
     return {

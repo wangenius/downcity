@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 统一组装 tools。
- * - step 边界回调从 SessionRunScope 读取，Executor 不直接管理来源。
+ * - step 边界回调从显式 SessionRunContext 读取，Executor 不直接管理来源。
  */
 
 import type { ModelMessage } from "ai";

@@ -34,7 +34,6 @@ import type {
 } from "@/types/session/SessionMutation.js";
 import type { SessionApprovalRuntimeEvent } from "@/types/session/SessionApproval.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
-import { getSessionRunContext } from "@/executor/SessionRunScope.js";
 
 /**
  * 跨 plugin runtime 调用参数。
@@ -303,27 +302,21 @@ export class AgentContext {
   }
 
   /**
-   * 读取当前调用链可见的 Agent env。
+   * 读取 Agent 已配置的 env。
    *
    * 关键点（中文）
-   * - Session step 内优先返回统一输入队列已经提交的 effective env。
-   * - Session 运行外返回 Agent 配置 API 最近一次成功写入的 configured env。
+   * - Session step 的 effective env 由 Plugin action 参数 `run_context.agentEnv` 显式提供。
+   * - 该 getter 不再根据异步调用链隐式切换结果。
    */
   get env(): Record<string, string> {
-    const effective_env = getSessionRunContext()?.agentEnv;
-    return effective_env
-      ? { ...effective_env }
-      : this.configured_env;
+    return this.configured_env;
   }
 
   /**
-   * 读取当前调用链可见的 Agent instruction。
+   * 读取 Agent 已配置的 instruction。
    */
   get systems(): string[] {
-    const effective_systems = getSessionRunContext()?.agentSystems;
-    return effective_systems
-      ? [...effective_systems]
-      : this.configured_systems;
+    return this.configured_systems;
   }
 
   /**

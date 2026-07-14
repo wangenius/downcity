@@ -14,7 +14,6 @@ import type { AgentContext } from "@downcity/agent";
 import { Executor } from "@downcity/agent";
 import type { SessionRunResult } from "@downcity/agent";
 import type { TaskSessionRuntimePort } from "@/task/runtime/TaskRunnerTypes.js";
-import { drainDeferredPersistedUserMessages } from "@downcity/agent";
 import { JsonlSessionHistoryComposer } from "@downcity/agent";
 import { JsonlSessionHistoryStore } from "@downcity/agent";
 import { JsonlSessionCompactionComposer } from "@downcity/agent";
@@ -65,6 +64,10 @@ export function createTaskSessionRuntimePort(params: {
   runDirAbs: string;
   runSessionId: string;
   userSimulatorSessionId: string;
+  /** 当前 task 显式继承的 Agent env 快照。 */
+  agent_env?: Readonly<Record<string, string>>;
+  /** 当前 task 显式继承的 Agent instruction 快照。 */
+  agent_systems?: readonly string[];
 }): TaskSessionRuntimePort {
   const {
     context,
@@ -73,10 +76,16 @@ export function createTaskSessionRuntimePort(params: {
     runSessionId,
     userSimulatorSessionId,
   } = params;
+  const effective_env = params.agent_env
+    ? { ...params.agent_env }
+    : { ...context.env };
+  const effective_systems = params.agent_systems
+    ? [...params.agent_systems]
+    : [...context.systems];
   const compactionComposer = new JsonlSessionCompactionComposer();
   const systemComposer = new DefaultSessionSystemComposer({
     projectRoot: context.rootPath,
-    getStaticSystemPrompts: () => context.systems,
+    getStaticSystemPrompts: () => [...effective_systems],
     getContext: () => context,
     profile: "task",
   });
@@ -85,7 +94,7 @@ export function createTaskSessionRuntimePort(params: {
   const runtimesBySessionId = new Map<string, SessionExecutor>();
   const shell = new Shell({
     root_path: context.rootPath,
-    env: context.env,
+    env: effective_env,
     logger: context.logger,
   });
   const shell_tools = shell.tools as unknown as Record<string, Tool>;
@@ -163,7 +172,7 @@ export function createTaskSessionRuntimePort(params: {
         contextComposer,
         systemComposer,
         getTools: () => shell_tools,
-        getEnv: () => ({ ...context.env }),
+        getEnv: () => ({ ...effective_env }),
       });
       runtimesBySessionId.set(key, created);
       return created;
@@ -185,7 +194,7 @@ export async function appendTaskAssistantMessage(params: {
   if (rawResult.assistantMessage) {
     await historyStore.write_record(rawResult.assistantMessage);
   }
-  const deferredUserMessages = drainDeferredPersistedUserMessages(sessionId);
+  const deferredUserMessages = rawResult.deferredPersistedUserMessages || [];
   for (const deferred of deferredUserMessages) {
     await historyStore.write_record(deferred);
   }

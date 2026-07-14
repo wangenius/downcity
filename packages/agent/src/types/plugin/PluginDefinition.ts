@@ -26,6 +26,7 @@ import type {
   PluginUsageDefinition,
 } from "@/types/plugin/PluginSetup.js";
 import type { PluginHttpDefinition } from "@/types/plugin/PluginHttp.js";
+import type { PluginRunContext } from "@/types/plugin/PluginRunContext.js";
 
 /**
  * Plugin 定义。
@@ -61,8 +62,16 @@ export interface Plugin {
   hooks?: PluginHooks;
   /** Plugin resolve 点集合（可选）。 */
   resolves?: PluginResolves;
-  /** Plugin system 文本构建器（可选）。 */
-  system?: (context: AgentContext) => string | Promise<string>;
+  /**
+   * Plugin system 文本构建器（可选）。
+   *
+   * @param context Agent 稳定能力上下文。
+   * @param run_context 当前 Session run 上下文；非 Session 快照读取时可缺省。
+   */
+  system?: (
+    context: AgentContext,
+    run_context?: PluginRunContext,
+  ) => string | Promise<string>;
   /** Plugin 生命周期定义（可选）。 */
   lifecycle?: PluginLifecycle;
   /** Plugin 可用性检查器（可选）。 */

@@ -85,7 +85,6 @@ Executor.prepareExecuteInput()
 ```text
 executor/
 ├── Executor.ts
-├── SessionRunScope.ts
 ├── composer/
 │   ├── compaction/
 │   ├── context/

@@ -18,7 +18,6 @@ import {
 } from "../bin/executor/tools/plugin/PluginToolBridge.js";
 import { createPluginTools } from "../bin/executor/tools/plugin/PluginToolDefinition.js";
 import { plugin_call_input_schema } from "../bin/executor/tools/plugin/PluginToolSchemas.js";
-import { withSessionRunScope } from "../bin/executor/SessionRunScope.js";
 import { createAction, createPlugin } from "../bin/plugin/core/PluginActionFactory.js";
 import { createAgentPluginRegistry } from "../bin/agent/local/AgentPluginFactory.js";
 import { z } from "zod";
@@ -80,16 +79,15 @@ test("invokePluginCallTool returns absolute paths for materialized file parts", 
   };
 
   const run_context = create_run_context(project_root);
-  const result = await withSessionRunScope({ runContext: run_context }, () =>
-    invokePluginCallTool({
-      plugins,
-      input: {
-        plugin: "image",
-        action: "image_result",
-        payload: { job_id: "img_1" },
-      },
-    }),
-  );
+  const result = await invokePluginCallTool({
+    plugins,
+    run_context,
+    input: {
+      plugin: "image",
+      action: "image_result",
+      payload: { job_id: "img_1" },
+    },
+  });
 
   assert.equal(result.success, true);
   assert.equal(result.assistant_file_count, 1);
@@ -149,6 +147,7 @@ test("invokePluginReadTool returns plugin action metadata", async () => {
 
   const result = await invokePluginReadTool({
     plugins,
+    run_context: create_run_context(process.cwd()),
     input: {
       plugin: "image",
       action: "image_create",
@@ -226,9 +225,12 @@ test("createPluginTools binds plugin_call to the current registry", async () => 
       actions: {
         lookup: createAction({
           description: "Return registry owner",
-          execute: async () => ({
+          execute: async ({ run_context }) => ({
             success: true,
-            data: { owner },
+            data: {
+              owner,
+              session_id: run_context?.sessionId,
+            },
             message: owner,
           }),
         }),
@@ -245,22 +247,38 @@ test("createPluginTools binds plugin_call to the current registry", async () => 
   const registry_b = create_owner_registry("agent_b");
   const tools_a = createPluginTools({ plugins: registry_a });
   const tools_b = createPluginTools({ plugins: registry_b });
+  const create_execution_options = (session_id) => {
+    const run_context = create_run_context(process.cwd());
+    run_context.sessionId = session_id;
+    return {
+      toolCallId: `call_${session_id}`,
+      messages: [],
+      experimental_context: {
+        session_run_context: run_context,
+        shell_run_context: {
+          ownerContextId: session_id,
+        },
+      },
+    };
+  };
 
   const result_a = await tools_a.plugin_call.execute({
     plugin: "skill",
     action: "lookup",
     payload: { name: "anything" },
-  });
+  }, create_execution_options("session_a"));
   const result_b = await tools_b.plugin_call.execute({
     plugin: "skill",
     action: "lookup",
     payload: { name: "anything" },
-  });
+  }, create_execution_options("session_b"));
 
   assert.equal(result_a.success, true);
   assert.equal(result_a.data.value.owner, "agent_a");
+  assert.equal(result_a.data.value.session_id, "session_a");
   assert.equal(result_b.success, true);
   assert.equal(result_b.data.value.owner, "agent_b");
+  assert.equal(result_b.data.value.session_id, "session_b");
 });
 
 test("PluginRegistry keeps plugin ready after action business failure", async () => {

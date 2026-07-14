@@ -129,13 +129,6 @@ export type {
 
 // Session 与即时执行集成
 export { Executor } from "./executor/Executor.js";
-export {
-  drainDeferredPersistedUserMessages,
-  drainInjectedUserMessages,
-  getSessionRunContext,
-  getSessionRunScope,
-  withSessionRunScope,
-} from "./executor/SessionRunScope.js";
 export { JsonlSessionHistoryComposer } from "./executor/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 export { LocalSessionContextComposer } from "./executor/composer/context/LocalSessionContextComposer.js";
 export { JsonlSessionHistoryStore } from "./executor/store/history/jsonl/JsonlSessionHistoryStore.js";
@@ -162,6 +155,8 @@ export type {
   SessionRunResult,
 } from "./executor/types/SessionRun.js";
 export type { SessionRunContext } from "./types/executor/SessionRunContext.js";
+export type { SessionToolExecutionContext } from "./types/executor/SessionToolExecutionContext.js";
+export type { PluginRunContext } from "./types/plugin/PluginRunContext.js";
 export type {
   SessionActionRecordV1,
   SessionMessageRecordV1,

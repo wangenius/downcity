@@ -29,7 +29,6 @@ import {
   ensureCapacity,
   isInMemorySession,
   persistSnapshot,
-  resolveOwnerContextId,
   resolveSession,
   resolveShellCwd,
 } from "../ShellActionRuntimeSupport.js";
@@ -69,17 +68,14 @@ export async function startShellSession(
   const sandboxMode = resolveSandboxMode(request.sandbox);
   const reason = String(request.reason || "").trim();
   // 关键点（中文）
-  // - 优先使用显式传入的 ownerContextId/turnId。
-  // - 未显式传入时保留 AsyncLocalStorage fallback，避免非 Agent 直接调用 Shell 时上下文丢失。
+  // - ownerContextId/turnId 由 tool action 显式传入。
   const ownerContextId =
     String(
-      request.ownerContextId ||
-        context.shellIntegration?.getRunContext?.()?.sessionId ||
-        "",
+      request.ownerContextId || "",
     ).trim() || undefined;
   const turnId =
     String(
-      request.turnId || context.shellIntegration?.getRunContext?.()?.turnId || "",
+      request.turnId || "",
     ).trim() || undefined;
   const shellDir = getShellDir(context.rootPath, shellId);
   const snapshotFilePath = getShellSnapshotPath(context.rootPath, shellId);

@@ -9,6 +9,7 @@
 import path from "node:path";
 import type { ShipTaskStatus } from "./types/Task.js";
 import type { AgentContext } from "@downcity/agent";
+import type { PluginRunContext } from "@downcity/agent";
 import type { JsonValue } from "@downcity/agent";
 import {
   deriveTaskIdFromTitle,
@@ -322,6 +323,7 @@ export async function runTaskDefinition(params: {
   context: AgentContext;
   projectRoot: string;
   request: TaskRunRequest;
+  run_context?: PluginRunContext;
 }): Promise<TaskRunResponse> {
   const root = path.resolve(params.projectRoot);
   const title = String(params.request.title || "").trim();
@@ -360,6 +362,12 @@ export async function runTaskDefinition(params: {
       taskId,
       trigger,
       executionId,
+      ...(params.run_context?.agentEnv
+        ? { agent_env: { ...params.run_context.agentEnv } }
+        : {}),
+      ...(params.run_context?.agentSystems
+        ? { agent_systems: [...params.run_context.agentSystems] }
+        : {}),
     })
       .then((result) => {
         params.context.logger.info(

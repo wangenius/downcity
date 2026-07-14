@@ -8,6 +8,7 @@
  */
 
 import type { AgentContext } from "@downcity/agent";
+import type { PluginRunContext } from "@downcity/agent";
 import type { JsonValue } from "@downcity/agent";
 import type { PluginActions } from "@downcity/agent";
 import { BasePlugin } from "@downcity/agent";
@@ -83,6 +84,7 @@ import {
 async function resolveSelfEndpoint(
   context: AgentContext,
   endpointOverride?: string,
+  effective_env?: Readonly<Record<string, string>>,
 ): Promise<string> {
   const explicit = String(endpointOverride || "").trim();
   if (explicit) return normalizeContactEndpoint(explicit);
@@ -90,6 +92,7 @@ async function resolveSelfEndpoint(
   const env = {
     ...process.env,
     ...context.env,
+    ...effective_env,
   };
   const runtimePort = Number(process.env.DC_CITY_PORT || env.DC_CITY_PORT || "");
   // 关键点（中文）：link code 必须写入当前 runtime 的真实监听端口，不能使用可能已经过期的配置端口。
@@ -104,10 +107,14 @@ async function resolveSelfEndpoint(
   );
 }
 
-function hasRuntimePublicEndpointEnv(context: AgentContext): boolean {
+function hasRuntimePublicEndpointEnv(
+  context: AgentContext,
+  effective_env?: Readonly<Record<string, string>>,
+): boolean {
   const env = {
     ...process.env,
     ...context.env,
+    ...effective_env,
   };
   return Boolean(
     String(env.DOWNCITY_PUBLIC_URL || "").trim() ||
@@ -155,10 +162,10 @@ export class ContactPlugin extends BasePlugin {
     super();
     this.options = options || {};
     this.actions = createContactActions({
-      link: async (context, payload) =>
-        (await this.link(context, payload)) as unknown as JsonValue,
-      approve: async (context, payload) =>
-        (await this.approve(context, payload)) as unknown as JsonValue,
+      link: async (context, payload, run_context) =>
+        (await this.link(context, payload, run_context)) as unknown as JsonValue,
+      approve: async (context, payload, run_context) =>
+        (await this.approve(context, payload, run_context)) as unknown as JsonValue,
       check: async (context, payload) =>
         (await this.check(context, payload)) as unknown as JsonValue,
       chat: async (context, payload) =>
@@ -180,7 +187,11 @@ export class ContactPlugin extends BasePlugin {
     return buildContactPluginSystemText();
   }
 
-  private async link(context: AgentContext, payload: ContactLinkCommandPayload) {
+  private async link(
+    context: AgentContext,
+    payload: ContactLinkCommandPayload,
+    run_context?: PluginRunContext,
+  ) {
     const now = Date.now();
     const ttlSeconds = Math.max(
       60,
@@ -191,6 +202,7 @@ export class ContactPlugin extends BasePlugin {
     const endpoint = await resolveSelfEndpoint(
       context,
       payload.endpoint || this.options.endpoint,
+      run_context?.agentEnv,
     );
     const agentName = getAgentName(context);
 
@@ -224,7 +236,11 @@ export class ContactPlugin extends BasePlugin {
     };
   }
 
-  private async approve(context: AgentContext, payload: ContactApproveCommandPayload) {
+  private async approve(
+    context: AgentContext,
+    payload: ContactApproveCommandPayload,
+    run_context?: PluginRunContext,
+  ) {
     const parsed = parseContactLinkCode(payload.code);
     // 关键点（中文）：approve 端不使用本机时钟预判过期，避免两台机器时钟不一致时把本来可用的 link 提前拦截。
     // 是否过期统一交给 link 持有方在远端按本地记录判断。
@@ -232,11 +248,15 @@ export class ContactPlugin extends BasePlugin {
     const targetReachability = classifyContactEndpoint(parsed.endpoint);
     const shouldResolveRequesterEndpoint =
       payload.endpoint ||
-      hasRuntimePublicEndpointEnv(context) ||
+      hasRuntimePublicEndpointEnv(context, run_context?.agentEnv) ||
       targetReachability === "loopback" ||
       targetReachability === "private";
     const requesterEndpointCandidate = shouldResolveRequesterEndpoint
-      ? await resolveSelfEndpoint(context, payload.endpoint || this.options.endpoint)
+      ? await resolveSelfEndpoint(
+          context,
+          payload.endpoint || this.options.endpoint,
+          run_context?.agentEnv,
+        )
       : undefined;
     const callbackDecision = buildContactApproveCallbackDecision({
       targetEndpoint: parsed.endpoint,

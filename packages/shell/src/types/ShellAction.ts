@@ -149,7 +149,7 @@ export type ShellStartRequest = {
   inlineWaitMs?: number;
   /** 单次读取输出返回给模型的 token 上限。 */
   maxOutputTokens?: number;
-  /** 显式指定 owner sessionId；为空时优先从 SessionRunScope 推断。 */
+  /** 显式指定 owner sessionId。 */
   ownerContextId?: string;
   /** 显式指定当前 turn id。 */
   turnId?: string;
@@ -225,7 +225,7 @@ export type ShellQueryRequest = {
   shellId?: string;
   /** 命令关键字；用于在当前 context 下查找最近匹配会话。 */
   cmd?: string;
-  /** 指定 owner sessionId；为空时优先从 SessionRunScope 推断。 */
+  /** 显式指定 owner sessionId。 */
   ownerContextId?: string;
   /** 是否允许匹配已结束会话。 */
   includeCompleted?: boolean;
@@ -298,7 +298,7 @@ export type ShellCloseRequest = {
  * shell session 列表请求。
  */
 export type ShellListRequest = {
-  /** 指定 owner sessionId；为空时优先从 SessionRunScope 推断。 */
+  /** 显式指定 owner sessionId。 */
   ownerContextId?: string;
   /** 是否包含已结束会话；默认 true。 */
   includeCompleted?: boolean;

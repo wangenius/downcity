@@ -18,7 +18,7 @@ function stripShellSecretEnv(env: NodeJS.ProcessEnv): void {
  * 构造 shell 子进程环境变量。
  *
  * 关键点（中文）
- * - `sessionId` 显式传入时优先使用，避免依赖 AsyncLocalStorage。
+ * - `sessionId` 显式传入时优先使用，避免依赖隐式运行状态。
  */
 export function buildShellEnv(
   context: ShellHostContext,

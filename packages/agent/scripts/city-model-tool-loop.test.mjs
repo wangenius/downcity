@@ -15,7 +15,6 @@ import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { Agent } from "../bin/index.js";
-import { enqueueAssistantFileParts } from "../bin/executor/SessionRunScope.js";
 import { createAction, createPlugin } from "../bin/plugin/core/PluginActionFactory.js";
 import { CITY_MODEL_INVOKER, CITY_MODEL_KIND } from "@downcity/type";
 import { tool } from "ai";
@@ -256,14 +255,14 @@ test("CityModel uses direct LanguageModel path and sends tool result back", asyn
           inputSchema: z.object({
             value: z.string(),
           }),
-          execute: async ({ value }) => {
+          execute: async ({ value }, options) => {
             tool_executed = true;
-            enqueueAssistantFileParts([{
+            options.experimental_context.session_run_context.pendingAssistantFileParts.push({
               type: "file",
               mediaType: "image/png",
               url: ".downcity/resources/tool-output.png",
               filename: "tool-output.png",
-            }]);
+            });
             return { echoed: value };
           },
         }),

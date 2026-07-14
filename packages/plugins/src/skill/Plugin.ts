@@ -97,12 +97,12 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
     title: "Skill Catalog And Loader",
     description:
       "Finds, installs, lists, and reads local skills, and injects the current skill overview into system prompts so the agent knows what capabilities are available.",
-    async system(context) {
+    async system(context, run_context) {
       const dynamicText = String(
         await buildSkillsSystemText({
           rootPath: context.rootPath,
           options,
-        }),
+        }, run_context),
       ).trim();
       return [SKILL_PLUGIN_PROMPT, dynamicText].filter(Boolean).join("\n\n");
     },

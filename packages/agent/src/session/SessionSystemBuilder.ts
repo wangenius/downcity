@@ -255,7 +255,7 @@ export class SessionSystemBuilder implements SessionSystemComposer {
       getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
       getPluginSystemBlocks: async () =>
         run_context.agentPlugins
-          ? await run_context.agentPlugins.systemBlocks()
+          ? await run_context.agentPlugins.systemBlocks(run_context)
           : await this.getPluginSystemBlocks(),
     });
   }

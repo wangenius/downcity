@@ -3,11 +3,11 @@
  *
  * 关键点（中文）
  * - chat 语义（chatKey 与 sessionId 映射）统一收口在本模块
- * - 通过 SessionRunScope（ALS）读取当前请求上下文
+ * - Session 运行上下文由 action 入口显式传入
  */
 
 import type { AgentContext } from "@downcity/agent";
-import { getSessionRunContext } from "@downcity/agent";
+import type { PluginRunContext } from "@downcity/agent";
 import {
   sendActionByChatKey,
   sendTextByChatKey,
@@ -51,15 +51,16 @@ function readEnvNumber(name: string): number | undefined {
  *
  * 优先级（中文）
  * 1) 显式参数
- * 2) SessionRunScope（ALS）
+ * 2) 显式 PluginRunContext
  * 3) 环境变量回退
  */
 export function resolveChatSessionSnapshot(input?: {
   sessionId?: string;
   chatKey?: string;
   context?: AgentContext;
+  run_context?: PluginRunContext;
 }): ChatSessionSnapshot {
-  const run_context = getSessionRunContext();
+  const run_context = input?.run_context;
 
   const explicitSessionId = String(input?.sessionId || "").trim();
   const explicitChatKey = String(input?.chatKey || "").trim();
@@ -127,11 +128,13 @@ export function resolveSessionId(input?: {
   sessionId?: string;
   chatKey?: string;
   context?: AgentContext;
+  run_context?: PluginRunContext;
 }): string | undefined {
   const snapshot = resolveChatSessionSnapshot({
     sessionId: input?.sessionId,
     chatKey: input?.chatKey,
     context: input?.context,
+    run_context: input?.run_context,
   });
   const key = String(snapshot.sessionId || "").trim();
   return key ? key : undefined;
@@ -144,11 +147,13 @@ export function resolveChatKey(input?: {
   chatKey?: string;
   sessionId?: string;
   context?: AgentContext;
+  run_context?: PluginRunContext;
 }): string | undefined {
   const snapshot = resolveChatSessionSnapshot({
     chatKey: input?.chatKey,
     sessionId: input?.sessionId,
     context: input?.context,
+    run_context: input?.run_context,
   });
   const key = String(snapshot.chatKey || "").trim();
   return key ? key : undefined;
@@ -159,7 +164,7 @@ export function resolveChatKey(input?: {
  *
  * 关键点（中文）
  * - 只有显式 reply 且未手动传入 messageId 时才尝试补全。
- * - 仅在目标 chatKey 与当前请求上下文一致时，才复用 `DC_CTX_MESSAGE_ID` / ALS 快照。
+ * - 仅在目标 chatKey 与当前显式请求上下文一致时，才复用 `DC_CTX_MESSAGE_ID`。
  * - 这样可把一次 run 固定到触发它的那条消息，避免处理中被后续新消息覆盖。
  */
 function resolveReplyMessageIdForChatSend(params: {
@@ -167,6 +172,7 @@ function resolveReplyMessageIdForChatSend(params: {
   context: AgentContext;
   replyToMessage: boolean;
   explicitMessageId?: string;
+  run_context?: PluginRunContext;
 }): string | undefined {
   const explicitMessageId =
     typeof params.explicitMessageId === "string" && params.explicitMessageId.trim()
@@ -177,6 +183,7 @@ function resolveReplyMessageIdForChatSend(params: {
 
   const snapshot = resolveChatSessionSnapshot({
     context: params.context,
+    run_context: params.run_context,
   });
   const snapshotChatKey = String(snapshot.chatKey || "").trim();
   const snapshotMessageId = String(snapshot.messageId || "").trim();
@@ -274,6 +281,7 @@ export async function sendChatTextByChatKey(params: {
   nonBlockingDelay?: boolean;
   replyToMessage?: boolean;
   messageId?: string;
+  run_context?: PluginRunContext;
 }): Promise<ChatSendResponse> {
   const chatKey = String(params.chatKey || "").trim();
   const text = normalizeChatSendText(String(params.text ?? ""));
@@ -305,6 +313,7 @@ export async function sendChatTextByChatKey(params: {
     chatKey,
     replyToMessage,
     explicitMessageId: params.messageId,
+    run_context: params.run_context,
   });
   const targetWaitMs = resolveTargetWaitMs({ delayMs, sendAtMs });
   if (params.nonBlockingDelay === true && targetWaitMs > 0) {
@@ -446,11 +455,13 @@ export async function deleteChatByChatKey(params: {
   context: AgentContext;
   chatKey?: string;
   sessionId?: string;
+  run_context?: PluginRunContext;
 }): Promise<ChatDeleteResponse> {
   const chatKey = resolveChatKey({
     context: params.context,
     chatKey: params.chatKey,
     sessionId: params.sessionId,
+    run_context: params.run_context,
   });
   const sessionId = String(chatKey || "").trim();
   if (!sessionId) {

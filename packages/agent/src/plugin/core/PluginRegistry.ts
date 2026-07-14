@@ -27,6 +27,7 @@ import type {
   PluginRuntimeRecord,
   PluginSnapshot,
 } from "@/types/plugin/PluginState.js";
+import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 
 type ContextResolver = () => AgentContext;
 
@@ -515,6 +516,7 @@ export class PluginRegistry implements AgentPlugins {
     plugin: string;
     action: string;
     payload?: JsonValue;
+    run_context?: SessionRunContext;
   }): Promise<PluginActionResult<JsonValue>> {
     return await this.run_action_from_records(this.records, params);
   }
@@ -528,6 +530,7 @@ export class PluginRegistry implements AgentPlugins {
       plugin: string;
       action: string;
       payload?: JsonValue;
+      run_context?: SessionRunContext;
     },
   ): Promise<PluginActionResult<JsonValue>> {
     const key = normalize_plugin_name(params.plugin);
@@ -581,6 +584,7 @@ export class PluginRegistry implements AgentPlugins {
         input: parsed_payload.input,
         pluginName: record.plugin.name,
         actionName,
+        ...(params.run_context ? { run_context: params.run_context } : {}),
       });
       return result;
     } catch (error) {
@@ -595,8 +599,10 @@ export class PluginRegistry implements AgentPlugins {
   /**
    * 读取当前生效的 plugin system blocks。
    */
-  async systemBlocks(): Promise<AgentSessionSystemBlock[]> {
-    return await this.system_blocks_from_records(this.records);
+  async systemBlocks(
+    run_context?: SessionRunContext,
+  ): Promise<AgentSessionSystemBlock[]> {
+    return await this.system_blocks_from_records(this.records, run_context);
   }
 
   /**
@@ -604,6 +610,7 @@ export class PluginRegistry implements AgentPlugins {
    */
   private async system_blocks_from_records(
     records: ReadonlyMap<string, PluginRuntimeRecord>,
+    run_context?: SessionRunContext,
   ): Promise<AgentSessionSystemBlock[]> {
     const context = this.contextResolver();
     const out: AgentSessionSystemBlock[] = [];
@@ -616,7 +623,9 @@ export class PluginRegistry implements AgentPlugins {
           const availability = await plugin.availability(context);
           if (!availability.available) continue;
         }
-        const text = String(await plugin.system(context)).trim();
+        const text = String(
+          await plugin.system(context, run_context),
+        ).trim();
         if (!text) continue;
         out.push({
           source: "plugin",
@@ -639,8 +648,8 @@ export class PluginRegistry implements AgentPlugins {
       read: (params) => this.read_from_records(records, params),
       runAction: async (params) =>
         await this.run_action_from_records(records, params),
-      systemBlocks: async () =>
-        await this.system_blocks_from_records(records),
+      systemBlocks: async (run_context) =>
+        await this.system_blocks_from_records(records, run_context),
       acquire: () => this.acquire_execution_view(records),
     };
   }
@@ -669,8 +678,8 @@ export class PluginRegistry implements AgentPlugins {
       read: (params) => this.read_from_records(leased_records, params),
       runAction: async (params) =>
         await this.run_action_from_records(leased_records, params),
-      systemBlocks: async () =>
-        await this.system_blocks_from_records(leased_records),
+      systemBlocks: async (run_context) =>
+        await this.system_blocks_from_records(leased_records, run_context),
       release: async () => {
         if (released) return;
         released = true;

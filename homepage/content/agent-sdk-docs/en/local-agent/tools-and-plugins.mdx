@@ -65,7 +65,7 @@ const agent = new Agent({
 });
 ```
 
-Registered plugin actions can be called through `agent.plugins.runAction(...)`, and plugin `system(context)` text is injected into session prompts.
+Registered plugin actions can be called through `agent.plugins.runAction(...)`, and plugin `system(context, run_context)` text is injected into session prompts.
 
 Each `Agent` has its own plugin registry and its own `plugin_read` / `plugin_call` tool instances. If one process creates and caches multiple Agents, a session's `plugin_call` only reaches the registry for the Agent that owns that session.
 
@@ -109,9 +109,12 @@ const demo_plugin = createPlugin({
           payload: { text: "hello" },
         },
       ],
-      execute: async ({ input }) => ({
+      execute: async ({ input, run_context }) => ({
         success: true,
-        data: { text: input.text },
+        data: {
+          text: input.text,
+          session_id: run_context?.sessionId,
+        },
         message: "echoed",
       }),
     }),
@@ -125,7 +128,7 @@ const agent = new Agent({
 });
 ```
 
-The `zod` schema handles runtime validation. `json_schema` and `examples` are returned by `plugin_read` for the model or UI. Existing `class extends BasePlugin` plugins still work, and can gradually move individual actions to `createAction(...)`.
+The `zod` schema handles runtime validation. `json_schema` and `examples` are returned by `plugin_read` for the model or UI. `run_context` is present when the action runs through a session tool and can be absent for direct CLI, HTTP, or scheduler calls. Use `run_context.agentEnv` for the effective env committed at the current session step; `context.env` is the Agent's configured baseline. Existing `class extends BasePlugin` plugins still work, and can gradually move individual actions to `createAction(...)`.
 
 ## ChatPlugin
 

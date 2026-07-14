@@ -19,11 +19,24 @@ import {
 import { validateChatSendCommand } from "@/tool/ShellToolFormatting.js";
 import type {
   ShellToolAction,
+  ShellToolExecutionContext,
+  ShellToolRunContext,
   ShellToolRunner,
   ShellToolSet,
 } from "@/types/ShellRuntime.js";
 
 type JsonObject = Record<string, unknown>;
+
+/**
+ * 从 AI SDK tool 显式上下文中读取 Shell 运行快照。
+ */
+function resolve_shell_run_context(value: unknown): ShellToolRunContext {
+  if (!value || typeof value !== "object") return {};
+  const context = value as Partial<ShellToolExecutionContext>;
+  const run_context = context.shell_run_context;
+  if (!run_context || typeof run_context !== "object") return {};
+  return run_context;
+}
 
 function flattenShellActionResponse(params: {
   /**
@@ -190,8 +203,8 @@ function formatToolError(
  * 创建 shell tools。
  *
  * 关键点（中文）
- * - 每个 tool.execute 都会通过 runner.getRunContext() 拿到显式 session/turn 上下文，
- *   并随 action 请求一起传给 Shell 内部，避免依赖 AsyncLocalStorage。
+ * - 每个 tool.execute 从 AI SDK `experimental_context` 读取显式上下文。
+ * - session、turn 与 env 随 action 请求传入 Shell，不依赖异步全局状态。
  */
 export function createShellTools(runner: ShellToolRunner): ShellToolSet {
   const session_output_cursors = new Map<string, number>();
@@ -208,15 +221,16 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
   function run_action_with_context(
     action: ShellToolAction,
     payload: JsonObject,
-    toolCallId?: string,
+    options: ToolExecutionOptions,
   ): Promise<ShellActionResponse> {
-    const run_context = runner.getRunContext?.() || null;
+    const run_context = resolve_shell_run_context(options.experimental_context);
     return runner.run_action({
       action,
       payload,
-      ownerContextId: run_context?.ownerContextId,
-      turnId: run_context?.turnId,
-      toolCallId,
+      ownerContextId: run_context.ownerContextId,
+      turnId: run_context.turnId,
+      env: run_context.env,
+      toolCallId: options.toolCallId,
     });
   }
 
@@ -261,7 +275,7 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
             sandbox,
             ...(reason ? { reason } : {}),
           },
-          options.toolCallId,
+          options,
         );
         return flattenShellExecResponse({ response, started_at });
       } catch (error) {
@@ -310,7 +324,7 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
               sandbox: input.sandbox || "safe",
               ...(input.reason ? { reason: input.reason } : {}),
             },
-            options.toolCallId,
+            options,
           );
           remember_output_cursor(response);
           return flattenShellActionResponse({ response, started_at });
@@ -325,7 +339,7 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
               chars: input.input ?? "",
               ...(input.reason ? { reason: input.reason } : {}),
             },
-            options.toolCallId,
+            options,
           );
           const shell = response.shell;
           if (!shell) return flattenShellActionResponse({ response, started_at });
@@ -340,7 +354,7 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
                 ? { maxOutputTokens: input.max_output_tokens }
                 : {}),
             },
-            options.toolCallId,
+            options,
           );
           remember_output_cursor(waited);
           return flattenShellActionResponse({ response: waited, started_at });
@@ -359,7 +373,7 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
                 ? { maxOutputTokens: input.max_output_tokens }
                 : {}),
             },
-            options.toolCallId,
+            options,
           );
           remember_output_cursor(response);
           return flattenShellActionResponse({ response, started_at });
@@ -370,7 +384,7 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
             {
               includeCompleted: input.include_completed !== false,
             },
-            options.toolCallId,
+            options,
           );
           return flattenShellListResponse({ response, started_at });
         }
@@ -381,7 +395,7 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
               shellId: String(input.shell_id || "").trim(),
               force: input.force === true,
             },
-            options.toolCallId,
+            options,
           );
           if (input.shell_id) session_output_cursors.delete(input.shell_id);
           return flattenShellActionResponse({ response, started_at });

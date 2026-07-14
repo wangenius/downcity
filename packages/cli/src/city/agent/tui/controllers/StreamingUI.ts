@@ -61,6 +61,7 @@ export class StreamingUIController {
    */
   start_turn(): void {
     this.active_turn_id = "";
+    this.tool_call_ids.clear();
     this.on_streaming_text_end();
     this.assistant_draft = "";
     this.pending_assistant_flush = false;
@@ -108,7 +109,14 @@ export class StreamingUIController {
       this.add_tool_call(
         part.tool_name,
         part.tool_call_id,
-        part.input || {},
+        part.input,
+      );
+    } else if (part.input !== undefined) {
+      // 关键点（中文）：input-start 只创建占位卡片，ready/approval 事件负责原位补全输入。
+      this.message_list.update_tool_input(
+        part.tool_call_id,
+        part.tool_name,
+        part.input,
       );
     }
     if (part.state === "approval-required" && part.approval_id) {

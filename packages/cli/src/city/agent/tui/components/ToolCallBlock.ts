@@ -58,6 +58,18 @@ export class ToolCallBlockComponent implements Component {
   }
 
   /**
+   * 补全流式 tool 调用的名称与输入。
+   *
+   * @param tool_name tool 名称。
+   * @param args 已完成解析的 tool 输入。
+   */
+  update_input(tool_name: string, args: unknown): void {
+    if (this.entry.kind !== "tool-call") return;
+    this.entry.tool_name = tool_name;
+    this.entry.args = args;
+  }
+
+  /**
    * 切换展开/折叠状态。
    */
   toggle(): void {
@@ -258,7 +270,10 @@ export class ToolCallBlockComponent implements Component {
   }
 
   private format_json_args(args: unknown): string[] {
-    if (args === null || args === undefined) {
+    if (args === undefined) {
+      return ["preparing arguments..."];
+    }
+    if (args === null) {
       return ["no arguments"];
     }
     if (typeof args === "object" && !Array.isArray(args)) {

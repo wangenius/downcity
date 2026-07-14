@@ -98,6 +98,91 @@ test("角色消息和工具执行块保持稳定层级且不超过可用宽度",
   assert.ok(narrow_tool_lines.find((line) => line.startsWith("┌"))?.endsWith("┐"));
 });
 
+test("tool 输入从流式占位更新为完整参数且不重复创建卡片", () => {
+  const message_list = new MessageListComponent({
+    get_viewport_height: () => 30,
+  });
+  const renderer = new PiTuiChatRenderer(message_list, () => {});
+  renderer.start_turn();
+  renderer.attach_turn_id("turn-streaming-input");
+
+  const base_event = {
+    message_id: "assistant-streaming-input",
+    session_id: "session-1",
+    turn_id: "turn-streaming-input",
+    created_at: 1,
+    variant: "part",
+    type: "tool",
+    part_id: "tool:call-streaming-input",
+  };
+  renderer.render_event({
+    ...base_event,
+    mutation_id: "mutation-input-start",
+    revision: 1,
+    part: {
+      part_id: "tool:call-streaming-input",
+      type: "tool",
+      tool_call_id: "call-streaming-input",
+      tool_name: "shell_exec",
+      state: "input-streaming",
+      input_text: "",
+    },
+  });
+
+  const preparing = plain(message_list.render(80)).join("\n");
+  assert.match(preparing, /preparing arguments\.\.\./);
+  assert.doesNotMatch(preparing, /no arguments/);
+
+  renderer.render_event({
+    ...base_event,
+    mutation_id: "mutation-input-ready",
+    revision: 2,
+    part: {
+      part_id: "tool:call-streaming-input",
+      type: "tool",
+      tool_call_id: "call-streaming-input",
+      tool_name: "shell_exec",
+      state: "ready",
+      input: {
+        cmd: "ls -la ~/Desktop",
+        sandbox: "unrestricted",
+        reason: "Inspect the requested desktop files",
+      },
+    },
+  });
+
+  const ready = plain(message_list.render(80)).join("\n");
+  assert.equal((ready.match(/Tool · shell_exec/g) || []).length, 1);
+  assert.match(ready, /cmd: ls -la ~\/Desktop/);
+  assert.match(ready, /sandbox: unrestricted/);
+  assert.match(ready, /reason: Inspect the requested desktop files/);
+  assert.doesNotMatch(ready, /preparing arguments/);
+
+  renderer.render_event({
+    ...base_event,
+    mutation_id: "mutation-approval-required",
+    revision: 3,
+    part: {
+      part_id: "tool:call-streaming-input",
+      type: "tool",
+      tool_call_id: "call-streaming-input",
+      tool_name: "shell_exec",
+      state: "approval-required",
+      approval_id: "approval-streaming-input",
+      input: {
+        cmd: "ls -la ~/Desktop",
+        sandbox: "unrestricted",
+        reason: "Inspect the requested desktop files",
+      },
+    },
+  });
+
+  const approval_required = plain(message_list.render(80)).join("\n");
+  assert.equal((approval_required.match(/Tool · shell_exec/g) || []).length, 1);
+  assert.match(approval_required, /approval required · approval-streaming-input/);
+  assert.match(approval_required, /cmd: ls -la ~\/Desktop/);
+});
+
 test("Header 与 Footer 在宽屏和窄屏下保持上下文与操作层级", () => {
   const app_state = {
     agent_id: "demo",

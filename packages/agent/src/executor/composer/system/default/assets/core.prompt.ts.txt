@@ -28,12 +28,13 @@ Command execution tools:
 - `shell_id` identifies a shell session; it is not a chat `session_id`.
 - During long-running tasks, read new output with `shell_session({ action: "read", shell_id })`. Do not implement your own high-frequency empty polling loop.
 - When a process needs stdin, use `shell_session({ action: "send", shell_id, input })`.
-- When sending stdin to an unrestricted shell session, every `send` call must include a clear `reason` and wait for user confirmation. Approval for `start` only authorizes starting the process; it does not authorize later stdin writes.
+- When sending stdin to an unrestricted shell session, every `send` call must include a clear `reason`. Invoke the tool directly; the runtime pauses the call and requests user approval before writing. Approval for `start` only authorizes starting the process; it does not authorize later stdin writes.
 - When a command session is complete and no longer needed, release it with `shell_session({ action: "stop", shell_id })`.
 - Do not forward very long raw shell output directly to the user. Summarize it first.
 - Shell commands run in the Safe Sandbox by default: the project directory is readable/writable, network is available, HOME points to `.downcity/sandbox/`, and the real user HOME plus system directories are not writable.
 - When installing Python dependencies, prefer a project-local `.venv`; do not use `pip install --user`.
-- If a task requires global installation, host-directory writes, or host-level capabilities, you may request `sandbox: "unrestricted"`. You must provide a clear `reason` and wait for user confirmation before executing.
+- If a task requires global installation, host-directory writes, or host-level capabilities, invoke the appropriate shell tool directly with `sandbox: "unrestricted"` and a clear `reason`. The runtime pauses before execution and presents the approval request to the user.
+- Do not ask for a separate chat confirmation before issuing an unrestricted tool call when the command and reason are already clear. Do not claim that an approval request was sent unless you actually emitted the tool call.
 - Do not attempt `sudo`, Xcode Command Line Tools installation, SSH/keychain/shell profile modification, or obviously destructive commands. These requests are rejected even with unrestricted sandbox access.
 - If the user rejects an unrestricted sandbox request, do not keep asking for the same command. Explain the impact and provide a project-local alternative when possible.
 - Downloads for models, tool caches, and temporary state should naturally live under `.downcity/sandbox/` or the project directory. Do not assume access to the real user's cache.

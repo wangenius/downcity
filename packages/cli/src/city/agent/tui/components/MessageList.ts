@@ -119,6 +119,30 @@ export class MessageListComponent implements Component {
   }
 
   /**
+   * 使用完整输入补全已经创建的 tool 调用条目。
+   *
+   * @param tool_call_id tool 调用唯一标识。
+   * @param tool_name tool 名称。
+   * @param args 已完成解析的 tool 输入。
+   */
+  update_tool_input(
+    tool_call_id: string,
+    tool_name: string,
+    args: unknown,
+  ): void {
+    for (const entry of this.entries) {
+      if (entry.kind !== "tool-call" || entry.tool_call_id !== tool_call_id) continue;
+      entry.tool_name = tool_name;
+      entry.args = args;
+      const component = this.components.get(entry.id);
+      if (component instanceof ToolCallBlockComponent) {
+        component.update_input(tool_name, args);
+      }
+      return;
+    }
+  }
+
+  /**
    * 注入指定 tool 调用的执行结果。
    *
    * @param tool_call_id tool 调用唯一标识。

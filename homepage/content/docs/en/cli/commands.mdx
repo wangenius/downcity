@@ -62,7 +62,7 @@ The interactive Agent Chat header shows the current session, model, and executio
 
 Scroll message history with the mouse wheel, `Up` / `Down` while the editor is empty, or `PageUp` / `PageDown`. Press `Ctrl+L` to return to the latest message. Tool executions are collapsed by default; `Ctrl+O` expands or collapses their arguments and results together.
 
-When an unrestricted shell operation needs approval, an inline panel above the editor shows its command, working directory, and reason. Choose Approve or Deny; `Esc` / `Ctrl+C` safely acts as Deny. If the remote decision fails, the request is retained and shown again instead of leaving the current turn without an approval path.
+When an unrestricted shell operation needs approval, the Agent issues the tool request directly and the runtime pauses before execution; no separate chat confirmation is required. An inline panel above the editor shows the command, working directory, and reason. Choose Approve or Deny; `Esc` / `Ctrl+C` safely acts as Deny. If the remote decision fails, the request is retained and shown again instead of leaving the current turn without an approval path.
 
 While the Agent is running, `/approve`, `/deny`, `/help`, and `/quit` remain submittable. Commands that change the session or transcript (`/model`, `/session`, `/new`, and `/clear`) are idle-only, and regular messages cannot start a concurrent turn.
 

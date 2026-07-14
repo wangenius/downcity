@@ -59,7 +59,10 @@ export interface ToolCallEntry extends BaseEntry {
   tool_call_id: string;
   /** tool 名称。 */
   tool_name: string;
-  /** tool 参数（JSON 任意类型）。 */
+  /**
+   * tool 参数（JSON 任意类型）。
+   * `undefined` 表示输入仍在流式生成，完整输入到达后会原位更新。
+   */
   args: unknown;
   /** tool 执行结果；收到 tool-result 事件后填充。 */
   result?: unknown;

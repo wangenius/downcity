@@ -31,6 +31,27 @@ import type {
   SessionSegmentSummary,
 } from "@/types/session/SessionSegment.js";
 
+/** Shell 审批事件等待 Tool 输入完成落盘的最长时间。 */
+const TOOL_INPUT_READY_WAIT_TIMEOUT_MS = 5_000;
+
+/** 已进入当前流式 Assistant 的 Tool Part 定位结果。 */
+type StreamingToolLocation = {
+  /** Tool Part 所属 Assistant Message。 */
+  message_id: string;
+  /** 当前 Tool Part 快照。 */
+  part: SessionAssistantToolPart;
+};
+
+/** 等待指定 Tool Part 进入 ready 状态的回调。 */
+type StreamingToolWaiter = {
+  /** Tool 输入完成后返回稳定定位结果。 */
+  resolve: (tool: StreamingToolLocation) => void;
+  /** 等待超时后拒绝审批事件投影。 */
+  reject: (error: Error) => void;
+  /** 清理有界等待定时器。 */
+  timer: ReturnType<typeof setTimeout>;
+};
+
 /** SessionRecorder 构造参数。 */
 export interface SessionRecorderOptions {
   /** 当前 Session 标识。 */
@@ -121,6 +142,7 @@ export class SessionRecorder {
   private readonly store: JsonlSessionMessageStore;
   private readonly publish: SessionRecorderOptions["publish"];
   private readonly messages_by_id = new Map<string, SessionMessage>();
+  private readonly streaming_tool_waiters = new Map<string, Set<StreamingToolWaiter>>();
   private initialized = false;
 
   constructor(options: SessionRecorderOptions) {
@@ -484,6 +506,9 @@ export class SessionRecorder {
       part_id: next_part.part_id,
       part: next_part,
     } as SessionMutation, message);
+    if (next_part.type === "tool") {
+      this.resolve_streaming_tool_waiters(message_id, next_part);
+    }
   }
 
   /** @internal 收口 Assistant Message。 */
@@ -514,7 +539,8 @@ export class SessionRecorder {
     tool_call_id: string;
     approval_id: string;
   }): Promise<void> {
-    const tool = this.find_streaming_tool(input.tool_call_id);
+    // 关键点（中文）：Shell execute 与 UI chunk 落盘并发，审批事件可能先于 ready Tool Part 到达。
+    const tool = await this.wait_for_ready_streaming_tool(input.tool_call_id);
     await this.update_assistant_part(tool.message_id, {
       ...tool.part,
       state: "approval-required",
@@ -528,7 +554,7 @@ export class SessionRecorder {
     approval_id: string;
     decision: "approved" | "denied" | "expired";
   }): Promise<void> {
-    const tool = this.find_streaming_tool(input.tool_call_id);
+    const tool = this.require_streaming_tool(input.tool_call_id);
     if (tool.part.approval_id && tool.part.approval_id !== input.approval_id) {
       throw new Error(`Tool approval identity mismatch: ${input.approval_id}`);
     }
@@ -563,10 +589,7 @@ export class SessionRecorder {
     return message;
   }
 
-  private find_streaming_tool(tool_call_id: string): {
-    message_id: string;
-    part: SessionAssistantToolPart;
-  } {
+  private find_streaming_tool(tool_call_id: string): StreamingToolLocation | undefined {
     for (const message of this.messages_by_id.values()) {
       if (message.type !== "assistant" || message.status !== "streaming") continue;
       const part = message.parts.find(
@@ -575,7 +598,57 @@ export class SessionRecorder {
       );
       if (part) return { message_id: message.message_id, part };
     }
+    return undefined;
+  }
+
+  /** 读取已存在的流式 Tool Part，不存在时抛出稳定错误。 */
+  private require_streaming_tool(tool_call_id: string): StreamingToolLocation {
+    const tool = this.find_streaming_tool(tool_call_id);
+    if (tool) return tool;
     throw new Error(`Streaming Tool Part not found: ${tool_call_id}`);
+  }
+
+  /**
+   * 等待 AI SDK 把完整 Tool 输入写入当前流式 Assistant。
+   *
+   * 审批事件不能绑定 `input-streaming` 占位，否则后续 ready 快照会覆盖审批状态。
+   */
+  private async wait_for_ready_streaming_tool(
+    tool_call_id: string,
+  ): Promise<StreamingToolLocation> {
+    const current = this.find_streaming_tool(tool_call_id);
+    if (current && current.part.state !== "input-streaming") return current;
+
+    return await new Promise<StreamingToolLocation>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        const waiters = this.streaming_tool_waiters.get(tool_call_id);
+        if (waiters) {
+          waiters.delete(waiter);
+          if (waiters.size === 0) this.streaming_tool_waiters.delete(tool_call_id);
+        }
+        reject(new Error(`Timed out waiting for Tool input: ${tool_call_id}`));
+      }, TOOL_INPUT_READY_WAIT_TIMEOUT_MS);
+      if (typeof timer.unref === "function") timer.unref();
+      const waiter: StreamingToolWaiter = { resolve, reject, timer };
+      const waiters = this.streaming_tool_waiters.get(tool_call_id) || new Set();
+      waiters.add(waiter);
+      this.streaming_tool_waiters.set(tool_call_id, waiters);
+    });
+  }
+
+  /** Tool 输入完成后兑现同一调用的全部审批等待者。 */
+  private resolve_streaming_tool_waiters(
+    message_id: string,
+    part: SessionAssistantToolPart,
+  ): void {
+    if (part.state === "input-streaming") return;
+    const waiters = this.streaming_tool_waiters.get(part.tool_call_id);
+    if (!waiters) return;
+    this.streaming_tool_waiters.delete(part.tool_call_id);
+    for (const waiter of waiters) {
+      clearTimeout(waiter.timer);
+      waiter.resolve({ message_id, part });
+    }
   }
 
   private build_message_mutation(

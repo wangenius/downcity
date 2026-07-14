@@ -167,9 +167,10 @@ const agent = new Agent({
 Key points:
 
 - Shell is not a plugin
-- the Agent mounts shell tools from the Shell instance
+- the Agent mounts `shell_exec`, `shell_session`, `read`, `write`, and `edit` from the Shell instance
 - session and turn context are wired internally
 - approvals belong to a specific Session; use `session.approvals()`, `session.resolve_approval(...)`, and `session.set_approval_mode(...)`
+- file tools are always restricted to the Agent project root and have no unrestricted mode
 
 ## `plugins`
 

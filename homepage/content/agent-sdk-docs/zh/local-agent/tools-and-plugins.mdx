@@ -38,7 +38,34 @@ const agent = new Agent({
 });
 ```
 
-这会挂载 `shell_exec` 和 `shell_session`。`shell_exec` 适合一次性非交互命令；`shell_session` 适合长任务和需要 stdin 的 PTY 交互式会话。
+这会挂载五个模型工具：
+
+- `shell_exec`：一次性非交互命令
+- `shell_session`：长任务和需要 stdin 的 PTY 交互式会话
+- `read`：分页读取文本并识别二进制文件
+- `write`：创建文件或显式原子覆盖完整文件
+- `edit`：通过唯一文本匹配原子编辑单个文件
+
+文件工具只允许访问 Agent 项目根目录。它们没有 unrestricted 模式；项目外操作仍然必须通过 Shell 的 unrestricted 审批流程。
+
+`read` 会返回文件 SHA-256。文件可能被其他进程同时修改时，把该值作为 `edit.expected_sha256` 传入，可以阻止过期编辑覆盖新内容：
+
+```ts
+const current = await agent.tools.read.execute({
+  file_path: "src/index.ts",
+});
+
+await agent.tools.edit.execute({
+  file_path: "src/index.ts",
+  expected_sha256: current.sha256,
+  edits: [
+    {
+      old_text: "const enabled = false;",
+      new_text: "const enabled = true;",
+    },
+  ],
+});
+```
 
 Unrestricted sandbox 请求归属发起工具调用的 Session：
 

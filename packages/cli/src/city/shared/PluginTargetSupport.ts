@@ -16,8 +16,8 @@ import { CliError } from "@/shared/CliError.js";
 import type { ActionScheduleJobStatus } from "@downcity/agent";
 import type { PluginCliBaseOptions } from "@downcity/agent";
 import { checkShellSandboxPreflight } from "@downcity/shell/sandbox/SandboxPreflight.js";
-import { assertProjectExecutionModelReady } from "@/city/runtime/city-model/ExecutionModelBinding.js";
 import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
+import { ensure_project_execution_model_ready } from "@/city/agent/AgentExecutionModelRecovery.js";
 
 /**
  * Agent 启动前预检选项。
@@ -76,8 +76,8 @@ export async function checkAgentPreflight(
     });
   }
 
-  // 关键点（中文）：提前校验 execution binding，避免"启动成功后秒退"。
-  await assertProjectExecutionModelReady(projectRoot);
+  // 关键点（中文）：失配时由 TTY 选择器恢复模型，避免切换 Federation 后只能手工修配置。
+  await ensure_project_execution_model_ready(projectRoot);
 }
 
 /**

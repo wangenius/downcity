@@ -169,9 +169,10 @@ const agent = new Agent({
 关键点：
 
 - Shell 不是 plugin
-- Agent 会从 Shell 实例挂载 shell tools
+- Agent 会从 Shell 实例挂载 `shell_exec`、`shell_session`、`read`、`write` 和 `edit`
 - session 与 turn 上下文由 Agent 内部自动接线
 - 审批归属具体 Session，使用 `session.approvals()`、`session.resolve_approval(...)` 和 `session.set_approval_mode(...)`
+- 文件工具固定限制在 Agent 项目根目录内，不提供 unrestricted 模式
 
 ## `plugins`
 

@@ -43,6 +43,13 @@ import {
   writeShellSession,
 } from "@/session/ShellActionRuntime.js";
 import { createShellTools } from "@/tool/ShellTools.js";
+import { create_file_tools } from "@/tool/FileTools.js";
+import { run_file_action } from "@/file/FileActionRuntime.js";
+import type {
+  FileToolActionRequest,
+  FileToolActionResult,
+  FileToolSet,
+} from "@/types/FileTool.js";
 
 /**
  * Shell 运行时对象。
@@ -61,22 +68,28 @@ export class Shell {
   /**
    * 模型可调用的 shell tools。
    */
-  readonly tools: ShellToolSet;
+  readonly tools: ShellToolSet & FileToolSet;
 
   constructor(options: ShellOptions = {}) {
     this.host_options = { ...options };
     this.state = createShellRuntimeState();
-    this.tools = createShellTools({
-      run_action: async (params) =>
-        await this.run_action(
-          params.action,
-          params.payload,
-          params.ownerContextId,
-          params.turnId,
-          params.env,
-          params.toolCallId,
-        ),
-    });
+    this.tools = {
+      ...createShellTools({
+        run_action: async (params) =>
+          await this.run_action(
+            params.action,
+            params.payload,
+            params.ownerContextId,
+            params.turnId,
+            params.env,
+            params.toolCallId,
+          ),
+      }),
+      ...create_file_tools({
+        run_file_action: async (request) =>
+          await this.run_file_action(request),
+      }),
+    };
   }
 
   /**
@@ -236,6 +249,19 @@ export class Shell {
       default:
         throw new Error(`Unknown shell action: ${String(action)}`);
     }
+  }
+
+  /**
+   * 执行一个项目内结构化文件 action。
+   *
+   * 关键点（中文）
+   * - 文件 action 与 PTY action 使用独立协议，避免 read/write 语义冲突。
+   * - 权限边界只读取 Shell 已配置的 root_path，不提供 unrestricted 模式。
+   */
+  private async run_file_action(
+    request: FileToolActionRequest,
+  ): Promise<FileToolActionResult> {
+    return await run_file_action(this.create_host_context(), request);
   }
 
   /**

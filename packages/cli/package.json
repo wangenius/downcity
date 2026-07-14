@@ -1,6 +1,6 @@
 {
   "name": "downcity",
-  "version": "1.1.325",
+  "version": "1.1.326",
   "type": "module",
   "description": "Downcity CLI — unified City and Agent host management",
   "bin": {
@@ -21,6 +21,7 @@
     "typecheck": "tsc --noEmit",
     "test:tui": "pnpm build && node --test scripts/agent-tui.test.mjs",
     "test:config-storage": "pnpm build && node --test scripts/config-storage.test.mjs",
+    "test:model-recovery": "pnpm build && node --test scripts/agent-model-recovery.test.mjs",
     "prepack": "npm run build && node ../../scripts/rewrite-workspace-dependencies.mjs prepare ./package.json",
     "postpack": "node ../../scripts/rewrite-workspace-dependencies.mjs restore ./package.json"
   },

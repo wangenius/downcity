@@ -18,6 +18,7 @@ import {
   createShellRuntimeState,
   execShellCommand,
   startShellSession,
+  waitShellSession,
 } from "@downcity/shell/session/ShellActionRuntime.js";
 
 async function create_context() {
@@ -41,9 +42,15 @@ async function create_context() {
   };
 }
 
-test("Shell exposes only shell_exec and shell_session model tools", () => {
+test("Shell exposes command and structured file tools", () => {
   const shell = new Shell({ root_path: process.cwd() });
-  assert.deepEqual(Object.keys(shell.tools).sort(), ["shell_exec", "shell_session"]);
+  assert.deepEqual(Object.keys(shell.tools).sort(), [
+    "edit",
+    "read",
+    "shell_exec",
+    "shell_session",
+    "write",
+  ]);
 });
 
 test("shell_session uses PTY while shell_exec stays non-interactive", async () => {
@@ -73,8 +80,16 @@ test("shell_session uses PTY while shell_exec stays non-interactive", async () =
       inlineWaitMs: 200,
       sandbox: "safe",
     });
-    assert.match(session_result.chunk?.output || "", /tty/);
-    assert.equal(session_result.shell?.terminal, true);
+    const observed_result = session_result.chunk?.output
+      ? session_result
+      : await waitShellSession(state, fixture.context, {
+          shellId: session_result.shell.shellId,
+          afterVersion: session_result.shell.version,
+          fromCursor: 0,
+          timeoutMs: 1000,
+        });
+    assert.match(observed_result.chunk?.output || "", /tty/);
+    assert.equal(observed_result.shell?.terminal, true);
   } finally {
     await closeAllShellSessions(state, true);
     await fs.rm(fixture.root_path, { recursive: true, force: true });

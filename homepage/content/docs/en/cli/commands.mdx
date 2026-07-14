@@ -56,6 +56,8 @@ downcity agent chat -m "hello"
 
 `downcity agent model <path> --set <model-id>` updates the Agent default model and takes effect after the next start or restart. Add `--session-id <id>` to override only that running Session, effective from its next turn. Interactive mode first selects the Agent default or a running Session, then selects a Federation model.
 
+When an Agent starts or restarts and its saved default model is missing from the current Federation catalog, an interactive terminal opens the current Federation model picker. The selected model is saved and the original start flow continues. Non-interactive mode never selects implicitly; it returns the available models and an executable `agent model --set` fix command.
+
 The interactive Agent Chat header shows the current session, model, and execution state. After `/model` or `/session`, the picker appears directly below the editor without covering message history. A selected model is stored on the current session and takes effect on the next turn.
 
 Scroll message history with the mouse wheel, `Up` / `Down` while the editor is empty, or `PageUp` / `PageDown`. Press `Ctrl+L` to return to the latest message. Tool executions are collapsed by default; `Ctrl+O` expands or collapses their arguments and results together.

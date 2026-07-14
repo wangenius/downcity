@@ -36,7 +36,34 @@ const agent = new Agent({
 });
 ```
 
-This mounts `shell_exec` and `shell_session`. Use `shell_exec` for one-shot non-interactive commands, and `shell_session` for long-running or stdin-driven interactive PTY sessions.
+This mounts five model tools:
+
+- `shell_exec`: one-shot non-interactive commands
+- `shell_session`: long-running or stdin-driven interactive PTY sessions
+- `read`: paginated text reads with binary-file detection
+- `write`: file creation or explicit atomic full-file replacement
+- `edit`: atomic exact-text edits within one file
+
+File tools can only access the Agent project root. They have no unrestricted mode; operations outside the project still require the Shell unrestricted approval flow.
+
+`read` returns the file SHA-256. When another process may change the file concurrently, pass it as `edit.expected_sha256` to prevent a stale edit from replacing newer content:
+
+```ts
+const current = await agent.tools.read.execute({
+  file_path: "src/index.ts",
+});
+
+await agent.tools.edit.execute({
+  file_path: "src/index.ts",
+  expected_sha256: current.sha256,
+  edits: [
+    {
+      old_text: "const enabled = false;",
+      new_text: "const enabled = true;",
+    },
+  ],
+});
+```
 
 Unrestricted sandbox requests belong to the Session that started the tool call:
 

@@ -18,10 +18,9 @@ import {
 import {
   listManagedAgentEntries,
 } from "@/city/process/registry/CityRegistry.js";
-import { assertProjectExecutionModelReady } from "@/city/runtime/city-model/ExecutionModelBinding.js";
 import { CliError } from "@/shared/CliError.js";
 import { injectAgentContext } from "@/shared/IndexSupport.js";
-import { checkShellSandboxHostPreflight } from "@/city/shared/PluginTargetSupport.js";
+import { checkAgentPreflight } from "@/city/shared/PluginTargetSupport.js";
 
 /**
  * 解析当前仍在运行的 managed agent。
@@ -90,8 +89,7 @@ export async function prepareForegroundAgent(
 }> {
   injectAgentContext(cwd);
   const project_root = resolve(String(cwd || "."));
-  await checkShellSandboxHostPreflight();
-  await assertProjectExecutionModelReady(project_root);
+  await checkAgentPreflight(project_root);
 
   const should_foreground = options.foreground === true;
   if (!should_foreground) {

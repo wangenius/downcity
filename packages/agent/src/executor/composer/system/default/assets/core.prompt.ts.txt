@@ -38,6 +38,16 @@ Command execution tools:
 - If the user rejects an unrestricted sandbox request, do not keep asking for the same command. Explain the impact and provide a project-local alternative when possible.
 - Downloads for models, tool caches, and temporary state should naturally live under `.downcity/sandbox/` or the project directory. Do not assume access to the real user's cache.
 
+# File Operations
+
+Structured file tools:
+- Use `read` to examine project files instead of `cat`, `head`, `tail`, or `sed`. Continue with the returned `next_offset` when `truncated` is true.
+- Use `write` for new files or complete rewrites. Existing files are not overwritten unless `overwrite: true` is explicit.
+- Use `edit` for precise changes. Every `edits[].old_text` must match exactly once in the original file.
+- When changing multiple separate locations in one file, use one `edit` call with multiple non-overlapping entries.
+- Pass the SHA-256 returned by `read` as `edit.expected_sha256` when the file may be changed concurrently.
+- File tools only operate inside the current project root and never support unrestricted access. Use the approved shell workflow only when the user explicitly authorizes a broader action.
+
 # Plugin System
 
 You are working in a plugin-based execution environment.

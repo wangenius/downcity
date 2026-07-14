@@ -23,7 +23,7 @@ pnpm add @downcity/shell
 import { Shell } from "@downcity/shell";
 import { Agent } from "@downcity/agent";
 
-const shell = new Shell({ autoApprove: false });
+const shell = new Shell();
 
 const agent = new Agent({
   id: "demo",
@@ -32,13 +32,7 @@ const agent = new Agent({
 });
 ```
 
-### 构造参数
-
-| 选项 | 类型 | 说明 |
-|------|------|------|
-| `autoApprove` | `boolean` | 是否自动审批命令执行 |
-| `allowedCommands` | `string[]` | 限制允许执行的命令列表 |
-| `workdir` | `string` | 命令执行的工作目录 |
+通过 `Agent` 装配时不需要传入路径；Agent 会把自己的项目根目录和运行时上下文配置给 Shell。独立使用 Shell 时可以传入 `root_path`。
 
 ### 方法
 
@@ -46,9 +40,27 @@ const agent = new Agent({
 
 审批请求会在 `session.subscribe((mutation, reply) => {})` 中表现为 `approval-required` Tool Part。应用层使用 `reply.approval(...)`，或使用 `session.approvals()` 与 `session.resolve_approval(...)`，不直接调用 Shell Runtime 的内部审批方法。
 
+## 模型工具
+
+传给 Agent 的 Shell 会提供：
+
+| 工具 | 用途 |
+|------|------|
+| `shell_exec` | 执行一次性非交互命令 |
+| `shell_session` | 管理长运行或交互式 PTY 命令 |
+| `read` | 按行分页读取文本；二进制文件只返回元数据 |
+| `write` | 创建 UTF-8 文件，或在 `overwrite: true` 时原子覆盖 |
+| `edit` | 使用唯一、非重叠的 `old_text` 精确编辑一个文件 |
+
+`read` 默认最多返回 500 行，单次最多 2,000 行或 256KB。结果中的 `truncated` 和 `next_offset` 用于继续读取。`write` 单次最多写入 1MB，并自动创建父目录。
+
+`edit` 一次最多接受 10 个修改，所有修改都基于原始文件匹配并且全部成功后才写入。可以把 `read.sha256` 传给 `edit.expected_sha256`，防止覆盖并发修改。
+
+三个文件工具都固定限制在项目根目录内，并拒绝符号链接逃逸。它们不会申请 unrestricted 权限。
+
 ## 沙箱
 
-沙箱通过宿主传入的 Agent 配置或 Shell 构造参数配置。沙箱后端会根据宿主平台自动选择：
+Shell 命令默认使用 safe sandbox。沙箱后端会根据宿主平台自动选择：
 
 - `macos-seatbelt` — macOS 沙箱
 - `linux-bubblewrap` — Linux 沙箱
@@ -83,6 +95,6 @@ await agent.tools.shell_exec.execute(
 
 ### ConfigResolver
 
-`SandboxConfigResolver` 从项目环境加载沙箱配置。
+`SandboxConfigResolver` 根据 Agent 项目根目录生成固定的 safe sandbox 边界。
 
 `SandboxPreflight` 执行沙箱前置检查，验证沙箱环境是否就绪。

@@ -1,6 +1,6 @@
 {
   "name": "@downcity/shell",
-  "version": "0.1.99",
+  "version": "0.1.100",
   "type": "module",
   "description": "Downcity Shell — structured file tools, local command execution, sandboxing, shell sessions, and approvals",
   "main": "./bin/index.js",
@@ -72,6 +72,7 @@
   "dependencies": {
     "ai": "^6.0.193",
     "fs-extra": "^11.3.5",
+    "globby": "^11.1.0",
     "node-pty": "1.2.0-beta.14",
     "zod": "^4.4.3"
   },

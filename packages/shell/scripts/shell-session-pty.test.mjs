@@ -42,10 +42,12 @@ async function create_context() {
   };
 }
 
-test("Shell exposes command and structured file tools", () => {
+test("Shell exposes command, file, and search tools", () => {
   const shell = new Shell({ root_path: process.cwd() });
   assert.deepEqual(Object.keys(shell.tools).sort(), [
     "edit",
+    "find",
+    "grep",
     "read",
     "shell_exec",
     "shell_session",

@@ -45,11 +45,18 @@ import {
 import { createShellTools } from "@/tool/ShellTools.js";
 import { create_file_tools } from "@/tool/FileTools.js";
 import { run_file_action } from "@/file/FileActionRuntime.js";
+import { create_search_tools } from "@/tool/SearchTools.js";
+import { run_search_action } from "@/search/SearchActionRuntime.js";
 import type {
   FileToolActionRequest,
   FileToolActionResult,
   FileToolSet,
 } from "@/types/FileTool.js";
+import type {
+  SearchToolActionRequest,
+  SearchToolActionResult,
+  SearchToolSet,
+} from "@/types/SearchTool.js";
 
 /**
  * Shell 运行时对象。
@@ -68,7 +75,7 @@ export class Shell {
   /**
    * 模型可调用的 shell tools。
    */
-  readonly tools: ShellToolSet & FileToolSet;
+  readonly tools: ShellToolSet & FileToolSet & SearchToolSet;
 
   constructor(options: ShellOptions = {}) {
     this.host_options = { ...options };
@@ -88,6 +95,10 @@ export class Shell {
       ...create_file_tools({
         run_file_action: async (request) =>
           await this.run_file_action(request),
+      }),
+      ...create_search_tools({
+        run_search_action: async (request) =>
+          await this.run_search_action(request),
       }),
     };
   }
@@ -262,6 +273,17 @@ export class Shell {
     request: FileToolActionRequest,
   ): Promise<FileToolActionResult> {
     return await run_file_action(this.create_host_context(), request);
+  }
+
+  /**
+   * 执行一个项目内结构化搜索 action。
+   *
+   * 关键点（中文）：搜索与 PTY shell action 使用独立协议，不需要拼接 shell 命令。
+   */
+  private async run_search_action(
+    request: SearchToolActionRequest,
+  ): Promise<SearchToolActionResult> {
+    return await run_search_action(this.create_host_context(), request);
   }
 
   /**

@@ -215,3 +215,11 @@ export interface FileToolSet {
   /** 通过唯一文本匹配原子编辑单个文件。 */
   edit: Tool;
 }
+
+/** 已通过项目根目录约束的文件工具路径。 */
+export interface ResolvedFileToolPath {
+  /** 解析后的目标绝对路径。 */
+  file_path: string;
+  /** 解析后的项目根目录绝对路径。 */
+  root_path: string;
+}

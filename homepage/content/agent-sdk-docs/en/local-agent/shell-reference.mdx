@@ -50,6 +50,8 @@ A Shell mounted on an Agent provides:
 |------|---------|
 | `shell_exec` | Run one non-interactive command |
 | `shell_session` | Manage long-running or interactive PTY commands |
+| `grep` | Search project file contents directly with ripgrep |
+| `find` | Discover project files with POSIX glob patterns |
 | `read` | Read paginated text; binary files return metadata only |
 | `write` | Create UTF-8 files or atomically replace them with `overwrite: true` |
 | `edit` | Apply unique, non-overlapping exact-text replacements to one file |
@@ -58,7 +60,11 @@ A Shell mounted on an Agent provides:
 
 `edit` accepts up to ten operations. Every operation is matched against the original file, and the file is written only when all operations are valid. Pass `read.sha256` as `edit.expected_sha256` to reject stale concurrent edits.
 
-All three file tools are fixed to the project root and reject symbolic-link escapes. They never request unrestricted access.
+`grep` runs `rg --json` directly without a shell. It searches literal text case-insensitively by default; set `literal: false` for regular expressions or `case_sensitive: true` for exact casing. Use `glob` to limit candidate files.
+
+`find` accepts a POSIX glob `pattern`, includes dotfiles, respects `.gitignore`, and does not follow symbolic links. Both search tools return up to 200 results by default and accept `max_results` up to 2,000.
+
+All file and search tools are fixed to the project root and reject symbolic-link escapes. They never request unrestricted access.
 
 ## Sandbox
 
@@ -81,4 +87,4 @@ The SDK's internal sandbox runner handles shell subprocess creation, platform-sp
 
 ## ShellTools
 
-`ShellTools`, `FileTools`, and their schemas provide the AI-ready definitions used by the Agent. You do not normally need to use them directly; they are wired automatically when you pass `shell` to the Agent constructor.
+`ShellTools`, `FileTools`, `SearchTools`, and their schemas provide the AI-ready definitions used by the Agent. You do not normally need to use them directly; they are wired automatically when you pass `shell` to the Agent constructor.

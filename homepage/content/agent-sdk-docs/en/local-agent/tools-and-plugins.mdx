@@ -36,15 +36,17 @@ const agent = new Agent({
 });
 ```
 
-This mounts five model tools:
+This mounts seven model tools:
 
 - `shell_exec`: one-shot non-interactive commands
 - `shell_session`: long-running or stdin-driven interactive PTY sessions
+- `grep`: structured project-content search powered directly by ripgrep
+- `find`: project file discovery with POSIX glob patterns
 - `read`: paginated text reads with binary-file detection
 - `write`: file creation or explicit atomic full-file replacement
 - `edit`: atomic exact-text edits within one file
 
-File tools can only access the Agent project root. They have no unrestricted mode; operations outside the project still require the Shell unrestricted approval flow.
+File and search tools can only access the Agent project root. They have no unrestricted mode; operations outside the project still require the Shell unrestricted approval flow. `grep` and `find` respect ignore files, return at most 200 results by default, and accept `max_results` up to 2,000.
 
 `read` returns the file SHA-256. When another process may change the file concurrently, pass it as `edit.expected_sha256` to prevent a stale edit from replacing newer content:
 

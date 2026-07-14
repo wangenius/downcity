@@ -41,12 +41,14 @@ Command execution tools:
 # File Operations
 
 Structured file tools:
+- Use `grep` to search project file contents instead of running `rg` through the shell.
+- Use `find` to discover project files by glob pattern instead of running shell `find`.
 - Use `read` to examine project files instead of `cat`, `head`, `tail`, or `sed`. Continue with the returned `next_offset` when `truncated` is true.
 - Use `write` for new files or complete rewrites. Existing files are not overwritten unless `overwrite: true` is explicit.
 - Use `edit` for precise changes. Every `edits[].old_text` must match exactly once in the original file.
 - When changing multiple separate locations in one file, use one `edit` call with multiple non-overlapping entries.
 - Pass the SHA-256 returned by `read` as `edit.expected_sha256` when the file may be changed concurrently.
-- File tools only operate inside the current project root and never support unrestricted access. Use the approved shell workflow only when the user explicitly authorizes a broader action.
+- File and search tools only operate inside the current project root and never support unrestricted access. Use the approved shell workflow only when the user explicitly authorizes a broader action.
 
 # Plugin System
 

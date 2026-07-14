@@ -48,6 +48,8 @@ const agent = new Agent({
 |------|------|
 | `shell_exec` | 执行一次性非交互命令 |
 | `shell_session` | 管理长运行或交互式 PTY 命令 |
+| `grep` | 底层直接使用 ripgrep 搜索项目文件内容 |
+| `find` | 使用 POSIX glob 模式发现项目文件 |
 | `read` | 按行分页读取文本；二进制文件只返回元数据 |
 | `write` | 创建 UTF-8 文件，或在 `overwrite: true` 时原子覆盖 |
 | `edit` | 使用唯一、非重叠的 `old_text` 精确编辑一个文件 |
@@ -56,7 +58,11 @@ const agent = new Agent({
 
 `edit` 一次最多接受 10 个修改，所有修改都基于原始文件匹配并且全部成功后才写入。可以把 `read.sha256` 传给 `edit.expected_sha256`，防止覆盖并发修改。
 
-三个文件工具都固定限制在项目根目录内，并拒绝符号链接逃逸。它们不会申请 unrestricted 权限。
+`grep` 不经过 shell，直接执行 `rg --json`。它默认使用不区分大小写的字面量搜索；设为 `literal: false` 可使用正则表达式，设为 `case_sensitive: true` 可区分大小写，`glob` 用于限制候选文件。
+
+`find` 接受 POSIX glob `pattern`，包含 dotfile、遵守 `.gitignore`，且不会跟随符号链接。两个搜索工具默认最多返回 200 项，`max_results` 最大为 2,000。
+
+所有文件和搜索工具都固定限制在项目根目录内，并拒绝符号链接逃逸。它们不会申请 unrestricted 权限。
 
 ## 沙箱
 

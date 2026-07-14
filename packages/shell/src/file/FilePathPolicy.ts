@@ -10,21 +10,16 @@
 import path from "node:path";
 import { lstat, realpath } from "node:fs/promises";
 import { FileToolRuntimeError } from "@/file/FileToolError.js";
-
-/** 已通过项目根目录约束的文件路径。 */
-export interface ResolvedFileToolPath {
-  /** 解析后的目标绝对路径。 */
-  file_path: string;
-  /** 解析后的项目根目录绝对路径。 */
-  root_path: string;
-}
+import type { ResolvedFileToolPath } from "@/types/FileTool.js";
 
 /** 判断目标路径是否等于根目录或位于根目录之下。 */
 function is_path_inside_root(root_path: string, target_path: string): boolean {
   const relative_path = path.relative(root_path, target_path);
   return (
     relative_path === "" ||
-    (!relative_path.startsWith("..") && !path.isAbsolute(relative_path))
+    (relative_path !== ".." &&
+      !relative_path.startsWith(`..${path.sep}`) &&
+      !path.isAbsolute(relative_path))
   );
 }
 
@@ -52,14 +47,16 @@ async function resolve_existing_ancestor(target_path: string): Promise<string> {
   }
 }
 
-/** 解析并校验一个项目内文件路径。 */
-export async function resolve_file_tool_path(params: {
+/** 解析并校验一个项目内文件或搜索路径。 */
+async function resolve_project_tool_path(params: {
   /** Shell 当前绑定的项目根目录。 */
   root_path: string;
   /** 模型传入的相对路径或绝对路径。 */
   file_path: string;
   /** 目标文件不存在时是否仍允许返回路径。 */
   allow_missing: boolean;
+  /** 是否要求目标为普通文件。 */
+  require_file: boolean;
 }): Promise<ResolvedFileToolPath> {
   const raw_root_path = String(params.root_path || "").trim();
   const raw_file_path = String(params.file_path || "").trim();
@@ -100,7 +97,7 @@ export async function resolve_file_tool_path(params: {
         file_path,
       });
     }
-    if (!metadata.isFile()) {
+    if (params.require_file && !metadata.isFile()) {
       throw new FileToolRuntimeError({
         error_code: "not_a_file",
         message: `Expected a regular file: ${file_path}`,
@@ -136,4 +133,30 @@ export async function resolve_file_tool_path(params: {
   }
 
   return { file_path, root_path };
+}
+
+/** 解析并校验一个项目内文件路径。 */
+export async function resolve_file_tool_path(params: {
+  /** Shell 当前绑定的项目根目录。 */
+  root_path: string;
+  /** 模型传入的相对路径或绝对路径。 */
+  file_path: string;
+  /** 目标文件不存在时是否仍允许返回路径。 */
+  allow_missing: boolean;
+}): Promise<ResolvedFileToolPath> {
+  return await resolve_project_tool_path({ ...params, require_file: true });
+}
+
+/** 解析并校验一个项目内搜索路径，允许普通文件或目录。 */
+export async function resolve_search_tool_path(params: {
+  /** Shell 当前绑定的项目根目录。 */
+  root_path: string;
+  /** 模型传入的相对路径或绝对路径。 */
+  file_path: string;
+}): Promise<ResolvedFileToolPath> {
+  return await resolve_project_tool_path({
+    ...params,
+    allow_missing: false,
+    require_file: false,
+  });
 }

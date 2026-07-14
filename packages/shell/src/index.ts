@@ -28,6 +28,7 @@ export type {
 export * from "./types/ShellRuntimeOptions.js";
 export * from "./types/ShellHostContext.js";
 export * from "./types/FileTool.js";
+export * from "./types/SearchTool.js";
 export * from "./Shell.js";
 export * from "./sandbox/types/Sandbox.js";
 export * from "./sandbox/types/SandboxRuntime.js";
@@ -43,3 +44,5 @@ export * from "./tool/ShellTools.js";
 export * from "./tool/ShellToolSchemas.js";
 export * from "./tool/FileTools.js";
 export * from "./tool/FileToolSchemas.js";
+export * from "./tool/SearchTools.js";
+export * from "./tool/SearchToolSchemas.js";

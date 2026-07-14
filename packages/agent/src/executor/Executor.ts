@@ -460,45 +460,43 @@ export class Executor implements SessionExecutor {
     compacted: boolean;
     reason?: string;
   }> {
-    await this.refresh_step_runtime(run_context);
+    let compaction_action_id = "";
     try {
+      await this.refresh_step_runtime(run_context);
       const model = this.resolveModelOrThrow();
       const system = await this.systemComposer.resolve(run_context);
-      let compaction_action_id = "";
       const emit_compaction_action = async (
         action: SessionActionRecordV1,
       ): Promise<void> => {
         if (action.state === "running") compaction_action_id = action.id;
         await this.emitAction(run_context, action);
       };
-      try {
-        const context_window = this.get_model_context_window?.();
-        return await this.compactionComposer.run({
-          historyStore: this.historyStore,
-          model,
-          ...(context_window !== undefined ? { context_window } : {}),
-          system,
-          retryCount: 0,
-          force: true,
-          onAction: emit_compaction_action,
-        });
-      } catch (error) {
-        await this.emitAction(run_context, {
-          type: "action",
-          id:
-            compaction_action_id ||
-            `compacting:${this.sessionId}:failed:${Date.now()}:${generateId()}`,
-          title: "Session records compact failed",
-          description: error instanceof Error ? error.message : String(error),
-          state: "failed",
-          metadata: {
-            v: 1,
-            ts: Date.now(),
-            sessionId: this.sessionId,
-          },
-        });
-        return { compacted: false, reason: "compact_failed" };
-      }
+      const context_window = this.get_model_context_window?.();
+      return await this.compactionComposer.run({
+        historyStore: this.historyStore,
+        model,
+        ...(context_window !== undefined ? { context_window } : {}),
+        system,
+        retryCount: 0,
+        force: true,
+        onAction: emit_compaction_action,
+      });
+    } catch (error) {
+      await this.emitAction(run_context, {
+        type: "action",
+        id:
+          compaction_action_id ||
+          `compacting:${this.sessionId}:failed:${Date.now()}:${generateId()}`,
+        title: "Session records compact failed",
+        description: error instanceof Error ? error.message : String(error),
+        state: "failed",
+        metadata: {
+          v: 1,
+          ts: Date.now(),
+          sessionId: this.sessionId,
+        },
+      });
+      return { compacted: false, reason: "compact_failed" };
     } finally {
       await this.release_step_plugins(run_context);
     }
@@ -622,6 +620,9 @@ export class Executor implements SessionExecutor {
         : {}),
       ...(typeof input?.hasPendingStepInput === "function"
         ? { hasPendingStepInput: input.hasPendingStepInput }
+        : {}),
+      ...(typeof input?.consume_history_reload === "function"
+        ? { consume_history_reload: input.consume_history_reload }
         : {}),
       ...(typeof input?.onAssistantStepCallback === "function"
         ? { onAssistantStepCallback: input.onAssistantStepCallback }

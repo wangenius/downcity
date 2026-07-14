@@ -123,6 +123,11 @@ export class RemoteSession implements RemoteAgentSession {
     return await this.transport.stop(this.id);
   }
 
+  /** 把一次显式历史压缩加入当前远程 Session 的有序输入队列。 */
+  async compact(): Promise<void> {
+    await this.transport.compact(this.id);
+  }
+
   /** 订阅当前 Session 的全部未来 Mutation。 */
   subscribe(subscriber: SessionMutationSubscriber): SessionMutationUnsubscribe {
     this.event_subscriber_count += 1;

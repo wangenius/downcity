@@ -194,7 +194,7 @@ export class CoreEngineRunner {
         tools,
         projectRoot: input.run_context.projectRoot,
       });
-      const persisted_compaction_summary_id = resolve_compaction_summary_id(
+      let persisted_compaction_summary_id = resolve_compaction_summary_id(
         input.execute_input.messages,
       );
 
@@ -247,6 +247,23 @@ export class CoreEngineRunner {
         const step_inputs = await input.resolve_step_inputs();
         system = Array.isArray(step_inputs.system) ? step_inputs.system : [];
         tools = step_inputs.tools;
+        if (input.run_context.consume_history_reload?.()) {
+          const canonical_records = await this.history_store.list_records();
+          await message_state.replace_session_messages(canonical_records, tools);
+          persisted_compaction_summary_id = resolve_compaction_summary_id(
+            canonical_records,
+          );
+          compact_validation_pending = Boolean(
+            persisted_compaction_summary_id &&
+              persisted_compaction_summary_id !==
+                this.validated_compaction_summary_id,
+          );
+          await this.logger.log("info", "[agent] context.history_reloaded", {
+            sessionId: session_id,
+            recordCount: canonical_records.length,
+            compactionSummaryId: persisted_compaction_summary_id || undefined,
+          });
+        }
         if (compact_pending) {
           const previous_message_count = message_state.modelMessages.length;
           message_state.replace_model_messages(

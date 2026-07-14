@@ -28,6 +28,7 @@ async function reserve_port() {
 
 function create_fake_agent() {
   const subscribers = new Set();
+  let compact_count = 0;
   const info = {
     agentId: "http-test-agent",
     sessionId: "http-test-session",
@@ -105,6 +106,9 @@ function create_fake_agent() {
     async stop() {
       return { stopped: false, cancelledQueuedPrompts: 0, reason: "idle" };
     },
+    async compact() {
+      compact_count += 1;
+    },
     async messages() {
       return { items: [], total: 0, source: "active", has_more: false };
     },
@@ -137,6 +141,9 @@ function create_fake_agent() {
     },
   };
   return {
+    read_compact_count() {
+      return compact_count;
+    },
     sessions: {
       async list() {
         return { items: [info], has_more: false };
@@ -167,7 +174,8 @@ function create_fake_agent() {
 
 test("AgentHTTP resolves RemoteAgent turns and exposes plugin actions", async () => {
   const port = await reserve_port();
-  const http = new AgentHTTP(create_fake_agent());
+  const fake_agent = create_fake_agent();
+  const http = new AgentHTTP(fake_agent);
   const remote_agent = new RemoteAgent({ url: `http://127.0.0.1:${port}` });
   try {
     await http.server().listen({ host: "127.0.0.1", port });
@@ -203,6 +211,8 @@ test("AgentHTTP resolves RemoteAgent turns and exposes plugin actions", async ()
       }),
       { success: true, approval_id: "approval-http-test", decision: "approved" },
     );
+    await session.compact();
+    assert.equal(fake_agent.read_compact_count(), 1);
 
     const action = await remote_agent.runPluginAction({
       plugin: "demo",

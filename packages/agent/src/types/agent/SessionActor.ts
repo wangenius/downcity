@@ -79,6 +79,15 @@ export interface AgentSessionActor {
   /** 停止当前 turn，并取消尚未被吸收的排队 prompt。 */
   stop(): Promise<AgentSessionStopResult>;
 
+  /**
+   * 把一次显式历史压缩加入当前 Session 的有序输入队列。
+   *
+   * 关键点（中文）
+   * - 返回表示 command 已成功入队，不表示压缩已经执行完成。
+   * - 实际结果通过 Session action message 对外观测。
+   */
+  compact(): Promise<void>;
+
   /** 订阅当前 session 的未来事件。 */
   subscribe(
     subscriber: SessionMutationSubscriber,

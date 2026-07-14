@@ -263,6 +263,13 @@ export class Session implements AgentSession {
   }
 
   /**
+   * 把一次显式历史压缩加入当前 Session 的有序输入队列。
+   */
+  async compact(): Promise<void> {
+    await this.turnService.compact();
+  }
+
+  /**
    * 把 Agent configured state command 加入当前 Session 的统一输入队列。
    */
   enqueue_agent_command(command: AgentSessionCommand): void {

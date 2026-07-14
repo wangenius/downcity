@@ -62,6 +62,8 @@ export type RemoteSessionTransport = {
   ): Promise<{ id: string }>;
   /** 停止当前 session turn，并取消未吸收队列。 */
   stop(session_id: string): Promise<AgentSessionStopResult>;
+  /** 把一次显式历史压缩加入远程 Session 的有序输入队列。 */
+  compact(session_id: string): Promise<void>;
   /** 订阅 session 事件。 */
   subscribe(params: {
     session_id: string;

@@ -102,3 +102,21 @@ test("RemoteSession switches models by stable id without local model instances",
     /does not accept a local model instance/,
   );
 });
+
+test("RemoteSession queues compact through its transport", async () => {
+  const compacted_session_ids = [];
+  const transport = {
+    async compact(session_id) {
+      compacted_session_ids.push(session_id);
+    },
+  };
+  const session = new RemoteSession(transport, {
+    agentId: "agent_test",
+    sessionId: "session_test",
+    messageCount: 0,
+  });
+
+  await session.compact();
+
+  assert.deepEqual(compacted_session_ids, ["session_test"]);
+});

@@ -193,6 +193,13 @@ export class SessionPromptRuntime {
   }
 
   /**
+   * 判断是否存在等待在下一 Session step 检查点执行的 command。
+   */
+  has_pending_command(): boolean {
+    return this.queue.some((item) => item.type === "command");
+  }
+
+  /**
    * 返回当前 actor prompt 调度器是否仍处于活跃态。
    *
    * 说明（中文）

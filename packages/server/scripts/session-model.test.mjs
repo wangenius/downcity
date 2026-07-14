@@ -1,9 +1,10 @@
 /**
- * @file 验证 RemoteAgent 通过 RPC 热切换 Session 模型。
+ * @file 验证 RemoteAgent 通过 RPC 控制 Session。
  *
  * 关键点（中文）
  * - 远程只传稳定 modelId，运行时模型由 Agent 宿主 resolver 创建。
  * - 切换结果立即反映在同一个 Session，不重启 AgentRPC。
+ * - compact 只验证 command 被远程 Session 接受，不应自行启动 turn。
  */
 
 import assert from "node:assert/strict";
@@ -29,7 +30,7 @@ async function reserve_port() {
   return port;
 }
 
-test("RPC switches a running Session model without restarting Agent", async () => {
+test("RPC updates model and queues compact without restarting Agent", async () => {
   const project_root = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-server-session-model-"),
   );
@@ -61,6 +62,8 @@ test("RPC switches a running Session model without restarting Agent", async () =
 
     assert.equal((await session.get_info()).modelId, "session-model");
     assert.equal(session.config.modelId, "session-model");
+
+    await session.compact();
   } finally {
     await remote_agent.close();
     await rpc.close();

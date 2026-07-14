@@ -65,6 +65,12 @@ export async function handleSdkSessionRpcRequest(params: {
       write_success(request.id, { result });
       return true;
     }
+    case "sdk.sessions.compact": {
+      const session = await options.sessions.get(request.params.sessionId);
+      await session.compact();
+      write_success(request.id, { queued: true });
+      return true;
+    }
     case "sdk.sessions.messages": {
       const session = await options.sessions.get(request.params.sessionId);
       const messages = await session.messages(request.params.input);

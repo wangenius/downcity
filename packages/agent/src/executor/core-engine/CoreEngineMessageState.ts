@@ -144,6 +144,25 @@ export class CoreEngineMessageState {
     this.currentModelMessages = Array.isArray(messages) ? [...messages] : [];
   }
 
+  /**
+   * 使用 canonical records 原子替换两份消息基线。
+   *
+   * 关键点（中文）
+   * - 显式 compact 会重写持久化历史，旧的 SessionRecord 与 ModelMessage 必须同时失效。
+   * - tools 使用当前 step 的执行视图，避免配置 command 生效后仍按旧工具解码历史。
+   */
+  async replace_session_messages(
+    messages: SessionRecordV1[],
+    tools: Record<string, Tool>,
+  ): Promise<void> {
+    this.sessionMessages = Array.isArray(messages) ? [...messages] : [];
+    this.currentModelMessages = await toModelMessages(
+      this.sessionMessages,
+      tools,
+      this.projectRoot,
+    );
+  }
+
   private async appendSessionMessagesAsModelMessages(
     messages: SessionRecordV1[],
   ): Promise<ModelMessage[]> {

@@ -66,6 +66,15 @@ export interface SessionRunContext {
   hasPendingStepInput?: () => boolean;
 
   /**
+   * 消费一次 canonical history 重载请求。
+   *
+   * 关键点（中文）
+   * - QueueCommand 重写持久化历史后返回 true。
+   * - CoreEngine 必须在下一次 provider 调用前重新读取 records，并且每次请求只能消费一次。
+   */
+  consume_history_reload?: () => boolean;
+
+  /**
    * 当前 Session step 实际使用的 Agent env。
    *
    * 关键点（中文）

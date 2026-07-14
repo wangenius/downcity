@@ -1,0 +1,49 @@
+---
+title: session.compact()
+description: 在本地或远程 Session 中排队执行一次显式历史压缩
+---
+
+# `session.compact()`
+
+`session.compact()` 用于显式请求压缩当前 Session 历史。
+
+```ts
+const unsubscribe = session.subscribe((mutation) => {
+  apply_mutation_to_ui(mutation);
+});
+
+await session.compact();
+await session.prompt({ query: "基于压缩后的历史继续" });
+```
+
+本地 `AgentSession` 与远程 `RemoteAgentSession` 都支持这个方法。
+
+## 队列语义
+
+`await session.compact()` 表示 command 已通过校验并进入 Session 有序输入队列，不表示摘要生成和历史重写已经完成。
+
+- Session 空闲时，command 在下一次 `prompt()` turn 开始前执行
+- turn 运行中时，command 在下一个 Session step 检查点执行
+- 如果当前 turn 在下一个检查点前结束，command 会保留到下一个 turn
+- compact command、配置 command 和 steer prompt 严格保持入队顺序
+- 单独调用 `compact()` 不会创建 turn，也不会主动发起 provider 请求
+
+运行中执行 compact 前，SDK 会先收口当前 Assistant 草稿。canonical history 重写完成后，下一次 provider 调用会重新加载历史，不会继续使用压缩前的内存消息。
+
+## 观察执行结果
+
+压缩过程通过正常的 Session timeline 发布 action message：
+
+- 准备摘要和归档时为 `running`
+- canonical history 替换完成后为 `completed`
+- 模型、composer 或存储操作失败时为 `failed`
+
+如果当前没有可压缩的 active record，Session 会产生一条 completed action，说明不需要压缩。
+
+调用方通过 `subscribe()` 观察这些消息；`compact()` 的返回只表达入队是否成功。
+
+## 自动压缩与显式压缩
+
+Provider 真实 usage 达到上下文阈值时，自动压缩仍会正常运行。`session.compact()` 复用同一个 compaction composer、存储事务和 action message，只是向 Session 队列增加一次显式请求。
+
+Summary、Active 历史和恢复行为见 [元数据与落盘](/zh/agent-sdk-docs/sessions/metadata-and-storage)。

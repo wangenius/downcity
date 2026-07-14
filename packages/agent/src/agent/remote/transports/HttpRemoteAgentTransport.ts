@@ -166,6 +166,21 @@ export class HttpRemoteAgentTransport implements RemoteAgentTransport {
     return payload.result;
   }
 
+  async compact(session_id: string): Promise<void> {
+    const payload = await read_http_json<{
+      success?: boolean;
+      error?: string;
+    }>(`${this.base_url}/api/sdk/sessions/${encodeURIComponent(session_id)}/compact`, {
+      method: "POST",
+      headers: this.headers({
+        "Content-Type": "application/json",
+      }),
+    });
+    if (!payload.success) {
+      throw new Error(String(payload.error || "Remote session compact failed"));
+    }
+  }
+
   async subscribe(params: {
     session_id: string;
     on_ready: () => void;

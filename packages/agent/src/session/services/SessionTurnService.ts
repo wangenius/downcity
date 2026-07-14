@@ -14,6 +14,7 @@ import { isAgentSessionPromptInputEmpty } from "@/types/sdk/AgentSessionPrompt.j
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
+import type { SessionRunResult } from "@/executor/types/SessionRun.js";
 import type {
   SessionRecordV1,
   SessionMessageRecordV1,
@@ -29,6 +30,7 @@ import {
   SessionRecorder,
 } from "@/session/recorder/SessionRecorder.js";
 import { from_ui_assistant_parts } from "@/session/recorder/SessionMessageCodec.js";
+import { generateId } from "@/utils/Id.js";
 
 type SessionTurnServiceOptions = {
   /**
@@ -71,6 +73,8 @@ export class SessionTurnService {
   private readonly event_hub: SessionEventHub;
   private readonly recorder: SessionRecorder;
   private readonly prompt_runtime: SessionPromptRuntime;
+  private active_run_context: SessionRunContext | null = null;
+  private request_active_history_reload: (() => void) | null = null;
 
   constructor(options: SessionTurnServiceOptions) {
     this.session_id = options.session_id;
@@ -145,6 +149,45 @@ export class SessionTurnService {
   }
 
   /**
+   * 把一次显式历史压缩加入当前 Session 的统一输入队列。
+   */
+  async compact(): Promise<void> {
+    await this.state_service.ensure_runnable();
+    const command_id = generateId();
+    this.enqueue_command({
+      type: "command",
+      command_id,
+      scope: "session",
+      execute: async ({ turn_id }) => {
+        const active_run_context = this.active_run_context;
+        const run_context = active_run_context ||
+          this.create_compaction_run_context(turn_id);
+        const result = await this.executor.compact_history(run_context);
+        if (
+          result.compacted &&
+          active_run_context !== null &&
+          active_run_context === this.active_run_context
+        ) {
+          this.request_active_history_reload?.();
+        }
+        await this.state_service.touch_metadata();
+        if (result.compacted) {
+          return;
+        }
+        if (!result.compacted && result.reason === "nothing_to_compact") {
+          await this.state_service.emit_action_event({
+            id: `compacting:${this.session_id}:${command_id}`,
+            title: "Session records already compact",
+            description: "The Session has no active records to compact.",
+            state: "completed",
+            turnId: turn_id,
+          });
+        }
+      },
+    });
+  }
+
+  /**
    * 停止当前 turn，并取消尚未被吸收的排队 prompt。
    */
   async stop(): Promise<AgentSessionStopResult> {
@@ -169,6 +212,7 @@ export class SessionTurnService {
       current: SessionAssistantMessageWriter | null;
     } = { current: null };
     let assistant_segment_index = 0;
+    let history_reload_requested = false;
     const ensure_assistant_writer = async (): Promise<SessionAssistantMessageWriter> => {
       if (assistant_writer_ref.current) return assistant_writer_ref.current;
       assistant_segment_index += 1;
@@ -183,6 +227,13 @@ export class SessionTurnService {
       sessionId: this.session_id,
       projectRoot: this.project_root,
       onStepCallback: async () => {
+        if (
+          this.prompt_runtime.has_pending_command() &&
+          assistant_writer_ref.current
+        ) {
+          await assistant_writer_ref.current.complete();
+          assistant_writer_ref.current = null;
+        }
         const merged = await input.onStepMerge();
         if (merged.length > 0 && assistant_writer_ref.current) {
           await assistant_writer_ref.current.complete();
@@ -191,6 +242,11 @@ export class SessionTurnService {
         return merged;
       },
       hasPendingStepInput: () => this.prompt_runtime.has_pending_prompt(),
+      consume_history_reload: () => {
+        const requested = history_reload_requested;
+        history_reload_requested = false;
+        return requested;
+      },
       onUiMessageChunkCallback: async (chunk) => {
         if (!is_assistant_content_chunk(chunk.type)) return;
         const writer = await ensure_assistant_writer();
@@ -206,10 +262,22 @@ export class SessionTurnService {
     };
     const query = input.promptInput.query;
     const executor_query = typeof query === "string" ? query : extractTextFromParts(query);
-    const result = await this.executor.run({
-      query: executor_query,
-      runContext: run_context,
-    });
+    this.active_run_context = run_context;
+    this.request_active_history_reload = () => {
+      history_reload_requested = true;
+    };
+    let result: SessionRunResult;
+    try {
+      result = await this.executor.run({
+        query: executor_query,
+        runContext: run_context,
+      });
+    } finally {
+      if (this.active_run_context === run_context) {
+        this.active_run_context = null;
+        this.request_active_history_reload = null;
+      }
+    }
     const final_assistant_parts = result.assistantMessage
       ? from_ui_assistant_parts(result.assistantMessage.parts)
       : [];
@@ -265,6 +333,23 @@ export class SessionTurnService {
         ? { assistantMessage: result.assistantMessage }
         : {}),
       ...(result.error ? { error: result.error } : {}),
+    };
+  }
+
+  /**
+   * 为 turn 开始前执行的 compact command 构造最小运行上下文。
+   */
+  private create_compaction_run_context(turn_id: string): SessionRunContext {
+    return {
+      turnId: turn_id,
+      sessionId: this.session_id,
+      projectRoot: this.project_root,
+      onActionCallback: async (event) => {
+        await this.state_service.persist_action_event(event);
+      },
+      injectedUserMessages: [],
+      deferredPersistedUserMessages: [],
+      pendingAssistantFileParts: [],
     };
   }
 }

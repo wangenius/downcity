@@ -177,6 +177,67 @@ test("新的持久化 Summary 只按 50% 水位验收一次", async () => {
   assert.equal(second.compact_required, undefined);
 });
 
+test("显式 compact 后在下一次 provider 调用前重载 canonical history", async () => {
+  const provider_prompts = [];
+  const compacted_records = [{
+    id: "summary-reloaded",
+    role: "assistant",
+    metadata: {
+      v: 1,
+      ts: 2,
+      sessionId: "compact-runner-session",
+      source: "compact",
+      kind: "summary",
+    },
+    parts: [{ type: "text", text: "compacted checkpoint" }],
+  }];
+  const context_composer = new LocalSessionContextComposer({
+    sessionId: "compact-runner-session",
+    getTools: () => ({}),
+  });
+  const runner = new CoreEngineRunner({
+    history_store: {
+      sessionId: "compact-runner-session",
+      list_records: async () => compacted_records,
+    },
+    context_composer,
+    logger: { log: async () => {} },
+    should_compact_on_error: () => false,
+  });
+  let reload_requested = true;
+  const model = new MockLanguageModelV3({
+    modelId: "history-reload-model",
+    doStream: async (options) => {
+      provider_prompts.push(JSON.stringify(options.prompt));
+      return create_stream_text_result("done", 20, 5);
+    },
+  });
+  const input = create_run_input(model, [{
+    id: "old-user",
+    role: "user",
+    metadata: {
+      v: 1,
+      ts: 1,
+      sessionId: "compact-runner-session",
+      source: "ingress",
+      kind: "normal",
+    },
+    parts: [{ type: "text", text: "history before compact" }],
+  }]);
+  input.run_context.consume_history_reload = () => {
+    const requested = reload_requested;
+    reload_requested = false;
+    return requested;
+  };
+
+  const result = await runner.run(input);
+
+  assert.equal(result.success, true);
+  assert.equal(provider_prompts.length, 1);
+  assert.match(provider_prompts[0], /compacted checkpoint/);
+  assert.doesNotMatch(provider_prompts[0], /history before compact/);
+});
+
 test("Provider context-length error 在当前 tool-loop 内 deep compact 后重试", async () => {
   let provider_calls = 0;
   const model = new MockLanguageModelV3({

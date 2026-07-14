@@ -72,7 +72,7 @@ Do not treat Messages and Mutations as interchangeable. Messages are recoverable
 
 ## Local versus remote
 
-Both expose `prompt()`, `stop()`, `subscribe()`, `messages()`, `approvals()`, and `fork()`. Model configuration is the important difference:
+Both expose `prompt()`, `stop()`, `compact()`, `subscribe()`, `messages()`, `approvals()`, and `fork()`. Model configuration is the important difference:
 
 | Context | Configure a model |
 | --- | --- |
@@ -87,7 +87,7 @@ Never send a local model instance to a `RemoteAgentSession`.
 - Manage Sessions: `agent.sessions.create/get/list/archive/archived/clean_archive()`
 - Input and completion: `session.prompt()` and `turn.finished`
 - Read and stream: `session.messages()`, `session.get_info()`, and `session.subscribe()`
-- Control execution: `session.stop()`, `session.set()`, and `session.fork()`
+- Control execution: `session.stop()`, `session.set()`, [`session.compact()`](/en/agent-sdk-docs/sessions/compact), and `session.fork()`
 - Tool approval: `session.approvals()`, `session.resolve_approval()`, and `session.approval_mode()`
 - Inspect context: `session.system()` and [metadata and storage](/en/agent-sdk-docs/sessions/metadata-and-storage)
 

@@ -176,6 +176,26 @@ export function registerSdkSessionRoutes(
     }
   });
 
+  app.post("/api/sdk/sessions/:sessionId/compact", async (c) => {
+    try {
+      const sessionId = String(c.req.param("sessionId") || "").trim();
+      if (!sessionId) {
+        return c.json({ success: false, error: "Missing sessionId" }, 400);
+      }
+      const session = await sessions.get(sessionId);
+      await session.compact();
+      return c.json({ success: true, queued: true });
+    } catch (error) {
+      return c.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        500,
+      );
+    }
+  });
+
   app.get("/api/sdk/sessions/:sessionId/events", async (c) => {
     const sessionId = String(c.req.param("sessionId") || "").trim();
     if (!sessionId) {

@@ -207,7 +207,7 @@ test("SessionPromptRuntime applies config and steer in queue order at the same s
   await first_turn.finished;
 });
 
-test("SessionPromptRuntime keeps config queued without starting a turn", async () => {
+test("SessionPromptRuntime keeps command queued without starting a turn", async () => {
   let apply_count = 0;
   const runtime = new SessionPromptRuntime({
     sessionId: "test",
@@ -228,6 +228,7 @@ test("SessionPromptRuntime keeps config queued without starting a turn", async (
   });
 
   assert.equal(runtime.isActive(), false);
+  assert.equal(runtime.has_pending_command(), true);
   assert.equal(apply_count, 0);
 });
 

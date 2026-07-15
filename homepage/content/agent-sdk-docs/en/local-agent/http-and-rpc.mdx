@@ -15,8 +15,8 @@ pnpm add @downcity/agent @downcity/server
 
 After `new Agent(...)`, plugin lifecycle and ActionSchedule start automatically. You do not need to call `start()`.
 
-- `await agent.ready()`: wait until background services are up. Use it before reading plugin state right after construction.
-- `await agent.dispose()`: release background resources (plugins, ActionSchedule, shell).
+- `await agent.ready()`: wait for Plugin lifecycle and ActionSchedule startup. Use it before reading plugin state right after construction.
+- `await agent.dispose()`: release Agent-owned runtime resources (plugins, ActionSchedule, shell).
 
 RPC and HTTP are no longer Agent responsibilities.
 

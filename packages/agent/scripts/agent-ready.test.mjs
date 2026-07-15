@@ -1,5 +1,5 @@
 /**
- * @file 验证 session.prompt 会等待当前 Agent 后台能力 ready。
+ * @file 验证 session.prompt 会等待当前 Agent runtime ready。
  *
  * 关键点（中文）
  * - 这里走编译后的公开 SDK，覆盖宿主真实入口。
@@ -86,7 +86,7 @@ function create_stream_text_result(text) {
   };
 }
 
-test("session.prompt waits for agent background ready before model execution", async () => {
+test("session.prompt waits for agent runtime ready before model execution", async () => {
   const agent_path = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-agent-ready-"),
   );
@@ -199,6 +199,37 @@ test("agent ready isolates plugin lifecycle start failures", async () => {
     assert.equal(healthy_started, true);
     assert.equal(agent.plugins.status("failing")?.status, "error");
     assert.equal(agent.plugins.status("healthy")?.status, "ready");
+  } finally {
+    await agent.dispose();
+  }
+});
+
+test("AgentState installs plugin tools when an action plugin is registered", async () => {
+  const agent_path = await fs.mkdtemp(
+    path.join(os.tmpdir(), "downcity-agent-state-plugin-tools-"),
+  );
+  const agent = new Agent({
+    id: "state_plugin_tools_agent",
+    path: agent_path,
+  });
+  const action_plugin = createPlugin({
+    name: "dynamic_action",
+    actions: {
+      ping: {
+        description: "Return pong",
+        execute: async () => ({ success: true, data: { value: "pong" } }),
+      },
+    },
+  });
+
+  try {
+    assert.equal(agent.tools.plugin_read, undefined);
+    assert.equal(agent.tools.plugin_call, undefined);
+
+    await agent.plugins.register(action_plugin);
+
+    assert.notEqual(agent.tools.plugin_read, undefined);
+    assert.notEqual(agent.tools.plugin_call, undefined);
   } finally {
     await agent.dispose();
   }

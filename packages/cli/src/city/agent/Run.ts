@@ -117,7 +117,7 @@ export async function runCommand(
   process.env.DC_AGENT_ID = agentId;
   process.env.DC_AGENT_PATH = projectRoot;
 
-  // 关键点（中文）：等待 Agent 后台能力（plugin lifecycle / ActionSchedule）启动完成。
+  // 关键点（中文）：等待 Agent 持有的 plugin lifecycle 与 ActionSchedule 启动完成。
   await agent.ready();
 
   // 关键点（中文）：RPC transport 由 `@downcity/server` 提供，独立于 Agent 实例本身。

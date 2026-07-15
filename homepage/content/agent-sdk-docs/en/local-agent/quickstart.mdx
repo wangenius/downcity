@@ -64,7 +64,7 @@ const turn = await session.prompt({ query: "hello" });
 await turn.finished;
 ```
 
-Session entry points already wait for the current Agent's background services internally; model execution starts after plugin lifecycle is ready. You can still call `await agent.ready()` as an explicit checkpoint, for example before inspecting plugin state right after construction or before exposing the Agent over RPC / HTTP.
+Session entry points already wait for the current Agent runtime internally; model execution starts after plugin lifecycle is ready. You can still call `await agent.ready()` as an explicit checkpoint, for example before inspecting plugin state right after construction or before exposing the Agent over RPC / HTTP.
 
 When you are done, call `await agent.dispose()` to stop plugin lifecycle, ActionSchedule, and shell.
 

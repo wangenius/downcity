@@ -15,8 +15,8 @@ pnpm add @downcity/agent @downcity/server
 
 `new Agent(...)` 之后，plugin lifecycle 和 ActionSchedule 会自动启动。无需再手动调用 `start()`。
 
-- `await agent.ready()`：等待后台服务启动完成。在构造之后立刻读取 plugin 状态时使用。
-- `await agent.dispose()`：释放后台资源（plugins、ActionSchedule、shell）。
+- `await agent.ready()`：等待 Plugin lifecycle 与 ActionSchedule 启动完成。在构造之后立刻读取 plugin 状态时使用。
+- `await agent.dispose()`：释放 Agent 自有运行时资源（plugins、ActionSchedule、shell）。
 
 RPC 与 HTTP 不再是 Agent 的职责。
 

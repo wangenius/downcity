@@ -87,9 +87,9 @@ const turn = await session.prompt({ query: "hello" });
 await turn.finished;
 ```
 
-Session 入口内部已经隐式等待当前 Agent 的后台启动；模型开始执行前，plugin lifecycle 已完成。`await agent.ready()` 仍然可以作为显式检查点使用，适合在构造后立刻读取 plugin 状态或暴露 RPC / HTTP 服务前调用。
+Session 入口内部已经隐式等待当前 Agent runtime；模型开始执行前，plugin lifecycle 已完成。`await agent.ready()` 仍然可以作为显式检查点使用，适合在构造后立刻读取 plugin 状态或暴露 RPC / HTTP 服务前调用。
 
-不再使用时调用 `await agent.dispose()`，会停掉 plugin lifecycle、ActionSchedule、shell 等后台资源。
+不再使用时调用 `await agent.dispose()`，会停掉 plugin lifecycle、ActionSchedule、shell 等 Agent 自有运行时资源。
 
 如果需要把当前 Agent 暴露给其他进程使用（RPC 或 HTTP），请使用独立包 [`@downcity/server`](/zh/agent-sdk-docs/local-agent/http-and-rpc)。Agent 自身不再启动任何 transport。
 

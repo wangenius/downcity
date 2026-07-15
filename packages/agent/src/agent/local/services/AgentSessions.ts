@@ -84,7 +84,7 @@ type AgentSessionsOptions = {
   get_agent_plugins: () => AgentPluginExecutionRuntime;
 
   /**
-   * 等待当前 Agent 后台能力启动完成。
+   * 等待当前 Agent 持有的长期运行时启动完成。
    */
   ensure_agent_ready: () => Promise<void>;
 

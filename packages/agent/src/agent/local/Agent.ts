@@ -4,7 +4,7 @@
  * 职责说明（中文）
  * - 对外暴露 `Agent` 这一唯一的本地实例类。
  * - Agent 直接持有自身状态与长期运行时对象，避免额外 Assembly 复制同一批字段。
- * - Session 管理与后台生命周期仍由独立对象负责具体行为。
+ * - Session 集合由 `AgentSessions` 管理；长期运行状态由 `AgentState` 管理。
  */
 
 import type { LanguageModel, Tool } from "ai";
@@ -15,8 +15,7 @@ import { Logger } from "@/utils/logger/Logger.js";
 import { resolve_agent_env } from "@/config/AgentEnv.js";
 import { normalizeInstructionInput } from "@/agent/local/AgentInstructions.js";
 import { AgentSessions } from "@/agent/local/services/AgentSessions.js";
-import { AgentBackgroundService } from "@/agent/local/services/AgentBackgroundService.js";
-import { createPluginTools } from "@executor/tools/plugin/PluginToolDefinition.js";
+import { AgentState } from "@/agent/local/AgentState.js";
 import { generateId } from "@/utils/Id.js";
 import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 
@@ -60,8 +59,8 @@ export class Agent {
   /** 调用方提供的自定义 Session 类；省略时使用 SDK 默认实现。 */
   private readonly SessionClass: AgentOptions["Session"];
 
-  /** 负责 Plugin lifecycle、ActionSchedule 与 Shell 等后台能力的生命周期服务。 */
-  private readonly backgroundService: AgentBackgroundService;
+  /** 当前 Agent 的长期运行状态与生命周期。 */
+  private readonly state: AgentState;
 
   /** 当前 Agent 可选的内建 Shell 实例。 */
   private readonly shell?: AgentOptions["shell"];
@@ -87,13 +86,6 @@ export class Agent {
     this.shell = options.shell;
 
     this.plugins = new PluginRegistry(options.plugins || []);
-    if (options.plugins?.some((plugin) =>
-      plugin.actions && Object.keys(plugin.actions).length > 0
-    )) {
-      const plugin_tools = createPluginTools({ plugins: this.plugins });
-      this.tools.plugin_read = this.tools.plugin_read || plugin_tools.plugin_read;
-      this.tools.plugin_call = this.tools.plugin_call || plugin_tools.plugin_call;
-    }
     if (this.shell) {
       this.shell.configure({
         root_path: this.path,
@@ -104,7 +96,20 @@ export class Agent {
       Object.assign(this.tools, this.shell.tools);
     }
 
-    this.sessions = this.create_sessions();
+    this.sessions = new AgentSessions({
+      agent_id: this.id,
+      project_root: this.path,
+      tools: this.tools,
+      logger: this.logger,
+      get_instruction: () => this.instruction,
+      get_agent_env: () => this.getEnv(),
+      get_agent_plugins: () => this.plugins.execution_view(),
+      ensure_agent_ready: async () => {
+        await this.ready();
+      },
+      get_agent_model: () => this.model,
+      SessionClass: this.SessionClass,
+    });
     this.context = new AgentContext({
       agent_id: this.id,
       rootPath: this.path,
@@ -114,44 +119,37 @@ export class Agent {
       sessions: this.sessions,
       plugins: this.plugins,
     });
-    this.plugins.bind_context(this.context);
 
-    // 关键点（中文）：构造完成即触发后台能力启动；调用方可 `await agent.ready()` 等待。
-    this.backgroundService = new AgentBackgroundService({
-      logger: this.logger,
+    // 关键点（中文）：装配完成后创建唯一状态对象，并立即启动长期运行时。
+    this.state = new AgentState({
       context: this.context,
-      get_shell: () => this.shell,
-    });
-    this.plugins.set_change_listener(({ type, plugin_name }) => {
-      const verb = type === "register" ? "registered" : "unregistered";
-      this.sessions.broadcast_plugins({
-        command_id: generateId(),
-        title: `Agent plugin ${plugin_name} ${verb}`,
-        plugins: this.plugins.execution_view(),
-      });
+      plugins: this.plugins,
+      sessions: this.sessions,
+      tools: this.tools,
+      shell: this.shell,
     });
   }
 
   /**
-   * 等待 Agent 后台能力启动完成。
+   * 等待 Agent 持有的长期运行时启动完成。
    *
    * 关键点（中文）
    * - Agent 构造完成即开始启动 plugin lifecycle 与 ActionSchedule。
-   * - 调用方在需要确认后台能力就绪时使用，例如启动后立刻读取 plugin 状态。
+   * - 调用方在需要确认运行时就绪时使用，例如启动后立刻读取 plugin 状态。
    */
   async ready(): Promise<void> {
-    await this.backgroundService.ready();
+    await this.state.ready();
   }
 
   /**
-   * 释放当前 Agent 的后台能力。
+   * 释放当前 Agent 持有的长期运行时对象。
    *
    * 关键点（中文）
-   * - 关闭 plugin lifecycle、ActionSchedule、shell 等后台资源。
+   * - 关闭 plugin lifecycle、ActionSchedule、shell 等 Agent 自有资源。
    * - 不负责任何 transport（RPC / HTTP）；transport 由 `@downcity/server` 自行管理。
    */
   async dispose(): Promise<void> {
-    await this.backgroundService.dispose();
+    await this.state.dispose();
   }
 
   /**
@@ -238,22 +236,5 @@ export class Agent {
    */
   getShell(): Shell | undefined {
     return this.shell;
-  }
-
-  private create_sessions(): AgentSessions {
-    return new AgentSessions({
-      agent_id: this.id,
-      project_root: this.path,
-      tools: this.tools,
-      logger: this.logger,
-      get_instruction: () => this.instruction,
-      get_agent_env: () => this.getEnv(),
-      get_agent_plugins: () => this.plugins.execution_view(),
-      ensure_agent_ready: async () => {
-        await this.backgroundService.ready();
-      },
-      get_agent_model: () => this.model,
-      SessionClass: this.SessionClass,
-    });
   }
 }

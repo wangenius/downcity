@@ -19,7 +19,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Navbar } from "@/components/sections/navbar";
 import i18next from "@/lib/locales"; // naming conflict with fumadocs i18n
 import { i18n } from "@/lib/i18n";
-import { product } from "@/lib/product";
+import { create_page_meta } from "@/lib/seo";
 
 const favicon_version = "20260626";
 
@@ -74,64 +74,14 @@ export const meta: Route.MetaFunction = ({ location }) => {
   const title = "Downcity - Agent Infrastructure for AI Builders";
   const description =
     "Downcity gives AI builders one reusable runtime for agents, models, tools, tasks, memory, services, permissions, usage, billing, and control surfaces.";
-  // X/Twitter、LinkedIn、Discord 等抓取 Open Graph 图片时必须使用绝对 URL。
-  const site_origin = product.homepage ?? "https://www.downcity.ai";
-  const canonical_url = `${site_origin}${location.pathname}${location.search}`;
-  const og_image = `${site_origin}/social-icon.png`;
 
-  return [
-    { title },
-    { charSet: "utf-8" },
-    { name: "viewport", content: "width=device-width, initial-scale=1" },
-    {
-      name: "description",
-      content: description,
-    },
-    {
-      name: "keywords",
-      content:
-        "AI agent infrastructure, agent runtime, AI builders, agent products, agent operations, AI workflow automation, developer tools",
-    },
-    { name: "author", content: "Downcity" },
-    // Open Graph / Facebook
-    { property: "og:type", content: "website" },
-    { property: "og:site_name", content: "Downcity" },
-    {
-      property: "og:title",
-      content: title,
-    },
-    {
-      property: "og:description",
-      content: description,
-    },
-    { property: "og:image", content: og_image },
-    { property: "og:image:type", content: "image/png" },
-    { property: "og:image:width", content: "512" },
-    { property: "og:image:height", content: "512" },
-    { property: "og:url", content: canonical_url },
-    { tagName: "link", rel: "canonical", href: canonical_url },
-
-    // Twitter / X
-    // social-icon.png 为不透明高对比图片，避免 X 等平台把透明 logo 放到深色背景后不可见。
-    { name: "twitter:card", content: "summary" },
-    { name: "twitter:site", content: "@downcity_ai" },
-    {
-      name: "twitter:title",
-      content: title,
-    },
-    {
-      name: "twitter:description",
-      content: description,
-    },
-    { name: "twitter:image", content: og_image },
-    { name: "twitter:image:width", content: "512" },
-    { name: "twitter:image:height", content: "512" },
-
-    // Additional SEO
-    { name: "robots", content: "index, follow" },
-    { name: "googlebot", content: "index, follow" },
-    { name: "language", content: "English" },
-  ];
+  return create_page_meta({
+    title,
+    description,
+    pathname: location.pathname,
+    keywords:
+      "AI agent infrastructure, agent runtime, AI builders, agent products, agent operations, AI workflow automation, developer tools",
+  });
 };
 
 export function Layout({ children }: { children: React.ReactNode }) {

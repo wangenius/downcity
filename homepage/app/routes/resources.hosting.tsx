@@ -1,16 +1,21 @@
 import { useTranslation } from "react-i18next";
 import { COMMUNITY_LINKS } from "@/lib/community-links";
 import { product } from "@/lib/product";
+import { create_page_meta, get_path_locale } from "@/lib/seo";
+import type { Route } from "./+types/resources.hosting";
 
-export function meta() {
-  const title = `${product.productName} — Hosting`;
-  const description = "Managed hosting for Downcity agents";
-  return [
-    { title },
-    { name: "description", content: description },
-    { property: "og:title", content: title },
-    { property: "og:description", content: description },
-  ];
+export function meta({ location }: Route.MetaArgs) {
+  const is_chinese = get_path_locale(location.pathname) === "zh";
+  const title = `${product.productName} — ${is_chinese ? "托管" : "Hosting"}`;
+  const description = is_chinese
+    ? "了解 Downcity Agent 的托管与部署方案。"
+    : "Managed hosting for Downcity agents";
+  return create_page_meta({
+    title,
+    description,
+    pathname: location.pathname,
+    localized: true,
+  });
 }
 
 const hostingFeatures = [

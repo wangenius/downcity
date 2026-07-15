@@ -15,6 +15,7 @@ export default [
   route("zh/start", "routes/start.tsx", { id: "start-zh" }),
   route("terms", "routes/terms.tsx"),
   route("privacy", "routes/privacy.tsx"),
+  route("sitemap.xml", "routes/sitemap.xml.ts"),
 
   // Features page
   route("features", "routes/features.tsx"),

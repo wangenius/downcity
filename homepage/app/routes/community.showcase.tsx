@@ -4,16 +4,21 @@ import { useTranslation } from "react-i18next";
 import { IconArrowUpRight, IconBox } from "@tabler/icons-react";
 import { product } from "@/lib/product";
 import { fetch_webcap_metadata, type WebCapMetadata } from "@/lib/webcap";
+import { create_page_meta, get_path_locale } from "@/lib/seo";
+import type { Route } from "./+types/community.showcase";
 
-export function meta() {
-  const title = `${product.productName} — Showcase`;
-  const description = "Products and experiences built with Downcity";
-  return [
-    { title },
-    { name: "description", content: description },
-    { property: "og:title", content: title },
-    { property: "og:description", content: description },
-  ];
+export function meta({ location }: Route.MetaArgs) {
+  const is_chinese = get_path_locale(location.pathname) === "zh";
+  const title = `${product.productName} — ${is_chinese ? "案例" : "Showcase"}`;
+  const description = is_chinese
+    ? "查看使用 Downcity 构建的真实产品与 Agent 体验。"
+    : "Products and experiences built with Downcity";
+  return create_page_meta({
+    title,
+    description,
+    pathname: location.pathname,
+    localized: true,
+  });
 }
 
 /**

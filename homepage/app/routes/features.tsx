@@ -4,46 +4,23 @@ import { CodePreviewSection } from "@/components/sections/CodePreviewSection";
 import { CTASection } from "@/components/sections/CTASection";
 import { Footer } from "@/components/sections/Footer";
 import { product } from "@/lib/product";
+import { create_page_meta, get_path_locale } from "@/lib/seo";
+import type { Route } from "./+types/features";
 
-export function meta() {
-  const baseUrl = product.homepage || "https://downcity.ai";
-  const title = `${product.productName} — Features`;
-  const description = "Explore all features of Downcity";
+export function meta({ location }: Route.MetaArgs) {
+  const is_chinese = get_path_locale(location.pathname) === "zh";
+  const title = `${product.productName} — ${is_chinese ? "功能" : "Features"}`;
+  const description = is_chinese
+    ? "了解 Downcity 为 Agent 产品提供的运行时、工具、任务、记忆、权限和多端部署能力。"
+    : "Explore all features of Downcity";
 
-  return [
-    { charSet: "utf-8" },
-    { name: "viewport", content: "width=device-width, initial-scale=1" },
-    { title },
-    {
-      name: "description",
-      content: description,
-    },
-    {
-      property: "og:title",
-      content: title,
-    },
-    {
-      property: "og:description",
-      content: description,
-    },
-    {
-      property: "og:type",
-      content: "website",
-    },
-    {
-      property: "og:url",
-      content: `${baseUrl}/features`,
-    },
-    {
-      name: "twitter:card",
-      content: "summary_large_image",
-    },
-    {
-      tagName: "link",
-      rel: "canonical",
-      href: `${baseUrl}/features`,
-    },
-  ];
+  return create_page_meta({
+    title,
+    description,
+    pathname: location.pathname,
+    twitter_card: "summary_large_image",
+    localized: true,
+  });
 }
 
 export default function Features() {

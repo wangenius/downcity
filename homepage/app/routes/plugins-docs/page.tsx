@@ -18,6 +18,7 @@ import {
   CopyMarkdownButton,
   RawMarkdownContext,
 } from "@/components/docs/copy-markdown-button";
+import { create_page_meta } from "@/lib/seo";
 
 type PageTreeNode = {
   type?: string;
@@ -73,6 +74,8 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   if (!page) {
     throw new Response("Not found", { status: 404 });
   }
+  const alternate_lang = lang === "en" ? "zh" : "en";
+  const alternate_page = pluginsDocsSource.getPage(cleanSlugs, alternate_lang);
 
   let rawMarkdown = "";
   if (page.absolutePath) {
@@ -85,6 +88,8 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 
   return {
     path: page.path,
+    url: page.url,
+    alternate_url: alternate_page?.url,
     title: page.data.title ?? "Agent Plugins Docs",
     description: page.data.description ?? "",
     rawMarkdown,
@@ -94,34 +99,18 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
 
-  const baseUrl = "https://downcity.ai";
   const title = `${loaderData.title} — Downcity Agent Plugins Docs`;
   const description = loaderData.description || "Downcity plugin manuals and examples";
-  const url = `${baseUrl}${loaderData.path}`;
 
-  return [
-    { charSet: "utf-8" },
-    { name: "viewport", content: "width=device-width, initial-scale=1" },
-    { title },
-    { name: "description", content: description },
-    { name: "keywords", content: "Downcity, agent plugins docs, built-in plugins, examples" },
-    { property: "og:title", content: title },
-    { property: "og:description", content: description },
-    { property: "og:type", content: "website" },
-    { property: "og:url", content: url },
-    { property: "og:image", content: `${baseUrl}/og-image.png` },
-    { property: "og:site_name", content: "Downcity" },
-    { name: "twitter:card", content: "summary" },
-    { name: "twitter:url", content: url },
-    { name: "twitter:title", content: title },
-    { name: "twitter:description", content: description },
-    { name: "twitter:image", content: `${baseUrl}/twitter-image.png` },
-    {
-      tagName: "link",
-      rel: "canonical",
-      href: url,
-    },
-  ];
+  return create_page_meta({
+    title,
+    description,
+    pathname: loaderData.url,
+    keywords: "Downcity, agent plugins docs, built-in plugins, examples",
+    image_pathname: "/og-image.png",
+    localized: Boolean(loaderData.alternate_url),
+    alternate_pathname: loaderData.alternate_url,
+  });
 }
 
 const clientLoader = browserCollections.pluginsDocs.createClientLoader({

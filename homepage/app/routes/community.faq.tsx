@@ -3,16 +3,21 @@ import { useTranslation } from "react-i18next";
 import { COMMUNITY_LINKS } from "@/lib/community-links";
 import { product } from "@/lib/product";
 import { cn } from "@/lib/utils";
+import { create_page_meta, get_path_locale } from "@/lib/seo";
+import type { Route } from "./+types/community.faq";
 
-export function meta() {
-  const title = `${product.productName} — FAQ`;
-  const description = "Frequently asked questions about Downcity";
-  return [
-    { title },
-    { name: "description", content: description },
-    { property: "og:title", content: title },
-    { property: "og:description", content: description },
-  ];
+export function meta({ location }: Route.MetaArgs) {
+  const is_chinese = get_path_locale(location.pathname) === "zh";
+  const title = `${product.productName} — ${is_chinese ? "常见问题" : "FAQ"}`;
+  const description = is_chinese
+    ? "查看关于 Downcity 的常见问题与解答。"
+    : "Frequently asked questions about Downcity";
+  return create_page_meta({
+    title,
+    description,
+    pathname: location.pathname,
+    localized: true,
+  });
 }
 
 const faqs = [

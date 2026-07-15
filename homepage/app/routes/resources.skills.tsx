@@ -1,16 +1,21 @@
 import { useTranslation } from "react-i18next";
 import { IconExternalLink } from "@tabler/icons-react";
 import { product } from "@/lib/product";
+import { create_page_meta, get_path_locale } from "@/lib/seo";
+import type { Route } from "./+types/resources.skills";
 
-export function meta() {
-  const title = `${product.productName} — Skills`;
-  const description = "Skill directories and plugin resources";
-  return [
-    { title },
-    { name: "description", content: description },
-    { property: "og:title", content: title },
-    { property: "og:description", content: description },
-  ];
+export function meta({ location }: Route.MetaArgs) {
+  const is_chinese = get_path_locale(location.pathname) === "zh";
+  const title = `${product.productName} — ${is_chinese ? "Skills 技能" : "Skills"}`;
+  const description = is_chinese
+    ? "查找可用于 Downcity Agent 的技能目录和插件资源。"
+    : "Skill directories and plugin resources";
+  return create_page_meta({
+    title,
+    description,
+    pathname: location.pathname,
+    localized: true,
+  });
 }
 
 const skillDirectories = [

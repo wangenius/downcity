@@ -18,6 +18,7 @@ import {
   CopyMarkdownButton,
   RawMarkdownContext,
 } from "@/components/docs/copy-markdown-button";
+import { create_page_meta } from "@/lib/seo";
 
 type PageTreeNode = {
   type?: string;
@@ -78,6 +79,8 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   if (!page) {
     throw new Response("Not found", { status: 404 });
   }
+  const alternate_lang = lang === "en" ? "zh" : "en";
+  const alternate_page = source.getPage(cleanSlugs, alternate_lang);
 
   // 读取原始 Markdown 文件内容，用于复制按钮功能
   let rawMarkdown = "";
@@ -91,6 +94,8 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 
   return {
     path: page.path,
+    url: page.url,
+    alternate_url: alternate_page?.url,
     title: page.data.title ?? "Downcity Docs",
     description: page.data.description ?? "",
     rawMarkdown,
@@ -100,74 +105,18 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
 
-  const baseUrl = "https://downcity.ai";
   const title = `${loaderData.title} — Downcity Docs`;
   const description = loaderData.description || "Downcity product documentation";
-  const url = `${baseUrl}${loaderData.path}`;
 
-  return [
-    // Essential meta tags (these are required and not inherited from parent)
-    { charSet: "utf-8" },
-    { name: "viewport", content: "width=device-width, initial-scale=1" },
-    { title },
-    {
-      name: "description",
-      content: description,
-    },
-    {
-      name: "keywords",
-      content: "Downcity, docs, products, SDKs, guide",
-    },
-    {
-      property: "og:title",
-      content: title,
-    },
-    {
-      property: "og:description",
-      content: description,
-    },
-    {
-      property: "og:type",
-      content: "website",
-    },
-    {
-      property: "og:url",
-      content: url,
-    },
-    {
-      property: "og:image",
-      content: `${baseUrl}/og-image.png`,
-    },
-    {
-      property: "og:site_name",
-      content: "Downcity",
-    },
-    {
-      name: "twitter:card",
-      content: "summary",
-    },
-    {
-      name: "twitter:url",
-      content: url,
-    },
-    {
-      name: "twitter:title",
-      content: title,
-    },
-    {
-      name: "twitter:description",
-      content: description,
-    },
-    {
-      name: "twitter:image",
-      content: `${baseUrl}/twitter-image.png`,
-    },
-    {
-      tagName: "link",
-      rel: "canonical",
-      href: url,
-    },
-  ];
+  return create_page_meta({
+    title,
+    description,
+    pathname: loaderData.url,
+    keywords: "Downcity, docs, products, SDKs, guide",
+    image_pathname: "/og-image.png",
+    localized: Boolean(loaderData.alternate_url),
+    alternate_pathname: loaderData.alternate_url,
+  });
 }
 
 const clientLoader = browserCollections.docs.createClientLoader({

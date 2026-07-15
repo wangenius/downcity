@@ -7,6 +7,7 @@
     "build": "react-router build",
     "dev": "react-router dev",
     "start": "react-router start",
+    "test:seo": "node --test scripts/seo-ready.test.mjs",
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {

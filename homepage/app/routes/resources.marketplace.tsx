@@ -29,6 +29,7 @@ import type {
   AgentMarketplaceSubmissionFormErrors,
   AgentMarketplaceSubmissionFormValues,
 } from "@/types/agent-marketplace";
+import { create_page_meta } from "@/lib/seo";
 
 const MARKETPLACE_PAGE = {
   en: {
@@ -218,29 +219,34 @@ function deriveSubmitterNameFromEmail(email: string) {
   return (email.split("@")[0] || "community-submitter").slice(0, 80);
 }
 
-export function meta({ loaderData }: Route.MetaArgs) {
+export function meta({ loaderData, location }: Route.MetaArgs) {
   const isZh = loaderData?.lang === "zh";
   const title = isZh ? "Downcity — Agent 社区资源" : "Downcity — Agent Marketplace";
   const description = isZh
     ? "提交 Agent 代码仓库，进入 Supabase 审核流程，并在通过后显示到社区资源页。"
     : "Submit agent repositories into a Supabase review queue and publish approved community agents automatically.";
 
-  return [
-    { title },
-    { name: "description", content: description },
-    { property: "og:title", content: title },
-    { property: "og:description", content: description },
-  ];
+  return create_page_meta({
+    title,
+    description,
+    pathname: location.pathname,
+    localized: true,
+  });
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const lang = getLangFromPathname(url.pathname);
-  const approvedAgents = await listApprovedAgentMarketplaceSubmissions();
+  // 静态预渲染阶段数据库可能不可达；公开页面降级为空列表，不能阻塞整站构建。
+  const approved_agents = await listApprovedAgentMarketplaceSubmissions().catch((error) => {
+    const error_message = error instanceof Error ? error.message : String(error);
+    console.warn(`读取 Agent Marketplace 公开列表失败，使用空列表继续渲染：${error_message}`);
+    return [];
+  });
 
   return {
     lang,
-    approvedAgents,
+    approvedAgents: approved_agents,
   };
 }
 

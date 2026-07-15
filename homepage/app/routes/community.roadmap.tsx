@@ -1,16 +1,21 @@
 import { useTranslation } from "react-i18next";
 import { product } from "@/lib/product";
 import { cn } from "@/lib/utils";
+import { create_page_meta, get_path_locale } from "@/lib/seo";
+import type { Route } from "./+types/community.roadmap";
 
-export function meta() {
-  const title = `${product.productName} — Roadmap`;
-  const description = "See what we are building next";
-  return [
-    { title },
-    { name: "description", content: description },
-    { property: "og:title", content: title },
-    { property: "og:description", content: description },
-  ];
+export function meta({ location }: Route.MetaArgs) {
+  const is_chinese = get_path_locale(location.pathname) === "zh";
+  const title = `${product.productName} — ${is_chinese ? "路线图" : "Roadmap"}`;
+  const description = is_chinese
+    ? "了解 Downcity 接下来正在建设的产品和生态能力。"
+    : "See what we are building next";
+  return create_page_meta({
+    title,
+    description,
+    pathname: location.pathname,
+    localized: true,
+  });
 }
 
 export default function Roadmap() {

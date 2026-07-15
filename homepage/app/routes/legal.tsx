@@ -1,5 +1,6 @@
 import { Footer } from "@/components/sections/Footer";
 import { product } from "@/lib/product";
+import { create_page_meta } from "@/lib/seo";
 
 /**
  * Legal 页面内容模型。
@@ -259,43 +260,13 @@ const legal_pages = {
  */
 export function create_legal_meta(page_key: keyof typeof legal_pages) {
   const page = legal_pages[page_key];
-  const base_url = product.homepage || "https://downcity.ai";
   const title = `${product.productName} — ${page.title}`;
 
-  return [
-    { charSet: "utf-8" },
-    { name: "viewport", content: "width=device-width, initial-scale=1" },
-    { title },
-    {
-      name: "description",
-      content: page.description,
-    },
-    {
-      property: "og:title",
-      content: title,
-    },
-    {
-      property: "og:description",
-      content: page.description,
-    },
-    {
-      property: "og:type",
-      content: "website",
-    },
-    {
-      property: "og:url",
-      content: `${base_url}${page.path}`,
-    },
-    {
-      name: "twitter:card",
-      content: "summary",
-    },
-    {
-      tagName: "link",
-      rel: "canonical",
-      href: `${base_url}${page.path}`,
-    },
-  ];
+  return create_page_meta({
+    title,
+    description: page.description,
+    pathname: page.path,
+  });
 }
 
 /**

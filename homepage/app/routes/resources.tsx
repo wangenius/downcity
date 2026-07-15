@@ -1,47 +1,23 @@
 import { Outlet } from "react-router";
 import { Footer } from "@/components/sections/Footer";
 import { product } from "@/lib/product";
+import { create_page_meta, get_path_locale } from "@/lib/seo";
+import type { Route } from "./+types/resources";
 
-export function meta() {
-  const baseUrl = product.homepage || "https://downcity.ai";
-  const title = `${product.productName} — Resources`;
-  const description =
-    "Skills, marketplace, and hosting resources for Downcity";
+export function meta({ location }: Route.MetaArgs) {
+  const is_chinese = get_path_locale(location.pathname) === "zh";
+  const title = `${product.productName} — ${is_chinese ? "资源" : "Resources"}`;
+  const description = is_chinese
+    ? "查找 Downcity Skills、Agent Marketplace 和托管资源。"
+    : "Skills, marketplace, and hosting resources for Downcity";
 
-  return [
-    { charSet: "utf-8" },
-    { name: "viewport", content: "width=device-width, initial-scale=1" },
-    { title },
-    {
-      name: "description",
-      content: description,
-    },
-    {
-      property: "og:title",
-      content: title,
-    },
-    {
-      property: "og:description",
-      content: description,
-    },
-    {
-      property: "og:type",
-      content: "website",
-    },
-    {
-      property: "og:url",
-      content: `${baseUrl}/resources`,
-    },
-    {
-      name: "twitter:card",
-      content: "summary_large_image",
-    },
-    {
-      tagName: "link",
-      rel: "canonical",
-      href: `${baseUrl}/resources`,
-    },
-  ];
+  return create_page_meta({
+    title,
+    description,
+    pathname: location.pathname,
+    twitter_card: "summary_large_image",
+    localized: true,
+  });
 }
 
 export default function Resources() {

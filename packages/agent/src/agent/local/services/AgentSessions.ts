@@ -23,7 +23,10 @@ import type {
   AgentSessionSystemBlock,
 } from "@/types/agent/SessionTypes.js";
 import type { AgentSessionConstructor } from "@/types/agent/AgentOptions.js";
-import type { AgentSession, AgentSessions as AgentSessionsApi } from "@/types/agent/SessionActor.js";
+import type {
+  AgentSession,
+  AgentSessions as AgentSessionsContract,
+} from "@/types/agent/SessionActor.js";
 import type { AgentManagedSession } from "@/types/session/SessionOptions.js";
 import { Session } from "@/session/Session.js";
 import {
@@ -105,7 +108,7 @@ type AgentSessionsOptions = {
 /**
  * 本地 Agent session 管理服务。
  */
-export class AgentSessions implements AgentSessionsApi<AgentSession> {
+export class AgentSessions implements AgentSessionsContract<AgentSession> {
   private readonly agent_id: string;
   private readonly project_root: string;
   private readonly tools: Record<string, Tool>;

@@ -12,17 +12,14 @@ import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { AgentPlugins } from "@/types/plugin/PluginRuntime.js";
 import type { AgentOptions } from "@/types/agent/AgentOptions.js";
-import type { AgentSessions as AgentSessionsApi } from "@/types/agent/SessionActor.js";
-import type {
-  Shell,
-} from "@downcity/shell";
+import type { Shell } from "@downcity/shell";
 import { Logger } from "@/utils/logger/Logger.js";
 import { normalizeInstructionInput } from "@/agent/local/AgentInstructions.js";
 import {
   AgentAssemblyService,
   type AgentAssemblyResult,
 } from "@/agent/local/services/AgentAssemblyService.js";
-import { AgentSessions as LocalAgentSessions } from "@/agent/local/services/AgentSessions.js";
+import { AgentSessions } from "@/agent/local/services/AgentSessions.js";
 import { AgentBackgroundService } from "@/agent/local/services/AgentBackgroundService.js";
 import { generateId } from "@/utils/Id.js";
 import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
@@ -31,28 +28,58 @@ import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
  * SDK 本地 Agent。
  */
 export class Agent {
+  /** 当前 Agent 的稳定标识，用于区分 Session 存储目录与运行时归属。 */
   readonly id: string;
+
+  /** 当前 Agent 绑定的项目根目录绝对路径。 */
   readonly path: string;
+
+  /** 当前 Agent 向所有 Session 提供的工具集合。 */
   readonly tools: Record<string, Tool>;
+
+  /** 当前 Agent 已装配的 Plugin 调用与注册入口。 */
   readonly plugins: AgentPlugins;
-  readonly sessions: AgentSessionsApi;
+
+  /** 当前 Agent 的本地 Session 创建、恢复、查询与归档入口。 */
+  readonly sessions: AgentSessions;
+
+  /**
+   * 当前 Agent 持有的默认运行时模型实例。
+   *
+   * 关键点（中文）
+   * - Agent 只持有调用方传入的实例，不负责模型选择、持久化或恢复。
+   * - Session 未设置自己的模型时，执行会回退使用该实例。
+   */
   readonly model?: LanguageModel;
 
+  /** 当前 Agent 独享的运行日志器。 */
   private readonly logger: Logger;
-  private readonly agentContext: AgentContext;
-  private readonly config: DowncityConfig;
-  private readonly env: Record<string, string>;
-  private readonly SessionClass: AgentOptions["Session"];
-  private readonly backgroundService: AgentBackgroundService;
-  private readonly shell?: AgentOptions["shell"];
-  private readonly local_sessions: LocalAgentSessions;
 
+  /** 提供给 Plugin、Session 与宿主集成层共享的 Agent 执行上下文。 */
+  private readonly agentContext: AgentContext;
+
+  /** 构造阶段完成解析的 Agent 配置快照。 */
+  private readonly config: DowncityConfig;
+
+  /** 当前 Agent configured env 的可变共享对象。 */
+  private readonly env: Record<string, string>;
+
+  /** 调用方提供的自定义 Session 类；省略时使用 SDK 默认实现。 */
+  private readonly SessionClass: AgentOptions["Session"];
+
+  /** 负责 Plugin lifecycle、ActionSchedule 与 Shell 等后台能力的生命周期服务。 */
+  private readonly backgroundService: AgentBackgroundService;
+
+  /** 当前 Agent 可选的内建 Shell 实例。 */
+  private readonly shell?: AgentOptions["shell"];
+
+  /** 当前 Agent configured instruction 的可变有序集合。 */
   private instruction: string[];
 
   constructor(options: AgentOptions) {
     this.SessionClass = options.Session;
     this.model = options.model;
-    let sessions_ref: LocalAgentSessions | null = null;
+    let sessions_ref: AgentSessions | null = null;
     const assembly_service = new AgentAssemblyService({
       options,
       list_cached_sessions: () => sessions_ref?.list_cached_sessions() || [],
@@ -82,15 +109,13 @@ export class Agent {
       agent_context: this.agentContext,
       get_shell: () => this.shell,
     });
-    const sessions = this.create_sessions(assembly);
-    this.sessions = sessions;
-    this.local_sessions = sessions;
-    sessions_ref = sessions;
+    this.sessions = this.create_sessions(assembly);
+    sessions_ref = this.sessions;
     if (this.plugins instanceof PluginRegistry) {
       const plugin_registry = this.plugins;
       plugin_registry.set_change_listener(({ type, plugin_name }) => {
         const verb = type === "register" ? "registered" : "unregistered";
-        this.local_sessions.broadcast_plugins({
+        this.sessions.broadcast_plugins({
           command_id: generateId(),
           title: `Agent plugin ${plugin_name} ${verb}`,
           plugins: plugin_registry.execution_view(),
@@ -127,7 +152,7 @@ export class Agent {
   setInstruction(input: string | string[]): void {
     const next_instruction = normalizeInstructionInput(input);
     this.instruction.splice(0, this.instruction.length, ...next_instruction);
-    this.local_sessions.broadcast_instruction(this.instruction, generateId());
+    this.sessions.broadcast_instruction(this.instruction, generateId());
   }
 
   /**
@@ -153,7 +178,7 @@ export class Agent {
       delete this.env[key];
     }
     this.apply_env_patch(next);
-    this.local_sessions.broadcast_env(this.env, generateId());
+    this.sessions.broadcast_env(this.env, generateId());
   }
 
   /**
@@ -165,7 +190,7 @@ export class Agent {
    */
   patchEnv(patch: Record<string, string | null | undefined>): void {
     this.apply_env_patch(patch);
-    this.local_sessions.broadcast_env(this.env, generateId());
+    this.sessions.broadcast_env(this.env, generateId());
   }
 
   /**
@@ -216,8 +241,8 @@ export class Agent {
 
   private create_sessions(
     assembly: AgentAssemblyResult,
-  ): LocalAgentSessions {
-    return new LocalAgentSessions({
+  ): AgentSessions {
+    return new AgentSessions({
       agent_id: this.id || assembly.id,
       project_root: this.path || assembly.path,
       tools: this.tools || assembly.tools,

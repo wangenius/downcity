@@ -9,10 +9,6 @@
 
 import type { LanguageModel } from "ai";
 import type { Logger } from "@/utils/logger/Logger.js";
-import type {
-  AgentPathRuntime,
-  AgentPluginConfigRuntime,
-} from "@/types/agent/AgentRuntimePorts.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { AgentPlugins } from "@/types/plugin/PluginRuntime.js";
 import type {
@@ -31,6 +27,7 @@ import type {
   SessionMutationUnsubscribe,
 } from "@/types/session/SessionMutation.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
+import type { AgentSessions } from "@/agent/local/services/AgentSessions.js";
 
 /**
  * 单个 Session 执行端口。
@@ -132,24 +129,6 @@ export interface SessionPort {
 }
 
 /**
- * Session 集合入口。
- */
-export interface SessionCollectionPort {
-  /**
-   * 获取指定 sessionId 对应的 Session 实例。
-   */
-  get(sessionId: string): SessionPort;
-  /**
-   * 返回当前所有执行中的 sessionId。
-   */
-  listExecutingSessionIds(): string[];
-  /**
-   * 返回当前执行中的 session 数量。
-   */
-  getExecutingSessionCount(): number;
-}
-
-/**
  * AgentContext 构造参数。
  *
  * 关键点（中文）
@@ -173,12 +152,8 @@ interface AgentContextOptions {
   get_env: () => Readonly<Record<string, string>>;
   /** 读取当前 Agent configured systems。 */
   get_systems: () => readonly string[];
-  /** 当前可见的路径能力集合。 */
-  paths: AgentPathRuntime;
-  /** 当前可见的 plugin 配置持久化能力集合。 */
-  pluginConfig: AgentPluginConfigRuntime;
-  /** Session 能力入口。 */
-  sessions: SessionCollectionPort;
+  /** 当前 Agent 直接持有的 Session 集合。 */
+  sessions: AgentSessions;
   /** Plugin 调用入口。 */
   plugins: AgentPlugins;
 }
@@ -201,12 +176,8 @@ export class AgentContext {
   private readonly get_env: AgentContextOptions["get_env"];
   /** 当前 Agent configured systems 读取器。 */
   private readonly get_systems: AgentContextOptions["get_systems"];
-  /** 当前可见的路径能力集合。 */
-  readonly paths: AgentPathRuntime;
-  /** 当前可见的 plugin 配置持久化能力集合。 */
-  readonly pluginConfig: AgentPluginConfigRuntime;
-  /** Session 能力入口。 */
-  readonly sessions: SessionCollectionPort;
+  /** 当前 Agent 直接持有的 Session 集合。 */
+  readonly sessions: AgentSessions;
   /** Plugin 调用入口。 */
   readonly plugins: AgentPlugins;
 
@@ -216,8 +187,6 @@ export class AgentContext {
     this.logger = options.logger;
     this.get_env = options.get_env;
     this.get_systems = options.get_systems;
-    this.paths = options.paths;
-    this.pluginConfig = options.pluginConfig;
     this.sessions = options.sessions;
     this.plugins = options.plugins;
   }

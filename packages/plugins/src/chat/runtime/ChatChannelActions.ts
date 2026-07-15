@@ -2,108 +2,28 @@
  * ChatChannelActions：chat 渠道 action 执行模块。
  *
  * 关键点（中文）
- * - status/test/reconnect/open/close/configuration/configure 的执行逻辑统一收敛在这里。
+ * - status/test/reconnect 的执行逻辑统一收敛在这里。
  * - 该模块复用 lifecycle/config 模块，不直接持有长期运行态。
  * - 对外只暴露 action 级入口，供 ChatPluginActions 装配使用。
  */
 
-import type {
-  AgentContext,
-  JsonObject,
-} from "@downcity/agent";
+import type { AgentContext } from "@downcity/agent";
 import type { ChatChannelState } from "@/chat/types/ChatRuntime.js";
-import { getStoredChannelAccountSync } from "@/chat/accounts/Store.js";
 import type {
-  ChatCloseActionPayload,
-  ChatConfigurationActionPayload,
-  ChatConfigureActionPayload,
-  ChatOpenActionPayload,
   ChatReconnectActionPayload,
   ChatStatusActionPayload,
   ChatTestActionPayload,
 } from "@/chat/types/ChatPluginActionPayload.js";
 import type { ChatChannelTestResult } from "@/chat/types/ChannelStatus.js";
-import type { ChatChannelName } from "@/chat/types/ChannelStatus.js";
-import type {
-  ChatPluginChannelConfig,
-  ChatPluginRuntimeConfig,
-} from "@/chat/types/ChatPluginOptions.js";
+import { getChatChannelStatus } from "./ChatChannelConfig.js";
 import {
-  describeChatChannelConfiguration,
-  getChatChannelStatus,
-  listChatChannelConfigurationDescriptions,
-  normalizeChatChannelConfigPatch,
-} from "./ChatChannelConfig.js";
-import {
-  type ChatRuntimeBindings,
   getChatChannelBot,
-  resolveChatPluginBindings,
   resolveTargetChannels,
 } from "./ChatChannelCore.js";
 import {
   startSingleChatChannel,
   stopSingleChatChannel,
 } from "./ChatChannelLifecycle.js";
-
-type ChatRuntimeControlBindings = ChatRuntimeBindings & {
-  applyChannelRuntimePatch: NonNullable<ChatRuntimeBindings["applyChannelRuntimePatch"]>;
-  get_runtime_config: NonNullable<ChatRuntimeBindings["get_runtime_config"]>;
-};
-
-function getChatRuntimeBindings(context: AgentContext): ChatRuntimeControlBindings {
-  const plugin = resolveChatPluginBindings(context);
-  if (!plugin?.applyChannelRuntimePatch || !plugin.get_runtime_config) {
-    throw new Error("ChatPlugin runtime instance is not available");
-  }
-  return plugin as ChatRuntimeControlBindings;
-}
-
-/**
- * 将 channel patch 合并进 Chat Plugin 配置并交给宿主持久化。
- *
- * 关键点（中文）
- * - Plugin 只生成并提交自己的完整配置，不读取其他 Plugin 配置。
- * - 宿主持久化成功后才更新当前 Plugin 实例，保证运行态与存储态一致。
- */
-async function persist_chat_channel_patches(params: {
-  context: AgentContext;
-  patches: Array<{
-    channel: ChatChannelName;
-    enabled?: boolean;
-    channel_account_id?: string | null;
-  }>;
-}): Promise<ChatPluginRuntimeConfig> {
-  const plugin = getChatRuntimeBindings(params.context);
-  const current_chat = plugin.get_runtime_config(params.context);
-  const next_channels = { ...(current_chat.channels || {}) };
-
-  for (const patch of params.patches) {
-    const current_channel = next_channels[patch.channel] || {};
-    const next_channel: ChatPluginChannelConfig = { ...current_channel };
-    if (typeof patch.enabled === "boolean") {
-      next_channel.enabled = patch.enabled;
-    }
-    if (Object.prototype.hasOwnProperty.call(patch, "channel_account_id")) {
-      const channel_account_id = String(patch.channel_account_id || "").trim();
-      if (channel_account_id) {
-        next_channel.channelAccountId = channel_account_id;
-      } else {
-        delete next_channel.channelAccountId;
-      }
-    }
-    next_channels[patch.channel] = next_channel;
-  }
-
-  const next_chat: ChatPluginRuntimeConfig = {
-    ...current_chat,
-    channels: next_channels,
-  };
-  await params.context.pluginConfig.persist_plugin_config(
-    "chat",
-    next_chat as unknown as JsonObject,
-  );
-  return next_chat;
-}
 
 /**
  * 执行 `chat.status` action。
@@ -218,180 +138,6 @@ export async function executeChatReconnectAction(params: {
     success: true,
     data: {
       channels,
-    },
-  };
-}
-
-/**
- * 执行 `chat.open` action。
- */
-export async function executeChatOpenAction(params: {
-  state: ChatChannelState;
-  context: AgentContext;
-  payload: ChatOpenActionPayload;
-}) {
-  const targets = resolveTargetChannels(params.payload.channel);
-  const plugin = getChatRuntimeBindings(params.context);
-  await persist_chat_channel_patches({
-    context: params.context,
-    patches: targets.map((channel) => ({ channel, enabled: true })),
-  });
-  for (const channel of targets) {
-    plugin.applyChannelRuntimePatch({
-      channel,
-      enabled: true,
-    });
-  }
-
-  for (const channel of targets) {
-    const snapshot = getChatChannelStatus(params.state, params.context, channel);
-    if (!snapshot.configured) continue;
-    if (snapshot.running) continue;
-    await startSingleChatChannel(params.state, params.context, channel);
-  }
-
-  const channels = targets.map((channel) =>
-    getChatChannelStatus(params.state, params.context, channel),
-  );
-  return {
-    success: true,
-    data: {
-      channels,
-    },
-  };
-}
-
-/**
- * 执行 `chat.close` action。
- */
-export async function executeChatCloseAction(params: {
-  state: ChatChannelState;
-  context: AgentContext;
-  payload: ChatCloseActionPayload;
-}) {
-  const targets = resolveTargetChannels(params.payload.channel);
-  const plugin = getChatRuntimeBindings(params.context);
-  await persist_chat_channel_patches({
-    context: params.context,
-    patches: targets.map((channel) => ({ channel, enabled: false })),
-  });
-  for (const channel of targets) {
-    await stopSingleChatChannel(params.state, channel);
-    plugin.applyChannelRuntimePatch({
-      channel,
-      enabled: false,
-    });
-  }
-
-  const channels = targets.map((channel) =>
-    getChatChannelStatus(params.state, params.context, channel),
-  );
-  return {
-    success: true,
-    data: {
-      channels,
-    },
-  };
-}
-
-/**
- * 执行 `chat.configuration` action。
- */
-export async function executeChatConfigurationAction(params: {
-  context: AgentContext;
-  payload: ChatConfigurationActionPayload;
-}) {
-  void params.context;
-  const targets = resolveTargetChannels(params.payload.channel);
-  const items = targets.map((channel) => ({
-    channel,
-    configuration: describeChatChannelConfiguration(channel),
-  }));
-  return {
-    success: true,
-    data: {
-      channels: items,
-      allChannels: listChatChannelConfigurationDescriptions(),
-    },
-  };
-}
-
-/**
- * 执行 `chat.configure` action。
- */
-export async function executeChatConfigureAction(params: {
-  state: ChatChannelState;
-  context: AgentContext;
-  payload: ChatConfigureActionPayload;
-}) {
-  const channel = params.payload.channel;
-  const patch = normalizeChatChannelConfigPatch({
-    channel,
-    config: params.payload.config || {},
-  });
-
-  if (Object.keys(patch).length === 0) {
-    return {
-      success: false,
-      error: "No valid config fields provided",
-    };
-  }
-
-  if (Object.prototype.hasOwnProperty.call(patch, "channelAccountId")) {
-    const channelAccountId = String(patch.channelAccountId || "").trim();
-    if (channelAccountId) {
-      const account = getStoredChannelAccountSync(channelAccountId);
-      if (!account) {
-        return {
-          success: false,
-          error: `Bot account not found: ${channelAccountId}`,
-        };
-      }
-      if (account.channel !== channel) {
-        return {
-          success: false,
-          error: `Bot account channel mismatch: expected ${channel}, got ${account.channel}`,
-        };
-      }
-    }
-  }
-
-  const plugin = getChatRuntimeBindings(params.context);
-  await persist_chat_channel_patches({
-    context: params.context,
-    patches: [{
-      channel,
-      ...(typeof patch.enabled === "boolean" ? { enabled: patch.enabled } : {}),
-      ...(Object.prototype.hasOwnProperty.call(patch, "channelAccountId")
-        ? { channel_account_id: String(patch.channelAccountId || "").trim() || null }
-        : {}),
-    }],
-  });
-  plugin.applyChannelRuntimePatch({
-    channel,
-    ...(typeof patch.enabled === "boolean" ? { enabled: patch.enabled } : {}),
-    ...(Object.prototype.hasOwnProperty.call(patch, "channelAccountId")
-      ? { channelAccountId: String(patch.channelAccountId || "").trim() || null }
-      : {}),
-  });
-
-  // 关键点（中文）：默认重载一次目标渠道，让新配置立刻生效。
-  const restart = params.payload.restart !== false;
-  if (restart) {
-    await stopSingleChatChannel(params.state, channel);
-    const snapshot = getChatChannelStatus(params.state, params.context, channel);
-    if (snapshot.enabled && snapshot.configured) {
-      await startSingleChatChannel(params.state, params.context, channel);
-    }
-  }
-
-  return {
-    success: true,
-    data: {
-      channel,
-      restartApplied: restart,
-      appliedKeys: Object.keys(patch),
-      channels: [getChatChannelStatus(params.state, params.context, channel)],
     },
   };
 }

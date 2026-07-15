@@ -108,7 +108,6 @@ export type {
 } from "./types/sdk/AgentSessionTurn.js";
 export { AgentContext } from "./types/runtime/agent/AgentContext.js";
 export type {
-  SessionCollectionPort,
   SessionPort,
   StructuredConfig,
 } from "./types/runtime/agent/AgentContext.js";
@@ -225,10 +224,7 @@ export {
   load_project_dotenv,
   resolve_agent_env,
 } from "./config/AgentEnv.js";
-export {
-  getDowncityChatHistoryPath,
-  getDowncitySessionMessagesPath,
-} from "./config/Paths.js";
+export { getDowncitySessionMessagesPath } from "./config/Paths.js";
 export {
   getPlatformStoreDbPath,
   getPlatformStoreKeyPath,
@@ -245,12 +241,6 @@ export {
   formatDateTimeInTimezone,
   resolveRuntimeTimezone,
 } from "./utils/Time.js";
-
-// 宿主端口类型
-export type {
-  AgentPathRuntime,
-  AgentPluginConfigRuntime,
-} from "./types/agent/AgentRuntimePorts.js";
 
 // 项目协议类型
 export type {

@@ -15,9 +15,6 @@ import type {
 } from "@/types/plugin/PluginRuntime.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 
-type ContextResolver = () => AgentContext;
-type PluginEnabledChecker = (pluginName: string, context: AgentContext) => boolean;
-
 type PipelineRecord = {
   pluginName: string;
   handler: PluginPipelineHook<JsonValue>;
@@ -42,8 +39,8 @@ type ResolveRecord = {
  * HookRegistry：plugin 点注册与执行实现。
  */
 export class HookRegistry {
-  private readonly contextResolver: ContextResolver;
-  private readonly pluginEnabledChecker: PluginEnabledChecker;
+  private readonly get_context: () => AgentContext;
+  private readonly is_plugin_ready: (plugin_name: string) => boolean;
 
   private readonly pipelineHooks = new Map<string, PipelineRecord[]>();
 
@@ -54,11 +51,11 @@ export class HookRegistry {
   private readonly resolveHooks = new Map<string, ResolveRecord>();
 
   constructor(params: {
-    contextResolver: ContextResolver;
-    pluginEnabledChecker: PluginEnabledChecker;
+    get_context: () => AgentContext;
+    is_plugin_ready: (plugin_name: string) => boolean;
   }) {
-    this.contextResolver = params.contextResolver;
-    this.pluginEnabledChecker = params.pluginEnabledChecker;
+    this.get_context = params.get_context;
+    this.is_plugin_ready = params.is_plugin_ready;
   }
 
   /**
@@ -208,10 +205,10 @@ export class HookRegistry {
     const bucket = this.pipelineHooks.get(key) || [];
     if (bucket.length === 0) return value;
 
-    const context = this.contextResolver();
+    const context = this.get_context();
     let current = value as JsonValue;
     for (const item of bucket) {
-      if (!this.pluginEnabledChecker(item.pluginName, context)) continue;
+      if (!this.is_plugin_ready(item.pluginName)) continue;
       current = await item.handler({
         context,
         value: current,
@@ -230,9 +227,9 @@ export class HookRegistry {
     const bucket = this.guardHooks.get(key) || [];
     if (bucket.length === 0) return;
 
-    const context = this.contextResolver();
+    const context = this.get_context();
     for (const item of bucket) {
-      if (!this.pluginEnabledChecker(item.pluginName, context)) continue;
+      if (!this.is_plugin_ready(item.pluginName)) continue;
       await item.handler({
         context,
         value: value as JsonValue,
@@ -250,9 +247,9 @@ export class HookRegistry {
     const bucket = this.effectHooks.get(key) || [];
     if (bucket.length === 0) return;
 
-    const context = this.contextResolver();
+    const context = this.get_context();
     for (const item of bucket) {
-      if (!this.pluginEnabledChecker(item.pluginName, context)) continue;
+      if (!this.is_plugin_ready(item.pluginName)) continue;
       await item.handler({
         context,
         value: value as JsonValue,
@@ -276,8 +273,8 @@ export class HookRegistry {
     if (!record) {
       throw new Error(`No plugin resolver registered for point: ${key}`);
     }
-    const context = this.contextResolver();
-    if (!this.pluginEnabledChecker(record.pluginName, context)) {
+    const context = this.get_context();
+    if (!this.is_plugin_ready(record.pluginName)) {
       throw new Error(`No active plugin resolver registered for point: ${key}`);
     }
 

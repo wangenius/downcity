@@ -24,38 +24,6 @@ export function getCacheDirPath(cwd: string): string {
 }
 
 /**
- * Memory 根目录（V2）。
- *
- * 关键点（中文）
- * - `.downcity/memory` 为跨会话记忆目录。
- */
-function getDowncityMemoryDirPath(cwd: string): string {
-  return path.join(getDowncityDirPath(cwd), "memory");
-}
-
-/**
- * 长期记忆文件路径（V2）。
- */
-export function getDowncityMemoryLongTermPath(cwd: string): string {
-  return path.join(getDowncityMemoryDirPath(cwd), "MEMORY.md");
-}
-
-/**
- * 每日记忆目录路径（V2）。
- */
-export function getDowncityMemoryDailyDirPath(cwd: string): string {
-  return path.join(getDowncityMemoryDirPath(cwd), "daily");
-}
-
-/**
- * 每日记忆文件路径（V2）。
- */
-export function getDowncityMemoryDailyPath(cwd: string, date: string): string {
-  const fileName = `${String(date || "").trim() || "unknown-date"}.md`;
-  return path.join(getDowncityMemoryDailyDirPath(cwd), fileName);
-}
-
-/**
  * Plugin Schedule JSONL 路径。
  *
  * 关键点（中文）
@@ -161,61 +129,4 @@ export function getDowncityDebugDirPath(cwd: string): string {
  */
 export function getDowncityPublicDirPath(cwd: string): string {
   return path.join(getDowncityDirPath(cwd), "public");
-}
-
-/**
- * Chat 元信息目录（由 chat plugin runtime 维护）。
- *
- * 关键点（中文）
- * - 该目录存放 `sessionId -> chat` 的最近映射快照
- * - 与 core session messages 分离，避免把平台路由细节耦合进 core
- */
-function getDowncityChatDirPath(cwd: string): string {
-  return path.join(getDowncityDirPath(cwd), "chat");
-}
-
-/**
- * Channel 目录（channel -> sessionId 映射）。
- *
- * 关键点（中文）
- * - 专门承载渠道目标与内部 sessionId 的映射关系。
- * - 与 `chat/` 审计事件目录分离，避免职责混淆。
- */
-export function getDowncityChannelDirPath(cwd: string): string {
-  return path.join(getDowncityDirPath(cwd), "channel");
-}
-
-/**
- * Channel 元信息文件路径。
- *
- * 关键点（中文）
- * - 采用单文件 JSON（`meta.json`）存储映射表与最近路由信息。
- */
-export function getDowncityChannelMetaPath(cwd: string): string {
-  return path.join(getDowncityChannelDirPath(cwd), "meta.json");
-}
-
-/**
- * Chat 会话目录（按 sessionId 组织）。
- *
- * 关键点（中文）
- * - 用于存放聊天事件流（history.jsonl）等审计向数据。
- * - 与 `chat/meta` 分离，避免路由快照与事件流混在一起。
- */
-export function getDowncityChatSessionDirPath(cwd: string, sessionId: string): string {
-  return path.join(
-    getDowncityChatDirPath(cwd),
-    encodeURIComponent(String(sessionId || "").trim()),
-  );
-}
-
-/**
- * Chat 事件流文件路径（JSONL）。
- *
- * 关键点（中文）
- * - 每行一条 chat 事件（当前为 inbound）。
- * - 设计为 append-only，便于审计与回放。
- */
-export function getDowncityChatHistoryPath(cwd: string, sessionId: string): string {
-  return path.join(getDowncityChatSessionDirPath(cwd, sessionId), "history.jsonl");
 }

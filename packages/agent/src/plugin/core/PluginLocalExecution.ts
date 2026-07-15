@@ -11,10 +11,6 @@ import path from "node:path";
 import { getLogger } from "@/utils/logger/Logger.js";
 import { resolve_agent_env } from "@/config/AgentEnv.js";
 import { findPluginByName } from "@/plugin/core/PluginCatalog.js";
-import {
-  createAgentPathRuntime,
-  createAgentPluginConfigRuntime,
-} from "@/agent/local/AgentRuntimePorts.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import type { PluginActionResult } from "@/types/plugin/PluginAction.js";
@@ -49,11 +45,6 @@ export function createLocalPluginCommandContext(
     rootPath,
     logger,
     env,
-    paths: createAgentPathRuntime(
-      rootPath,
-      agent_id,
-    ),
-    pluginConfig: createAgentPluginConfigRuntime(rootPath),
   };
 }
 

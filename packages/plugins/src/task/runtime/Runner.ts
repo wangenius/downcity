@@ -186,7 +186,7 @@ export async function runTaskNow(params: {
     errorText = scriptResult.errorText;
   } else {
     const task_model = context.sessions
-      .get(task.frontmatter.sessionId)
+      .runtime(task.frontmatter.sessionId)
       .getModel();
     if (!task_model) {
       throw new Error(`Task "${task.taskId}" requires a configured model`);

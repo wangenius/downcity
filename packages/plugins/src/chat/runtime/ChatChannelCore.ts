@@ -11,33 +11,17 @@ import type { AgentContext } from "@downcity/agent";
 import type { StoredChannelAccount } from "@downcity/agent";
 import type { ChatChannelName } from "@/chat/types/ChannelStatus.js";
 import type { ChatChannelState } from "@/chat/types/ChatRuntime.js";
-import type { ChatPluginRuntimeConfig } from "@/chat/types/ChatPluginOptions.js";
 import { getStoredChannelAccountSync } from "@/chat/accounts/Store.js";
 
 const CHAT_CHANNEL_NAMES: ChatChannelName[] = ["telegram", "feishu", "qq"];
 
 export type ChatRuntimeBindings = {
-  get_runtime_config?(context: AgentContext): ChatPluginRuntimeConfig;
   getChannelAccountId?(context: AgentContext, channel: ChatChannelName): string;
   resolveChannelAccount?(
     context: AgentContext,
     channel: ChatChannelName,
   ): StoredChannelAccount | null;
   isChannelEnabled?(context: AgentContext, channel: ChatChannelName): boolean;
-  applyChannelRuntimePatch?(params: {
-    /**
-     * 目标渠道。
-     */
-    channel: ChatChannelName;
-    /**
-     * 是否启用该渠道。
-     */
-    enabled?: boolean;
-    /**
-     * 绑定的账号池记录 ID；传入 null 表示清空绑定。
-     */
-    channelAccountId?: string | null;
-  }): void;
 };
 
 export function resolveChatPluginBindings(

@@ -8,11 +8,9 @@
  * - 清理运行中 agent 与队列，避免残留任务继续执行
  */
 
-import fs from "fs-extra";
-import path from "node:path";
 import type { AgentContext } from "@downcity/agent";
 import { resolveChatQueueStore } from "@/chat/runtime/ChatQueue.js";
-import { removeChatMetaBySessionId } from "@/chat/runtime/ChatMetaStore.js";
+import { clean_chat_storage } from "@/chat/runtime/ChatStorage.js";
 
 function normalizeSessionId(sessionId: string): string {
   return String(sessionId || "").trim();
@@ -53,32 +51,24 @@ export async function deleteChatSessionById(params: {
     // 关键点（中文）：先停执行，再删文件，避免删除过程中仍有任务写入。
     resolveChatQueueStore(params.context).clear(sessionId);
 
-    const removedMetaResult = await removeChatMetaBySessionId({
-      context: params.context,
-      sessionId,
+    const chat_result = await clean_chat_storage({
+      root_path: params.context.rootPath,
+      session_id: sessionId,
     });
-
-    const chatDir = path.join(params.context.rootPath, ".downcity", "chat", sessionId);
-    const sessionDir = params.context.paths.getDowncitySessionDirPath(sessionId);
-    const hadChatDir = await fs.pathExists(chatDir);
-    const hadSessionDir = await fs.pathExists(sessionDir);
-    if (hadChatDir) {
-      await fs.remove(chatDir);
-    }
-    if (hadSessionDir) {
-      await fs.remove(sessionDir);
-    }
+    const removed_session_dir = await params.context.sessions.remove(sessionId);
 
     const deleted =
-      removedMetaResult.removed || hadChatDir || hadSessionDir;
+      chat_result.removed_route ||
+      chat_result.removed_chat_dir ||
+      removed_session_dir;
 
     return {
       success: true,
       sessionId,
       deleted,
-      removedMeta: removedMetaResult.removed,
-      removedChatDir: hadChatDir,
-      removedSessionDir: hadSessionDir,
+      removedMeta: chat_result.removed_route,
+      removedChatDir: chat_result.removed_chat_dir,
+      removedSessionDir: removed_session_dir,
     };
   } catch (error) {
     return {

@@ -25,7 +25,6 @@ import { resolveAgentId } from "@/shared/IndexSupport.js";
 import { startAgentHttpGateway } from "@/city/agent/AgentHttpGateway.js";
 import { createCityBuiltinPlugins } from "@/city/runtime/plugins/CityBuiltinPlugins.js";
 import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
-import { createAgentPluginConfigRuntime } from "@/city/process/registry/AgentHostRuntime.js";
 
 /**
  * 前台启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
@@ -109,7 +108,6 @@ export async function runCommand(
     model,
     plugins,
     env: hostEnv,
-    plugin_config: createAgentPluginConfigRuntime(projectRoot),
   });
 
   process.env.DC_BAY_PORT = String(port);

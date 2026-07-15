@@ -38,10 +38,15 @@ export {
 } from "./chat/access/ChatAccessService.js";
 export { get_chat_access_db_path } from "./chat/access/ChatAccessStore.js";
 export { CHAT_ACCESS_ACTIONS } from "./chat/types/ChatAccess.js";
+export { clean_chat_storage } from "./chat/runtime/ChatStorage.js";
 
 export type {
   ChatChannelAccountListItem,
 } from "./chat/types/ChannelAccount.js";
+export type {
+  ChatStorageCleanInput,
+  ChatStorageCleanResult,
+} from "./chat/types/ChatStorage.js";
 export type {
   BaseChatChannelOptions,
   ChatChannelEnv,
@@ -51,7 +56,6 @@ export type {
 } from "./chat/channels/RuntimeChannel.js";
 export type {
   ChatChannel,
-  ChatChannelRuntimePatch,
   ChatPluginOptions,
 } from "./chat/types/ChatPluginOptions.js";
 export type { ContactPluginOptions } from "./contact/types/ContactPluginOptions.js";

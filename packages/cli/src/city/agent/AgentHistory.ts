@@ -9,15 +9,10 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import {
-  getDowncityChannelDirPath,
-  getDowncityChannelMetaPath,
-  getDowncityChatSessionDirPath,
-  getDowncitySessionDirPath,
-} from "@/city/config/Paths.js";
+import { clean_chat_storage } from "@downcity/plugins";
+import { getDowncitySessionDirPath } from "@/city/config/Paths.js";
 import { CliError } from "@/shared/CliError.js";
 import type {
-  AgentHistoryChannelMetaFile,
   AgentHistoryCleanOptions,
   AgentHistoryCleanResult,
 } from "@/city/agent/AgentHistoryTypes.js";
@@ -29,96 +24,12 @@ function normalizeText(input: unknown): string {
   return String(input || "").trim();
 }
 
-function normalizeThreadId(input: unknown): string {
+function normalize_thread_id(input: unknown): number | undefined {
   const text = normalizeText(input);
-  if (!text) return "";
+  if (!text) return undefined;
   const numberValue = Number(text);
-  if (!Number.isFinite(numberValue) || numberValue <= 0) return "";
-  return String(Math.trunc(numberValue));
-}
-
-function buildTargetKey(options: AgentHistoryCleanOptions): string {
-  const channel = normalizeText(options.channel);
-  const chatId = normalizeText(options.chatId);
-  if (!channel || !chatId) return "";
-  return [
-    channel,
-    chatId,
-    normalizeText(options.targetType),
-    normalizeThreadId(options.threadId),
-  ].join("|");
-}
-
-async function readChannelMeta(projectRoot: string): Promise<AgentHistoryChannelMetaFile> {
-  const filePath = getDowncityChannelMetaPath(projectRoot);
-  const raw = (await fs.readJson(filePath).catch(() => null)) as
-    | AgentHistoryChannelMetaFile
-    | null;
-  return raw && typeof raw === "object" ? raw : {};
-}
-
-function resolveSessionIdFromMeta(
-  meta: AgentHistoryChannelMetaFile,
-  options: AgentHistoryCleanOptions,
-): string {
-  const targetKey = buildTargetKey(options);
-  if (!targetKey) return "";
-
-  const mapped = normalizeText(meta.sessionIdByTargetKey?.[targetKey]);
-  if (mapped) return mapped;
-
-  const routes = meta.routesBySessionId || {};
-  const channel = normalizeText(options.channel);
-  const chatId = normalizeText(options.chatId);
-  const targetType = normalizeText(options.targetType);
-  const threadId = normalizeThreadId(options.threadId);
-  for (const route of Object.values(routes)) {
-    if (normalizeText(route.channel) !== channel) continue;
-    if (normalizeText(route.chatId) !== chatId) continue;
-    if (targetType && normalizeText(route.targetType) !== targetType) continue;
-    if (threadId && normalizeThreadId(route.threadId) !== threadId) continue;
-    const sessionId = normalizeText(route.sessionId);
-    if (sessionId) return sessionId;
-  }
-  return "";
-}
-
-async function removeRouteFromMeta(params: {
-  projectRoot: string;
-  sessionId: string;
-}): Promise<boolean> {
-  const metaPath = getDowncityChannelMetaPath(params.projectRoot);
-  const meta = await readChannelMeta(params.projectRoot);
-  const routesBySessionId = meta.routesBySessionId || {};
-  const sessionIdByTargetKey = meta.sessionIdByTargetKey || {};
-  let removed = false;
-
-  if (routesBySessionId[params.sessionId]) {
-    delete routesBySessionId[params.sessionId];
-    removed = true;
-  }
-
-  for (const [targetKey, mappedSessionId] of Object.entries(sessionIdByTargetKey)) {
-    if (normalizeText(mappedSessionId) !== params.sessionId) continue;
-    delete sessionIdByTargetKey[targetKey];
-    removed = true;
-  }
-
-  if (!removed) return false;
-
-  await fs.ensureDir(getDowncityChannelDirPath(params.projectRoot));
-  await fs.writeJson(
-    metaPath,
-    {
-      ...meta,
-      v: 1,
-      updatedAt: Date.now(),
-      sessionIdByTargetKey,
-      routesBySessionId,
-    },
-    { spaces: 2 },
-  );
-  return true;
+  if (!Number.isFinite(numberValue) || numberValue <= 0) return undefined;
+  return Math.trunc(numberValue);
 }
 
 /**
@@ -136,9 +47,21 @@ export async function agentHistoryCleanCommand(
     });
   }
 
-  const meta = await readChannelMeta(projectRoot);
-  const sessionId =
-    normalizeText(options.sessionId) || resolveSessionIdFromMeta(meta, options);
+  const chat_result = await clean_chat_storage({
+    root_path: projectRoot,
+    ...(normalizeText(options.sessionId)
+      ? { session_id: normalizeText(options.sessionId) }
+      : {}),
+    ...(normalizeText(options.channel) ? { channel: normalizeText(options.channel) } : {}),
+    ...(normalizeText(options.chatId) ? { chat_id: normalizeText(options.chatId) } : {}),
+    ...(normalizeText(options.targetType)
+      ? { target_type: normalizeText(options.targetType) }
+      : {}),
+    ...(normalize_thread_id(options.threadId)
+      ? { thread_id: normalize_thread_id(options.threadId) }
+      : {}),
+  });
+  const sessionId = chat_result.session_id;
   if (!sessionId) {
     throw new CliError({
       title: "Cannot resolve target session",
@@ -152,19 +75,15 @@ export async function agentHistoryCleanCommand(
     resolveAgentId(projectRoot),
     sessionId,
   );
-  const chatDir = getDowncityChatSessionDirPath(projectRoot, sessionId);
   const removedSessionDir = await fs.pathExists(sessionDir);
-  const removedChatDir = await fs.pathExists(chatDir);
   if (removedSessionDir) await fs.remove(sessionDir);
-  if (removedChatDir) await fs.remove(chatDir);
-  const removedRoute = await removeRouteFromMeta({ projectRoot, sessionId });
 
   const result: AgentHistoryCleanResult = {
     projectRoot: path.resolve(projectRoot),
     sessionId,
     removedSessionDir,
-    removedChatDir,
-    removedRoute,
+    removedChatDir: chat_result.removed_chat_dir,
+    removedRoute: chat_result.removed_route,
   };
 
   if (options.json === true) {

@@ -62,10 +62,6 @@ const CHAT_RUNTIME_ACTION_COMMANDS_HIDDEN_FROM_CITY = new Set([
   "status",
   "test",
   "reconnect",
-  "open",
-  "close",
-  "configuration",
-  "configure",
 ]);
 
 function translateManagedPluginDescription(

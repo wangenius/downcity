@@ -19,7 +19,7 @@ import {
 import { createPluginTools } from "../bin/executor/tools/plugin/PluginToolDefinition.js";
 import { plugin_call_input_schema } from "../bin/executor/tools/plugin/PluginToolSchemas.js";
 import { createAction, createPlugin } from "../bin/plugin/core/PluginActionFactory.js";
-import { createAgentPluginRegistry } from "../bin/agent/local/AgentPluginFactory.js";
+import { PluginRegistry } from "../bin/plugin/core/PluginRegistry.js";
 import { z } from "zod";
 
 function create_run_context(project_root) {
@@ -30,6 +30,12 @@ function create_run_context(project_root) {
     deferredPersistedUserMessages: [],
     pendingAssistantFileParts: [],
   };
+}
+
+function create_registry(plugin) {
+  const registry = new PluginRegistry([plugin]);
+  registry.bind_context({ rootPath: process.cwd() });
+  return registry;
 }
 
 test("plugin_call payload schema allows arbitrary object properties", async () => {
@@ -189,11 +195,7 @@ test("PluginRegistry validates action payload with metadata schema", async () =>
       }),
     },
   });
-  const registry = createAgentPluginRegistry({
-    plugins: [plugin],
-    plugin_instances: new Map(),
-    get_context: () => ({ rootPath: process.cwd() }),
-  });
+  const registry = create_registry(plugin);
 
   const metadata = registry.read({ plugin: "demo", action: "echo" });
   assert.equal(metadata.actions[0].description, "Echo text");
@@ -236,11 +238,7 @@ test("createPluginTools binds plugin_call to the current registry", async () => 
         }),
       },
     });
-    return createAgentPluginRegistry({
-      plugins: [plugin],
-      plugin_instances: new Map(),
-      get_context: () => ({ rootPath: process.cwd() }),
-    });
+    return create_registry(plugin);
   }
 
   const registry_a = create_owner_registry("agent_a");
@@ -308,11 +306,7 @@ test("PluginRegistry keeps plugin ready after action business failure", async ()
       }),
     },
   });
-  const registry = createAgentPluginRegistry({
-    plugins: [plugin],
-    plugin_instances: new Map(),
-    get_context: () => ({ rootPath: process.cwd() }),
-  });
+  const registry = create_registry(plugin);
 
   const failed = await registry.runAction({
     plugin: "skill",
@@ -358,11 +352,7 @@ test("PluginRegistry delays lifecycle stop until the active execution lease is r
       }),
     },
   });
-  const registry = createAgentPluginRegistry({
-    plugins: [plugin],
-    plugin_instances: new Map(),
-    get_context: () => ({ rootPath: process.cwd() }),
-  });
+  const registry = create_registry(plugin);
   await registry.startAll();
   const lease = registry.execution_view().acquire();
 

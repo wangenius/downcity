@@ -82,7 +82,7 @@ export interface ChatChannelConfigurationField {
    */
   nullable: boolean;
   /**
-   * 是否允许通过 `chat.configure` 写入。
+   * 是否允许上游产品写入。
    */
   writable: boolean;
   /**
@@ -136,7 +136,7 @@ export interface ChatChannelConfigurationDescriptor {
      */
     canBindChannelAccount: boolean;
     /**
-     * 是否支持 `chat.configure`。
+     * 上游产品是否支持编辑该渠道配置。
      */
     canConfigure: boolean;
   };

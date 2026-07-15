@@ -7,10 +7,8 @@
  * - `chat send` 的 frontmatter / <file> 协议也在这里完成标准化解析。
  */
 
-import type { JsonObject, JsonValue } from "@downcity/agent";
 import type { PluginActionCommandInput } from "@downcity/agent";
 import type {
-  ChatConfigureActionPayload,
   ChatDeleteActionPayload,
   ChatHistoryActionPayload,
   ChatInfoActionPayload,
@@ -22,7 +20,6 @@ import { resolveChatChannelNameOrThrow } from "@/chat/runtime/ChatChannelFacade.
 import {
   getBooleanOpt,
   getStringOpt,
-  isJsonObject,
   parseOptionalTimestampOrThrow,
   parsePositiveIntOptionOrThrow,
   readHistoryDirectionOrThrow,
@@ -64,34 +61,6 @@ export function mapChatInfoCommandInput(
   return {
     ...(chatKey ? { chatKey } : {}),
     ...(sessionId ? { sessionId } : {}),
-  };
-}
-
-export function mapChatConfigureCommandInput(
-  input: PluginActionCommandInput,
-): ChatConfigureActionPayload {
-  const channelRaw = getStringOpt(input.opts, "channel");
-  if (!channelRaw) {
-    throw new Error("Missing --channel. Use telegram|feishu|qq.");
-  }
-  const channel = resolveChatChannelNameOrThrow(channelRaw);
-  const rawConfigJson = getStringOpt(input.opts, "configJson");
-  if (!rawConfigJson) {
-    throw new Error("Missing --config-json.");
-  }
-  let parsed: JsonValue = {};
-  try {
-    parsed = JSON.parse(rawConfigJson) as JsonValue;
-  } catch (error) {
-    throw new Error(`Invalid --config-json: ${String(error)}`);
-  }
-  if (!isJsonObject(parsed)) {
-    throw new Error("--config-json must be a JSON object");
-  }
-  return {
-    channel,
-    config: parsed as Record<string, JsonValue>,
-    restart: getBooleanOpt(input.opts, "restart"),
   };
 }
 

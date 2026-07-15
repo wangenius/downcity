@@ -23,17 +23,3 @@ export interface AgentHistoryCleanResult {
   removedChatDir: boolean;
   removedRoute: boolean;
 }
-
-export interface AgentHistoryChannelRoute {
-  sessionId?: unknown;
-  channel?: unknown;
-  chatId?: unknown;
-  targetType?: unknown;
-  threadId?: unknown;
-}
-
-export interface AgentHistoryChannelMetaFile {
-  updatedAt?: unknown;
-  sessionIdByTargetKey?: Record<string, unknown>;
-  routesBySessionId?: Record<string, AgentHistoryChannelRoute>;
-}

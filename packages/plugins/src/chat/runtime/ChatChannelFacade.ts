@@ -16,8 +16,4 @@ export {
   executeChatStatusAction,
   executeChatTestAction,
   executeChatReconnectAction,
-  executeChatOpenAction,
-  executeChatCloseAction,
-  executeChatConfigurationAction,
-  executeChatConfigureAction,
 } from "./ChatChannelActions.js";

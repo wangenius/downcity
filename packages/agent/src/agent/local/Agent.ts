@@ -16,11 +16,6 @@ import { resolve_agent_env } from "@/config/AgentEnv.js";
 import { normalizeInstructionInput } from "@/agent/local/AgentInstructions.js";
 import { AgentSessions } from "@/agent/local/services/AgentSessions.js";
 import { AgentBackgroundService } from "@/agent/local/services/AgentBackgroundService.js";
-import { createAgentPluginRegistry } from "@/agent/local/AgentPluginFactory.js";
-import {
-  createAgentPathRuntime,
-  createAgentPluginConfigRuntime,
-} from "@/agent/local/AgentRuntimePorts.js";
 import { createPluginTools } from "@executor/tools/plugin/PluginToolDefinition.js";
 import { generateId } from "@/utils/Id.js";
 import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
@@ -57,7 +52,7 @@ export class Agent {
   private readonly logger: Logger;
 
   /** 提供给 Plugin、Session 与宿主集成层共享的 Agent 执行上下文。 */
-  private readonly agentContext: AgentContext;
+  private readonly context: AgentContext;
 
   /** 当前 Agent configured env 的可变共享对象。 */
   private readonly env: Record<string, string>;
@@ -91,16 +86,7 @@ export class Agent {
     this.instruction = normalizeInstructionInput(options.instruction);
     this.shell = options.shell;
 
-    let context_ref: AgentContext | undefined;
-    this.plugins = createAgentPluginRegistry({
-      plugins: options.plugins || [],
-      get_context: () => {
-        if (!context_ref) {
-          throw new Error("AgentContext is not initialized");
-        }
-        return context_ref;
-      },
-    });
+    this.plugins = new PluginRegistry(options.plugins || []);
     if (options.plugins?.some((plugin) =>
       plugin.actions && Object.keys(plugin.actions).length > 0
     )) {
@@ -119,31 +105,21 @@ export class Agent {
     }
 
     this.sessions = this.create_sessions();
-    const paths = createAgentPathRuntime(this.path, this.id);
-    this.agentContext = new AgentContext({
+    this.context = new AgentContext({
       agent_id: this.id,
       rootPath: this.path,
       logger: this.logger,
       get_env: () => this.env,
       get_systems: () => this.instruction,
-      paths,
-      pluginConfig:
-        options.plugin_config || createAgentPluginConfigRuntime(this.path),
-      sessions: {
-        get: (session_id) => this.sessions.get_session_port(session_id),
-        listExecutingSessionIds: () =>
-          this.sessions.list_executing_session_ids(),
-        getExecutingSessionCount: () =>
-          this.sessions.get_executing_session_count(),
-      },
+      sessions: this.sessions,
       plugins: this.plugins,
     });
-    context_ref = this.agentContext;
+    this.plugins.bind_context(this.context);
 
     // 关键点（中文）：构造完成即触发后台能力启动；调用方可 `await agent.ready()` 等待。
     this.backgroundService = new AgentBackgroundService({
       logger: this.logger,
-      agent_context: this.agentContext,
+      context: this.context,
       get_shell: () => this.shell,
     });
     this.plugins.set_change_listener(({ type, plugin_name }) => {
@@ -254,7 +230,7 @@ export class Agent {
    * 返回当前 agent context。
    */
   getContext(): AgentContext {
-    return this.agentContext;
+    return this.context;
   }
 
   /**

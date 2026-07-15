@@ -88,16 +88,7 @@ plugin action 的 `execute` 接收到的是 `PluginCommandContext` 语义。
 
 - 一组最小但稳定的命令执行上下文
 
-它通常包括：
-
-- `cwd`
-- `rootPath`
-- `logger`
-- `config`
-- `env`
-- `globalEnv`
-- `paths`
-- `pluginConfig`
+它包括当前 Agent 标识、项目根目录、日志器和已经整理好的 env。Plugin 的产品配置由上游在构造 Plugin 实例时传入，不通过 action context 读取或持久化。
 
 ## 一个完整一些的例子
 

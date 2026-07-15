@@ -27,7 +27,7 @@ export abstract class ChatChannelConfiguration {
   abstract describe(): ChatChannelConfigurationDescriptor;
 
   /**
-   * 返回可通过 `chat.configure` 更新的运行态字段定义。
+   * 返回允许上游产品编辑的 Agent 配置字段定义。
    */
   get_writable_agent_config_fields(): ChatChannelConfigurationField[] {
     return this.describe().fields.agent_config.filter((field) => field.writable);

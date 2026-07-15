@@ -33,6 +33,7 @@ import {
   getSdkAgentArchivedSessionDirPath,
   getSdkAgentArchivedSessionsDirPath,
   getSdkAgentSessionDirPath,
+  getSdkAgentSessionMessagesDirPath,
 } from "@/session/storage/Paths.js";
 import {
   listArchivedAgentSessionSummaryPage,
@@ -195,7 +196,7 @@ export class AgentSessions implements AgentSessionsContract<AgentSession> {
   /**
    * 获取或创建一个 session runtime port。
    */
-  get_session_port(session_id: string): SessionPort {
+  runtime(session_id: string): SessionPort {
     return this.get_or_create_session({
       session_id,
     }).getRuntimePort();
@@ -253,6 +254,56 @@ export class AgentSessions implements AgentSessionsContract<AgentSession> {
     });
     await session.initialize();
     return session;
+  }
+
+  /**
+   * 永久删除一个 Session 及其全部 Agent 领域数据。
+   *
+   * 关键点（中文）
+   * - 正在执行的 Session 会先停止，避免删除后继续写入。
+   * - 该方法不处理任何 Plugin 自有数据。
+   */
+  async remove(session_id: string): Promise<boolean> {
+    const resolved_session_id = String(session_id || "").trim();
+    if (!resolved_session_id) {
+      throw new Error("sessions.remove requires a non-empty sessionId");
+    }
+    const cached = this.sessions_by_id.get(resolved_session_id);
+    if (cached?.isExecuting()) {
+      await cached.stop();
+    }
+    const session_dir_path = getSdkAgentSessionDirPath(
+      this.project_root,
+      this.agent_id,
+      resolved_session_id,
+    );
+    const existed = await fs.pathExists(session_dir_path);
+    if (existed) await fs.remove(session_dir_path);
+    this.sessions_by_id.delete(resolved_session_id);
+    return existed;
+  }
+
+  /**
+   * 清空一个 Session 的消息目录。
+   */
+  async clear_messages(session_id: string): Promise<boolean> {
+    const resolved_session_id = String(session_id || "").trim();
+    if (!resolved_session_id) {
+      throw new Error("sessions.clear_messages requires a non-empty sessionId");
+    }
+    const cached = this.sessions_by_id.get(resolved_session_id);
+    if (cached?.isExecuting()) {
+      throw new Error(`Session "${resolved_session_id}" is currently executing`);
+    }
+    const messages_dir_path = getSdkAgentSessionMessagesDirPath(
+      this.project_root,
+      this.agent_id,
+      resolved_session_id,
+    );
+    const existed = await fs.pathExists(messages_dir_path);
+    if (existed) await fs.remove(messages_dir_path);
+    this.sessions_by_id.delete(resolved_session_id);
+    return existed;
   }
 
   /**

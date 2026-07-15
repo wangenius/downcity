@@ -1,6 +1,6 @@
 {
   "name": "@downcity/plugins",
-  "version": "1.0.184",
+  "version": "1.0.187",
   "type": "module",
   "description": "Downcity 内建 plugin 集合包",
   "main": "./bin/index.js",
@@ -17,6 +17,7 @@
     "typecheck": "tsc --noEmit",
     "test:chat-access": "pnpm build && node --test scripts/chat-access.test.mjs",
     "test:chat-config": "pnpm build && node --test scripts/chat-channel-config.test.mjs",
+    "test:chat-storage": "pnpm build && node --test scripts/chat-storage.test.mjs",
     "test:sound": "pnpm build && node --test scripts/sound-plugin.test.mjs",
     "prepack": "npm run build && node ../../scripts/rewrite-workspace-dependencies.mjs prepare ./package.json",
     "postpack": "node ../../scripts/rewrite-workspace-dependencies.mjs restore ./package.json"

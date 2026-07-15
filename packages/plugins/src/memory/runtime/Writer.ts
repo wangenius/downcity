@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - `sources/` 保存原始证据，`wiki/` 保存整理后的长期记忆。
- * - 所有外部传入路径都必须限制在 `.downcity/memory` 或 session working memory 内。
+ * - 所有外部传入路径都必须限制在 Memory Plugin 自己的 `.downcity/memory` 目录内。
  * - 无 LLM 注入时使用 append fallback，保证 MemoryPlugin 仍然可用。
  */
 
@@ -83,11 +83,8 @@ function resolveAllowedReadPath(context: AgentContext, relPath: string): string 
   }
   const absPath = path.resolve(context.rootPath, normalized);
   const memoryRoot = path.resolve(path.join(context.rootPath, ".downcity", "memory"));
-  const sessionRoot = path.resolve(context.paths.getDowncitySessionRootDirPath());
   const isMemoryPath = isWithin(memoryRoot, absPath);
-  const isWorkingPath =
-    isWithin(sessionRoot, absPath) && normalized.endsWith("/memory/working.md");
-  if (!isMemoryPath && !isWorkingPath) {
+  if (!isMemoryPath) {
     throw new Error("path is not allowed");
   }
   if (!normalized.toLowerCase().endsWith(".md")) {

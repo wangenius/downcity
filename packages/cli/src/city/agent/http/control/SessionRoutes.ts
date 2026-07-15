@@ -9,10 +9,8 @@
 
 import type { SystemModelMessage } from "ai";
 import fs from "fs-extra";
-import { dirname } from "path";
 import { resolveSessionSystemMessages } from "@downcity/agent";
 import {
-  getDowncityChatHistoryPath,
   getDowncitySessionMessagesArchiveDirPath,
   getDowncitySessionMessagesArchivePath,
   getDowncitySessionMessagesPath,
@@ -101,7 +99,7 @@ export function registerControlSessionRoutes(
         const runtime = params.getAgentContext();
         const limit = toLimit(c.req.query("limit"));
         const executingSessionIds = new Set<string>(
-          runtime.sessions.listExecutingSessionIds(),
+          runtime.sessions.list_executing_session_ids(),
         );
         const sessions = await listControlSessionSummaries({
           projectRoot: runtime.rootPath,
@@ -177,13 +175,7 @@ export function registerControlSessionRoutes(
           return c.json({ success: false, error: "Missing sessionId" }, 400);
         }
 
-        const messagesPath = getDowncitySessionMessagesPath(
-          runtime.rootPath,
-          runtime.agent_id,
-          sessionId,
-        );
-        const messagesDirPath = dirname(messagesPath);
-        await fs.remove(messagesDirPath);
+        await runtime.sessions.clear_messages(sessionId);
         return c.json({
           success: true,
           sessionId,
@@ -204,8 +196,14 @@ export function registerControlSessionRoutes(
           return c.json({ success: false, error: "Missing sessionId" }, 400);
         }
 
-        const historyPath = getDowncityChatHistoryPath(runtime.rootPath, sessionId);
-        await fs.remove(historyPath);
+        const result = await runtime.plugins.runAction({
+          plugin: "chat",
+          action: "history_clear",
+          payload: { sessionId },
+        });
+        if (!result.success) {
+          throw new Error(result.error || result.message || "Chat history clear failed");
+        }
 
         return c.json({
           success: true,

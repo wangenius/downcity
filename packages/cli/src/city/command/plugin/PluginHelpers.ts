@@ -36,10 +36,6 @@ const CHAT_RUNTIME_ACTIONS_HIDDEN_FROM_CITY = new Set([
   "status",
   "test",
   "reconnect",
-  "open",
-  "close",
-  "configuration",
-  "configure",
 ]);
 
 const CONTACT_REMOTE_ACTIONS_HIDDEN_FROM_CITY = new Set([

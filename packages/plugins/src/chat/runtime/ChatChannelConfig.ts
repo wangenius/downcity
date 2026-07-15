@@ -2,24 +2,19 @@
  * ChatChannelConfig：chat 渠道配置与状态快照模块。
  *
  * 关键点（中文）
- * - 渠道配置摘要、状态快照、patch 归一化都收敛在这里。
- * - chat.configure 的配置持久化由宿主能力承载，运行态更新由 ChatPlugin 实例承载。
- * - 该模块不直接负责 action 流程控制，只提供可复用的底层能力。
+ * - 渠道配置摘要与状态快照统一收敛在这里。
+ * - Plugin 只读取宿主构造时传入的 channel 配置，不负责修改或持久化。
  */
 
-import type { JsonObject, JsonValue } from "@downcity/agent";
+import type { JsonObject } from "@downcity/agent";
 import type { AgentContext } from "@downcity/agent";
 import type { StoredChannelAccount } from "@downcity/agent";
 import type {
   ChatChannelName,
   ChatChannelStateSnapshot,
 } from "@/chat/types/ChannelStatus.js";
-import type { ChatChannelConfigurationField } from "@/chat/types/ChannelConfiguration.js";
 import type { ChatChannelState } from "@/chat/types/ChatRuntime.js";
-import {
-  getChatChannelConfiguration,
-  listChatChannelConfigurations,
-} from "@/chat/channels/ConfigurationRegistry.js";
+import { getChatChannelConfiguration } from "@/chat/channels/ConfigurationRegistry.js";
 import {
   getChatChannelBot,
   isChatChannelEnabled,
@@ -105,128 +100,4 @@ export function getChatChannelStatus(
       configuration: toJsonObject(getChatChannelConfiguration(channel).describe()),
     },
   };
-}
-
-function isJsonObject(value: JsonValue): value is JsonObject {
-  return !!value && typeof value === "object" && !Array.isArray(value);
-}
-
-function readOptionalStringPatch(value: JsonValue): string | null | undefined {
-  if (value === null) return null;
-  if (typeof value === "string") {
-    const text = value.trim();
-    return text || null;
-  }
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return String(value);
-  }
-  return undefined;
-}
-
-function readOptionalBooleanPatch(value: JsonValue): boolean | undefined {
-  if (value === true) return true;
-  if (value === false) return false;
-  if (typeof value === "string") {
-    const text = value.trim().toLowerCase();
-    if (text === "true" || text === "1") return true;
-    if (text === "false" || text === "0") return false;
-  }
-  return undefined;
-}
-
-function readOptionalNumberPatch(value: JsonValue): number | null | undefined {
-  if (value === null) return null;
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const text = value.trim();
-    if (!text) return null;
-    const parsed = Number(text);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return undefined;
-}
-
-function normalizePatchFieldValue(params: {
-  field: ChatChannelConfigurationField;
-  value: JsonValue;
-}): string | number | boolean | null | undefined {
-  const { field, value } = params;
-
-  if (field.type === "boolean") {
-    if (value === null) return field.nullable ? null : undefined;
-    return readOptionalBooleanPatch(value);
-  }
-
-  if (field.type === "number") {
-    const normalized = readOptionalNumberPatch(value);
-    if (normalized === null) {
-      return field.nullable ? null : undefined;
-    }
-    return normalized;
-  }
-
-  const normalizedText = readOptionalStringPatch(value);
-  if (normalizedText === null) {
-    return field.nullable ? null : undefined;
-  }
-  if (normalizedText === undefined) {
-    return undefined;
-  }
-
-  if (field.type === "enum" && Array.isArray(field.options) && field.options.length > 0) {
-    const allowed = new Set(
-      field.options.map((item) => String(item.value || "").trim()).filter(Boolean),
-    );
-    if (!allowed.has(normalizedText)) {
-      throw new Error(
-        `Invalid value for ${field.key}: ${normalizedText}. Allowed: ${[...allowed].join(", ")}`,
-      );
-    }
-  }
-  return normalizedText;
-}
-
-/**
- * 解析 chat.configure patch。
- */
-export function normalizeChatChannelConfigPatch(params: {
-  channel: ChatChannelName;
-  config: Record<string, JsonValue>;
-}): Record<string, string | number | boolean | null> {
-  const configDefinition = getChatChannelConfiguration(params.channel);
-  const writableFields = configDefinition.get_writable_agent_config_fields();
-  const patch: Record<string, string | number | boolean | null> = {};
-
-  for (const field of writableFields) {
-    if (!Object.prototype.hasOwnProperty.call(params.config, field.key)) continue;
-    const rawValue = params.config[field.key];
-    const normalizedValue = normalizePatchFieldValue({
-      field,
-      value: rawValue,
-    });
-    if (normalizedValue === undefined) continue;
-    patch[field.key] = normalizedValue;
-  }
-  return patch;
-}
-
-/**
- * 读取渠道 configuration 描述。
- */
-export function describeChatChannelConfiguration(channel: ChatChannelName): JsonObject {
-  return toJsonObject(getChatChannelConfiguration(channel).describe());
-}
-
-/**
- * 读取全部渠道 configuration 描述。
- */
-export function listChatChannelConfigurationDescriptions(): JsonObject[] {
-  return listChatChannelConfigurations().map((item) => toJsonObject(item.describe()));
-}
-
-/**
- * 判断输入是否为 JSON object。
- */
-export function isChatChannelConfigObject(value: JsonValue): value is JsonObject {
-  return isJsonObject(value);
 }

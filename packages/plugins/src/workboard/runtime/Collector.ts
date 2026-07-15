@@ -29,7 +29,7 @@ export async function collectWorkboardSnapshot(
   context: AgentContext,
 ): Promise<WorkboardSnapshot> {
   const collectedAt = new Date().toISOString();
-  const executingSessionIds = new Set(context.sessions.listExecutingSessionIds());
+  const executingSessionIds = new Set(context.sessions.list_executing_session_ids());
   const sessions = await listWorkboardSessionSummaries({
     context,
     limit: WORKBOARD_RECENT_LIMIT + Math.max(executingSessionIds.size, 1),

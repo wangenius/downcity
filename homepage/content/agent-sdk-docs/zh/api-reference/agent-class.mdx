@@ -33,8 +33,10 @@ description: 本地 Agent SDK 的核心公开接口
 - `agent.sessions.archive({ id })`
 - `agent.sessions.archived(input?)`
 - `agent.sessions.clean_archive()`
+- `agent.sessions.remove(sessionId)`
+- `agent.sessions.clear_messages(sessionId)`
 
-`archive({ id })` 把当前 agent 下一个已存在且未在执行中的 session 移动到归档目录。`archived(input?)` 列出已归档 session 的分页摘要。`clean_archive()` 永久删除所有已归档 session，并返回被删除的 session id 列表。
+`archive({ id })` 把当前 agent 下一个已存在且未在执行中的 session 移动到归档目录。`archived(input?)` 列出已归档 session 的分页摘要。`clean_archive()` 永久删除所有已归档 session。`remove(sessionId)` 永久删除一个本地 Session 的全部 Agent 数据；`clear_messages(sessionId)` 只清空消息，保留 Session。
 
 ## 构造参数
 
@@ -46,13 +48,12 @@ description: 本地 Agent SDK 的核心公开接口
 - `model`
 - `plugins`
 - `Session`
-- `plugin_config`
 
 当前没有 `mode` 这个构造参数。
 
 `model` 是 Agent 持有的运行时模型实例。Session 可以通过 `session.set({ model })` 持有自己的实例；执行时优先使用 Session 模型，没有时回退到 Agent 模型。SDK 不保存或恢复模型实例与模型 ID。
 
-完整项目 config 属于 CLI 等上游宿主。Agent 只接收执行所需的明确参数；`plugin_config` 也只是单个 Plugin 配置的持久化端口，不会把完整 config 放进 Agent 或 `AgentContext`。
+完整项目 config 与 Plugin config 都属于 CLI 等上游宿主。上游根据配置构造 Plugin 实例，再通过 `plugins` 传给 Agent；Agent 与 `AgentContext` 不读取、修改或持久化这些配置。
 
 ## 核心语义
 

@@ -9,7 +9,6 @@
 import type { LanguageModel, Tool } from "ai";
 import type { Shell } from "@downcity/shell";
 import type { Plugin } from "@/types/plugin/PluginDefinition.js";
-import type { AgentPluginConfigRuntime } from "@/types/agent/AgentRuntimePorts.js";
 import type {
   AgentManagedSession,
   SessionOptions,
@@ -110,12 +109,4 @@ export interface AgentOptions {
    */
   env?: Record<string, string>;
 
-  /**
-   * 宿主提供的 plugin 配置持久化能力。
-   *
-   * 关键点（中文）
-   * - SDK 默认会拒绝持久化操作；CLI 等宿主可在这里接入自己的全局数据库。
-   * - plugin 只依赖该稳定接口，不感知 SQLite、文件或远端服务等具体实现。
-   */
-  plugin_config?: AgentPluginConfigRuntime;
 }

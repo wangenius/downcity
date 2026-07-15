@@ -88,16 +88,7 @@ Practically, you can think of it as:
 
 - a stable minimal execution context for plugin work
 
-It usually includes:
-
-- `cwd`
-- `rootPath`
-- `logger`
-- `config`
-- `env`
-- `globalEnv`
-- `paths`
-- `pluginConfig`
+It includes the current Agent id, project root, logger, and resolved env. Product configuration for a Plugin is passed by the upstream host when constructing the Plugin instance; actions do not read or persist it through their context.
 
 ## A slightly fuller example
 

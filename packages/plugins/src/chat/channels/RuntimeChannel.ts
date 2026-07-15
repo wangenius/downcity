@@ -10,10 +10,7 @@
 import type { AgentContext } from "@downcity/agent";
 import type { StoredChannelAccount } from "@downcity/agent";
 import type { ChatChannelName } from "@/chat/types/ChannelStatus.js";
-import type {
-  ChatChannel,
-  ChatChannelRuntimePatch,
-} from "@/chat/types/ChatPluginOptions.js";
+import type { ChatChannel } from "@/chat/types/ChatPluginOptions.js";
 import { getStoredChannelAccountSync } from "@/chat/accounts/Store.js";
 
 /**
@@ -30,7 +27,7 @@ export interface BaseChatChannelOptions {
    *
    * 说明（中文）
    * - 默认值为 `true`，因为传入 channel 对象通常表示希望启用它。
-   * - 可通过 chat.open / chat.close 在运行态修改。
+   * - 该值由宿主构造 channel 时传入，运行期间保持不变。
    */
   enabled?: boolean;
   /**
@@ -79,15 +76,6 @@ abstract class BaseRuntimeChatChannel implements ChatChannel {
 
   getChannelAccountId(_context: AgentContext): string {
     return this.channelAccountId;
-  }
-
-  applyRuntimePatch(patch: ChatChannelRuntimePatch): void {
-    if (typeof patch.enabled === "boolean") {
-      this.enabled = patch.enabled;
-    }
-    if (Object.prototype.hasOwnProperty.call(patch, "channelAccountId")) {
-      this.channelAccountId = String(patch.channelAccountId || "").trim();
-    }
   }
 
   protected getStoredAccount(): StoredChannelAccount | null {

@@ -27,6 +27,7 @@ import { parseFeishuAttachments } from "./Shared.js";
 import { FeishuPlatformClient } from "./FeishuPlatformClient.js";
 import { handleFeishuMessage } from "./FeishuMessageHandler.js";
 import { isMissingFeishuSdkDependencyError } from "./FeishuSdk.js";
+import { get_feishu_dedupe_dir_path } from "@/chat/runtime/ChatStorage.js";
 
 /**
  * 飞书入站确认 reaction 类型。
@@ -63,7 +64,7 @@ export class FeishuBot extends BaseChatChannel {
     this.appId = appId;
     this.appSecret = appSecret;
     this.domain = domain;
-    this.dedupeDir = path.join(context.paths.getCacheDirPath(), "feishu", "dedupe");
+    this.dedupeDir = get_feishu_dedupe_dir_path(context.rootPath);
     this.platform = new FeishuPlatformClient({
       context,
       config: {

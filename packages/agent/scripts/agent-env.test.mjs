@@ -55,21 +55,6 @@ test("Agent 运行时只使用显式 id，不读取完整项目 config", async (
   }
 });
 
-test("SDK 未注入 plugin_config 时明确拒绝持久化", async () => {
-  const project_root = create_project_root();
-  try {
-    const agent = new Agent({ id: "sdk_id", path: project_root });
-    await assert.rejects(
-      agent.getContext().pluginConfig.persist_plugin_config("chat", {}),
-      /Plugin config persistence is not configured/,
-    );
-    await agent.ready();
-    await agent.dispose();
-  } finally {
-    fs.rmSync(project_root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
-  }
-});
-
 test("项目初始化只创建 .env、Skills 和运行目录并返回真实结果", async () => {
   const project_root = create_project_root();
   try {

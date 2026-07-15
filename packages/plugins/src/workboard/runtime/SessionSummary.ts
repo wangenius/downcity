@@ -6,8 +6,6 @@
  * - 这里只读取消息数量、更新时间与执行中状态，不暴露消息内容。
  */
 
-import fs from "fs-extra";
-import path from "node:path";
 import type { AgentContext } from "@downcity/agent";
 
 /**
@@ -49,44 +47,15 @@ export async function listWorkboardSessionSummaries(params: {
    */
   executingSessionIds?: Set<string>;
 }): Promise<WorkboardSessionSummary[]> {
-  const root_dir = params.context.paths.getDowncitySessionRootDirPath();
-  if (!(await fs.pathExists(root_dir))) return [];
-
-  const entries = await fs.readdir(root_dir, { withFileTypes: true });
-  const items: WorkboardSessionSummary[] = [];
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const session_id = decodeMaybe(entry.name);
-    if (!session_id) continue;
-    const messages_path = path.join(
-      params.context.paths.getDowncitySessionDirPath(session_id),
-      "messages",
-      "messages.jsonl",
-    );
-    const stat = await fs.stat(messages_path).catch(() => null);
-    items.push({
-      sessionId: session_id,
-      messageCount: await countJsonlLines(messages_path),
-      ...(stat ? { updatedAt: stat.mtimeMs } : {}),
-      ...(params.executingSessionIds?.has(session_id) ? { executing: true } : {}),
-    });
-  }
-
-  items.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-  return items.slice(0, Math.max(1, params.limit));
-}
-
-async function countJsonlLines(file_path: string): Promise<number> {
-  const raw = await fs.readFile(file_path, "utf-8").catch(() => "");
-  if (!raw) return 0;
-  return raw.split("\n").filter((line) => line.trim()).length;
-}
-
-function decodeMaybe(value: string): string {
-  try {
-    return decodeURIComponent(String(value || "")).trim();
-  } catch {
-    return String(value || "").trim();
-  }
+  const page = await params.context.sessions.list({
+    limit: Math.max(1, params.limit),
+  });
+  return page.items.map((item) => ({
+    sessionId: item.sessionId,
+    messageCount: item.messageCount,
+    ...(typeof item.updatedAt === "number" ? { updatedAt: item.updatedAt } : {}),
+    ...(item.executing || params.executingSessionIds?.has(item.sessionId)
+      ? { executing: true }
+      : {}),
+  }));
 }

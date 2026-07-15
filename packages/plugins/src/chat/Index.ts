@@ -20,6 +20,5 @@ export type {
 } from "./channels/RuntimeChannel.js";
 export type {
   ChatChannel,
-  ChatChannelRuntimePatch,
   ChatPluginOptions,
 } from "./types/ChatPluginOptions.js";

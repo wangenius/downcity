@@ -22,7 +22,7 @@ type AgentBackgroundServiceOptions = {
   /**
    * 当前 agent context。
    */
-  agent_context: AgentContext;
+  context: AgentContext;
 
   /**
    * 读取当前 agent 挂载的 Shell。
@@ -39,7 +39,7 @@ type AgentBackgroundServiceOptions = {
  */
 export class AgentBackgroundService {
   private readonly logger: Logger;
-  private readonly agent_context: AgentContext;
+  private readonly context: AgentContext;
   private readonly get_shell: AgentBackgroundServiceOptions["get_shell"];
 
   private plugins_started = false;
@@ -48,7 +48,7 @@ export class AgentBackgroundService {
 
   constructor(options: AgentBackgroundServiceOptions) {
     this.logger = options.logger;
-    this.agent_context = options.agent_context;
+    this.context = options.context;
     this.get_shell = options.get_shell;
     // 关键点（中文）：Agent 构造完成即触发后台启动，不再要求外部显式 `start()`。
     this.ready_promise = this.boot();
@@ -72,7 +72,7 @@ export class AgentBackgroundService {
     }
     if (this.plugins_started) {
       await this.stop_action_schedule_runtime();
-      await this.agent_context.plugins.unregisterAll();
+      await this.context.plugins.unregisterAll();
       this.plugins_started = false;
     }
     await this.get_shell?.()?.dispose();
@@ -84,7 +84,7 @@ export class AgentBackgroundService {
 
   private async ensure_plugins_started(): Promise<void> {
     if (this.plugins_started) return;
-    const snapshots = await this.agent_context.plugins.startAll();
+    const snapshots = await this.context.plugins.startAll();
     this.plugins_started = true;
     for (const item of snapshots) {
       if (item.status === "error") {
@@ -100,7 +100,7 @@ export class AgentBackgroundService {
     if (this.action_schedule_runtime) return;
     try {
       this.action_schedule_runtime = await startActionScheduleRuntime(
-        this.agent_context,
+        this.context,
       );
     } catch (error) {
       this.logger.error(`ActionSchedule start failed: ${String(error)}`);

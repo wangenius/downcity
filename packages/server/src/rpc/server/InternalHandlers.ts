@@ -4,11 +4,9 @@
  * 关键点（中文）
  * - 只处理 `internal.*` 方法。
  * - 这些方法服务 downcity 本机管理通道，不属于 RemoteAgent 的用户 SDK 面。
- * - 实现依赖 `@downcity/agent` 的 internal 路径，故只能由 `@downcity/server` 同进程使用。
+ * - Session 与 Plugin 数据通过 AgentContext 能力操作，不读取领域内部路径。
  */
 
-import { rm } from "node:fs/promises";
-import { dirname } from "node:path";
 import type { SystemModelMessage } from "ai";
 import type { AgentContext } from "@downcity/agent";
 import type { RpcRequest } from "@/types/RpcProtocol.js";
@@ -16,10 +14,6 @@ import type {
   RpcRequestHandlerOptions,
   RpcWriteSuccess,
 } from "@/rpc/server/ServerTypes.js";
-import {
-  getDowncityChatHistoryPath,
-  getDowncitySessionMessagesPath,
-} from "@downcity/agent";
 import { resolveSessionSystemMessages } from "@downcity/agent";
 import {
   controlPluginState,
@@ -56,12 +50,7 @@ export async function handleInternalRpcRequest(params: {
       const context = requireAgentContext(options);
       const session_id = String(request.params.sessionId || "").trim();
       if (!session_id) throw new Error("Missing sessionId");
-      const messages_path = getDowncitySessionMessagesPath(
-        context.rootPath,
-        context.agent_id,
-        session_id,
-      );
-      await rm(dirname(messages_path), { recursive: true, force: true });
+      await context.sessions.clear_messages(session_id);
       write_success(request.id, {
         sessionId: session_id,
         cleared: true,
@@ -72,13 +61,20 @@ export async function handleInternalRpcRequest(params: {
       const context = requireAgentContext(options);
       const session_id = String(request.params.sessionId || "").trim();
       if (!session_id) throw new Error("Missing sessionId");
-      await rm(getDowncityChatHistoryPath(context.rootPath, session_id), {
-        recursive: true,
-        force: true,
+      const result = await context.plugins.runAction({
+        plugin: "chat",
+        action: "history_clear",
+        payload: { sessionId: session_id },
       });
+      if (!result.success) {
+        throw new Error(result.error || result.message || "Chat history clear failed");
+      }
+      const data = result.data && typeof result.data === "object"
+        ? result.data as { cleared?: unknown }
+        : {};
       write_success(request.id, {
         sessionId: session_id,
-        cleared: true,
+        cleared: data.cleared === true,
       });
       return true;
     }

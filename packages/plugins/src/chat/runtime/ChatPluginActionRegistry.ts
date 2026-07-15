@@ -12,14 +12,11 @@ import type { PluginActions } from "@downcity/agent";
 import { createAction } from "@downcity/agent";
 import { z } from "zod";
 import type {
-  ChatCloseActionPayload,
-  ChatConfigurationActionPayload,
-  ChatConfigureActionPayload,
   ChatDeleteActionPayload,
   ChatHistoryActionPayload,
+  ChatHistoryClearActionPayload,
   ChatInfoActionPayload,
   ChatListActionPayload,
-  ChatOpenActionPayload,
   ChatReactActionPayload,
   ChatReconnectActionPayload,
   ChatSendActionPayload,
@@ -30,7 +27,6 @@ import type {
 import type { ChatChannelState } from "@/chat/types/ChatRuntime.js";
 import {
   mapChatChannelCommandInput,
-  mapChatConfigureCommandInput,
   mapChatDeleteCommandInput,
   mapChatHistoryCommandInput,
   mapChatInfoCommandInput,
@@ -46,12 +42,9 @@ import {
   executeChatListAction,
   executeChatReactAction,
   executeChatSendAction,
+  execute_chat_history_clear_action,
 } from "./ChatActionExecution.js";
 import {
-  executeChatCloseAction,
-  executeChatConfigurationAction,
-  executeChatConfigureAction,
-  executeChatOpenAction,
   executeChatReconnectAction,
   executeChatStatusAction,
   executeChatTestAction,
@@ -163,95 +156,6 @@ export function createChatPluginActions(params: {
           state: params.channelState,
           context: actionParams.context,
           payload: actionParams.input as ChatReconnectActionPayload,
-        });
-      },
-    }),
-    open: createAction({
-      description: "Open and enable the specified chat channel.",
-      input_schema: {
-        zod: z.object({}).passthrough(),
-        json_schema: { type: "object", properties: {}, additionalProperties: true },
-      },
-      command: {
-        description: "Open chat channel (enabled=true, and start it if configured).",
-        configure(command: Command) {
-          command.option("--channel <name>", "Specify channel (telegram|feishu|qq).");
-        },
-        mapInput: mapChatChannelCommandInput,
-      },
-      execute: async (actionParams) => {
-        return executeChatOpenAction({
-          state: params.channelState,
-          context: actionParams.context,
-          payload: actionParams.input as ChatOpenActionPayload,
-        });
-      },
-    }),
-    close: createAction({
-      description: "Close and disable the specified chat channel.",
-      input_schema: {
-        zod: z.object({}).passthrough(),
-        json_schema: { type: "object", properties: {}, additionalProperties: true },
-      },
-      command: {
-        description: "Close chat channel (enabled=false and stop runtime).",
-        configure(command: Command) {
-          command.option("--channel <name>", "Specify channel (telegram|feishu|qq).");
-        },
-        mapInput: mapChatChannelCommandInput,
-      },
-      execute: async (actionParams) => {
-        return executeChatCloseAction({
-          state: params.channelState,
-          context: actionParams.context,
-          payload: actionParams.input as ChatCloseActionPayload,
-        });
-      },
-    }),
-    configuration: createAction({
-      description: "View chat channel configuration metadata.",
-      input_schema: {
-        zod: z.object({}).passthrough(),
-        json_schema: { type: "object", properties: {}, additionalProperties: true },
-      },
-      command: {
-        description: "View chat channel configuration metadata (fields, types, descriptions).",
-        configure(command: Command) {
-          command.option("--channel <name>", "Specify channel (telegram|feishu|qq).");
-        },
-        mapInput: mapChatChannelCommandInput,
-      },
-      execute: async (actionParams) => {
-        return executeChatConfigurationAction({
-          context: actionParams.context,
-          payload: actionParams.input as ChatConfigurationActionPayload,
-        });
-      },
-    }),
-    configure: createAction({
-      description: "Update runtime parameters for a chat channel.",
-      input_schema: {
-        zod: z.object({}).passthrough(),
-        json_schema: { type: "object", properties: {}, additionalProperties: true },
-      },
-      command: {
-        description: "Update runtime parameters for a chat channel, optionally restarting it immediately.",
-        configure(command: Command) {
-          command
-            .requiredOption("--channel <name>", "Specify channel (telegram|feishu|qq).")
-            .requiredOption(
-              "--config-json <json>",
-              "Configuration patch JSON, for example '{\"channelAccountId\":\"qq-main\",\"enabled\":true}'.",
-            )
-            .option("--restart", "Restart the channel immediately after configuration.", false);
-        },
-        mapInput: mapChatConfigureCommandInput,
-      },
-      execute: async (actionParams) => {
-        return executeChatConfigureAction({
-          state: params.channelState,
-          context: actionParams.context,
-          payload: actionParams.input as ChatConfigureActionPayload,
         });
       },
     }),
@@ -438,6 +342,24 @@ export function createChatPluginActions(params: {
           context: actionParams.context,
           payload: actionParams.input as ChatHistoryActionPayload,
           run_context: actionParams.run_context,
+        });
+      },
+    }),
+    history_clear: createAction({
+      description: "Clear the Chat Plugin event history for one Session.",
+      input_schema: {
+        zod: z.object({ sessionId: z.string().min(1) }),
+        json_schema: {
+          type: "object",
+          properties: { sessionId: { type: "string" } },
+          required: ["sessionId"],
+          additionalProperties: false,
+        },
+      },
+      execute: async (actionParams) => {
+        return await execute_chat_history_clear_action({
+          context: actionParams.context,
+          payload: actionParams.input as unknown as ChatHistoryClearActionPayload,
         });
       },
     }),

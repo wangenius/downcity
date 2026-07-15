@@ -6,10 +6,6 @@
  * - lifecycle 面向 runtime 主动 start/stop 钩子。
  */
 
-import type {
-  AgentPathRuntime,
-  AgentPluginConfigRuntime,
-} from "@/types/agent/AgentRuntimePorts.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { JsonValue } from "@/types/common/Json.js";
@@ -37,10 +33,6 @@ export interface PluginCommandContext {
    * - plugin 不再区分 global env 与 agent env，避免上下文语义膨胀。
    */
   env: Record<string, string>;
-  /** 当前可见的路径能力集合。 */
-  paths: AgentPathRuntime;
-  /** 当前可见的 plugin 配置持久化能力集合。 */
-  pluginConfig: AgentPluginConfigRuntime;
 }
 
 /**

@@ -85,7 +85,7 @@ Message 和 Mutation 不要混用：Message 是可恢复的状态快照；Mutati
 
 ## API 地图
 
-- 管理会话：`agent.sessions.create/get/list/archive/archived/clean_archive()`
+- 管理本地会话：`agent.sessions.create/get/list/archive/archived/clean_archive/remove/clear_messages()`
 - 输入与完成：`session.prompt()`、`turn.finished`
 - 读取与实时：`session.messages()`、`session.get_info()`、`session.subscribe()`
 - 运行控制：`session.stop()`、`session.set()`、[`session.compact()`](/zh/agent-sdk-docs/sessions/compact)、`session.fork()`

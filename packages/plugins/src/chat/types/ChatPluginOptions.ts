@@ -13,24 +13,6 @@ import type { ChatChannelName } from "@/chat/types/ChannelStatus.js";
 import type { ChatQueueWorkerConfig } from "@/chat/types/ChatQueueWorker.js";
 
 /**
- * Chat channel 运行态 patch。
- */
-export interface ChatChannelRuntimePatch {
-  /**
-   * 是否启用该 channel。
-   */
-  enabled?: boolean;
-  /**
-   * 绑定的账号池记录 ID。
-   *
-   * 说明（中文）
-   * - 传入字符串表示绑定到该账号池记录。
-   * - 传入 `null` 表示清空账号池绑定。
-   */
-  channelAccountId?: string | null;
-}
-
-/**
  * Chat channel 对象协议。
  */
 export interface ChatChannel {
@@ -50,10 +32,6 @@ export interface ChatChannel {
    * 解析当前 channel 的运行态账号。
    */
   getAccount(context: AgentContext): StoredChannelAccount | null;
-  /**
-   * 应用运行态配置 patch。
-   */
-  applyRuntimePatch(patch: ChatChannelRuntimePatch): void;
 }
 
 /**
@@ -76,20 +54,4 @@ export interface ChatPluginOptions {
    * - 未传入时不启用任何 chat channel。
    */
   channels?: ChatChannel[];
-}
-
-/** ChatPlugin 可持久化的单个渠道配置。 */
-export interface ChatPluginChannelConfig {
-  /** 当前渠道是否启用。 */
-  enabled?: boolean;
-  /** 当前渠道绑定的账号池记录 ID。 */
-  channelAccountId?: string;
-}
-
-/** ChatPlugin 从自身运行态生成的完整持久化配置。 */
-export interface ChatPluginRuntimeConfig {
-  /** 当前 queue worker 配置。 */
-  queue?: Partial<ChatQueueWorkerConfig>;
-  /** 当前所有已注册渠道的运行配置。 */
-  channels: Partial<Record<ChatChannelName, ChatPluginChannelConfig>>;
 }

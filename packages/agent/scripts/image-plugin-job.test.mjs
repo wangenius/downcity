@@ -14,7 +14,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { ImagePlugin } from "../../plugins/bin/index.js";
-import { createAgentPluginRegistry } from "../bin/agent/local/AgentPluginFactory.js";
+import { PluginRegistry } from "../bin/plugin/core/PluginRegistry.js";
 
 function create_image_message() {
   return {
@@ -36,11 +36,9 @@ function create_context(rootPath = process.cwd()) {
 }
 
 function create_registry(plugin, rootPath = process.cwd()) {
-  return createAgentPluginRegistry({
-    plugins: [plugin],
-    plugin_instances: new Map(),
-    get_context: () => create_context(rootPath),
-  });
+  const registry = new PluginRegistry([plugin]);
+  registry.bind_context(create_context(rootPath));
+  return registry;
 }
 
 test("ImagePlugin exposes only job-style image actions", async () => {

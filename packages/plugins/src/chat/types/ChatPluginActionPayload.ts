@@ -7,7 +7,6 @@
  * - 字段命名保持与 CLI/API 参数一致，降低映射心智负担。
  */
 
-import type { JsonValue } from "@downcity/agent";
 import type {
   ChatDeleteRequest,
   ChatHistoryRequest,
@@ -67,6 +66,14 @@ export type ChatSessionActionPayload = {
 export type ChatHistoryActionPayload = ChatHistoryRequest;
 
 /**
+ * `chat.history_clear` action 的输入载荷。
+ */
+export interface ChatHistoryClearActionPayload {
+  /** 要清空 Chat 事件历史的 Session 标识。 */
+  sessionId: string;
+}
+
+/**
  * `chat.react` action 的输入载荷。
  */
 export type ChatReactActionPayload = ChatReactRequest;
@@ -114,52 +121,4 @@ export type ChatReconnectActionPayload = {
    * 指定目标渠道；省略时表示全部渠道。
    */
   channel?: ChatChannelName;
-};
-
-/**
- * `chat.open` action 的输入载荷。
- */
-export type ChatOpenActionPayload = {
-  /**
-   * 指定目标渠道；省略时表示全部渠道。
-   */
-  channel?: ChatChannelName;
-};
-
-/**
- * `chat.close` action 的输入载荷。
- */
-export type ChatCloseActionPayload = {
-  /**
-   * 指定目标渠道；省略时表示全部渠道。
-   */
-  channel?: ChatChannelName;
-};
-
-/**
- * `chat.configuration` action 的输入载荷。
- */
-export type ChatConfigurationActionPayload = {
-  /**
-   * 指定目标渠道；省略时表示全部渠道。
-   */
-  channel?: ChatChannelName;
-};
-
-/**
- * `chat.configure` action 的输入载荷。
- */
-export type ChatConfigureActionPayload = {
-  /**
-   * 要更新的目标渠道。
-   */
-  channel: ChatChannelName;
-  /**
-   * 渠道配置 patch；值类型遵循 channel configuration 元信息。
-   */
-  config: Record<string, JsonValue>;
-  /**
-   * 配置完成后是否立即重启目标渠道；默认由上层解释为 true。
-   */
-  restart?: boolean;
 };

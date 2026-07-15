@@ -17,7 +17,6 @@ import type { ChatQueueWorkerConfig } from "@/chat/types/ChatQueueWorker.js";
 import type {
   ChatChannel,
   ChatPluginOptions,
-  ChatPluginRuntimeConfig,
 } from "@/chat/types/ChatPluginOptions.js";
 import type { ChatChannelName } from "@/chat/types/ChannelStatus.js";
 import {
@@ -160,24 +159,6 @@ export class ChatPlugin extends BasePlugin {
     return this.options.queue;
   }
 
-  /** 从当前 Plugin 实例生成可持久化的完整运行配置。 */
-  get_runtime_config(context: AgentContext): ChatPluginRuntimeConfig {
-    const channels: ChatPluginRuntimeConfig["channels"] = {};
-    for (const channel of this.channels) {
-      const channel_account_id = channel.getChannelAccountId(context);
-      channels[channel.name] = {
-        enabled: channel.isEnabled(context),
-        ...(channel_account_id
-          ? { channelAccountId: channel_account_id }
-          : {}),
-      };
-    }
-    return {
-      ...(this.options.queue ? { queue: { ...this.options.queue } } : {}),
-      channels,
-    };
-  }
-
   /**
    * 判断指定渠道是否启用。
    */
@@ -193,39 +174,6 @@ export class ChatPlugin extends BasePlugin {
     channel: ChatChannelName,
   ): string {
     return String(this.getChannel(channel)?.getChannelAccountId(context) || "").trim();
-  }
-
-  /**
-   * 更新当前实例的渠道运行态配置。
-   *
-   * 关键点（中文）
-   * - chat.open/close/configure 由 action 先调用宿主持久化能力，再修改当前实例。
-   * - 当前运行态只允许更新 `enabled` 与 `channelAccountId`，密钥仍来自 constructor 或账号池。
-   */
-  applyChannelRuntimePatch(params: {
-    /**
-     * 目标渠道。
-     */
-    channel: ChatChannelName;
-    /**
-     * 是否启用该渠道。
-     */
-    enabled?: boolean;
-    /**
-     * 绑定的账号池记录 ID；传入 null 表示清空绑定。
-     */
-    channelAccountId?: string | null;
-  }): void {
-    const channel = this.getChannel(params.channel);
-    if (!channel) {
-      throw new Error(`Chat channel is not registered: ${params.channel}`);
-    }
-    channel.applyRuntimePatch({
-      ...(typeof params.enabled === "boolean" ? { enabled: params.enabled } : {}),
-      ...(Object.prototype.hasOwnProperty.call(params, "channelAccountId")
-        ? { channelAccountId: params.channelAccountId ?? null }
-        : {}),
-    });
   }
 
   /**

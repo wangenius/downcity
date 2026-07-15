@@ -14,6 +14,7 @@ import type { PluginRunContext } from "@downcity/agent";
 import type {
   ChatDeleteActionPayload,
   ChatHistoryActionPayload,
+  ChatHistoryClearActionPayload,
   ChatInfoActionPayload,
   ChatListActionPayload,
   ChatReactActionPayload,
@@ -33,6 +34,36 @@ import { listChannelSessionRoutes } from "@/chat/runtime/ChannelContextStore.js"
 import { readChatHistory } from "@/chat/runtime/ChatHistoryStore.js";
 import { readChatMetaBySessionId } from "@/chat/runtime/ChatMetaStore.js";
 import { resolveChatChannelNameOrThrow } from "@/chat/runtime/ChatChannelFacade.js";
+import {
+  clear_chat_history,
+  get_chat_channel_meta_path,
+  get_chat_history_path,
+  get_chat_session_dir_path,
+} from "@/chat/runtime/ChatStorage.js";
+
+/**
+ * 执行 `chat.history_clear` action。
+ */
+export async function execute_chat_history_clear_action(params: {
+  context: AgentContext;
+  payload: ChatHistoryClearActionPayload;
+}) {
+  const session_id = String(params.payload.sessionId || "").trim();
+  if (!session_id) {
+    return {
+      success: false,
+      error: "Missing sessionId",
+    };
+  }
+  const cleared = await clear_chat_history(params.context.rootPath, session_id);
+  return {
+    success: true,
+    data: {
+      sessionId: session_id,
+      cleared,
+    },
+  };
+}
 
 function toChatHistoryView(events: ChatHistoryEventV1[]): JsonObject[] {
   return events.map((event) => ({
@@ -165,13 +196,13 @@ export async function executeChatInfoAction(params: {
     path.relative(params.context.rootPath, absPath).split(path.sep).join("/");
 
   const channelMetaPath = toPosixRelativePath(
-    params.context.paths.getDowncityChannelMetaPath(),
+    get_chat_channel_meta_path(params.context.rootPath),
   );
   const chatDirPath = toPosixRelativePath(
-    path.join(params.context.rootPath, ".downcity", "chat", sessionId),
+    get_chat_session_dir_path(params.context.rootPath, sessionId),
   );
   const historyPath = toPosixRelativePath(
-    params.context.paths.getDowncityChatHistoryPath(sessionId),
+    get_chat_history_path(params.context.rootPath, sessionId),
   );
 
   return {

@@ -8,7 +8,7 @@
  */
 
 import { toPluginView } from "@/plugin/core/PluginCatalog.js";
-import type { HookRegistry } from "@/plugin/core/HookRegistry.js";
+import { HookRegistry } from "@/plugin/core/HookRegistry.js";
 import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import type { PluginActionResult } from "@/types/plugin/PluginAction.js";
 import type {
@@ -28,8 +28,6 @@ import type {
   PluginSnapshot,
 } from "@/types/plugin/PluginState.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
-
-type ContextResolver = () => AgentContext;
 
 function now_ms(): number {
   return Date.now();
@@ -99,7 +97,7 @@ async function run_serial(
  * PluginRegistry：Agent plugin 注册、卸载与调用实现。
  */
 export class PluginRegistry implements AgentPlugins {
-  private readonly contextResolver: ContextResolver;
+  private context?: AgentContext;
 
   private readonly hookRegistry: HookRegistry;
 
@@ -114,12 +112,36 @@ export class PluginRegistry implements AgentPlugins {
     plugin_name: string;
   }) => void;
 
-  constructor(params: {
-    contextResolver: ContextResolver;
-    hookRegistry: HookRegistry;
-  }) {
-    this.contextResolver = params.contextResolver;
-    this.hookRegistry = params.hookRegistry;
+  constructor(plugins: Plugin[] = []) {
+    this.hookRegistry = new HookRegistry({
+      get_context: () => this.require_context(),
+      is_plugin_ready: (plugin_name) => this.isReady(plugin_name),
+    });
+    for (const plugin of plugins) {
+      this.mount(plugin);
+    }
+  }
+
+  /**
+   * 绑定当前 Registry 所属的唯一 AgentContext。
+   *
+   * 关键点（中文）
+   * - 初始 Plugin 可以在 Context 创建前同步挂载。
+   * - lifecycle、action、hook 首次执行前必须完成绑定。
+   */
+  bind_context(context: AgentContext): void {
+    if (this.context && this.context !== context) {
+      throw new Error("PluginRegistry context is already bound");
+    }
+    this.context = context;
+  }
+
+  /** 返回已经绑定的 AgentContext。 */
+  private require_context(): AgentContext {
+    if (!this.context) {
+      throw new Error("PluginRegistry context is not bound");
+    }
+    return this.context;
   }
 
   /**
@@ -301,7 +323,7 @@ export class PluginRegistry implements AgentPlugins {
         return;
       }
       try {
-        await record.plugin.lifecycle?.start?.(this.contextResolver());
+        await record.plugin.lifecycle?.start?.(this.require_context());
         record.lifecycle_started = true;
         update_record_state(record, "ready");
       } catch (error) {
@@ -315,7 +337,7 @@ export class PluginRegistry implements AgentPlugins {
     await run_serial(record, async () => {
       if (!record.lifecycle_started) return;
       try {
-        await record.plugin.lifecycle?.stop?.(this.contextResolver());
+        await record.plugin.lifecycle?.stop?.(this.require_context());
       } finally {
         record.lifecycle_started = false;
         record.updated_at = now_ms();
@@ -469,7 +491,7 @@ export class PluginRegistry implements AgentPlugins {
     }
 
     if (record.plugin.availability) {
-      return await record.plugin.availability(this.contextResolver());
+      return await record.plugin.availability(this.require_context());
     }
 
     return {
@@ -572,7 +594,7 @@ export class PluginRegistry implements AgentPlugins {
         return parsed_payload;
       }
       const result = await action.execute({
-        context: this.contextResolver(),
+        context: this.require_context(),
         input: parsed_payload.input,
         pluginName: record.plugin.name,
         actionName,
@@ -604,7 +626,7 @@ export class PluginRegistry implements AgentPlugins {
     records: ReadonlyMap<string, PluginRuntimeRecord>,
     run_context?: SessionRunContext,
   ): Promise<AgentSessionSystemBlock[]> {
-    const context = this.contextResolver();
+    const context = this.require_context();
     const out: AgentSessionSystemBlock[] = [];
     for (const record of records.values()) {
       const plugin = record.plugin;
@@ -724,7 +746,7 @@ export class PluginRegistry implements AgentPlugins {
       } catch (error) {
         update_record_state(record, "error", String(error));
         try {
-          await this.contextResolver().logger.log(
+          await this.require_context().logger.log(
             "error",
             "[plugin] lifecycle.stop failed after execution release",
             {

@@ -143,33 +143,6 @@ export async function listMemorySourceFiles(
     );
   }
 
-  const sessionRootDir = path.join(rootPath, ".downcity", "session");
-  let sessions: Dirent[] = [];
-  try {
-    sessions = await fsp.readdir(sessionRootDir, { withFileTypes: true });
-  } catch {
-    sessions = [];
-  }
-  for (const sessionDir of sessions) {
-    if (!sessionDir.isDirectory() || sessionDir.isSymbolicLink()) {
-      continue;
-    }
-    const workingPath = path.join(
-      sessionRootDir,
-      sessionDir.name,
-      "memory",
-      "working.md",
-    );
-    if (!(await pathExists(workingPath))) {
-      continue;
-    }
-    out.push({
-      source: "working",
-      absPath: workingPath,
-      relPath: normalizeRelPath(rootPath, workingPath),
-    });
-  }
-
   return out;
 }
 

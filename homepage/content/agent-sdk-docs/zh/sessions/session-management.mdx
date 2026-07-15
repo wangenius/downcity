@@ -59,6 +59,8 @@ console.log(removed.removedSessionIds);
 
 `clean_archive()` 会永久删除所有已归档 Session，适合明确的“清空回收站”操作；UI 必须在调用前要求用户确认。
 
+本地维护还可以使用 `remove(sessionId)` 永久删除一个活跃 Session 的 Agent 数据，或使用 `clear_messages(sessionId)` 只清空消息。Plugin 自有数据不会被隐式删除；需要同时清理领域数据时，应调用对应 Plugin。
+
 ## UI 建议
 
 1. 列表页只用 `list()` 的摘要数据。

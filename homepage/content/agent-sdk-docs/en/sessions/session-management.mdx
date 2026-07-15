@@ -59,6 +59,8 @@ Archiving removes a Session from the active list without immediately destroying 
 
 `clean_archive()` permanently deletes every archived Session. Treat it as an explicit empty-trash action and require user confirmation in a UI.
 
+For local maintenance, `remove(sessionId)` permanently deletes one active Session's Agent-owned data. `clear_messages(sessionId)` clears only its messages. Plugin-owned data is not deleted implicitly; call the owning Plugin when a workflow also needs to remove domain data.
+
 ## UI guidance
 
 1. Use lightweight `list()` summaries for the sidebar.

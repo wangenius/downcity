@@ -214,30 +214,30 @@ test("session.set only persists and publishes model-switching actions when model
   }
 });
 
-test("prepare_session injects the host model before every turn", async () => {
+test("session model overrides the Agent model for later turns", async () => {
   const agent_path = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-agent-session-model-host-"),
   );
   const model_calls = [];
-  let current_model = create_model("host-model-a", model_calls);
+  const agent_model = create_model("host-model-a", model_calls);
   const agent = new Agent({
     id: "session_model_host_agent",
     path: agent_path,
-    prepare_session: async (session) => {
-      await session.set({ model: current_model });
-    },
+    model: agent_model,
   });
   try {
     const session = await agent.sessions.create({
       sessionId: "host-model-session",
     });
     await (await session.prompt({ query: "first" })).finished;
-    current_model = create_model("host-model-b", model_calls);
+    await session.set({
+      model: create_model("session-model-b", model_calls),
+    });
     await (await session.prompt({ query: "second" })).finished;
     assert.deepEqual(model_calls, [
       "host-model-a",
       "host-model-a",
-      "host-model-b",
+      "session-model-b",
     ]);
   } finally {
     await agent.dispose();

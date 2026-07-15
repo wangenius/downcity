@@ -60,14 +60,12 @@ await client.ai.text({
 });
 
 const agent = new Agent({
-  prepare_session: async (session) => {
-    await session.set({ model: normalizeAgentModel(model) });
-  },
+  model: normalizeAgentModel(model),
 });
 ```
 
 This path does not require product code to create an AI SDK provider. The host
-converts the `CityModel` to a runtime model before injecting it into a Session.
+converts the `CityModel` to a runtime model before passing it to the local Agent. A Session with its own model instance takes priority.
 
 ## OpenAI-Compatible Pathway
 

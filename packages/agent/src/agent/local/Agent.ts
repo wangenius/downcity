@@ -7,7 +7,7 @@
  * - 单个 agent 的长期对象装配、session 管理、后台能力生命周期分别下沉到独立 service。
  */
 
-import type { Tool } from "ai";
+import type { LanguageModel, Tool } from "ai";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { AgentPlugins } from "@/types/plugin/PluginRuntime.js";
@@ -36,14 +36,13 @@ export class Agent {
   readonly tools: Record<string, Tool>;
   readonly plugins: AgentPlugins;
   readonly sessions: AgentSessionsApi;
+  readonly model?: LanguageModel;
 
   private readonly logger: Logger;
   private readonly agentContext: AgentContext;
   private readonly config: DowncityConfig;
   private readonly env: Record<string, string>;
   private readonly SessionClass: AgentOptions["Session"];
-  private readonly prepare_session?: AgentOptions["prepare_session"];
-  private readonly release_session?: AgentOptions["release_session"];
   private readonly backgroundService: AgentBackgroundService;
   private readonly shell?: AgentOptions["shell"];
   private readonly local_sessions: LocalAgentSessions;
@@ -52,8 +51,7 @@ export class Agent {
 
   constructor(options: AgentOptions) {
     this.SessionClass = options.Session;
-    this.prepare_session = options.prepare_session;
-    this.release_session = options.release_session;
+    this.model = options.model;
     let sessions_ref: LocalAgentSessions | null = null;
     const assembly_service = new AgentAssemblyService({
       options,
@@ -232,9 +230,8 @@ export class Agent {
       ensure_agent_ready: async () => {
         await this.backgroundService.ready();
       },
+      get_agent_model: () => this.model,
       SessionClass: this.SessionClass,
-      prepare_session: this.prepare_session,
-      release_session: this.release_session,
     });
   }
 }

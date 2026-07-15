@@ -92,10 +92,7 @@ export class AgentHeaderComponent implements Component {
   /** 构建 Session 与模型上下文。 */
   private build_context(): string {
     const title = this.app_state.session_title?.trim() || "Untitled";
-    const model = this.app_state.session_model_name?.trim()
-      || this.app_state.session_model_id?.trim()
-      || "agent default";
-    return `${title} · ${this.app_state.session_id} · ${model}`;
+    return `${title} · ${this.app_state.session_id}`;
   }
 
   /** 构建固定宽度语义状态。 */

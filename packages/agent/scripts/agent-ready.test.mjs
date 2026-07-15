@@ -140,9 +140,7 @@ test("session.prompt waits for agent background ready before model execution", a
     id: "ready_agent",
     path: agent_path,
     plugins: [blocking_plugin],
-    prepare_session: async (session) => {
-      await session.set({ model });
-    },
+    model,
   });
 
   try {

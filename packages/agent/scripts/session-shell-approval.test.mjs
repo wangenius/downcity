@@ -119,9 +119,7 @@ test("unrestricted Shell 审批保留当前 Turn 并等待用户决定", async (
   const agent = new Agent({
     id: "session_shell_approval_agent",
     path: project_root,
-    prepare_session: async (session) => {
-      if (!session.config.model) await session.set({ model });
-    },
+    model,
     shell: new Shell(),
   });
 

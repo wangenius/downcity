@@ -8,7 +8,6 @@
  */
 
 import type { BasePlugin, DowncityConfig } from "@downcity/agent";
-import type { LanguageModel } from "ai";
 import {
   ChatPlugin,
   ContactPlugin,
@@ -83,8 +82,6 @@ export function createCityStaticBuiltinPlugins(input: {
    * 当前 Agent 配置；未提供时所有 chat channel 保持禁用。
    */
   config?: DowncityConfig;
-  /** 由 City 宿主提供任务绑定 Session 的模型实例。 */
-  resolve_session_model?: (session_id: string) => Promise<LanguageModel>;
 } = {}): BasePlugin[] {
   return [
     new SkillPlugin(),
@@ -95,9 +92,7 @@ export function createCityStaticBuiltinPlugins(input: {
       channels: create_city_chat_channels(input.config),
     }),
     new ContactPlugin(),
-    new TaskPlugin({
-      resolve_session_model: input.resolve_session_model,
-    }),
+    new TaskPlugin(),
     new MemoryPlugin(),
   ];
 }
@@ -114,8 +109,6 @@ export async function createCityBuiltinPlugins(input: {
    * 当前运行 Agent 从全局 DB 读取的配置。
    */
   config: DowncityConfig;
-  /** 由 City 宿主提供任务绑定 Session 的模型实例。 */
-  resolve_session_model?: (session_id: string) => Promise<LanguageModel>;
 }): Promise<BasePlugin[]> {
   const { client } = await city_user_manager.createUserClient({
     env: input.env ?? process.env,
@@ -124,7 +117,6 @@ export async function createCityBuiltinPlugins(input: {
   return [
     ...createCityStaticBuiltinPlugins({
       config: input.config,
-      resolve_session_model: input.resolve_session_model,
     }),
     new ImagePlugin({
       list_models: async () => {

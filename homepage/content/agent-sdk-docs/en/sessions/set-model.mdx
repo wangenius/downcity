@@ -5,7 +5,7 @@ description: How a local SDK session explicitly binds its default model instance
 
 # `session.set({ model })`
 
-`session.set({ model })` is the only local SDK API for binding a runtime model instance to a Session.
+`session.set({ model })` lets a local SDK Session override the runtime model instance held by its Agent.
 
 ```ts
 await session.set({
@@ -30,24 +30,20 @@ This is useful when:
 
 - you are using `@downcity/agent` in pure SDK embedding mode
 - you manage a local Session directly
-- or you are implementing the host's `prepare_session` hook
 
-## Host-managed injection
+## Agent default model
 
-When several Sessions share a host model policy, use the model-agnostic Agent hook:
+When several Sessions share one model, provide the instance directly to the Agent:
 
 ```ts
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
-  prepare_session: async (session) => {
-    const model = await host_model_runtime.resolve(session.id);
-    await session.set({ model });
-  },
+  model,
 });
 ```
 
-The SDK does not know which IDs, defaults, or persistence strategy `host_model_runtime` uses.
+A Session without an explicit model falls back to the Agent model; once set, its own model takes priority. Model instances are not persisted.
 
 ## Why it works this way
 
@@ -60,11 +56,11 @@ That makes the local SDK more flexible, but it also makes the caller responsible
 
 ## What happens if you skip it
 
-If a local Session has not received a model instance through `session.set({ model })` before execution, execution fails explicitly.
+If neither the Agent nor the local Session has a model instance, execution fails explicitly.
 
 ## What about remote sessions
 
-Remote Sessions do not expose a model-setting API. Remote clients only send prompts; the server host selects and injects the model through `prepare_session`.
+Remote Sessions do not expose a model-setting API. Remote clients only send prompts; the server creates the local Agent with its runtime model instance.
 
 ## What about Downcity Agent projects
 

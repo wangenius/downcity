@@ -11,7 +11,6 @@ import type { PluginActions } from "@downcity/agent";
 import { createAction } from "@downcity/agent";
 import { z } from "zod";
 import type { TaskListActionPayload } from "@/task/types/TaskPluginTypes.js";
-import type { TaskPluginOptions } from "@/task/types/TaskPluginOptions.js";
 import type {
   TaskCreateRequest,
   TaskDeleteRequest,
@@ -91,7 +90,6 @@ const TASK_STATUS_REQ_SCHEMA = z.object({
  */
 export function createTaskPluginActions(params: {
   reloadSchedulerAfterMutation: TaskSchedulerReloadPort;
-  resolve_session_model?: TaskPluginOptions["resolve_session_model"];
 }): PluginActions {
   return {
     list: createAction({
@@ -225,7 +223,6 @@ export function createTaskPluginActions(params: {
           context: actionParams.context,
           payload: actionParams.input as TaskRunRequest,
           run_context: actionParams.run_context,
-          resolve_session_model: params.resolve_session_model,
         });
       },
     }),

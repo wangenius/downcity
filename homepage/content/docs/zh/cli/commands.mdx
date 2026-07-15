@@ -54,17 +54,17 @@ downcity agent chat -m "hello"
 
 `downcity agent list` 会优先展示正在运行的 Agent，同一状态下按 Agent ID 排序。
 
-`downcity agent model <path> --set <model-id>` 更新 Agent 默认模型，并在下次启动或重启时生效。添加 `--session-id <id>` 后则只覆盖该运行中 Session 的模型，并从下一轮对话开始生效。交互模式会先选择 Agent 默认模型或一个运行中的 Session，再选择 Federation 模型。
+`downcity agent model <path> --set <model-id>` 更新 Agent 默认模型，并在下次启动或重启时生效。交互模式会从 Federation 模型目录中选择 Agent 默认模型。
 
 启动或重启 Agent 时，如果已保存的默认模型不在当前 Federation 模型目录中，交互式终端会直接展示当前 Federation 的模型选择器；选择完成后会更新默认模型并继续原启动流程。非交互模式不会自动选择，而会返回可用模型和对应的 `agent model --set` 修复命令。
 
-交互式 Agent Chat 顶部会显示当前 Session、模型和运行状态。在聊天中输入 `/model` 或 `/session` 后，选择器会直接显示在输入框下方，不会遮挡消息历史。模型选择结果写入当前 Session，并从下一轮对话开始生效。
+交互式 Agent Chat 顶部会显示当前 Session 和运行状态。在聊天中输入 `/session` 后，选择器会直接显示在输入框下方，不会遮挡消息历史。
 
 消息历史支持鼠标滚轮、空输入时的 `↑` / `↓`、`PageUp` / `PageDown`；`Ctrl+L` 可直接返回最新消息。工具执行默认折叠，使用 `Ctrl+O` 统一展开或收起参数与结果。
 
 当 unrestricted shell 操作需要审批时，Agent 会直接发起工具请求，由运行时在执行前暂停并显示审批面板，不需要先在聊天中重复确认。同一条 Tool 更新会携带完整命令、工作目录、申请原因和审批 ID，内联面板不需要再次请求详情；选择 Approve 或 Deny 后提交，`Esc` / `Ctrl+C` 按安全语义执行 Deny。远端提交失败时，请求会保留并重新显示，不会让当前轮次失去审批入口。
 
-Agent 执行期间仍可提交 `/approve`、`/deny`、`/help` 和 `/quit`。会改变会话或 transcript 的 `/model`、`/session`、`/new`、`/clear` 仅在空闲时可用；普通消息也不会并发开启第二个 turn。
+Agent 执行期间仍可提交 `/approve`、`/deny`、`/help` 和 `/quit`。会改变会话或 transcript 的 `/session`、`/new`、`/clear` 仅在空闲时可用；普通消息也不会并发开启第二个 turn。
 
 ### Agent 历史
 

@@ -79,7 +79,7 @@ Both expose `prompt()`, `stop()`, `compact()`, `subscribe()`, `messages()`, `app
 | --- | --- |
 | Local `AgentSession` | `session.set({ model })`; only a runtime model instance is accepted |
 | `RemoteAgentSession` | No model configuration API; the remote client only executes the Session |
-| Downcity Agent project | City stores `execution.modelId` and Session overrides, then injects the model before each turn |
+| Downcity Agent project | CLI resolves `execution.modelId` and passes the runtime model to the Agent |
 
 Remote clients do not participate in model selection. IDs, defaults, and recovery belong to the server host.
 

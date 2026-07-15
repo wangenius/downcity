@@ -13,7 +13,6 @@
 import path from "node:path";
 import {
   Agent,
-  normalizeAgentModel,
   resolve_agent_env,
 } from "@downcity/agent";
 import { Shell } from "@downcity/shell";
@@ -21,14 +20,12 @@ import { AgentHTTP, AgentRPC } from "@downcity/server";
 import type { AgentStartOptions } from "@/city/types/AgentStartOptions.js";
 import { CliError } from "@/shared/CliError.js";
 import { createRuntimeModel } from "@/city/runtime/city-model/CreateRuntimeModel.js";
-import { createCityAiAgentModel } from "@/city/runtime/city-model/CityAiServiceBinding.js";
 import { mergeProcessEnvWithPlatformGlobalEnv } from "@/city/env/ProcessEnv.js";
 import { resolveAgentId } from "@/shared/IndexSupport.js";
 import { startAgentHttpGateway } from "@/city/agent/AgentHttpGateway.js";
 import { createCityBuiltinPlugins } from "@/city/runtime/plugins/CityBuiltinPlugins.js";
 import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
 import { createAgentPluginConfigRuntime } from "@/city/process/registry/AgentHostRuntime.js";
-import { CitySessionModelRuntime } from "@/city/agent/CitySessionModelRuntime.js";
 
 /**
  * 前台启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
@@ -98,35 +95,17 @@ export async function runCommand(
     config,
     env: hostEnv,
   });
-  const model_id = String(
-    config.execution?.type === "api" ? config.execution.modelId || "" : "",
-  ).trim();
-  const session_model_runtime = new CitySessionModelRuntime({
-    project_root: projectRoot,
-    default_model_id: model_id,
-    default_model: model,
-    resolve_model: async (session_model_id) =>
-      normalizeAgentModel(await createCityAiAgentModel({
-        modelId: session_model_id,
-        env: hostEnv,
-      })),
-  });
   const plugins = await createCityBuiltinPlugins({
     env: hostEnv,
     config,
-    resolve_session_model: async (session_id) =>
-      await session_model_runtime.resolve_session_model(session_id),
   });
 
   const agent = new Agent({
     id: agentId,
     path: projectRoot,
     shell: new Shell(),
+    model,
     plugins,
-    prepare_session: async (session) =>
-      await session_model_runtime.prepare_session(session),
-    release_session: async (session_id) =>
-      await session_model_runtime.release_session(session_id),
     env: hostEnv,
     config,
     plugin_config: createAgentPluginConfigRuntime(projectRoot),
@@ -169,8 +148,6 @@ export async function runCommand(
     await server.stop();
     await rpc.close();
     await agent.dispose();
-    session_model_runtime.dispose();
-
     // Save logs
     await agentLogger.saveAllLogs();
 

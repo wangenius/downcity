@@ -25,9 +25,7 @@ const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
   tools: {},
-  prepare_session: async (session) => {
-    await session.set({ model: openai.responses("gpt-5") });
-  },
+  model: openai.responses("gpt-5"),
 });
 
 const session = await agent.sessions.create();
@@ -43,14 +41,14 @@ console.log(result.text);
 
 1. `new Agent(...)`
 2. `await agent.sessions.create()`
-3. make sure the session has a model
+3. make sure the Agent or Session has a model
 
 Step 3 is the easiest one to forget, and it is also the most common local SDK mistake.
 
-You can satisfy step 3 in either way:
+You can satisfy step 3 in either way. Runtime resolution always prefers the Session model, then falls back to the Agent model:
 
-- inject the runtime model from the host with `prepare_session`
-- or call `await session.set({ model })` directly for one specific local session
+- pass a model to `new Agent({ model })`
+- call `await session.set({ model })` for one specific local session
 
 If you skip step 3 entirely, the local session has no model and cannot execute.
 

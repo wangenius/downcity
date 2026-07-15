@@ -30,7 +30,7 @@ import { AgentRPC } from "@downcity/server";
 const agent = new Agent({
   id,
   path,
-  prepare_session: async (session) => await session.set({ model }),
+  model,
 });
 await agent.ready();
 
@@ -72,11 +72,10 @@ const agent = new RemoteAgent({
 远程 Session 不提供模型配置方法：
 
 ```ts
-await session.set({ model });
-await session.set({ modelId: "quality" });
+// 远程 Session 不提供模型配置方法
 ```
 
-模型 ID、默认值、恢复策略和运行时实例始终由服务端宿主管理。
+模型 ID、默认值和运行时实例始终由服务端 Agent 管理。
 
 如果你是纯 SDK 模式，应该在服务端本地 `Agent` 或本地 `session` 上设置模型。
 

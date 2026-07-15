@@ -61,12 +61,7 @@ async function create_agent_with_titled_session(input) {
   const agent = new Agent({
     id: input.agent_id,
     path: agent_path,
-    prepare_session: async (session) => {
-      await session.set({ model: create_mock_title_model(input.title) });
-    },
-    ...(input.release_session
-      ? { release_session: input.release_session }
-      : {}),
+    model: create_mock_title_model(input.title),
   });
   const collection = agent.sessions;
   const session = await collection.create({
@@ -205,16 +200,12 @@ test("list_sessions reflects canonical Recorder history changes", async () => {
 });
 
 test("archive_sessions returns title from archived session metadata", async () => {
-  const released_session_ids = [];
   const { agent, collection, session } = await create_agent_with_titled_session({
     tmp_prefix: "downcity-agent-archive-list-title-",
     agent_id: "archive_list_title_agent",
     session_id: "archived_session",
     title: "归档标题",
     first_user_text: "Archive this titled session",
-    release_session: async (session_id) => {
-      released_session_ids.push(session_id);
-    },
   });
 
   try {
@@ -227,7 +218,6 @@ test("archive_sessions returns title from archived session metadata", async () =
 
     assert.equal(active_page.total, 0);
     assert.equal(archived_page.total, 1);
-    assert.deepEqual(released_session_ids, [session.id]);
     assert.deepEqual(
       archived_page.items.map((item) => ({
         sessionId: item.sessionId,

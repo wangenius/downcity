@@ -7,7 +7,6 @@
  */
 
 import type { AgentContext } from "@downcity/agent";
-import type { LanguageModel } from "ai";
 import {
   isTaskWhenManual,
   resolveTaskWhenCronExpression,
@@ -34,8 +33,6 @@ export async function registerTaskCronJobs(params: {
    * 当前 TaskPlugin 实例持有的运行中 task 锁。
    */
   runningTaskIds: Set<string>;
-  /** 由宿主提供任务绑定 Session 的运行时模型。 */
-  resolve_session_model?: (session_id: string) => Promise<LanguageModel>;
 }): Promise<{ tasksFound: number; jobsScheduled: number }> {
   const context = params.context;
   const logger = context.logger;
@@ -96,7 +93,6 @@ export async function registerTaskCronJobs(params: {
                 taskId,
                 projectRoot: context.rootPath,
                 trigger: { type: "cron" },
-                resolve_session_model: params.resolve_session_model,
               });
 
               void logger.log("info", formatTaskLogMessage("Task run finished"), {
@@ -183,7 +179,6 @@ export async function registerTaskCronJobs(params: {
               taskId,
               projectRoot: context.rootPath,
               trigger: { type: "time" },
-              resolve_session_model: params.resolve_session_model,
             });
 
             void logger.log("info", formatTaskLogMessage("Task run finished"), {

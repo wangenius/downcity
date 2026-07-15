@@ -274,11 +274,11 @@ export function formatAgentConfigPanelDescription(agent: AgentManagerAgentSummar
   return t({
     zh: [
       `Agent ${agent.id} · 模型 ${agent.execution_binding || "未配置"} · Chat ${agent.channels.length > 0 ? agent.channels.length : "未连接"}`,
-      "配置 Agent ID、Session 模型或连接 City 全局 Chat 账号。",
+      "配置 Agent ID、默认模型或连接 City 全局 Chat 账号。",
     ].join("\n"),
     en: [
       `Agent ${agent.id} · Model ${agent.execution_binding || "not configured"} · Chat ${agent.channels.length > 0 ? agent.channels.length : "not connected"}`,
-      "Configure the Agent ID, Session model, or City-level Chat accounts.",
+      "Configure the Agent ID, default model, or City-level Chat accounts.",
     ].join("\n"),
   });
 }
@@ -367,10 +367,10 @@ export async function promptAgentConfigAction(
         value: "configureId",
       },
       {
-        title: t({ zh: "配置 Session 模型", en: "Configure Session model" }),
+        title: t({ zh: "配置默认模型", en: "Configure default model" }),
         description: t({
-          zh: "选择运行中的 Session，再从当前 Federation 的 AI models 中切换模型。",
-          en: "Select a running Session, then switch its model from the active Federation AI models.",
+          zh: "从当前 Federation 的 AI models 中选择 Agent 默认模型。",
+          en: "Select the Agent default model from the active Federation AI models.",
         }),
         value: "configureModel",
       },
@@ -722,8 +722,8 @@ export async function runSelectedAgentManager(agent_input: AgentManagerAgentSumm
           agent = await reloadAgentSummary(agent.projectRoot, agent);
           last_message = result?.changed
             ? t({
-                zh: `${result.target === "session" ? "Session" : "Agent 默认"}模型已更新：${result.current_model_id}`,
-                en: `${result.target === "session" ? "Session" : "Agent default"} model updated: ${result.current_model_id}`,
+                zh: `Agent 默认模型已更新：${result.current_model_id}`,
+                en: `Agent default model updated: ${result.current_model_id}`,
               })
             : t({ zh: "模型未修改", en: "Model unchanged" });
           continue;

@@ -30,7 +30,7 @@ import { AgentRPC } from "@downcity/server";
 const agent = new Agent({
   id,
   path,
-  prepare_session: async (session) => await session.set({ model }),
+  model,
 });
 await agent.ready();
 
@@ -72,11 +72,10 @@ const agent = new RemoteAgent({
 Remote Sessions do not expose model configuration:
 
 ```ts
-await session.set({ model });
-await session.set({ modelId: "quality" });
+// model configuration is not available on RemoteAgentSession
 ```
 
-The server host owns model IDs, defaults, recovery, and runtime model injection.
+The server host owns the local Agent and its runtime model instance.
 
 If you are in pure SDK mode, configure the model on the server-side local `Agent` or local session.
 

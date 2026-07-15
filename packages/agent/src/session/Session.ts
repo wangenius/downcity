@@ -8,7 +8,7 @@
  */
 
 import { Executor } from "@executor/Executor.js";
-import type { Tool } from "ai";
+import type { LanguageModel, Tool } from "ai";
 import { JsonlSessionHistoryComposer } from "@executor/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 import { SessionRecorderHistoryStore } from "@/session/recorder/SessionRecorderHistoryStore.js";
 import { JsonlSessionMessageStore } from "@/session/recorder/JsonlSessionMessageStore.js";
@@ -27,6 +27,7 @@ import {
   getSdkAgentSessionDirPath,
 } from "@/session/storage/Paths.js";
 import { resolveSystemTimezone } from "@/session/storage/Metadata.js";
+import { read_agent_model_context_window } from "@/model/CityModelAdapter.js";
 import { createRuntimeSessionPort } from "@/session/storage/RuntimeSessionPort.js";
 import { SessionSystemBuilder } from "@/session/SessionSystemBuilder.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
@@ -93,6 +94,7 @@ export class Session implements AgentSession {
   private readonly approval_broker: SessionApprovalBroker;
   private readonly localState: SessionLocalState;
   private readonly getAgentEnv: SessionOptions["getAgentEnv"];
+  private readonly getAgentModel: SessionOptions["getAgentModel"];
   private readonly get_agent_plugins: SessionOptions["get_agent_plugins"];
   private effective_instruction_system_blocks: AgentSessionSystemBlock[];
   private effective_agent_env: Record<string, string>;
@@ -110,6 +112,7 @@ export class Session implements AgentSession {
     this.logger = options.logger;
     this.getInstructionSystemBlocks = options.getInstructionSystemBlocks;
     this.getAgentEnv = options.getAgentEnv;
+    this.getAgentModel = options.getAgentModel;
     this.get_agent_plugins = options.get_agent_plugins;
     this.effective_instruction_system_blocks = options
       .getInstructionSystemBlocks()
@@ -171,12 +174,7 @@ export class Session implements AgentSession {
             await this.ensureConfiguredHook?.(this);
           }
         : undefined,
-      ...(options.prepareExecution
-        ? {
-            prepare_execution_hook: async () =>
-              await options.prepareExecution?.(this),
-          }
-        : {}),
+      get_model: () => this.get_model(),
       publish_event: (event) => {
         this.eventHub.publish(event);
       },
@@ -404,6 +402,7 @@ export class Session implements AgentSession {
     if (this.runtimePort) return this.runtimePort;
     this.runtimePort = createRuntimeSessionPort({
       sessionId: this.id,
+      getModel: () => this.get_model(),
       getExecutor: () => this.executor.getExecutor(),
       prompt: async (input) => await this.prompt(input),
       stop: async () => await this.stop(),
@@ -444,6 +443,7 @@ export class Session implements AgentSession {
       getPluginSystemBlocks: async () =>
         await this.effective_agent_plugins.systemBlocks(),
       ensureConfigured: this.ensureConfiguredHook,
+      getAgentModel: this.getAgentModel,
       composers: this.composers,
     });
   }
@@ -570,13 +570,8 @@ export class Session implements AgentSession {
       sessionId: this.id,
       historyStore: this.historyStore,
       historyComposer: this.historyComposer,
-      getModel: () =>
-        this.localState.effective_session_config.model ||
-        this.localState.sessionConfig.model,
-      get_model_context_window: () =>
-        this.localState.effective_session_config.model
-          ? this.localState.effective_session_config.model_context_window
-          : this.localState.sessionConfig.model_context_window,
+      getModel: () => this.get_model(),
+      get_model_context_window: () => this.get_model_context_window(),
       logger: this.logger,
       systemComposer: system_composer,
       getTools: () => this.tools,
@@ -589,6 +584,28 @@ export class Session implements AgentSession {
         ? { compactionComposer: compaction_composer }
         : {}),
     });
+  }
+
+  /**
+   * 返回当前 Session 实际使用的模型实例。
+   *
+   * 解析顺序固定为 Session 覆盖模型，其次回退到 Agent 模型。
+   */
+  get_model(): LanguageModel | undefined {
+    return (
+      this.localState.effective_session_config.model ||
+      this.localState.sessionConfig.model ||
+      this.getAgentModel()
+    );
+  }
+
+  /** 读取当前有效模型对应的上下文窗口。 */
+  private get_model_context_window(): number | undefined {
+    return (
+      this.localState.effective_session_config.model_context_window ||
+      this.localState.sessionConfig.model_context_window ||
+      read_agent_model_context_window(this.get_model())
+    );
   }
 
   private resolve_composer<TComposer>(

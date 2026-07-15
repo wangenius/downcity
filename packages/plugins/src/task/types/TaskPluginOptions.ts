@@ -6,8 +6,6 @@
  * - 只暴露用户能直接理解的时区配置，内部调度实现细节不进入 constructor。
  */
 
-import type { LanguageModel } from "ai";
-
 /**
  * TaskPlugin 构造参数。
  */
@@ -22,12 +20,4 @@ export interface TaskPluginOptions {
    */
   timezone?: string;
 
-  /**
-   * 由宿主按 Session 标识提供任务执行使用的模型实例。
-   *
-   * 关键点（中文）
-   * - TaskPlugin 不读取模型 ID，也不从 AgentContext 获取模型。
-   * - 模型选择、持久化和恢复由宿主负责。
-   */
-  resolve_session_model?: (session_id: string) => Promise<LanguageModel>;
 }

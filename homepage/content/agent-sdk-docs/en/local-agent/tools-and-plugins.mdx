@@ -199,7 +199,7 @@ import { ImagePlugin } from "@downcity/plugins";
 const agent = new Agent({
   id: "creative-agent",
   path: "/path/to/project",
-  prepare_session: async (session) => await session.set({ model }),
+  model,
   plugins: [
     new ImagePlugin({
       default_model: "image-model-id",

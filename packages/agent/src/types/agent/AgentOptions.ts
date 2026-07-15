@@ -6,7 +6,7 @@
  * - RemoteAgent 与 Session 数据结构拆到独立类型文件。
  */
 
-import type { Tool } from "ai";
+import type { LanguageModel, Tool } from "ai";
 import type { Shell } from "@downcity/shell";
 import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
@@ -15,7 +15,6 @@ import type {
   AgentManagedSession,
   SessionOptions,
 } from "@/types/session/SessionOptions.js";
-import type { AgentSession } from "@/types/agent/SessionActor.js";
 
 /**
  * Agent 可使用的 Session 类。
@@ -73,24 +72,13 @@ export interface AgentOptions {
   instruction?: string | string[];
 
   /**
-   * Session 每次执行前调用的宿主准备钩子。
+   * 当前 Agent 持有的运行时模型实例。
    *
    * 关键点（中文）
-   * - Agent SDK 不选择、持久化或恢复模型。
-   * - 宿主可在这里注入当前执行所需的模型实例与其他运行时依赖。
-   * - 钩子在每次 turn 开始前执行，因此宿主配置变更可在下一轮生效。
+   * - Agent 不选择或恢复模型，只持有宿主传入的实例。
+   * - Session 未显式设置模型时，执行自动回退到该实例。
    */
-  prepare_session?: (session: AgentSession) => Promise<void>;
-
-  /**
-   * Session 离开当前 Agent 活跃集合后的宿主释放钩子。
-   *
-   * 关键点（中文）
-   * - 当前在 Session 归档成功后调用。
-   * - 宿主可清理模型绑定等自身持有的编排数据。
-   * - SDK 不感知宿主具体清理的数据类型。
-   */
-  release_session?: (session_id: string) => Promise<void>;
+  model?: LanguageModel;
 
   /**
    * 当前 agent 显式持有的插件实例集合。

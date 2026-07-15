@@ -99,6 +99,6 @@ Compact 先原子创建 Segment，再原子覆盖 Active。若进程在两步之
 
 ## `meta.json`
 
-`meta.json` 保存列表和详情所需的轻量属性，包括 `sessionId`、`agentId`、标题、模型、时间戳、消息数、历史字节数和时区。Session 属性或消息状态变化时，SDK 会同步更新这些摘要字段。
+`meta.json` 保存列表和详情所需的轻量属性，包括 `sessionId`、`agentId`、标题、模型标签、时间戳、消息数、历史字节数和时区。运行时模型实例不会持久化。Session 属性或消息状态变化时，SDK 会同步更新这些摘要字段。
 
 归档整个 Session 与 Compact Segment 是两件不同的事。`archive()` 会把整个 Session 移入 archived sessions 区域；Compact 只在当前 Session 的 `segments/` 中关闭旧 Active 前缀。

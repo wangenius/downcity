@@ -53,14 +53,12 @@ await client.ai.text({
 });
 
 const agent = new Agent({
-  prepare_session: async (session) => {
-    await session.set({ model: normalizeAgentModel(model) });
-  },
+  model: normalizeAgentModel(model),
 });
 ```
 
 这条路径不需要产品侧创建 AI SDK provider。宿主先把 `CityModel` 转换为运行时模型，
-再注入本地 Session。
+再传给本地 Agent。Session 如有自己的模型实例会优先使用。
 
 ## OpenAI 兼容通路
 

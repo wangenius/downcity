@@ -107,6 +107,8 @@ export interface SessionPort {
    * 当前 session 标识。
    */
   readonly sessionId: string;
+  /** 获取当前 Session 优先解析后的运行时模型实例。 */
+  getModel(): LanguageModel | undefined;
   /**
    * 获取当前 session 的执行端口。
    */

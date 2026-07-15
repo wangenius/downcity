@@ -24,6 +24,8 @@ export interface CreateRuntimeSessionPortParams {
    * 当前 sessionId。
    */
   sessionId: string;
+  /** 获取当前 Session 优先解析后的运行时模型实例。 */
+  getModel: SessionPort["getModel"];
   /**
    * 读取当前 session 底层执行端口。
    */
@@ -72,6 +74,7 @@ export function createRuntimeSessionPort(
 ): SessionPort {
   return {
     sessionId: params.sessionId,
+    getModel: () => params.getModel(),
     getExecutor: () => params.getExecutor(),
     getHistoryStore: () => params.historyStore,
     prompt: async (input) => {

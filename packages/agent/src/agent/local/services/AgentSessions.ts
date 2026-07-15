@@ -9,7 +9,7 @@
 
 import fs from "fs-extra";
 import { nanoid } from "nanoid";
-import type { Tool } from "ai";
+import type { LanguageModel, Tool } from "ai";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type {
   AgentCreateSessionInput,
@@ -98,11 +98,8 @@ type AgentSessionsOptions = {
    */
   SessionClass?: AgentSessionConstructor;
 
-  /** Session 每次执行前调用的宿主准备钩子。 */
-  prepare_session?: (session: AgentSession) => Promise<void>;
-
-  /** Session 归档后的宿主释放钩子。 */
-  release_session?: (session_id: string) => Promise<void>;
+  /** 读取 Agent 当前持有的运行时模型实例。 */
+  get_agent_model: () => LanguageModel | undefined;
 };
 
 /**
@@ -119,8 +116,7 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
   private readonly get_agent_plugins: AgentSessionsOptions["get_agent_plugins"];
   private readonly ensure_agent_ready: AgentSessionsOptions["ensure_agent_ready"];
   private readonly SessionClass: AgentSessionConstructor;
-  private readonly prepare_session?: AgentSessionsOptions["prepare_session"];
-  private readonly release_session?: AgentSessionsOptions["release_session"];
+  private readonly get_agent_model: AgentSessionsOptions["get_agent_model"];
   private readonly sessions_by_id = new Map<string, AgentManagedSession>();
 
   constructor(options: AgentSessionsOptions) {
@@ -134,8 +130,7 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
     this.get_agent_plugins = options.get_agent_plugins;
     this.ensure_agent_ready = options.ensure_agent_ready;
     this.SessionClass = options.SessionClass || Session;
-    this.prepare_session = options.prepare_session;
-    this.release_session = options.release_session;
+    this.get_agent_model = options.get_agent_model;
   }
 
   /**
@@ -314,13 +309,6 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
 
     // 关键点（中文）：归档后清理缓存，避免后续操作访问已移动目录。
     this.sessions_by_id.delete(session_id);
-    try {
-      await this.release_session?.(session_id);
-    } catch (error) {
-      this.logger.error(
-        `Agent session release failed: ${session_id} - ${String(error)}`,
-      );
-    }
 
     return {
       sessionId: session_id,
@@ -396,18 +384,13 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
       logger: this.logger,
       getInstructionSystemBlocks: () => this.load_instruction_system_blocks(),
       getAgentEnv: () => this.get_agent_env(),
+      getAgentModel: () => this.get_agent_model(),
       get_agent_plugins: () => this.get_agent_plugins(),
       getManagedPluginSystemBlocks: async () => [],
       getPluginSystemBlocks: async () => await this.load_plugin_system_blocks(),
       ensureConfigured: async (session) => {
         await this.ensure_agent_ready();
       },
-      ...(this.prepare_session
-        ? {
-            prepareExecution: async (session) =>
-              await this.prepare_session?.(session),
-          }
-        : {}),
     });
     this.sessions_by_id.set(resolved_session_id, created);
     return created;

@@ -38,9 +38,6 @@ export interface SlashCommandHost {
   /** 展示 session 选择器。 */
   show_session_picker(): Promise<void>;
 
-  /** 展示当前 Session 的模型选择器。 */
-  show_model_picker(): Promise<void>;
-
   /**
    * 批准指定 unrestricted sandbox 审批请求。
    *

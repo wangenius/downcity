@@ -55,15 +55,6 @@ import {
   removeChannelAccount,
   upsertChannelAccount,
 } from "@/city/runtime/store/StoreChannelAccountRepository.js";
-import {
-  get_agent_session_model_binding,
-  remove_agent_session_model_binding,
-  upsert_agent_session_model_binding,
-} from "@/city/runtime/store/StoreAgentSessionModelRepository.js";
-import type {
-  AgentSessionModelBinding,
-  UpsertAgentSessionModelBindingInput,
-} from "@/city/types/AgentSessionModel.js";
 
 /**
  * 平台控制面全局存储门面。
@@ -103,7 +94,6 @@ export class PlatformStore {
     this.sqlite.exec("DELETE FROM platform_secure_settings;");
     this.sqlite.exec("DELETE FROM env_entries;");
     this.sqlite.exec("DELETE FROM agent_configs;");
-    this.sqlite.exec("DELETE FROM agent_session_models;");
     this.sqlite.exec("DELETE FROM channel_accounts;");
   }
 
@@ -313,32 +303,6 @@ export class PlatformStore {
     removeChannelAccount(this.context, accountIdInput);
   }
 
-  /** 读取指定 Session 的模型覆盖。 */
-  get_agent_session_model_binding(
-    project_root: string,
-    session_id: string,
-  ): AgentSessionModelBinding | null {
-    return get_agent_session_model_binding(
-      this.context,
-      project_root,
-      session_id,
-    );
-  }
-
-  /** 新增或更新指定 Session 的模型覆盖。 */
-  upsert_agent_session_model_binding(
-    input: UpsertAgentSessionModelBindingInput,
-  ): AgentSessionModelBinding {
-    return upsert_agent_session_model_binding(this.context, input);
-  }
-
-  /** 删除指定 Session 的模型覆盖。 */
-  remove_agent_session_model_binding(
-    project_root: string,
-    session_id: string,
-  ): void {
-    remove_agent_session_model_binding(this.context, project_root, session_id);
-  }
 }
 
 /**

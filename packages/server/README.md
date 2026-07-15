@@ -24,9 +24,7 @@ import { AgentRPC, AgentHTTP } from "@downcity/server";
 const agent = new Agent({
   id,
   path,
-  prepare_session: async (session) => {
-    await session.set({ model });
-  },
+  model,
 });
 await agent.ready();
 

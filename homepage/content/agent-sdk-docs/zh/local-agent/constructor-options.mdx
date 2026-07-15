@@ -1,6 +1,6 @@
 ---
 title: Agent 构造参数
-description: 详细说明本地 Agent 的 id、path、instruction、prepare_session、env、tools 和 plugins 参数
+description: 详细说明本地 Agent 的 id、path、instruction、model、env、tools 和 plugins 参数
 ---
 
 # Agent 构造参数
@@ -11,7 +11,7 @@ description: 详细说明本地 Agent 的 id、path、instruction、prepare_sess
 new Agent({
   id,
   path,
-  prepare_session,
+  model,
   env,
   instruction,
   tools,
@@ -74,26 +74,24 @@ new Agent({
 
 宿主需要额外基础指令时，应通过 `instruction` 显式传入。
 
-## `prepare_session`
+## `model`
 
-Session 每次执行前调用的宿主准备钩子。
+Agent 持有的默认运行时模型实例。
 
 ```ts
 new Agent({
   id: "repo-helper",
   path: "/path/to/project",
-  prepare_session: async (session) => {
-    await session.set({ model: openai.responses("gpt-5") });
-  },
+  model: openai.responses("gpt-5"),
 });
 ```
 
 关键点：
 
-- SDK 不负责选择、保存或恢复模型 ID
-- 宿主先创建 `LanguageModel`，再通过钩子注入
-- 钩子每个 turn 执行前调用，宿主配置可在下一轮生效
-- 该钩子也可以准备其他宿主级运行时依赖
+- SDK 不负责选择、保存或恢复模型 ID，只持有模型实例
+- Session 没有自己的模型时回退使用 Agent 模型
+- 本地 Session 可通过 `session.set({ model })` 覆盖 Agent 模型
+- 有效模型解析顺序固定为 Session 模型、Agent 模型
 
 ## `env`
 

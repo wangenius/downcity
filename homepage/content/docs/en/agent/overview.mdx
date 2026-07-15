@@ -23,7 +23,7 @@ import { Agent } from "@downcity/agent";
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
-  prepare_session: async (session) => await session.set({ model: myModel }),
+  model: myModel,
   tools: [myTool],
   plugins: [myPlugin],
 });
@@ -34,7 +34,7 @@ const agent = new Agent({
 - **Session** — one execution thread. The Agent creates sessions on demand and routes messages through them.
 - **Tool** — a function the Agent can call during execution. Passed directly to the constructor.
 - **Plugin** — a module that extends the Agent with capabilities like chat, tasks, or memory. Also passed directly to the constructor.
-- **Model** — the inference backend. Passed directly to the constructor or set per-session.
+- **Model** — the inference backend. The Agent holds the default instance, and a Session can override it with its own instance.
 
 ## What an Agent is not responsible for
 

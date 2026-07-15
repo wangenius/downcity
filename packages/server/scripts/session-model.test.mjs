@@ -2,7 +2,7 @@
  * @file 验证 RemoteAgent 通过 RPC 控制 Session。
  *
  * 关键点（中文）
- * - RemoteAgent 不暴露模型选择协议，模型实例由 Agent 宿主准备钩子注入。
+ * - RemoteAgent 不暴露模型选择协议，模型实例由 Agent 在本地持有。
  * - compact 只验证 command 被远程 Session 接受，不应自行启动 turn。
  */
 
@@ -29,7 +29,7 @@ async function reserve_port() {
   return port;
 }
 
-test("RPC uses the host-prepared runtime model and queues compact", async () => {
+test("RPC uses the Agent runtime model and queues compact", async () => {
   const project_root = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-server-session-model-"),
   );
@@ -40,9 +40,7 @@ test("RPC uses the host-prepared runtime model and queues compact", async () => 
   const agent = new Agent({
     id: "rpc_model_agent",
     path: project_root,
-    prepare_session: async (session) => {
-      await session.set({ model });
-    },
+    model,
   });
   const rpc = new AgentRPC(agent);
   const port = await reserve_port();

@@ -9,7 +9,6 @@
  */
 
 import type { AgentContext } from "@downcity/agent";
-import type { LanguageModel } from "ai";
 import type {
   DialogueRoundRecord,
   UserSimulatorDecision,
@@ -85,8 +84,6 @@ export async function runTaskNow(params: {
   agent_env?: Readonly<Record<string, string>>;
   /** 发起该任务的 Session step 已提交生效的 instruction 快照。 */
   agent_systems?: readonly string[];
-  /** 由宿主提供任务绑定 Session 的运行时模型。 */
-  resolve_session_model?: (session_id: string) => Promise<LanguageModel>;
 }): Promise<{
   ok: boolean;
   status: ShipTaskRunStatusV1;
@@ -155,21 +152,6 @@ export async function runTaskNow(params: {
 
   const runSessionId = createTaskRunSessionId(task.taskId, timestamp);
   const userSimulatorSessionId = `task-user-sim:${task.taskId}:${timestamp}`;
-  if (!params.resolve_session_model) {
-    throw new Error(
-      `Task "${task.taskId}" requires a host model resolver`,
-    );
-  }
-  const taskModel = await params.resolve_session_model(task.frontmatter.sessionId);
-  const taskSessionRuntime = createTaskSessionRuntimePort({
-    context,
-    model: taskModel,
-    runDirAbs,
-    runSessionId,
-    userSimulatorSessionId,
-    ...(params.agent_env ? { agent_env: params.agent_env } : {}),
-    ...(params.agent_systems ? { agent_systems: params.agent_systems } : {}),
-  });
 
   let ok = false;
   let status: ShipTaskRunStatusV1 = "failure";
@@ -203,6 +185,21 @@ export async function runTaskNow(params: {
     outputText = scriptResult.outputText;
     errorText = scriptResult.errorText;
   } else {
+    const task_model = context.session
+      .get(task.frontmatter.sessionId)
+      .getModel();
+    if (!task_model) {
+      throw new Error(`Task "${task.taskId}" requires a configured model`);
+    }
+    const taskSessionRuntime = createTaskSessionRuntimePort({
+      context,
+      model: task_model,
+      runDirAbs,
+      runSessionId,
+      userSimulatorSessionId,
+      ...(params.agent_env ? { agent_env: params.agent_env } : {}),
+      ...(params.agent_systems ? { agent_systems: params.agent_systems } : {}),
+    });
     let lastRoundRuleErrors: string[] = [];
     let lastRoundDecision: UserSimulatorDecision | null = null;
     let lastFeedback = "";

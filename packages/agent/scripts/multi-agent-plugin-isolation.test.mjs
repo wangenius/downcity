@@ -250,21 +250,13 @@ test("multiple session prompts use only their owning Agent plugin registry", asy
     id: "agent_a",
     path: root_a,
     plugins: [create_owner_plugin("agent_a", executed_owners)],
-    prepare_session: async (session) => {
-      await session.set({
-        model: normalizeAgentModel(create_test_model(base_url, "model_a")),
-      });
-    },
+    model: normalizeAgentModel(create_test_model(base_url, "model_a")),
   });
   const agent_b = new Agent({
     id: "agent_b",
     path: root_b,
     plugins: [create_owner_plugin("agent_b", executed_owners)],
-    prepare_session: async (session) => {
-      await session.set({
-        model: normalizeAgentModel(create_test_model(base_url, "model_b")),
-      });
-    },
+    model: normalizeAgentModel(create_test_model(base_url, "model_b")),
   });
 
   try {

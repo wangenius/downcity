@@ -9,7 +9,7 @@ This is one of the most common local SDK problems.
 
 ## Reason
 
-Local SDK sessions do not have a model unless the host provides one.
+The local SDK has no executable model only when neither the Agent nor the Session provides one.
 
 You can fix it in either way:
 
@@ -17,7 +17,7 @@ You can fix it in either way:
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
-  prepare_session: async (session) => await session.set({ model }),
+  model,
 });
 ```
 

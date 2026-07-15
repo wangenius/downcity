@@ -47,6 +47,7 @@ import {
   to_executor_ui_message,
 } from "@/session/recorder/SessionMessageCodec.js";
 import type { SessionMessage } from "@/types/session/SessionMessage.js";
+import type { LanguageModel } from "ai";
 
 type SessionStateServiceOptions = {
   /**
@@ -92,8 +93,8 @@ type SessionStateServiceOptions = {
    */
   ensure_configured_hook?: () => Promise<void>;
 
-  /** 每次执行前调用的宿主准备钩子。 */
-  prepare_execution_hook?: () => Promise<void>;
+  /** 按 Session 优先、Agent 兜底规则读取当前运行时模型。 */
+  get_model: () => LanguageModel | undefined;
 
   /**
    * 发布 session 事件。
@@ -141,7 +142,7 @@ export class SessionStateService {
   private readonly state: SessionLocalState;
   private readonly logger: Logger;
   private readonly ensure_configured_hook?: SessionStateServiceOptions["ensure_configured_hook"];
-  private readonly prepare_execution_hook?: SessionStateServiceOptions["prepare_execution_hook"];
+  private readonly get_model: SessionStateServiceOptions["get_model"];
   private readonly publish_event: SessionStateServiceOptions["publish_event"];
 
   constructor(options: SessionStateServiceOptions) {
@@ -154,7 +155,7 @@ export class SessionStateService {
     this.state = options.state;
     this.logger = options.logger;
     this.ensure_configured_hook = options.ensure_configured_hook;
-    this.prepare_execution_hook = options.prepare_execution_hook;
+    this.get_model = options.get_model;
     this.publish_event = options.publish_event;
   }
 
@@ -248,8 +249,7 @@ export class SessionStateService {
    */
   async ensure_runnable(): Promise<void> {
     await this.ensure_ready_for_execution();
-    await this.prepare_execution_hook?.();
-    if (!this.state.sessionConfig.model) {
+    if (!this.get_model()) {
       throw new Error("requires a configured model.");
     }
   }
@@ -417,7 +417,11 @@ export class SessionStateService {
       agentId: this.agent_id,
       sessionId: this.session_id,
       messages,
-      ...(input?.generate ? { model: this.state.sessionConfig.model } : {}),
+      ...(input?.generate
+        ? {
+            model: this.get_model(),
+          }
+        : {}),
       ...(this.state.sessionConfig.modelLabel
         ? { modelLabel: this.state.sessionConfig.modelLabel }
         : {}),

@@ -102,9 +102,7 @@ test("running Agent config changes and steer apply at the same Session step chec
   const agent = new Agent({
     id: "config_turn_boundary_agent",
     path: agent_path,
-    prepare_session: async (session) => {
-      if (!session.config.model) await session.set({ model });
-    },
+    model,
     instruction: ["instruction:old"],
     env: { TURN_ENV: "old" },
     plugins: [runtime_plugin],
@@ -196,9 +194,7 @@ test("running session model changes apply with steer at the next Session step", 
   const agent = new Agent({
     id: "session_step_boundary_agent",
     path: agent_path,
-    prepare_session: async (session) => {
-      if (!session.config.model) await session.set({ model: old_model });
-    },
+    model: old_model,
     plugins: [runtime_plugin],
   });
 
@@ -226,10 +222,7 @@ test("running session model changes apply with steer at the next Session step", 
         message.type === "action" &&
         message.title === "Session model switched from old-model to new-model",
     );
-    assert.deepEqual(
-      model_actions.map((message) => message.status),
-      ["completed"],
-    );
+    assert.deepEqual(model_actions, []);
   } finally {
     release_old_model.resolve();
     await agent.dispose();
@@ -258,9 +251,7 @@ test("config remains effective when its action message cannot be persisted", asy
   const agent = new Agent({
     id: "config_action_observability_agent",
     path: agent_path,
-    prepare_session: async (session) => {
-      if (!session.config.model) await session.set({ model: old_model });
-    },
+    model: old_model,
   });
 
   try {

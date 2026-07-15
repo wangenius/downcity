@@ -11,7 +11,7 @@ description: Construct, ready, execute, and dispose an Agent
 const agent = new Agent({
   id: "my-agent",
   path: process.cwd(),
-  prepare_session: async (session) => await session.set({ model }),
+  model,
 });
 
 await agent.ready();

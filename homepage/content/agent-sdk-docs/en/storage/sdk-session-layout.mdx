@@ -22,7 +22,7 @@ Local SDK Agent Sessions are persisted under:
 - `active.jsonl`: complete `SessionMessage` snapshots retained after the latest Compact.
 - `assistant_message.json`: the one complete in-progress Assistant draft.
 - `segments/*.jsonl`: immutable history ranges with real Messages first and a cumulative Summary footer last.
-- `meta.json`: a lightweight index of title, model, timestamps, message count, and storage bytes.
+- `meta.json`: a lightweight index of title, model label, timestamps, message count, and storage bytes; it never stores the runtime model instance.
 
 Segment filenames use zero-padded 12-digit sequences, such as `000000000001-000000000900.jsonl`. There is no manifest; scanning filenames determines history order. A Summary is not a Message and consumes no sequence.
 

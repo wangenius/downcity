@@ -7,7 +7,7 @@
  * - Composer 仍然是 Session 级能力，不向 Agent 的执行策略层泄漏。
  */
 
-import type { Tool } from "ai";
+import type { LanguageModel, Tool } from "ai";
 import type { AgentSession } from "@/types/agent/SessionActor.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import type { AgentSessionSystemBlock } from "@/types/agent/SessionTypes.js";
@@ -104,14 +104,8 @@ export interface SessionOptions {
    */
   ensureConfigured?: (session: AgentManagedSession) => Promise<void>;
 
-  /**
-   * 每次 Session 执行前调用的宿主准备钩子。
-   *
-   * 关键点（中文）
-   * - 钩子只负责注入运行时依赖，不把宿主的模型 ID 或恢复策略带入 SDK。
-   * - 每次 turn 都会调用，宿主配置可在下一轮生效。
-   */
-  prepareExecution?: (session: AgentManagedSession) => Promise<void>;
+  /** 读取 Agent 当前持有的运行时模型实例。 */
+  getAgentModel: () => LanguageModel | undefined;
 
   /**
    * 当前 session 的 Composer 覆盖项。

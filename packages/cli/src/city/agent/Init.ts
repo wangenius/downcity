@@ -274,7 +274,6 @@ export async function initCommand(
     "Use downcity agent model --set <model-id> to update the Agent default model",
   ];
   if (primaryModelId) {
-    nextSteps.push("Use downcity agent model --session-id <id> --set <model-id> to override a running Session model");
     nextSteps.push('Use "city agent start" to confirm the Agent can reach its configured model');
   }
 

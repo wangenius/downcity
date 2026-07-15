@@ -18,7 +18,6 @@ import { UserMessageComponent } from "../bin/city/agent/tui/components/UserMessa
 import { resolve_transcript_scroll_delta } from "../bin/city/agent/tui/controllers/TranscriptNavigation.js";
 import { PiTuiChatRenderer } from "../bin/city/agent/tui/PiTuiChatRenderer.js";
 import { ApprovalPanelComponent } from "../bin/city/agent/tui/dialogs/ApprovalDialog.js";
-import { ModelPickerComponent } from "../bin/city/agent/tui/dialogs/ModelPicker.js";
 import { SessionPickerComponent } from "../bin/city/agent/tui/dialogs/SessionPicker.js";
 import { resolveSlashCommandInput } from "../bin/city/agent/tui/commands/resolve.js";
 
@@ -200,7 +199,6 @@ test("Header 与 Footer 在宽屏和窄屏下保持上下文与操作层级", ()
     agent_id: "demo",
     session_id: "session-123456789",
     session_title: "Build diagnostics",
-    session_model_name: "GPT-5.2",
     is_executing: false,
     status_text: "",
     transcript_scroll_offset: 0,
@@ -309,7 +307,7 @@ test("执行期间保留审批命令提交能力并阻止破坏性 Slash 命令"
   );
   assert.equal(
     resolveSlashCommandInput({ input: "/model", is_streaming: true }).kind,
-    "blocked",
+    "message",
   );
 });
 
@@ -328,24 +326,8 @@ test("内联槽位空闲时不占高度并把输入转交给下方面板", () =>
   assert.deepEqual(slot.render(64), []);
 });
 
-test("Model 与 Session Picker 在输入框下方保持搜索和选择能力", () => {
+test("Session Picker 在输入框下方保持搜索和选择能力", () => {
   const slot = new InlinePanelSlotComponent();
-  let selected_model = "";
-  slot.show(new ModelPickerComponent({
-    models: [
-      { model_id: "claude", model_name: "Claude", modalities: ["text"] },
-      { model_id: "gpt", model_name: "GPT", modalities: ["text"] },
-    ],
-    on_select: (model_id) => {
-      selected_model = model_id;
-    },
-    on_cancel: () => {},
-  }));
-  slot.handleInput("g");
-  assert.match(plain(slot.render(64)).join("\n"), /Search: g/);
-  slot.handleInput("\r");
-  assert.equal(selected_model, "gpt");
-
   let selected_session;
   slot.show(new SessionPickerComponent({
     sessions: [{

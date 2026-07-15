@@ -99,7 +99,7 @@ src/
   - `sandbox/` 放命令执行隔离与沙箱协议
   - `control/` 放 runtime 控制面内部协议与处理器
 - `src/rpc/` 放 Agent 本机 RPC runtime；HTTP gateway 由 downcity CLI 基于 RPC 转发提供
-- 模型选择、ID、默认值与恢复不在 `agent` 包内完成；宿主通过 `prepare_session` 在每轮执行前注入 `LanguageModel`，本地调用方也可直接使用 `session.set({ model })`
+- Agent 只持有宿主传入的运行时 `LanguageModel` 实例；Session 可通过 `session.set({ model })` 覆盖，执行时固定按 Session 模型、Agent 模型的顺序解析
 - `model` 也可以接收 City City 返回的 `CityModel`，Agent 会在内部适配成 AI SDK `LanguageModel`
 
 - `src/types/`

@@ -99,6 +99,6 @@ When a Session starts or reopens, the SDK also checks the Assistant draft. Exist
 
 ## `meta.json`
 
-`meta.json` stores lightweight list and detail fields such as `sessionId`, `agentId`, title, model, timestamps, message count, history bytes, and timezone. The SDK updates these summaries as Session properties and Message state change.
+`meta.json` stores lightweight list and detail fields such as `sessionId`, `agentId`, title, model label, timestamps, message count, history bytes, and timezone. Runtime model instances are never persisted. The SDK updates these summaries as Session properties and Message state change.
 
 Archiving a Session and Compact Segments are distinct. `archive()` moves the entire Session into archived sessions storage; Compact only closes an old Active prefix under the current Session's `segments/` directory.

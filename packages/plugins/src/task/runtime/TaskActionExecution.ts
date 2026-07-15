@@ -8,7 +8,6 @@
 
 import type { AgentContext } from "@downcity/agent";
 import type { PluginRunContext } from "@downcity/agent";
-import type { TaskPluginOptions } from "@/task/types/TaskPluginOptions.js";
 import type {
   TaskCronRegisterResult,
   TaskListActionPayload,
@@ -161,14 +160,12 @@ export async function executeTaskRunAction(params: {
   context: AgentContext;
   payload: TaskRunRequest;
   run_context?: PluginRunContext;
-  resolve_session_model?: TaskPluginOptions["resolve_session_model"];
 }) {
   const result = await runTaskDefinition({
     context: params.context,
     projectRoot: params.context.rootPath,
     request: params.payload,
     run_context: params.run_context,
-    resolve_session_model: params.resolve_session_model,
   });
   if (!result.success) {
     return {

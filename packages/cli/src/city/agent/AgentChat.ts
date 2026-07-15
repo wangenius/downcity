@@ -14,11 +14,6 @@ import {
   createRemoteChatSession,
   listRemoteChatSessions,
 } from "@/city/agent/AgentChatRemote.js";
-import {
-  read_session_model_override,
-  write_session_model_override,
-} from "@/city/agent/CitySessionModelRuntime.js";
-import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
 import { run_agent_chat_tui } from "@/city/agent/AgentChatTui.js";
 import type { AgentChatCliOptions } from "@/city/agent/AgentChatTypes.js";
 import {
@@ -30,7 +25,6 @@ import {
   runSdkPromptTurn,
 } from "@/city/agent/AgentChatHelpers.js";
 import { session_messages_to_entries } from "@/city/agent/tui/history/HistoryLoader.js";
-import { listPlatformModelChoices } from "@/city/runtime/city-model/ExecutionModelBinding.js";
 
 /**
  * `city agent chat` 统一入口。
@@ -97,15 +91,6 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
   }
 
   try {
-    const list_models = async () => {
-      const choices = await listPlatformModelChoices();
-      return choices.map((choice) => ({
-        model_id: choice.value,
-        model_name: choice.model.name || choice.value,
-        modalities: [...choice.model.modalities],
-      }));
-    };
-
     await run_agent_chat_tui({
       agent_id: agentId,
       session_id: interactive.target.sessionId,
@@ -117,14 +102,6 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
         await createRemoteChatSession({
           remote_agent: interactive.remote_agent,
         }),
-      list_models,
-      update_session_model: async (session_id, model_id) => {
-        write_session_model_override(
-          interactive.target.projectRoot,
-          session_id,
-          model_id,
-        );
-      },
       load_session_history: async (session_id) => {
         const session = await interactive.remote_agent.sessions.get(session_id);
         const [info, messages] = await Promise.all([
@@ -132,29 +109,8 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
           session.messages(),
         ]);
         const title = info.title?.trim() || "Untitled";
-        const config = readAgentConfig(interactive.target.projectRoot);
-        const default_model_id = String(
-          config?.execution?.type === "api"
-            ? config.execution.modelId || ""
-            : "",
-        ).trim();
-        const model_id = String(
-          read_session_model_override(
-            interactive.target.projectRoot,
-            session_id,
-          ) || default_model_id,
-        ).trim() || undefined;
-        let model_name = model_id;
-        if (model_id) {
-          try {
-            const models = await list_models();
-            model_name = models.find((model) => model.model_id === model_id)?.model_name || model_id;
-          } catch {
-            // 关键点（中文）：目录查询失败不阻塞历史加载，footer 回退展示稳定 model id。
-          }
-        }
         const entries = session_messages_to_entries(messages.items);
-        return { title, model_id, model_name, entries };
+        return { title, entries };
       },
       resolve_approval: async (session_id, approval_id, decision) => {
         const session = await interactive.remote_agent.sessions.get(session_id);

@@ -18,8 +18,8 @@ description: 理解 @downcity/agent 提供的本地 Agent、远程 Agent、Sessi
 
 这种模式下，宿主自己持有模型实例：
 
-- `await session.set({ model })`
-- 或由宿主在 `prepare_session` 中按自己的策略注入模型实例
+- `new Agent({ model })`
+- 或由宿主对某个 Session 调用 `await session.set({ model })`
 
 适合：
 
@@ -116,9 +116,7 @@ import { RemoteAgent } from "@downcity/agent";
 本地 SDK session 的模型由宿主注入：
 
 ```ts
-new Agent({
-  prepare_session: async (session) => await session.set({ model }),
-})
+new Agent({ model })
 ```
 
 或者：

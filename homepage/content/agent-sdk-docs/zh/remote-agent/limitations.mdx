@@ -12,8 +12,7 @@ RemoteAgent 当前最重要的限制是：
 远程 Session 不提供以下两种接口：
 
 ```ts
-await session.set({ model });
-await session.set({ modelId: "quality" });
+// 远程 Session 不提供模型配置方法
 ```
 
 原因很简单：
@@ -23,8 +22,8 @@ await session.set({ modelId: "quality" });
 
 ## 推荐做法
 
-- 在服务端宿主的 `prepare_session` 钩子中注入模型实例
-- 在 Downcity 集成模式里，通过 `execution.modelId` 绑定 `Federation AIService` 模型
+- 在服务端构造本地 Agent 时传入模型实例
+- 在 Downcity 集成模式里，由 CLI 读取 `execution.modelId` 并在构造 Agent 时传入模型实例
 - 客户端只做远程调用
 
 如果你把模型控制逻辑也放到客户端，就很容易和当前能力边界冲突。

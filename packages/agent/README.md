@@ -122,7 +122,8 @@ src/
 
 其中：
 
-- `agent/local` 与 `agent/remote` 是用户 API 面
+- `agent/core` 承载本地 Agent 核心运行时，`agent/remote` 承载远程 SDK 客户端
+- `config` 承载项目初始化等宿主集成能力，不进入 Agent 核心生命周期
 - `Agent` facade 是实例级装配中心，也是 env、instruction、model、tools、plugins 与 sessions 的唯一状态所有者
 - `AgentContext` 只向 Plugin 与宿主投影受限运行时能力，不保存完整项目 config 或第二份 Agent 状态
 - `session / executor / plugin` 是三大核心分层

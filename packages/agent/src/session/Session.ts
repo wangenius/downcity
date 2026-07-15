@@ -30,7 +30,7 @@ import { resolveSystemTimezone } from "@/session/storage/Metadata.js";
 import { read_agent_model_context_window } from "@/model/CityModelAdapter.js";
 import { createRuntimeSessionPort } from "@/session/storage/RuntimeSessionPort.js";
 import { SessionSystemBuilder } from "@/session/SessionSystemBuilder.js";
-import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
+import type { SessionPort } from "@/types/session/SessionPort.js";
 import type {
   SessionMutationSubscriber,
   SessionMutationUnsubscribe,

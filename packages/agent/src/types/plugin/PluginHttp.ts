@@ -7,7 +7,7 @@
  */
 
 import type { Hono } from "hono";
-import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/core/AgentContext.js";
 import type { AuthRoutePolicy } from "@/types/runtime/auth/AuthRoute.js";
 
 /**

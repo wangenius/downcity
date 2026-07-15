@@ -9,7 +9,7 @@
 import type {
   SessionSystemComposer,
 } from "@executor/composer/system/SessionSystemComposer.js";
-import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/core/AgentContext.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 import {
   resolveSessionSystemMessages,

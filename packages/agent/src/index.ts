@@ -8,7 +8,7 @@
  */
 
 // Agent 入口
-export { Agent } from "./agent/local/Agent.js";
+export { Agent } from "./agent/core/Agent.js";
 export { RemoteAgent } from "./agent/remote/RemoteAgent.js";
 export { Session } from "./session/Session.js";
 export type { SessionOptions } from "./types/session/SessionOptions.js";
@@ -106,11 +106,9 @@ export type {
   AgentSessionTurnHandle,
   AgentSessionTurnResult,
 } from "./types/sdk/AgentSessionTurn.js";
-export { AgentContext } from "./types/runtime/agent/AgentContext.js";
-export type {
-  SessionPort,
-  StructuredConfig,
-} from "./types/runtime/agent/AgentContext.js";
+export { AgentContext } from "./agent/core/AgentContext.js";
+export type { SessionPort } from "./types/session/SessionPort.js";
+export type { StructuredConfig } from "./types/plugin/PluginConfig.js";
 
 // Plugin 作者 API
 export { BasePlugin } from "./plugin/core/BasePlugin.js";
@@ -231,7 +229,7 @@ export {
 } from "./config/PlatformPaths.js";
 export {
   ensureRuntimeProjectReady,
-} from "./agent/local/ProjectSetup.js";
+} from "./config/ProjectSetup.js";
 export { assertProjectExecutionTarget } from "./config/ExecutionBinding.js";
 
 // 日志

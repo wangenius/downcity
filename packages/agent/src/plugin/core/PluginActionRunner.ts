@@ -7,7 +7,7 @@
  * - 延迟调度仍复用本模块，保证 schedule 到点后走统一 action 规则。
  */
 
-import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/core/AgentContext.js";
 import type { PluginAction, PluginActionResult } from "@/types/plugin/PluginAction.js";
 import type { PluginCommandResult } from "@/types/plugin/PluginCommand.js";
 import type { PluginSnapshot } from "@/types/plugin/PluginState.js";

@@ -6,7 +6,7 @@
  * - lifecycle 面向 runtime 主动 start/stop 钩子。
  */
 
-import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/core/AgentContext.js";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type { JsonValue } from "@/types/common/Json.js";
 

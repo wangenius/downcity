@@ -8,7 +8,7 @@
  */
 
 import type { z } from "zod";
-import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/core/AgentContext.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type {
   PluginAction,
@@ -35,7 +35,7 @@ import type {
   PluginUsageDefinition,
 } from "@/types/plugin/PluginSetup.js";
 import type { PluginHttpDefinition } from "@/types/plugin/PluginHttp.js";
-import type { StructuredConfig } from "@/types/runtime/agent/AgentContext.js";
+import type { StructuredConfig } from "@/types/plugin/PluginConfig.js";
 import type { PluginRunContext } from "@/types/plugin/PluginRunContext.js";
 
 /**

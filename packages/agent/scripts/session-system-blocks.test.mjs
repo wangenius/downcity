@@ -9,7 +9,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { createInstructionSystemBlocks } from "../bin/agent/local/AgentInstructions.js";
+import { createInstructionSystemBlocks } from "../bin/agent/core/AgentInstructions.js";
 import { buildSessionSystemBlocks } from "../bin/session/SessionSystemBuilder.js";
 
 test("instruction blocks keep Downcity core after custom instruction", () => {

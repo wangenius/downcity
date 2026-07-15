@@ -9,7 +9,7 @@
 
 import type { LanguageModel, Tool } from "ai";
 import type { AgentSession } from "@/types/agent/SessionActor.js";
-import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
+import type { SessionPort } from "@/types/session/SessionPort.js";
 import type { AgentSessionSystemBlock } from "@/types/agent/SessionTypes.js";
 import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.js";
 import type { AgentSessionCommand } from "@/types/session/SessionQueueCommand.js";

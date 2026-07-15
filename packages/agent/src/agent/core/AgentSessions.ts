@@ -39,8 +39,8 @@ import {
   listArchivedAgentSessionSummaryPage,
   listAgentSessionSummaryPage,
 } from "@/session/browse/Browse.js";
-import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
-import { createInstructionSystemBlocks } from "@/agent/local/AgentInstructions.js";
+import type { SessionPort } from "@/types/session/SessionPort.js";
+import { createInstructionSystemBlocks } from "@/agent/core/AgentInstructions.js";
 import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.js";
 
 function decodeMaybe(input: string): string {

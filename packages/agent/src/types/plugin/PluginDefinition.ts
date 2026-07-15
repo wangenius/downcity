@@ -6,10 +6,8 @@
  * - 细节类型分散在 State / Command / Action / Runtime / Setup / HTTP 模块。
  */
 
-import type {
-  AgentContext,
-  StructuredConfig,
-} from "@/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/core/AgentContext.js";
+import type { StructuredConfig } from "@/types/plugin/PluginConfig.js";
 import type { PluginActions } from "@/types/plugin/PluginAction.js";
 import type {
   PluginAvailability,

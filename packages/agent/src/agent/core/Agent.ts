@@ -1,5 +1,5 @@
 /**
- * Agent local：本地入口与 facade。
+ * Agent core：本地 Agent 核心入口与 facade。
  *
  * 职责说明（中文）
  * - 对外暴露 `Agent` 这一唯一的本地实例类。
@@ -8,14 +8,14 @@
  */
 
 import type { LanguageModel, Tool } from "ai";
-import { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import { AgentContext } from "@/agent/core/AgentContext.js";
 import type { AgentOptions } from "@/types/agent/AgentOptions.js";
 import type { Shell } from "@downcity/shell";
 import { Logger } from "@/utils/logger/Logger.js";
 import { resolve_agent_env } from "@/config/AgentEnv.js";
-import { normalizeInstructionInput } from "@/agent/local/AgentInstructions.js";
-import { AgentSessions } from "@/agent/local/services/AgentSessions.js";
-import { AgentState } from "@/agent/local/AgentState.js";
+import { normalizeInstructionInput } from "@/agent/core/AgentInstructions.js";
+import { AgentSessions } from "@/agent/core/AgentSessions.js";
+import { AgentState } from "@/agent/core/AgentState.js";
 import { generateId } from "@/utils/Id.js";
 import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 

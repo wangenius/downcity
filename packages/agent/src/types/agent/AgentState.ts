@@ -8,9 +8,9 @@
 
 import type { Tool } from "ai";
 import type { Shell } from "@downcity/shell";
-import type { AgentSessions } from "@/agent/local/services/AgentSessions.js";
+import type { AgentSessions } from "@/agent/core/AgentSessions.js";
 import type { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
-import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/core/AgentContext.js";
 
 /**
  * AgentState 构造参数。

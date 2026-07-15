@@ -7,7 +7,7 @@
  * - Agent 注册 plugin 时自动启动 lifecycle；卸载时自动停止 lifecycle。
  */
 
-import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/core/AgentContext.js";
 import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import type { PluginActions } from "@/types/plugin/PluginAction.js";
 import type { PluginCommandContext, PluginLifecycle } from "@/types/plugin/PluginCommand.js";
@@ -22,7 +22,7 @@ import type {
   PluginSetupDefinition,
   PluginUsageDefinition,
 } from "@/types/plugin/PluginSetup.js";
-import type { StructuredConfig } from "@/types/runtime/agent/AgentContext.js";
+import type { StructuredConfig } from "@/types/plugin/PluginConfig.js";
 import type { PluginRunContext } from "@/types/plugin/PluginRunContext.js";
 
 /**

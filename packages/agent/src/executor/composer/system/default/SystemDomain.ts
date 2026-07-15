@@ -8,7 +8,7 @@
 
 import type { SystemModelMessage } from "ai";
 import { transformPromptsIntoSystemMessages } from "@executor/composer/system/default/PromptRenderer.js";
-import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
+import type { AgentContext } from "@/agent/core/AgentContext.js";
 import { buildRuntimeClockSystemPrompt } from "@executor/composer/system/default/variables/VariableReplacer.js";
 import {
   CORE_SYSTEM_PROMPT,

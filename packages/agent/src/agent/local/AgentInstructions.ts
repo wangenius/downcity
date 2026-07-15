@@ -7,19 +7,8 @@
  * - 不读取 session、plugin 或 runtime 状态，保持为纯函数。
  */
 
-import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { AgentSessionSystemBlock } from "@/types/agent/SessionTypes.js";
 import { DEFAULT_SHIP_PROMPTS } from "@executor/composer/system/default/SystemDomain.js";
-
-/**
- * 创建 SDK 场景的最小 fallback 配置。
- */
-export function createFallbackSdkConfig(agent_id: string): DowncityConfig {
-  return {
-    id: agent_id,
-    version: "0.0.0",
-  } as DowncityConfig;
-}
 
 /**
  * 归一化调用方传入的静态 instruction。

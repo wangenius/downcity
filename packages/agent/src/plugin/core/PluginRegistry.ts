@@ -103,8 +103,6 @@ export class PluginRegistry implements AgentPlugins {
 
   private readonly hookRegistry: HookRegistry;
 
-  private readonly pluginInstances: Map<string, Plugin>;
-
   private readonly records = new Map<string, PluginRuntimeRecord>();
 
   private readonly retired_records = new Set<PluginRuntimeRecord>();
@@ -119,11 +117,9 @@ export class PluginRegistry implements AgentPlugins {
   constructor(params: {
     contextResolver: ContextResolver;
     hookRegistry: HookRegistry;
-    pluginInstances: Map<string, Plugin>;
   }) {
     this.contextResolver = params.contextResolver;
     this.hookRegistry = params.hookRegistry;
-    this.pluginInstances = params.pluginInstances;
   }
 
   /**
@@ -152,7 +148,6 @@ export class PluginRegistry implements AgentPlugins {
     const record = create_record(plugin);
     this.records.set(key, record);
     this.register_hooks(plugin);
-    this.pluginInstances.set(key, plugin);
 
     try {
       await this.start_record(record);
@@ -161,7 +156,6 @@ export class PluginRegistry implements AgentPlugins {
     } catch (error) {
       this.unregister_hooks(key);
       this.records.delete(key);
-      this.pluginInstances.delete(key);
       throw error;
     }
   }
@@ -185,7 +179,6 @@ export class PluginRegistry implements AgentPlugins {
     const record = create_record(plugin);
     this.records.set(key, record);
     this.register_hooks(plugin);
-    this.pluginInstances.set(key, plugin);
     return to_plugin_snapshot(record);
   }
 
@@ -205,7 +198,6 @@ export class PluginRegistry implements AgentPlugins {
 
     this.unregister_hooks(key);
     this.records.delete(key);
-    this.pluginInstances.delete(key);
     this.retire_record(record);
     this.change_listener?.({ type: "unregister", plugin_name: key });
     return true;

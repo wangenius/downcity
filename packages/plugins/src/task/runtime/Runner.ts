@@ -185,7 +185,7 @@ export async function runTaskNow(params: {
     outputText = scriptResult.outputText;
     errorText = scriptResult.errorText;
   } else {
-    const task_model = context.session
+    const task_model = context.sessions
       .get(task.frontmatter.sessionId)
       .getModel();
     if (!task_model) {

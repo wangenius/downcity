@@ -9,8 +9,7 @@
 
 import type {
   AgentContext,
-  DowncityChatChannelConfig,
-  DowncityConfig,
+  JsonObject,
 } from "@downcity/agent";
 import type { ChatChannelState } from "@/chat/types/ChatRuntime.js";
 import { getStoredChannelAccountSync } from "@/chat/accounts/Store.js";
@@ -25,6 +24,10 @@ import type {
 } from "@/chat/types/ChatPluginActionPayload.js";
 import type { ChatChannelTestResult } from "@/chat/types/ChannelStatus.js";
 import type { ChatChannelName } from "@/chat/types/ChannelStatus.js";
+import type {
+  ChatPluginChannelConfig,
+  ChatPluginRuntimeConfig,
+} from "@/chat/types/ChatPluginOptions.js";
 import {
   describeChatChannelConfiguration,
   getChatChannelStatus,
@@ -44,22 +47,23 @@ import {
 
 type ChatRuntimeControlBindings = ChatRuntimeBindings & {
   applyChannelRuntimePatch: NonNullable<ChatRuntimeBindings["applyChannelRuntimePatch"]>;
+  get_runtime_config: NonNullable<ChatRuntimeBindings["get_runtime_config"]>;
 };
 
 function getChatRuntimeBindings(context: AgentContext): ChatRuntimeControlBindings {
   const plugin = resolveChatPluginBindings(context);
-  if (!plugin?.applyChannelRuntimePatch) {
+  if (!plugin?.applyChannelRuntimePatch || !plugin.get_runtime_config) {
     throw new Error("ChatPlugin runtime instance is not available");
   }
   return plugin as ChatRuntimeControlBindings;
 }
 
 /**
- * 将 channel patch 合并进完整 plugins 配置并交给宿主持久化。
+ * 将 channel patch 合并进 Chat Plugin 配置并交给宿主持久化。
  *
  * 关键点（中文）
- * - 始终写回完整 plugins 对象，避免覆盖其他 plugin 配置。
- * - 宿主持久化成功后才更新当前 context 快照，保证运行态与存储态一致。
+ * - Plugin 只生成并提交自己的完整配置，不读取其他 Plugin 配置。
+ * - 宿主持久化成功后才更新当前 Plugin 实例，保证运行态与存储态一致。
  */
 async function persist_chat_channel_patches(params: {
   context: AgentContext;
@@ -68,14 +72,14 @@ async function persist_chat_channel_patches(params: {
     enabled?: boolean;
     channel_account_id?: string | null;
   }>;
-}): Promise<DowncityConfig["plugins"]> {
-  const current_plugins = params.context.config.plugins || {};
-  const current_chat = current_plugins.chat || {};
+}): Promise<ChatPluginRuntimeConfig> {
+  const plugin = getChatRuntimeBindings(params.context);
+  const current_chat = plugin.get_runtime_config(params.context);
   const next_channels = { ...(current_chat.channels || {}) };
 
   for (const patch of params.patches) {
     const current_channel = next_channels[patch.channel] || {};
-    const next_channel: DowncityChatChannelConfig = { ...current_channel };
+    const next_channel: ChatPluginChannelConfig = { ...current_channel };
     if (typeof patch.enabled === "boolean") {
       next_channel.enabled = patch.enabled;
     }
@@ -90,16 +94,15 @@ async function persist_chat_channel_patches(params: {
     next_channels[patch.channel] = next_channel;
   }
 
-  const next_plugins: DowncityConfig["plugins"] = {
-    ...current_plugins,
-    chat: {
-      ...current_chat,
-      channels: next_channels,
-    },
+  const next_chat: ChatPluginRuntimeConfig = {
+    ...current_chat,
+    channels: next_channels,
   };
-  await params.context.pluginConfig.persistProjectPlugins(next_plugins);
-  params.context.config.plugins = next_plugins;
-  return next_plugins;
+  await params.context.pluginConfig.persist_plugin_config(
+    "chat",
+    next_chat as unknown as JsonObject,
+  );
+  return next_chat;
 }
 
 /**

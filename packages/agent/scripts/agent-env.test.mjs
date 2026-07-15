@@ -37,7 +37,7 @@ test("项目 .env 覆盖宿主环境且不修改 process.env", () => {
   }
 });
 
-test("SDK 未传 config 时不读取 downcity.json", async () => {
+test("Agent 运行时只使用显式 id，不读取完整项目 config", async () => {
   const project_root = create_project_root();
   try {
     fs.writeFileSync(path.join(project_root, "downcity.json"), JSON.stringify({
@@ -45,8 +45,9 @@ test("SDK 未传 config 时不读取 downcity.json", async () => {
       version: "9.9.9",
     }));
     const agent = new Agent({ id: "sdk_id", path: project_root });
-    assert.equal(agent.getContext().config.id, "sdk_id");
-    assert.equal(agent.getContext().config.version, "0.0.0");
+    assert.equal(agent.id, "sdk_id");
+    assert.equal(agent.getContext().agent_id, "sdk_id");
+    assert.equal(agent.getContext().rootPath, project_root);
     await agent.ready();
     await agent.dispose();
   } finally {
@@ -59,7 +60,7 @@ test("SDK 未注入 plugin_config 时明确拒绝持久化", async () => {
   try {
     const agent = new Agent({ id: "sdk_id", path: project_root });
     await assert.rejects(
-      agent.getContext().pluginConfig.persistProjectPlugins({}),
+      agent.getContext().pluginConfig.persist_plugin_config("chat", {}),
       /Plugin config persistence is not configured/,
     );
     await agent.ready();

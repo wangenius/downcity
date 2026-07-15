@@ -101,11 +101,11 @@ export function registerControlSessionRoutes(
         const runtime = params.getAgentContext();
         const limit = toLimit(c.req.query("limit"));
         const executingSessionIds = new Set<string>(
-          runtime.listExecutingSessionIds(),
+          runtime.sessions.listExecutingSessionIds(),
         );
         const sessions = await listControlSessionSummaries({
           projectRoot: runtime.rootPath,
-          agentId: runtime.paths.agentId,
+          agentId: runtime.agent_id,
           limit,
           executingSessionIds,
         });
@@ -148,7 +148,7 @@ export function registerControlSessionRoutes(
 
         const filePath = getDowncitySessionMessagesPath(
           runtime.rootPath,
-          runtime.paths.agentId,
+          runtime.agent_id,
           sessionId,
         );
         const messages = await loadSessionMessagesFromFile(filePath);
@@ -179,7 +179,7 @@ export function registerControlSessionRoutes(
 
         const messagesPath = getDowncitySessionMessagesPath(
           runtime.rootPath,
-          runtime.paths.agentId,
+          runtime.agent_id,
           sessionId,
         );
         const messagesDirPath = dirname(messagesPath);
@@ -230,7 +230,7 @@ export function registerControlSessionRoutes(
 
         const archiveDirPath = getDowncitySessionMessagesArchiveDirPath(
           runtime.rootPath,
-          runtime.paths.agentId,
+          runtime.agent_id,
           sessionId,
         );
         if (!(await fs.pathExists(archiveDirPath))) {
@@ -255,7 +255,7 @@ export function registerControlSessionRoutes(
 
           const archivePath = getDowncitySessionMessagesArchivePath(
             runtime.rootPath,
-            runtime.paths.agentId,
+            runtime.agent_id,
             sessionId,
             archiveId,
           );
@@ -320,7 +320,7 @@ export function registerControlSessionRoutes(
 
         const archivePath = getDowncitySessionMessagesArchivePath(
           runtime.rootPath,
-          runtime.paths.agentId,
+          runtime.agent_id,
           sessionId,
           archiveId,
         );
@@ -375,7 +375,7 @@ export function registerControlSessionRoutes(
           projectRoot: runtime.rootPath,
           sessionId,
           profile: "chat",
-          staticSystemPrompts: runtime.systems,
+          staticSystemPrompts: [...runtime.systems],
           context: params.getAgentContext(),
         });
         return c.json({

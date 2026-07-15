@@ -9,8 +9,7 @@
 import type { LanguageModel, Tool } from "ai";
 import type { Shell } from "@downcity/shell";
 import type { Plugin } from "@/types/plugin/PluginDefinition.js";
-import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
-import type { AgentPluginConfigRuntime } from "@/types/agent/AgentRuntimeAssembly.js";
+import type { AgentPluginConfigRuntime } from "@/types/agent/AgentRuntimePorts.js";
 import type {
   AgentManagedSession,
   SessionOptions,
@@ -107,18 +106,9 @@ export interface AgentOptions {
    * 关键点（中文）
    * - 这里表示宿主显式注入给 agent 的基础 env。
    * - `Agent` 会在这份基础 env 之上继续叠加项目 `.env`。
-   * - 覆盖后的最终 env 会参与配置解析与运行时上下文装配，但不会回写到宿主环境。
+   * - 覆盖后的最终值会成为 Agent 运行时 env，但不会回写到宿主环境。
    */
   env?: Record<string, string>;
-
-  /**
-   * 宿主显式传入的运行时配置。
-   *
-   * 关键点（中文）
-   * - SDK 不读取项目配置文件。
-   * - CLI / Console 从自己的全局配置存储读取后传入这里。
-   */
-  config?: DowncityConfig;
 
   /**
    * 宿主提供的 plugin 配置持久化能力。

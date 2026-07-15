@@ -17,8 +17,6 @@ import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 export interface CreateAgentPluginRegistryOptions {
   /** 当前 agent 显式注册的 plugin 实例。 */
   plugins: Plugin[];
-  /** 当前 agent plugin 实例集合。 */
-  plugin_instances: Map<string, Plugin>;
   /** 延迟读取当前 AgentContext。 */
   get_context: () => AgentContext;
 }
@@ -40,7 +38,6 @@ export function createAgentPluginRegistry(
   const registry = new PluginRegistry({
     contextResolver: options.get_context,
     hookRegistry: hook_registry,
-    pluginInstances: options.plugin_instances,
   });
   plugin_registry_ref = registry;
 

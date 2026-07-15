@@ -45,7 +45,7 @@ The project root directory bound to the current agent.
 
 The SDK uses it to:
 
-- load project config
+- load the project `.env`
 - organize session storage
 
 If `path` is wrong, the agent will read the wrong `.env` and write runtime data in the wrong context.
@@ -112,7 +112,7 @@ Key points:
 - the SDK only consumes the explicit environment map you pass in
 - the SDK no longer splits global env and agent env
 - if a host needs layered env merging, it should merge first and then pass the final result through `env`
-- these values participate in config resolution and runtime context assembly, but are not written back to the system environment automatically
+- these values become the Agent runtime env, but are not written back to the system environment automatically
 
 ### Updating env at runtime
 

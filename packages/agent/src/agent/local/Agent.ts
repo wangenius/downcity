@@ -3,24 +3,25 @@
  *
  * 职责说明（中文）
  * - 对外暴露 `Agent` 这一唯一的本地实例类。
- * - facade 只保留公开 API 与 service 组合，不再直接承载装配、session 管理与生命周期细节。
- * - 单个 agent 的长期对象装配、session 管理、后台能力生命周期分别下沉到独立 service。
+ * - Agent 直接持有自身状态与长期运行时对象，避免额外 Assembly 复制同一批字段。
+ * - Session 管理与后台生命周期仍由独立对象负责具体行为。
  */
 
 import type { LanguageModel, Tool } from "ai";
-import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
-import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
-import type { AgentPlugins } from "@/types/plugin/PluginRuntime.js";
+import { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { AgentOptions } from "@/types/agent/AgentOptions.js";
 import type { Shell } from "@downcity/shell";
 import { Logger } from "@/utils/logger/Logger.js";
+import { resolve_agent_env } from "@/config/AgentEnv.js";
 import { normalizeInstructionInput } from "@/agent/local/AgentInstructions.js";
-import {
-  AgentAssemblyService,
-  type AgentAssemblyResult,
-} from "@/agent/local/services/AgentAssemblyService.js";
 import { AgentSessions } from "@/agent/local/services/AgentSessions.js";
 import { AgentBackgroundService } from "@/agent/local/services/AgentBackgroundService.js";
+import { createAgentPluginRegistry } from "@/agent/local/AgentPluginFactory.js";
+import {
+  createAgentPathRuntime,
+  createAgentPluginConfigRuntime,
+} from "@/agent/local/AgentRuntimePorts.js";
+import { createPluginTools } from "@executor/tools/plugin/PluginToolDefinition.js";
 import { generateId } from "@/utils/Id.js";
 import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 
@@ -38,7 +39,7 @@ export class Agent {
   readonly tools: Record<string, Tool>;
 
   /** 当前 Agent 已装配的 Plugin 调用与注册入口。 */
-  readonly plugins: AgentPlugins;
+  readonly plugins: PluginRegistry;
 
   /** 当前 Agent 的本地 Session 创建、恢复、查询与归档入口。 */
   readonly sessions: AgentSessions;
@@ -58,9 +59,6 @@ export class Agent {
   /** 提供给 Plugin、Session 与宿主集成层共享的 Agent 执行上下文。 */
   private readonly agentContext: AgentContext;
 
-  /** 构造阶段完成解析的 Agent 配置快照。 */
-  private readonly config: DowncityConfig;
-
   /** 当前 Agent configured env 的可变共享对象。 */
   private readonly env: Record<string, string>;
 
@@ -77,31 +75,70 @@ export class Agent {
   private instruction: string[];
 
   constructor(options: AgentOptions) {
+    this.id = String(options.id || "").trim();
+    this.path = String(options.path || "").trim();
+    if (!this.id) throw new Error("Agent requires a non-empty id");
+    if (!this.path) throw new Error("Agent requires a non-empty path");
+
     this.SessionClass = options.Session;
     this.model = options.model;
-    let sessions_ref: AgentSessions | null = null;
-    const assembly_service = new AgentAssemblyService({
-      options,
-      list_cached_sessions: () => sessions_ref?.list_cached_sessions() || [],
-      get_session_port: (session_id) => {
-        if (!sessions_ref) {
-          throw new Error("Agent sessions are not initialized");
+    this.tools = options.tools && typeof options.tools === "object"
+      ? { ...options.tools }
+      : {};
+    this.logger = new Logger();
+    this.logger.bindProjectRoot(this.path);
+    this.env = resolve_agent_env(this.path, options.env);
+    this.instruction = normalizeInstructionInput(options.instruction);
+    this.shell = options.shell;
+
+    let context_ref: AgentContext | undefined;
+    this.plugins = createAgentPluginRegistry({
+      plugins: options.plugins || [],
+      get_context: () => {
+        if (!context_ref) {
+          throw new Error("AgentContext is not initialized");
         }
-        return sessions_ref.get_session_port(session_id);
+        return context_ref;
       },
     });
-    const assembly = assembly_service.assemble();
+    if (options.plugins?.some((plugin) =>
+      plugin.actions && Object.keys(plugin.actions).length > 0
+    )) {
+      const plugin_tools = createPluginTools({ plugins: this.plugins });
+      this.tools.plugin_read = this.tools.plugin_read || plugin_tools.plugin_read;
+      this.tools.plugin_call = this.tools.plugin_call || plugin_tools.plugin_call;
+    }
+    if (this.shell) {
+      this.shell.configure({
+        root_path: this.path,
+        env: this.env,
+        agent_id: this.id,
+        logger: this.logger,
+      });
+      Object.assign(this.tools, this.shell.tools);
+    }
 
-    this.id = assembly.id;
-    this.path = assembly.path;
-    this.tools = assembly.tools;
-    this.plugins = assembly.plugins;
-    this.logger = assembly.logger;
-    this.agentContext = assembly.agent_context;
-    this.config = assembly.config;
-    this.env = assembly.env;
-    this.instruction = assembly.instruction;
-    this.shell = assembly.shell;
+    this.sessions = this.create_sessions();
+    const paths = createAgentPathRuntime(this.path, this.id);
+    this.agentContext = new AgentContext({
+      agent_id: this.id,
+      rootPath: this.path,
+      logger: this.logger,
+      get_env: () => this.env,
+      get_systems: () => this.instruction,
+      paths,
+      pluginConfig:
+        options.plugin_config || createAgentPluginConfigRuntime(this.path),
+      sessions: {
+        get: (session_id) => this.sessions.get_session_port(session_id),
+        listExecutingSessionIds: () =>
+          this.sessions.list_executing_session_ids(),
+        getExecutingSessionCount: () =>
+          this.sessions.get_executing_session_count(),
+      },
+      plugins: this.plugins,
+    });
+    context_ref = this.agentContext;
 
     // 关键点（中文）：构造完成即触发后台能力启动；调用方可 `await agent.ready()` 等待。
     this.backgroundService = new AgentBackgroundService({
@@ -109,19 +146,14 @@ export class Agent {
       agent_context: this.agentContext,
       get_shell: () => this.shell,
     });
-    this.sessions = this.create_sessions(assembly);
-    sessions_ref = this.sessions;
-    if (this.plugins instanceof PluginRegistry) {
-      const plugin_registry = this.plugins;
-      plugin_registry.set_change_listener(({ type, plugin_name }) => {
-        const verb = type === "register" ? "registered" : "unregistered";
-        this.sessions.broadcast_plugins({
-          command_id: generateId(),
-          title: `Agent plugin ${plugin_name} ${verb}`,
-          plugins: plugin_registry.execution_view(),
-        });
+    this.plugins.set_change_listener(({ type, plugin_name }) => {
+      const verb = type === "register" ? "registered" : "unregistered";
+      this.sessions.broadcast_plugins({
+        command_id: generateId(),
+        title: `Agent plugin ${plugin_name} ${verb}`,
+        plugins: this.plugins.execution_view(),
       });
-    }
+    });
   }
 
   /**
@@ -212,13 +244,6 @@ export class Agent {
   }
 
   /**
-   * 返回当前项目根目录解析后的配置快照。
-   */
-  getConfig(): DowncityConfig {
-    return this.config;
-  }
-
-  /**
    * 返回当前 agent 绑定的统一日志器。
    */
   getLogger(): Logger {
@@ -239,19 +264,15 @@ export class Agent {
     return this.shell;
   }
 
-  private create_sessions(
-    assembly: AgentAssemblyResult,
-  ): AgentSessions {
+  private create_sessions(): AgentSessions {
     return new AgentSessions({
-      agent_id: this.id || assembly.id,
-      project_root: this.path || assembly.path,
-      tools: this.tools || assembly.tools,
-      logger: this.logger || assembly.logger,
-      get_agent_context: () => this.agentContext ?? assembly.agent_context,
+      agent_id: this.id,
+      project_root: this.path,
+      tools: this.tools,
+      logger: this.logger,
       get_instruction: () => this.instruction,
       get_agent_env: () => this.getEnv(),
-      get_agent_plugins: () =>
-        (this.plugins as PluginRegistry).execution_view(),
+      get_agent_plugins: () => this.plugins.execution_view(),
       ensure_agent_ready: async () => {
         await this.backgroundService.ready();
       },

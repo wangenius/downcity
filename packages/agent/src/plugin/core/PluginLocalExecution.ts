@@ -14,21 +14,19 @@ import { findPluginByName } from "@/plugin/core/PluginCatalog.js";
 import {
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,
-} from "@/agent/local/AgentRuntimeAssembly.js";
-import { createFallbackSdkConfig } from "@/agent/local/AgentInstructions.js";
+} from "@/agent/local/AgentRuntimePorts.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import type { PluginActionResult } from "@/types/plugin/PluginAction.js";
 import type { PluginCommandContext } from "@/types/plugin/PluginCommand.js";
 import type { PluginAvailability } from "@/types/plugin/PluginRuntime.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
-import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 
 type LocalPluginCommandContextInput = {
   /** 当前项目根目录。 */
   projectRoot: string;
-  /** 宿主显式传入的 agent 配置。 */
-  config?: DowncityConfig;
+  /** 当前 Agent 稳定标识。 */
+  agent_id?: string;
 };
 
 /**
@@ -40,18 +38,16 @@ export function createLocalPluginCommandContext(
   const projectRoot = typeof input === "string" ? input : input.projectRoot;
   const rootPath = path.resolve(String(projectRoot || "").trim() || ".");
   const env = resolve_agent_env(rootPath);
-  const config = typeof input === "string" || !input.config
-    ? createFallbackSdkConfig(path.basename(rootPath) || "agent")
-    : input.config;
-  const agent_id = String(config.id || "").trim() || path.basename(rootPath) || "agent";
+  const agent_id = String(
+    typeof input === "string" ? "" : input.agent_id || "",
+  ).trim() || path.basename(rootPath) || "agent";
 
   const logger = getLogger(rootPath);
 
   return {
-    cwd: rootPath,
+    agent_id,
     rootPath,
     logger,
-    config,
     env,
     paths: createAgentPathRuntime(
       rootPath,
@@ -68,7 +64,7 @@ export async function getLocalPluginAvailability(params: {
   plugins: Iterable<Plugin>;
   projectRoot: string;
   pluginName: string;
-  config?: DowncityConfig;
+  agent_id?: string;
 }): Promise<PluginAvailability> {
   const plugin = findPluginByName(params.plugins, params.pluginName);
   if (!plugin) {
@@ -81,7 +77,7 @@ export async function getLocalPluginAvailability(params: {
 
   const context = createLocalPluginCommandContext({
     projectRoot: params.projectRoot,
-    config: params.config,
+    agent_id: params.agent_id,
   });
   if (plugin.availability) {
     return await plugin.availability(context);
@@ -103,7 +99,7 @@ export async function runLocalPluginAction(params: {
   pluginName: string;
   actionName: string;
   payload?: JsonValue;
-  config?: DowncityConfig;
+  agent_id?: string;
 }): Promise<PluginActionResult<JsonValue>> {
   const plugin = findPluginByName(params.plugins, params.pluginName);
   if (!plugin) {
@@ -134,7 +130,7 @@ export async function runLocalPluginAction(params: {
 
   const context = createLocalPluginCommandContext({
     projectRoot: params.projectRoot,
-    config: params.config,
+    agent_id: params.agent_id,
   });
 
   try {

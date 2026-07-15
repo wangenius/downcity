@@ -466,6 +466,6 @@ export class ChatQueueWorker {
    * - 在使用点显式校验，避免隐藏依赖来源。
    */
   private requireContext(sessionId: string) {
-    return this.context.session.get(sessionId);
+    return this.context.sessions.get(sessionId);
   }
 }

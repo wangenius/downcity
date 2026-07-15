@@ -245,7 +245,7 @@ export abstract class BaseChatChannel {
   protected buildAccessBlockedText(params: {
     result: IncomingChatAccessResult;
   }): string {
-    const agent_id = String(this.context.config.id || "agent").trim() || "agent";
+    const agent_id = String(this.context.agent_id || "agent").trim() || "agent";
     const displayed_agent_id = this.format_access_code(agent_id);
     if (params.result.reason === "identity_missing") {
       return "当前平台身份无法识别，请联系管理员检查 Chat 账号配置。";

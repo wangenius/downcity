@@ -108,8 +108,6 @@ export type {
 } from "./types/sdk/AgentSessionTurn.js";
 export { AgentContext } from "./types/runtime/agent/AgentContext.js";
 export type {
-  AgentContextOptions,
-  InvokePluginPort,
   SessionCollectionPort,
   SessionPort,
   StructuredConfig,
@@ -252,7 +250,7 @@ export {
 export type {
   AgentPathRuntime,
   AgentPluginConfigRuntime,
-} from "./types/agent/AgentRuntimeAssembly.js";
+} from "./types/agent/AgentRuntimePorts.js";
 
 // 项目协议类型
 export type {

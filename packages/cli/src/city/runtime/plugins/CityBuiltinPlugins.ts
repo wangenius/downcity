@@ -82,6 +82,10 @@ export function createCityStaticBuiltinPlugins(input: {
    * 当前 Agent 配置；未提供时所有 chat channel 保持禁用。
    */
   config?: DowncityConfig;
+  /** 当前 Agent HTTP runtime 的监听 host。 */
+  host?: string;
+  /** 当前 Agent HTTP runtime 的监听 port。 */
+  port?: number;
 } = {}): BasePlugin[] {
   return [
     new SkillPlugin(),
@@ -91,7 +95,10 @@ export function createCityStaticBuiltinPlugins(input: {
       queue: input.config?.plugins?.chat?.queue,
       channels: create_city_chat_channels(input.config),
     }),
-    new ContactPlugin(),
+    new ContactPlugin({
+      host: input.host ?? input.config?.start?.host,
+      port: input.port ?? input.config?.start?.port,
+    }),
     new TaskPlugin(),
     new MemoryPlugin(),
   ];
@@ -109,6 +116,10 @@ export async function createCityBuiltinPlugins(input: {
    * 当前运行 Agent 从全局 DB 读取的配置。
    */
   config: DowncityConfig;
+  /** 当前 Agent HTTP runtime 的监听 host。 */
+  host?: string;
+  /** 当前 Agent HTTP runtime 的监听 port。 */
+  port?: number;
 }): Promise<BasePlugin[]> {
   const { client } = await city_user_manager.createUserClient({
     env: input.env ?? process.env,
@@ -117,6 +128,8 @@ export async function createCityBuiltinPlugins(input: {
   return [
     ...createCityStaticBuiltinPlugins({
       config: input.config,
+      host: input.host,
+      port: input.port,
     }),
     new ImagePlugin({
       list_models: async () => {

@@ -50,7 +50,7 @@ export function registerControlOverviewRoutes(
         );
         const sessions = await listControlSessionSummaries({
           projectRoot: runtime.rootPath,
-          agentId: runtime.paths.agentId,
+          agentId: runtime.agent_id,
           limit: sessionLimit,
         });
         const runtimePlugins = listPluginStates({
@@ -81,7 +81,7 @@ export function registerControlOverviewRoutes(
           cityVersion: DC_VERSION,
           now: new Date().toISOString(),
           agent: {
-            id: runtime.config.id,
+            id: runtime.agent_id,
             status: "running",
           },
           sessions: {

@@ -14,13 +14,14 @@ description: 本地 Agent SDK 的核心公开接口
 - `agent.getEnv()`
 - `agent.setEnv(next)`
 - `agent.patchEnv(patch)`
-- `agent.getConfig()`
 - `agent.getLogger()`
+- `agent.getContext()`
+- `agent.getShell()`
 - `agent.plugins`
 
 `agent.sessions.create()` 和 `agent.sessions.get()` 返回 `AgentSession`。
 
-`agent.getConfig()`、`agent.getLogger()` 和 `agent.getContext()` 是高级集成辅助入口；没有 `agent.getRuntime()` 公开方法。
+`agent.getLogger()`、`agent.getContext()` 和 `agent.getShell()` 是高级集成辅助入口。`AgentContext` 只投影 Plugin 与宿主需要的受限运行时能力，不包含完整项目 config，也不是第二份 Agent 状态。
 
 ## Sessions
 
@@ -45,16 +46,17 @@ description: 本地 Agent SDK 的核心公开接口
 - `model`
 - `plugins`
 - `Session`
-- `config`
 - `plugin_config`
 
 当前没有 `mode` 这个构造参数。
 
 `model` 是 Agent 持有的运行时模型实例。Session 可以通过 `session.set({ model })` 持有自己的实例；执行时优先使用 Session 模型，没有时回退到 Agent 模型。SDK 不保存或恢复模型实例与模型 ID。
 
+完整项目 config 属于 CLI 等上游宿主。Agent 只接收执行所需的明确参数；`plugin_config` 也只是单个 Plugin 配置的持久化端口，不会把完整 config 放进 Agent 或 `AgentContext`。
+
 ## 核心语义
 
-- `Agent` 本身是本地执行壳
+- `Agent` 是本地运行时状态与长期对象的唯一所有者
 - 真正的执行对象是它创建出来的 session
 
 从 API 设计上看，它更像一个“session 工厂 + 后台能力管理入口”。Transport（RPC、HTTP）由 [`@downcity/server`](/zh/agent-sdk-docs/local-agent/http-and-rpc) 单独提供。

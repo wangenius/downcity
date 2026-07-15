@@ -117,13 +117,14 @@ src/
 `@downcity/agent` 的核心是一条单 Agent 执行链：
 
 ```text
-入口协议 -> Agent facade -> AgentContext -> Session / Executor / Plugin -> Runtime 子系统 -> History / Reply
+入口协议 -> Agent facade -> Session / Plugin -> Executor -> Runtime 子系统 -> History / Reply
 ```
 
 其中：
 
 - `agent/local` 与 `agent/remote` 是用户 API 面
-- `Agent` facade 是实例级装配中心
+- `Agent` facade 是实例级装配中心，也是 env、instruction、model、tools、plugins 与 sessions 的唯一状态所有者
+- `AgentContext` 只向 Plugin 与宿主投影受限运行时能力，不保存完整项目 config 或第二份 Agent 状态
 - `session / executor / plugin` 是三大核心分层
 - `runtime` 是 control / sandbox / host 这类实现细节的统一容器
 - `types / utils` 提供横向公共支撑

@@ -23,7 +23,7 @@ import type {
   AgentPathRuntime,
   AgentPluginConfigRuntime,
 } from "@downcity/agent";
-import type { DowncityConfig } from "@downcity/agent";
+import type { JsonObject } from "@downcity/agent";
 import {
   readAgentConfig,
   upsertAgentConfig,
@@ -39,8 +39,6 @@ export function createAgentPathRuntime(
   const rootPath = String(projectRoot || "").trim();
   const agentId = String(agentIdInput || "").trim();
   return {
-    projectRoot: rootPath,
-    agentId,
     getDowncityDirPath: () => getDowncityDirPath(rootPath),
     getCacheDirPath: () => getCacheDirPath(rootPath),
     getDowncityChannelDirPath: () => getDowncityChannelDirPath(rootPath),
@@ -61,12 +59,21 @@ export function createAgentPathRuntime(
 export function createAgentPluginConfigRuntime(projectRoot: string): AgentPluginConfigRuntime {
   const rootPath = String(projectRoot || "").trim();
   return {
-    async persistProjectPlugins(plugins: DowncityConfig["plugins"] | undefined): Promise<string> {
+    async persist_plugin_config(
+      plugin_name: string,
+      config: JsonObject | undefined,
+    ): Promise<string> {
       const current = readAgentConfig(rootPath);
+      const plugins = { ...(current?.plugins || {}) };
+      if (config === undefined) {
+        delete plugins[plugin_name];
+      } else {
+        plugins[plugin_name] = config;
+      }
       upsertAgentConfig({
         projectRoot: rootPath,
         ...(current || {}),
-        ...(plugins !== undefined ? { plugins } : {}),
+        plugins,
       });
       return rootPath;
     },

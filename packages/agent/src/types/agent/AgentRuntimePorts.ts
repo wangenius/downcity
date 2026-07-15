@@ -1,26 +1,18 @@
 /**
- * AgentRuntimeAssembly 类型定义。
+ * AgentRuntimePorts 类型定义。
  *
  * 关键点（中文）
- * - 这里统一描述由本地 agent 装配、再挂入 AgentRuntime 的能力。
- * - plugin runtime / session / plugin 作者 API 只能消费这些稳定能力，不应直接依赖具体宿主实现。
+ * - 这里只描述 Agent 运行时依赖的宿主能力，不持有 Agent 状态。
+ * - Plugin、Session 与宿主集成代码只消费这些稳定端口，不依赖具体存储实现。
  * - 当前先收敛路径与 plugin 配置持久化两类高频能力。
  */
 
-import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
+import type { JsonObject } from "@/types/common/Json.js";
 
 /**
  * Agent 路径能力集合。
  */
 export interface AgentPathRuntime {
-  /**
-   * 当前项目根目录。
-   */
-  projectRoot: string;
-  /**
-   * 当前 agent 的稳定标识。
-   */
-  agentId: string;
   /**
    * `.downcity` 根目录路径。
    */
@@ -68,7 +60,13 @@ export interface AgentPathRuntime {
  */
 export interface AgentPluginConfigRuntime {
   /**
-   * 将当前 `plugins` 配置块写回宿主配置存储。
+   * 将单个 Plugin 的配置合并写回宿主配置存储。
+   *
+   * @param plugin_name Plugin 稳定名称。
+   * @param config Plugin 当前完整的 JSON 配置；传入 undefined 表示删除配置。
    */
-  persistProjectPlugins(plugins: DowncityConfig["plugins"] | undefined): Promise<string>;
+  persist_plugin_config(
+    plugin_name: string,
+    config: JsonObject | undefined,
+  ): Promise<string>;
 }

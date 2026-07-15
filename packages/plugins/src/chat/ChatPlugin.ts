@@ -17,6 +17,7 @@ import type { ChatQueueWorkerConfig } from "@/chat/types/ChatQueueWorker.js";
 import type {
   ChatChannel,
   ChatPluginOptions,
+  ChatPluginRuntimeConfig,
 } from "@/chat/types/ChatPluginOptions.js";
 import type { ChatChannelName } from "@/chat/types/ChannelStatus.js";
 import {
@@ -157,6 +158,24 @@ export class ChatPlugin extends BasePlugin {
   ): Partial<ChatQueueWorkerConfig> | undefined {
     void context;
     return this.options.queue;
+  }
+
+  /** 从当前 Plugin 实例生成可持久化的完整运行配置。 */
+  get_runtime_config(context: AgentContext): ChatPluginRuntimeConfig {
+    const channels: ChatPluginRuntimeConfig["channels"] = {};
+    for (const channel of this.channels) {
+      const channel_account_id = channel.getChannelAccountId(context);
+      channels[channel.name] = {
+        enabled: channel.isEnabled(context),
+        ...(channel_account_id
+          ? { channelAccountId: channel_account_id }
+          : {}),
+      };
+    }
+    return {
+      ...(this.options.queue ? { queue: { ...this.options.queue } } : {}),
+      channels,
+    };
   }
 
   /**

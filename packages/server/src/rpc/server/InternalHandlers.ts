@@ -58,7 +58,7 @@ export async function handleInternalRpcRequest(params: {
       if (!session_id) throw new Error("Missing sessionId");
       const messages_path = getDowncitySessionMessagesPath(
         context.rootPath,
-        context.paths.agentId,
+        context.agent_id,
         session_id,
       );
       await rm(dirname(messages_path), { recursive: true, force: true });
@@ -90,7 +90,7 @@ export async function handleInternalRpcRequest(params: {
         projectRoot: context.rootPath,
         sessionId: session_id,
         profile: "chat",
-        staticSystemPrompts: context.systems,
+        staticSystemPrompts: [...context.systems],
         context,
       });
       write_success(request.id, {

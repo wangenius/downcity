@@ -85,7 +85,9 @@ export function createAgentHttpGatewayApp(
   if (options.sdkRouter) {
     app.route("/", options.sdkRouter);
   }
-  for (const plugin of options.getAgentContext().pluginInstances.values()) {
+  for (const snapshot of options.getAgentContext().plugins.snapshots()) {
+    const plugin = options.getAgentContext().plugins.get(snapshot.name);
+    if (!plugin) continue;
     plugin.http?.server?.register({
       app,
       getContext: options.getAgentContext,

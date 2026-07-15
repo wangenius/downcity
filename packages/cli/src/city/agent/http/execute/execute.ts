@@ -77,7 +77,7 @@ export function createExecuteRouter(
     try {
       const sessionId = `api:chat:${chatId}`;
       const agentState = options.getAgentContext();
-      const session = agentState.getSession(sessionId);
+      const session = agentState.sessions.get(sessionId);
       const turn = await session.prompt({
         query: String(instructions),
       });

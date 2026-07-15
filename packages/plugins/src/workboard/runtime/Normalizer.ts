@@ -92,7 +92,7 @@ export function toWorkboardAgentSummary(params: {
   });
 
   return {
-    name: String(params.context.config.id || "").trim() || "agent",
+    name: String(params.context.agent_id || "").trim() || "agent",
     running: true,
     statusText,
     collectedAt: params.collectedAt,

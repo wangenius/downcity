@@ -105,7 +105,7 @@ async function runPluginActionCommand(params: {
     projectRoot: resolved.projectRoot,
     pluginName: params.pluginName,
     actionName: params.actionName,
-    ...(config ? { config } : {}),
+    ...(config?.id ? { agent_id: config.id } : {}),
     ...(payload !== undefined ? { payload } : {}),
   });
   printResult({

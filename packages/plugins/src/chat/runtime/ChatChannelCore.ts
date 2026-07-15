@@ -11,11 +11,13 @@ import type { AgentContext } from "@downcity/agent";
 import type { StoredChannelAccount } from "@downcity/agent";
 import type { ChatChannelName } from "@/chat/types/ChannelStatus.js";
 import type { ChatChannelState } from "@/chat/types/ChatRuntime.js";
+import type { ChatPluginRuntimeConfig } from "@/chat/types/ChatPluginOptions.js";
 import { getStoredChannelAccountSync } from "@/chat/accounts/Store.js";
 
 const CHAT_CHANNEL_NAMES: ChatChannelName[] = ["telegram", "feishu", "qq"];
 
 export type ChatRuntimeBindings = {
+  get_runtime_config?(context: AgentContext): ChatPluginRuntimeConfig;
   getChannelAccountId?(context: AgentContext, channel: ChatChannelName): string;
   resolveChannelAccount?(
     context: AgentContext,
@@ -41,7 +43,7 @@ export type ChatRuntimeBindings = {
 export function resolveChatPluginBindings(
   context: AgentContext,
 ): ChatRuntimeBindings | null {
-  const candidate = context.pluginInstances?.get?.("chat") as
+  const candidate = context.plugins.get("chat") as
     | ChatRuntimeBindings
     | undefined;
   return candidate || null;

@@ -77,3 +77,19 @@ export interface ChatPluginOptions {
    */
   channels?: ChatChannel[];
 }
+
+/** ChatPlugin 可持久化的单个渠道配置。 */
+export interface ChatPluginChannelConfig {
+  /** 当前渠道是否启用。 */
+  enabled?: boolean;
+  /** 当前渠道绑定的账号池记录 ID。 */
+  channelAccountId?: string;
+}
+
+/** ChatPlugin 从自身运行态生成的完整持久化配置。 */
+export interface ChatPluginRuntimeConfig {
+  /** 当前 queue worker 配置。 */
+  queue?: Partial<ChatQueueWorkerConfig>;
+  /** 当前所有已注册渠道的运行配置。 */
+  channels: Partial<Record<ChatChannelName, ChatPluginChannelConfig>>;
+}

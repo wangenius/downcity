@@ -38,7 +38,6 @@ import {
   listArchivedAgentSessionSummaryPage,
   listAgentSessionSummaryPage,
 } from "@/session/browse/Browse.js";
-import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { SessionPort } from "@/types/runtime/agent/AgentContext.js";
 import { createInstructionSystemBlocks } from "@/agent/local/AgentInstructions.js";
 import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.js";
@@ -73,14 +72,6 @@ type AgentSessionsOptions = {
   logger: Logger;
 
   /**
-   * 延迟读取当前 agent context。
-   *
-   * 关键点（中文）
-   * - 装配期通过 getter 拿到 context，避免循环引用。
-   */
-  get_agent_context: () => AgentContext;
-
-  /**
    * 当前静态 instruction 文本集合。
    */
   get_instruction: () => string[];
@@ -113,7 +104,6 @@ export class AgentSessions implements AgentSessionsContract<AgentSession> {
   private readonly project_root: string;
   private readonly tools: Record<string, Tool>;
   private readonly logger: Logger;
-  private readonly get_agent_context: AgentSessionsOptions["get_agent_context"];
   private readonly get_instruction: AgentSessionsOptions["get_instruction"];
   private readonly get_agent_env: AgentSessionsOptions["get_agent_env"];
   private readonly get_agent_plugins: AgentSessionsOptions["get_agent_plugins"];
@@ -127,7 +117,6 @@ export class AgentSessions implements AgentSessionsContract<AgentSession> {
     this.project_root = options.project_root;
     this.tools = options.tools;
     this.logger = options.logger;
-    this.get_agent_context = options.get_agent_context;
     this.get_instruction = options.get_instruction;
     this.get_agent_env = options.get_agent_env;
     this.get_agent_plugins = options.get_agent_plugins;
@@ -141,6 +130,18 @@ export class AgentSessions implements AgentSessionsContract<AgentSession> {
    */
   list_cached_sessions(): AgentManagedSession[] {
     return [...this.sessions_by_id.values()];
+  }
+
+  /** 返回当前所有执行中的 Session 标识。 */
+  list_executing_session_ids(): string[] {
+    return this.list_cached_sessions()
+      .filter((session) => session.isExecuting())
+      .map((session) => session.id);
+  }
+
+  /** 返回当前执行中的 Session 数量。 */
+  get_executing_session_count(): number {
+    return this.list_executing_session_ids().length;
   }
 
   /**
@@ -264,7 +265,7 @@ export class AgentSessions implements AgentSessionsContract<AgentSession> {
       projectRoot: this.project_root,
       agentId: this.agent_id,
       input,
-      executingSessionIds: new Set(this.get_agent_context().listExecutingSessionIds()),
+      executingSessionIds: new Set(this.list_executing_session_ids()),
     });
   }
 
@@ -279,9 +280,7 @@ export class AgentSessions implements AgentSessionsContract<AgentSession> {
       throw new Error("sessions.archive requires a non-empty id");
     }
 
-    const executing_session_ids = new Set(
-      this.get_agent_context().listExecutingSessionIds(),
-    );
+    const executing_session_ids = new Set(this.list_executing_session_ids());
     if (executing_session_ids.has(session_id)) {
       throw new Error(`Session "${session_id}" is currently executing`);
     }
@@ -407,6 +406,6 @@ export class AgentSessions implements AgentSessionsContract<AgentSession> {
   }
 
   private async load_plugin_system_blocks(): Promise<AgentSessionSystemBlock[]> {
-    return await this.get_agent_context().plugins.systemBlocks();
+    return await this.get_agent_plugins().systemBlocks();
   }
 }

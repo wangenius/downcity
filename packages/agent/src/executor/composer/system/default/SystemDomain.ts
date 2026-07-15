@@ -164,7 +164,9 @@ export async function loadManagedPluginSystemPrompts(input: {
       .filter(Boolean),
   );
 
-  for (const plugin of input.context.pluginInstances.values()) {
+  for (const snapshot of input.context.plugins.snapshots()) {
+    const plugin = input.context.plugins.get(snapshot.name);
+    if (!plugin) continue;
     if (disabledPluginNames.has(plugin.name)) continue;
     if (typeof plugin.system !== "function") continue;
     try {

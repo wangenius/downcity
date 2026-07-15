@@ -12,11 +12,9 @@ import type { Logger } from "@/utils/logger/Logger.js";
 import type {
   AgentPathRuntime,
   AgentPluginConfigRuntime,
-} from "@/types/agent/AgentRuntimeAssembly.js";
-import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
+} from "@/types/agent/AgentRuntimePorts.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { AgentPlugins } from "@/types/plugin/PluginRuntime.js";
-import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import type {
   SessionMetadataV1,
   SessionRecordV1,
@@ -33,52 +31,6 @@ import type {
   SessionMutationUnsubscribe,
 } from "@/types/session/SessionMutation.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
-
-/**
- * 跨 plugin runtime 调用参数。
- */
-export interface InvokePluginParams {
-  /**
-   * 目标 plugin 名称。
-   */
-  plugin: string;
-  /**
-   * 目标 action 名称。
-   */
-  action: string;
-  /**
-   * 调用时附带的结构化 payload。
-   */
-  payload?: JsonValue;
-}
-
-/**
- * 跨 plugin runtime 调用结果。
- */
-export interface InvokePluginResult {
-  /**
-   * 调用是否成功。
-   */
-  success: boolean;
-  /**
-   * 成功时返回的数据载荷。
-   */
-  data?: JsonValue;
-  /**
-   * 失败时的错误信息。
-   */
-  error?: string;
-}
-
-/**
- * 跨 plugin runtime 调用端口。
- */
-export interface InvokePluginPort {
-  /**
-   * 调用指定 plugin action。
-   */
-  invoke(params: InvokePluginParams): Promise<InvokePluginResult>;
-}
 
 /**
  * 单个 Session 执行端口。
@@ -204,33 +156,29 @@ export interface SessionCollectionPort {
  * - 装配方负责把 session / plugins 等上层依赖注入进来。
  * - `env` 必须传入 agent 持有的 mutable 共享对象引用，不要在这里克隆。
  */
-export interface AgentContextOptions {
-  /** 当前命令工作目录。 */
-  cwd: string;
+interface AgentContextOptions {
+  /** 当前 Agent 稳定标识。 */
+  agent_id: string;
   /** 当前项目根目录。 */
   rootPath: string;
   /** 统一日志器。 */
   logger: Logger;
-  /** 当前运行时已解析配置。 */
-  config: DowncityConfig;
   /**
-   * 当前 agent env 共享对象引用。
+   * 读取当前 Agent configured env。
    *
    * 关键点（中文）
-   * - 必须是 Agent 持有的同一个 mutable 引用，不要克隆后再传入。
+   * - Agent 是 env 的唯一状态所有者，Context 只提供只读视图。
    * - Session step 内优先读取队列已经提交的 effective env。
    */
-  env: Record<string, string>;
-  /** 当前生效的 system 文本集合。 */
-  systems: string[];
+  get_env: () => Readonly<Record<string, string>>;
+  /** 读取当前 Agent configured systems。 */
+  get_systems: () => readonly string[];
   /** 当前可见的路径能力集合。 */
   paths: AgentPathRuntime;
   /** 当前可见的 plugin 配置持久化能力集合。 */
   pluginConfig: AgentPluginConfigRuntime;
-  /** 当前 agent 持有的插件实例集合。 */
-  pluginInstances: Map<string, Plugin>;
   /** Session 能力入口。 */
-  session: SessionCollectionPort;
+  sessions: SessionCollectionPort;
   /** Plugin 调用入口。 */
   plugins: AgentPlugins;
 }
@@ -239,51 +187,39 @@ export interface AgentContextOptions {
  * 统一执行上下文。
  *
  * 关键点（中文）
- * - 字段全部 readonly，构造一次后语义稳定，避免 plugin 误改。
- * - `env` 引用 agent 级共享 mutable 对象，`...ctx.env` / `ctx.env.FOO` 直接可用。
- * - `invoke` 是构造期组装的 plugin 调用端口，对外仍以 `InvokePluginPort` 形态暴露。
+ * - Context 不持有 Agent 状态，只投影 Plugin 与宿主需要的运行时能力。
+ * - `env` 与 `systems` 每次都从 Agent 唯一状态源读取。
  */
 export class AgentContext {
-  /** 当前命令工作目录。 */
-  readonly cwd: string;
+  /** 当前 Agent 稳定标识。 */
+  readonly agent_id: string;
   /** 当前项目根目录。 */
   readonly rootPath: string;
   /** 统一日志器。 */
   readonly logger: Logger;
-  /** 当前运行时已解析配置。 */
-  readonly config: DowncityConfig;
-  /** 当前 Agent configured env 共享对象。 */
-  private readonly configured_env: Record<string, string>;
-  /** 当前 Agent configured system 文本。 */
-  private readonly configured_systems: string[];
+  /** 当前 Agent configured env 读取器。 */
+  private readonly get_env: AgentContextOptions["get_env"];
+  /** 当前 Agent configured systems 读取器。 */
+  private readonly get_systems: AgentContextOptions["get_systems"];
   /** 当前可见的路径能力集合。 */
   readonly paths: AgentPathRuntime;
   /** 当前可见的 plugin 配置持久化能力集合。 */
   readonly pluginConfig: AgentPluginConfigRuntime;
-  /** 当前 agent 持有的插件实例集合。 */
-  readonly pluginInstances: Map<string, Plugin>;
   /** Session 能力入口。 */
-  readonly session: SessionCollectionPort;
+  readonly sessions: SessionCollectionPort;
   /** Plugin 调用入口。 */
   readonly plugins: AgentPlugins;
-  /** 跨 plugin runtime 调用主入口。 */
-  readonly invoke: InvokePluginPort;
 
   constructor(options: AgentContextOptions) {
-    this.cwd = options.cwd;
+    this.agent_id = options.agent_id;
     this.rootPath = options.rootPath;
     this.logger = options.logger;
-    this.config = options.config;
-    this.configured_env = options.env;
-    this.configured_systems = options.systems;
+    this.get_env = options.get_env;
+    this.get_systems = options.get_systems;
     this.paths = options.paths;
     this.pluginConfig = options.pluginConfig;
-    this.pluginInstances = options.pluginInstances;
-    this.session = options.session;
+    this.sessions = options.sessions;
     this.plugins = options.plugins;
-    this.invoke = {
-      invoke: (params) => this.invoke_plugin_action(params),
-    };
   }
 
   /**
@@ -293,67 +229,15 @@ export class AgentContext {
    * - Session step 的 effective env 由 Plugin action 参数 `run_context.agentEnv` 显式提供。
    * - 该 getter 不再根据异步调用链隐式切换结果。
    */
-  get env(): Record<string, string> {
-    return this.configured_env;
+  get env(): Readonly<Record<string, string>> {
+    return this.get_env();
   }
 
   /**
    * 读取 Agent 已配置的 instruction。
    */
-  get systems(): string[] {
-    return this.configured_systems;
-  }
-
-  /**
-   * 读取指定 sessionId 对应的 session 端口。
-   *
-   * 关键点（中文）
-   * - 返回值是统一的 `SessionPort`，而不是裸 `Executor`。
-   * - 这样 HTTP / plugin runtime / chat queue / contact 等入口都能复用同一层会话装配与执行兜底。
-   */
-  getSession(sessionId: string): SessionPort {
-    return this.session.get(sessionId);
-  }
-
-  /**
-   * 返回当前执行中的 sessionId 列表。
-   */
-  listExecutingSessionIds(): string[] {
-    return this.session.listExecutingSessionIds();
-  }
-
-  /**
-   * 返回当前执行中的 session 数量。
-   */
-  getExecutingSessionCount(): number {
-    return this.session.getExecutingSessionCount();
-  }
-
-  /**
-   * 跨 plugin runtime 调用 action 的内部实现。
-   *
-   * 关键点（中文）
-   * - 统一把 `runAction` 的成功/失败结果归一化为 `InvokePluginResult`。
-   * - 这里替代了原 `createAgentContext` 工厂里的胶水匿名函数。
-   */
-  private async invoke_plugin_action(
-    params: InvokePluginParams,
-  ): Promise<InvokePluginResult> {
-    const result = await this.plugins.runAction({
-      plugin: params.plugin,
-      action: params.action,
-      ...(params.payload !== undefined ? { payload: params.payload } : {}),
-    });
-    if (!result.success) {
-      return {
-        success: false,
-        error: result.error || result.message || "plugin action failed",
-      };
-    }
-    return {
-      success: true,
-      ...(result.data !== undefined ? { data: result.data } : {}),
-    };
+  get systems(): readonly string[] {
+    return this.get_systems();
   }
 }
 

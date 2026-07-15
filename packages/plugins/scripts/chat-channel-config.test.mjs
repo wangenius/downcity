@@ -25,15 +25,16 @@ function create_channel(name) {
 function create_context(plugin) {
   const writes = [];
   const context = {
-    config: {
-      id: "agent_test",
-      version: "1.0.0",
-      plugins: { memory: { enabled: true } },
+    agent_id: "agent_test",
+    plugins: {
+      get: (plugin_name) => plugin_name === "chat" ? plugin : undefined,
     },
-    pluginInstances: new Map([["chat", plugin]]),
     pluginConfig: {
-      persistProjectPlugins: async (plugins) => {
-        writes.push(structuredClone(plugins));
+      persist_plugin_config: async (plugin_name, config) => {
+        writes.push({
+          plugin_name,
+          config: structuredClone(config),
+        });
         return "/tmp/agent_test";
       },
     },
@@ -50,15 +51,15 @@ async function execute(plugin, action_name, context, input) {
   });
 }
 
-test("chat.open/close/configure 持久化完整 plugins 配置", async () => {
+test("chat.open/close/configure 只持久化 Chat Plugin 配置", async () => {
   const telegram = create_channel("telegram");
   const plugin = new ChatPlugin({ channels: [telegram] });
   const { context, writes } = create_context(plugin);
 
   await execute(plugin, "open", context, { channel: "telegram" });
   assert.equal(writes.length, 1);
-  assert.equal(writes[0].memory.enabled, true);
-  assert.equal(writes[0].chat.channels.telegram.enabled, true);
+  assert.equal(writes[0].plugin_name, "chat");
+  assert.equal(writes[0].config.channels.telegram.enabled, true);
   assert.equal(plugin.isChannelEnabled(context, "telegram"), true);
 
   await execute(plugin, "configure", context, {
@@ -67,12 +68,14 @@ test("chat.open/close/configure 持久化完整 plugins 配置", async () => {
     restart: false,
   });
   assert.equal(writes.length, 2);
-  assert.equal(writes[1].chat.channels.telegram.enabled, false);
+  assert.equal(writes[1].plugin_name, "chat");
+  assert.equal(writes[1].config.channels.telegram.enabled, false);
   assert.equal(plugin.isChannelEnabled(context, "telegram"), false);
 
   await execute(plugin, "close", context, { channel: "telegram" });
   assert.equal(writes.length, 3);
-  assert.equal(context.config.plugins.chat.channels.telegram.enabled, false);
+  assert.equal(writes[2].plugin_name, "chat");
+  assert.equal(writes[2].config.channels.telegram.enabled, false);
 });
 
 test("ChatPlugin queue 只读取 constructor 配置", () => {

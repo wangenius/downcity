@@ -98,6 +98,8 @@ export async function runCommand(
   const plugins = await createCityBuiltinPlugins({
     env: hostEnv,
     config,
+    host,
+    port,
   });
 
   const agent = new Agent({
@@ -107,7 +109,6 @@ export async function runCommand(
     model,
     plugins,
     env: hostEnv,
-    config,
     plugin_config: createAgentPluginConfigRuntime(projectRoot),
   });
 

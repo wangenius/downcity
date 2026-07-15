@@ -83,12 +83,12 @@ import {
 
 async function resolveSelfEndpoint(
   context: AgentContext,
+  options: ContactPluginOptions,
   endpointOverride?: string,
   effective_env?: Readonly<Record<string, string>>,
 ): Promise<string> {
   const explicit = String(endpointOverride || "").trim();
   if (explicit) return normalizeContactEndpoint(explicit);
-  const start = context.config.start || {};
   const env = {
     ...process.env,
     ...context.env,
@@ -96,11 +96,13 @@ async function resolveSelfEndpoint(
   };
   const runtimePort = Number(process.env.DC_CITY_PORT || env.DC_CITY_PORT || "");
   // 关键点（中文）：link code 必须写入当前 runtime 的真实监听端口，不能使用可能已经过期的配置端口。
-  const port = Number.isFinite(runtimePort) && runtimePort > 0 ? runtimePort : start.port;
+  const port = Number.isFinite(runtimePort) && runtimePort > 0
+    ? runtimePort
+    : options.port;
   const runtimeHost = String(process.env.DC_CITY_HOST || env.DC_CITY_HOST || "").trim();
   return normalizeContactEndpoint(
     await resolveContactSelfEndpoint({
-      host: runtimeHost || start.host,
+      host: runtimeHost || options.host,
       port,
       env,
     }),
@@ -123,7 +125,7 @@ function hasRuntimePublicEndpointEnv(
 }
 
 function getAgentName(context: AgentContext): string {
-  return String(context.config.id || "downcity-agent").trim() || "downcity-agent";
+  return String(context.agent_id || "downcity-agent").trim() || "downcity-agent";
 }
 
 function requireOutboundContact(contact: AgentContact): {
@@ -201,6 +203,7 @@ export class ContactPlugin extends BasePlugin {
     const secret = createContactToken();
     const endpoint = await resolveSelfEndpoint(
       context,
+      this.options,
       payload.endpoint || this.options.endpoint,
       run_context?.agentEnv,
     );
@@ -254,6 +257,7 @@ export class ContactPlugin extends BasePlugin {
     const requesterEndpointCandidate = shouldResolveRequesterEndpoint
       ? await resolveSelfEndpoint(
           context,
+          this.options,
           payload.endpoint || this.options.endpoint,
           run_context?.agentEnv,
         )
@@ -478,7 +482,7 @@ export class ContactPlugin extends BasePlugin {
     return await approveContactLinkRequest({
       projectRoot: context.rootPath,
       ownerAgentName: getAgentName(context),
-      ownerEndpoint: await resolveSelfEndpoint(context),
+      ownerEndpoint: await resolveSelfEndpoint(context, this.options),
       request,
     });
   }

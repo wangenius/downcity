@@ -9,10 +9,9 @@
 import type {
   AgentPathRuntime,
   AgentPluginConfigRuntime,
-} from "@/types/agent/AgentRuntimeAssembly.js";
+} from "@/types/agent/AgentRuntimePorts.js";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { Logger } from "@/utils/logger/Logger.js";
-import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { JsonValue } from "@/types/common/Json.js";
 
 /**
@@ -24,14 +23,12 @@ import type { JsonValue } from "@/types/common/Json.js";
  * - agent runtime 在需要复用 action 时，直接传入自身更完整的 AgentContext 即可。
  */
 export interface PluginCommandContext {
-  /** 当前命令工作目录。 */
-  cwd: string;
+  /** 当前 Agent 稳定标识。 */
+  agent_id: string;
   /** 当前项目根目录。 */
   rootPath: string;
   /** 当前统一日志器。 */
   logger: Logger;
-  /** 当前解析后的项目配置。 */
-  config: DowncityConfig;
   /**
    * 当前项目环境变量快照。
    *

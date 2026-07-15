@@ -19,6 +19,12 @@ export interface ContactPluginOptions {
    */
   endpoint?: string;
 
+  /** 当前 Agent HTTP runtime 的监听 host。 */
+  host?: string;
+
+  /** 当前 Agent HTTP runtime 的监听 port。 */
+  port?: number;
+
   /**
    * 默认 link 有效秒数。
    *

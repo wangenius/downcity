@@ -53,7 +53,7 @@ export async function dispatchTaskRunCompletionToChat(params: {
   if (!finalText) return;
 
   try {
-    const sent = await params.context.invoke.invoke({
+    const sent = await params.context.plugins.runAction({
       plugin: "chat",
       action: "send",
       payload: {

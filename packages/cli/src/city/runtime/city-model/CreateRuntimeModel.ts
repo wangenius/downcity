@@ -8,8 +8,7 @@
  */
 
 import { getLogger } from "@downcity/agent";
-import { normalizeAgentModel } from "@downcity/agent";
-import type { LanguageModel } from "ai";
+import type { AgentModel } from "@downcity/agent";
 import { createCityAiAgentModel } from "@/city/runtime/city-model/CityAiServiceBinding.js";
 import type { StoredAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
 
@@ -66,7 +65,7 @@ function readProjectExecutionBinding(
  */
 export async function createRuntimeModel(
   input: RuntimeModelFactoryInput,
-): Promise<LanguageModel> {
+): Promise<AgentModel> {
   const logger = getLogger();
   const execution = readProjectExecutionBinding(input.config);
   if (!execution) {
@@ -88,5 +87,5 @@ export async function createRuntimeModel(
     },
   );
 
-  return normalizeAgentModel(model);
+  return model;
 }

@@ -51,7 +51,7 @@ description: 本地 Agent SDK 的核心公开接口
 
 当前没有 `mode` 这个构造参数。
 
-`model` 是 Agent 持有的运行时模型实例。Session 可以通过 `session.set({ model })` 持有自己的实例；执行时优先使用 Session 模型，没有时回退到 Agent 模型。SDK 不保存或恢复模型实例与模型 ID。
+`model` 是 Agent 持有的 `AgentModel` 实例，可以是 AI SDK `LanguageModel` 或 City `CityModel`。Session 可以通过 `session.set({ model })` 持有自己的 `AgentModel`；执行时优先使用 Session 模型，没有时回退到 Agent 模型。SDK 不保存或恢复模型实例与模型 ID。
 
 完整项目 config 与 Plugin config 都属于 CLI 等上游宿主。上游根据配置构造 Plugin 实例，再通过 `plugins` 传给 Agent；Agent 与 `AgentContext` 不读取、修改或持久化这些配置。
 

@@ -76,7 +76,7 @@ Hosts that need additional base instructions should pass them explicitly through
 
 ## `model`
 
-The default runtime model instance held by the Agent.
+The default `AgentModel` instance held by the Agent. `AgentModel` can be an AI SDK `LanguageModel` or a City `CityModel`; callers do not need to convert it first.
 
 ```ts
 new Agent({
@@ -88,7 +88,8 @@ new Agent({
 
 Key points:
 
-- the SDK does not select, persist, or restore model IDs; it only holds runtime model instances
+- the SDK does not select, persist, or restore model IDs; it only holds `AgentModel` instances
+- Agent converts a `CityModel` to a `LanguageModel` only at the LLM execution boundary
 - a Session without its own model falls back to the Agent model
 - a local Session can override the Agent model with `session.set({ model })`
 - effective model resolution always checks the Session model before the Agent model

@@ -5,7 +5,7 @@ description: 本地 SDK Session 如何显式绑定默认模型实例
 
 # `session.set({ model })`
 
-`session.set({ model })` 让本地 SDK Session 覆盖 Agent 持有的运行时模型实例。
+`session.set({ model })` 让本地 SDK Session 使用自己的 `AgentModel` 覆盖 Agent 模型。这里可以直接传入 AI SDK `LanguageModel` 或 City `CityModel`。
 
 ```ts
 await session.set({

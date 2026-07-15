@@ -34,7 +34,7 @@ import { RpcClient, parse_rpc_url } from "@/rpc/Client.js";
 import type {
   RemoteAgentTransport,
   TransportSubscription,
-} from "@/agent/remote/RemoteTransport.js";
+} from "@/remote/RemoteTransport.js";
 import type {
   ResolveSessionApprovalInput,
   SessionApproval,

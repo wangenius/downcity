@@ -6,7 +6,7 @@
  * - 控制动作与类型协议保持一致，只支持状态查询和卸载。
  */
 
-import type { AgentContext } from "@/agent/core/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContext.js";
 import type {
   PluginControlAction,
   PluginControlResult,

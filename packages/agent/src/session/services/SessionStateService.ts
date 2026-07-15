@@ -10,7 +10,7 @@
 import {
   inferAgentModelLabel,
   read_agent_model_context_window,
-} from "@/model/CityModelAdapter.js";
+} from "@/agent/AgentModel.js";
 import {
   patchSessionModelLabel,
   readSessionMetadata,

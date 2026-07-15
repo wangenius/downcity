@@ -13,7 +13,7 @@ import type {
   PluginPipelineHook,
   PluginResolveHook,
 } from "@/types/plugin/PluginRuntime.js";
-import type { AgentContext } from "@/agent/core/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContext.js";
 
 type PipelineRecord = {
   pluginName: string;

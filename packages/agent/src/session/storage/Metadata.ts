@@ -7,7 +7,10 @@
  */
 
 import fs from "fs-extra";
-import type { LanguageModel } from "ai";
+import {
+  inferAgentModelLabel,
+  type AgentModel,
+} from "@/agent/AgentModel.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import { getSdkAgentSessionMetaPath } from "@/session/storage/Paths.js";
 
@@ -77,26 +80,9 @@ function normalize_history_bytes(input: unknown): number | undefined {
  * 从模型实例推导轻量可读标签。
  */
 export function inferModelLabel(
-  model: LanguageModel | undefined,
+  model: AgentModel | undefined,
 ): string | undefined {
-  if (!model || typeof model !== "object") return undefined;
-  const record = model as Record<string, unknown>;
-  const candidates = [
-    record.modelId,
-    record.model,
-    record.id,
-    record.name,
-    record.label,
-  ];
-  for (const candidate of candidates) {
-    const text = normalizeModelLabel(candidate);
-    if (text) return text;
-  }
-  const constructorName =
-    model.constructor && typeof model.constructor.name === "string"
-      ? model.constructor.name.trim()
-      : "";
-  return constructorName || "configured-model";
+  return inferAgentModelLabel(model);
 }
 
 /**
@@ -203,7 +189,7 @@ export async function patchSessionModelLabel(
     /**
      * 当前模型实例。
      */
-    model?: LanguageModel;
+    model?: AgentModel;
   },
 ): Promise<SessionHistoryMetaV1> {
   const current = await readSessionMetadata(input);

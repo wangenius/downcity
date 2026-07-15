@@ -21,7 +21,7 @@ import type {
   PluginView,
 } from "@/types/plugin/PluginRuntime.js";
 import type { AgentSessionSystemBlock } from "@/types/agent/SessionTypes.js";
-import type { AgentContext } from "@/agent/core/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContext.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type {
   PluginRuntimeRecord,

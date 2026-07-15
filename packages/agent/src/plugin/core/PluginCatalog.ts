@@ -9,7 +9,7 @@
 
 import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import type { PluginAvailability, PluginView } from "@/types/plugin/PluginRuntime.js";
-import type { AgentContext } from "@/agent/core/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContext.js";
 
 /**
  * 判断 plugin 是否声明了运行时生命周期。

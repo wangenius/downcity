@@ -6,7 +6,7 @@
  * - session actor 方法接口拆到 `SessionActor.ts`。
  */
 
-import type { LanguageModel } from "ai";
+import type { AgentModel } from "@/agent/AgentModel.js";
 import type { SessionRecordV1 } from "@/executor/types/SessionRecords.js";
 
 /**
@@ -68,7 +68,7 @@ export interface AgentSessionSetInput {
    * - SDK 只接受宿主已经解析完成的运行时模型实例。
    * - 模型选择、ID 与持久化全部由宿主负责。
    */
-  model: LanguageModel;
+  model: AgentModel;
 }
 
 /**
@@ -76,7 +76,7 @@ export interface AgentSessionSetInput {
  */
 export interface AgentSessionConfigSnapshot {
   /** 当前 session 绑定的默认模型实例。 */
-  model?: LanguageModel;
+  model?: AgentModel;
   /** 当前模型的轻量可读标签。 */
   modelLabel?: string;
   /** 当前模型支持的总上下文窗口长度，单位为 token。 */

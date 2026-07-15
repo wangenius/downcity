@@ -7,7 +7,7 @@
  * - 到期后重新走 `runPluginCommand`，复用 plugin action 的统一执行规则。
  */
 
-import type { AgentContext } from "@/agent/core/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContext.js";
 import type { ActionScheduleStore } from "@/plugin/core/ActionScheduleStore.js";
 import { runPluginCommand } from "@/plugin/core/PluginActionRunner.js";
 

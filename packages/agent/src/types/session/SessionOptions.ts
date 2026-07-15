@@ -7,7 +7,8 @@
  * - Composer 仍然是 Session 级能力，不向 Agent 的执行策略层泄漏。
  */
 
-import type { LanguageModel, Tool } from "ai";
+import type { Tool } from "ai";
+import type { AgentModel } from "@/agent/AgentModel.js";
 import type { AgentSession } from "@/types/agent/SessionActor.js";
 import type { SessionPort } from "@/types/session/SessionPort.js";
 import type { AgentSessionSystemBlock } from "@/types/agent/SessionTypes.js";
@@ -105,7 +106,7 @@ export interface SessionOptions {
   ensureConfigured?: (session: AgentManagedSession) => Promise<void>;
 
   /** 读取 Agent 当前持有的运行时模型实例。 */
-  getAgentModel: () => LanguageModel | undefined;
+  getAgentModel: () => AgentModel | undefined;
 
   /**
    * 当前 session 的 Composer 覆盖项。

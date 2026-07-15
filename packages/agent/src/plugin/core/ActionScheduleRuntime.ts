@@ -7,7 +7,7 @@
  * - 普通 plugin 先启动，ActionSchedule 再开始轮询，避免到期 action 执行到未启动的 plugin。
  */
 
-import type { AgentContext } from "@/agent/core/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContext.js";
 import { runDueActionScheduleJobs } from "@/plugin/core/ActionScheduleExecutor.js";
 import { ActionScheduleStore } from "@/plugin/core/ActionScheduleStore.js";
 

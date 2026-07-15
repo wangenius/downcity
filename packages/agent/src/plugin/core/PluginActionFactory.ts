@@ -8,7 +8,7 @@
  */
 
 import type { z } from "zod";
-import type { AgentContext } from "@/agent/core/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContext.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type {
   PluginAction,

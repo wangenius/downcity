@@ -8,16 +8,16 @@
  */
 
 // Agent 入口
-export { Agent } from "./agent/core/Agent.js";
-export { RemoteAgent } from "./agent/remote/RemoteAgent.js";
+export { Agent } from "./agent/Agent.js";
+export { RemoteAgent } from "./remote/RemoteAgent.js";
 export { Session } from "./session/Session.js";
 export type { SessionOptions } from "./types/session/SessionOptions.js";
 export {
   inferAgentModelLabel,
   normalizeAgentModel,
   read_agent_model_context_window,
-} from "./model/CityModelAdapter.js";
-export type { AgentModel } from "./model/CityModelAdapter.js";
+} from "./agent/AgentModel.js";
+export type { AgentModel } from "./agent/AgentModel.js";
 export type {
   AgentArchiveSessionInput,
   AgentArchiveSessionsInput,
@@ -106,7 +106,7 @@ export type {
   AgentSessionTurnHandle,
   AgentSessionTurnResult,
 } from "./types/sdk/AgentSessionTurn.js";
-export { AgentContext } from "./agent/core/AgentContext.js";
+export { AgentContext } from "./agent/AgentContext.js";
 export type { SessionPort } from "./types/session/SessionPort.js";
 export type { StructuredConfig } from "./types/plugin/PluginConfig.js";
 

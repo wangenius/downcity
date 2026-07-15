@@ -9,7 +9,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { RemoteSession } from "../bin/agent/remote/RemoteSession.js";
+import { RemoteSession } from "../bin/remote/RemoteSession.js";
 
 test("RemoteSession reconnects the event pump after transport close", async () => {
   const subscriptions = [];

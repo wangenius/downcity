@@ -9,6 +9,11 @@
 
 import { Executor } from "@executor/Executor.js";
 import type { LanguageModel, Tool } from "ai";
+import {
+  normalizeAgentModel,
+  read_agent_model_context_window,
+  type AgentModel,
+} from "@/agent/AgentModel.js";
 import { JsonlSessionHistoryComposer } from "@executor/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 import { SessionRecorderHistoryStore } from "@/session/recorder/SessionRecorderHistoryStore.js";
 import { JsonlSessionMessageStore } from "@/session/recorder/JsonlSessionMessageStore.js";
@@ -27,7 +32,6 @@ import {
   getSdkAgentSessionDirPath,
 } from "@/session/storage/Paths.js";
 import { resolveSystemTimezone } from "@/session/storage/Metadata.js";
-import { read_agent_model_context_window } from "@/model/CityModelAdapter.js";
 import { createRuntimeSessionPort } from "@/session/storage/RuntimeSessionPort.js";
 import { SessionSystemBuilder } from "@/session/SessionSystemBuilder.js";
 import type { SessionPort } from "@/types/session/SessionPort.js";
@@ -592,6 +596,12 @@ export class Session implements AgentSession {
    * 解析顺序固定为 Session 覆盖模型，其次回退到 Agent 模型。
    */
   get_model(): LanguageModel | undefined {
+    const model = this.get_selected_model();
+    return model ? normalizeAgentModel(model) : undefined;
+  }
+
+  /** 按 Session 优先、Agent 兜底规则读取当前配置的 AgentModel。 */
+  private get_selected_model(): AgentModel | undefined {
     return (
       this.localState.effective_session_config.model ||
       this.localState.sessionConfig.model ||
@@ -604,7 +614,7 @@ export class Session implements AgentSession {
     return (
       this.localState.effective_session_config.model_context_window ||
       this.localState.sessionConfig.model_context_window ||
-      read_agent_model_context_window(this.get_model())
+      read_agent_model_context_window(this.get_selected_model())
     );
   }
 

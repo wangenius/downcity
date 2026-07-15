@@ -99,8 +99,8 @@ src/
   - `sandbox/` 放命令执行隔离与沙箱协议
   - `control/` 放 runtime 控制面内部协议与处理器
 - `src/rpc/` 放 Agent 本机 RPC runtime；HTTP gateway 由 downcity CLI 基于 RPC 转发提供
-- Agent 只持有宿主传入的运行时 `LanguageModel` 实例；Session 可通过 `session.set({ model })` 覆盖，执行时固定按 Session 模型、Agent 模型的顺序解析
-- `model` 也可以接收 City City 返回的 `CityModel`，Agent 会在内部适配成 AI SDK `LanguageModel`
+- Agent 与 Session 都持有宿主传入的 `AgentModel` 实例；`AgentModel` 可以是 AI SDK `LanguageModel` 或 City 返回的 `CityModel`
+- Session 可通过 `session.set({ model })` 覆盖，执行时固定按 Session 模型、Agent 模型的顺序解析，并在 LLM 调用边界转换为 `LanguageModel`
 
 - `src/types/`
   - 跨模块、跨包共享协议类型
@@ -122,7 +122,7 @@ src/
 
 其中：
 
-- `agent/core` 承载本地 Agent 核心运行时，`agent/remote` 承载远程 SDK 客户端
+- `agent` 承载本地 Agent 核心运行时，`remote` 承载独立的远程 SDK 客户端
 - `config` 承载项目初始化等宿主集成能力，不进入 Agent 核心生命周期
 - `Agent` facade 是实例级装配中心，也是 env、instruction、model、tools、plugins 与 sessions 的唯一状态所有者
 - `AgentContext` 只向 Plugin 与宿主投影受限运行时能力，不保存完整项目 config 或第二份 Agent 状态

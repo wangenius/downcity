@@ -9,7 +9,8 @@
 
 import fs from "fs-extra";
 import { nanoid } from "nanoid";
-import type { LanguageModel, Tool } from "ai";
+import type { Tool } from "ai";
+import type { AgentModel } from "@/agent/AgentModel.js";
 import type { Logger } from "@/utils/logger/Logger.js";
 import type {
   AgentCreateSessionInput,
@@ -40,7 +41,7 @@ import {
   listAgentSessionSummaryPage,
 } from "@/session/browse/Browse.js";
 import type { SessionPort } from "@/types/session/SessionPort.js";
-import { createInstructionSystemBlocks } from "@/agent/core/AgentInstructions.js";
+import { createInstructionSystemBlocks } from "@/agent/AgentInstructions.js";
 import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.js";
 
 function decodeMaybe(input: string): string {
@@ -94,7 +95,7 @@ type AgentSessionsOptions = {
   SessionClass?: AgentSessionConstructor;
 
   /** 读取 Agent 当前持有的运行时模型实例。 */
-  get_agent_model: () => LanguageModel | undefined;
+  get_agent_model: () => AgentModel | undefined;
 };
 
 /**

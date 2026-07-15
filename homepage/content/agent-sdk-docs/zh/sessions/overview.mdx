@@ -77,9 +77,9 @@ Message 和 Mutation 不要混用：Message 是可恢复的状态快照；Mutati
 
 | 场景 | 配置模型 |
 | --- | --- |
-| 本地 `AgentSession` | `session.set({ model })`，只接收运行时模型实例 |
+| 本地 `AgentSession` | `session.set({ model })`，接收 `AgentModel` 实例 |
 | `RemoteAgentSession` | 不提供模型配置方法；远程客户端只执行 Session |
-| Downcity Agent 项目 | CLI 解析 `execution.modelId`，在构造 Agent 时传入运行时模型实例 |
+| Downcity Agent 项目 | CLI 解析 `execution.modelId`，在构造 Agent 时传入 `AgentModel` 实例 |
 
 远程客户端不参与模型选择；模型 ID、默认值和恢复策略都属于服务端宿主。
 

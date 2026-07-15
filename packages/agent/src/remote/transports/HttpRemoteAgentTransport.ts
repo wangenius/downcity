@@ -33,7 +33,7 @@ import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type {
   RemoteAgentTransport,
   TransportSubscription,
-} from "@/agent/remote/RemoteTransport.js";
+} from "@/remote/RemoteTransport.js";
 import type {
   ResolveSessionApprovalInput,
   SessionApproval,

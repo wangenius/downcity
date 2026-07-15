@@ -1,5 +1,5 @@
 /**
- * Agent remote：统一远程 SDK 客户端。
+ * RemoteAgent：统一远程 SDK 客户端。
  *
  * 关键点（中文）
  * - 对外只暴露一个 `url` 入口，不向用户暴露 transport 细节。
@@ -23,9 +23,9 @@ import type {
   RemoteAgentPluginActionInput,
   RemoteAgentPluginActionResult,
 } from "@/types/agent/RemoteAgentPluginAction.js";
-import type { RemoteAgentTransport } from "@/agent/remote/RemoteTransport.js";
-import { RemoteSession } from "@/agent/remote/RemoteSession.js";
-import { create_remote_agent_transport } from "@/agent/remote/TransportFactory.js";
+import type { RemoteAgentTransport } from "@/remote/RemoteTransport.js";
+import { RemoteSession } from "@/remote/RemoteSession.js";
+import { create_remote_agent_transport } from "@/remote/TransportFactory.js";
 
 /**
  * RemoteAgent：远程 Agent 客户端。

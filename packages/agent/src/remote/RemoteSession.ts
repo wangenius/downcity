@@ -38,7 +38,7 @@ import { SessionEventHub } from "@/session/runtime/SessionEventHub.js";
 import type {
   RemoteSessionTransport,
   TransportSubscription,
-} from "@/agent/remote/RemoteTransport.js";
+} from "@/remote/RemoteTransport.js";
 
 type Deferred<T> = {
   /** 当前延迟 Promise。 */

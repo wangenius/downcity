@@ -14,7 +14,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
-import { Agent, normalizeAgentModel } from "../bin/index.js";
+import { Agent } from "../bin/index.js";
 import { createAction, createPlugin } from "../bin/plugin/core/PluginActionFactory.js";
 import { CITY_MODEL_INVOKER, CITY_MODEL_KIND } from "@downcity/type";
 import { tool } from "ai";
@@ -270,7 +270,7 @@ test("CityModel uses direct LanguageModel path and sends tool result back", asyn
     });
 
     const session = await agent.sessions.create();
-    await session.set({ model: normalizeAgentModel(model) });
+    await session.set({ model });
     const turn = await session.prompt({ query: "please use the ping tool" });
     const result = await turn.finished;
 

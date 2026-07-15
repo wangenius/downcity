@@ -6,9 +6,9 @@
  * - HTTP token 只传给 HTTP transport，RPC 不读取 token。
  */
 
-import type { RemoteAgentTransport } from "@/agent/remote/RemoteTransport.js";
-import { HttpRemoteAgentTransport } from "@/agent/remote/transports/HttpRemoteAgentTransport.js";
-import { RpcRemoteAgentTransport } from "@/agent/remote/transports/RpcRemoteAgentTransport.js";
+import type { RemoteAgentTransport } from "@/remote/RemoteTransport.js";
+import { HttpRemoteAgentTransport } from "@/remote/transports/HttpRemoteAgentTransport.js";
+import { RpcRemoteAgentTransport } from "@/remote/transports/RpcRemoteAgentTransport.js";
 
 /**
  * 根据 URL 协议创建远程 transport。

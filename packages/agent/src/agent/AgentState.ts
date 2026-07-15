@@ -11,8 +11,8 @@
 
 import type { Shell } from "@downcity/shell";
 import type { Tool } from "ai";
-import type { AgentContext } from "@/agent/core/AgentContext.js";
-import type { AgentSessions } from "@/agent/core/AgentSessions.js";
+import type { AgentContext } from "@/agent/AgentContext.js";
+import type { AgentSessions } from "@/agent/AgentSessions.js";
 import type { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 import type { AgentStateOptions } from "@/types/agent/AgentState.js";
 import { createPluginTools } from "@executor/tools/plugin/PluginToolDefinition.js";

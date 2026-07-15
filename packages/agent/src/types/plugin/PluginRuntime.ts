@@ -6,7 +6,7 @@
  * - setup/usage UI 协议与 action 输入适配不放在这里。
  */
 
-import type { AgentContext } from "@/agent/core/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContext.js";
 import type { StructuredConfig } from "@/types/plugin/PluginConfig.js";
 import type { JsonValue } from "@/types/common/Json.js";
 import type { PluginActionResult } from "@/types/plugin/PluginAction.js";

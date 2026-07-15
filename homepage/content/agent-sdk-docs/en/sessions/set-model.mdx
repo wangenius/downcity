@@ -5,7 +5,7 @@ description: How a local SDK session explicitly binds its default model instance
 
 # `session.set({ model })`
 
-`session.set({ model })` lets a local SDK Session override the runtime model instance held by its Agent.
+`session.set({ model })` lets a local SDK Session override the Agent model with its own `AgentModel`. It accepts either an AI SDK `LanguageModel` or a City `CityModel` directly.
 
 ```ts
 await session.set({

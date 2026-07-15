@@ -1,8 +1,8 @@
 /**
- * CityModel 到 AI SDK LanguageModel 的归一化模块。
+ * AgentModel：Agent 与 Session 统一使用的运行时模型协议。
  *
  * 关键点（中文）
- * - Agent 对外可以接收 CityModel，但 executor 内部只处理 AI SDK LanguageModel。
+ * - Agent 与 Session 对外统一接收 AgentModel，executor 内部只处理 AI SDK LanguageModel。
  * - CityModel 保留模型目录信息；运行时连接信息通过隐藏协议提供。
  * - 这里直接创建 OpenAI-compatible LanguageModel，不再保留旧的 text/stream 反向适配。
  * - 这里不依赖 @downcity/city，只依赖 @downcity/type 的共享协议。
@@ -15,6 +15,9 @@ import {
   type CityModel,
 } from "@downcity/type";
 import type { LanguageModel } from "ai";
+
+/** 已完成转换的 CityModel 与 LanguageModel 对应关系。 */
+const normalized_models = new WeakMap<object, LanguageModel>();
 
 /**
  * Agent SDK 可接受的模型输入。
@@ -39,7 +42,11 @@ function cityModelToLanguageModel(model: CityModel): LanguageModel {
  */
 export function normalizeAgentModel(model: AgentModel): LanguageModel {
   if (isCityModel(model)) {
-    return cityModelToLanguageModel(model);
+    const cached = normalized_models.get(model);
+    if (cached) return cached;
+    const normalized = cityModelToLanguageModel(model);
+    normalized_models.set(model, normalized);
+    return normalized;
   }
   return model;
 }

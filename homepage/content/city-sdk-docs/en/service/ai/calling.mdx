@@ -48,7 +48,7 @@ The model catalog returns `CityModel` objects with hidden runtime connection
 metadata, so Downcity Agent and the City SDK can use them directly:
 
 ```ts
-import { Agent, normalizeAgentModel } from "@downcity/agent";
+import { Agent } from "@downcity/agent";
 
 const catalog = await client.ai.listModels();
 const model = catalog.get("deepseek-v4-flash");
@@ -60,12 +60,12 @@ await client.ai.text({
 });
 
 const agent = new Agent({
-  model: normalizeAgentModel(model),
+  model,
 });
 ```
 
-This path does not require product code to create an AI SDK provider. The host
-converts the `CityModel` to a runtime model before passing it to the local Agent. A Session with its own model instance takes priority.
+This path does not require product code to create an AI SDK provider. Agent converts
+the `CityModel` to an AI SDK `LanguageModel` at the LLM execution boundary. A Session with its own `AgentModel` instance takes priority.
 
 ## OpenAI-Compatible Pathway
 

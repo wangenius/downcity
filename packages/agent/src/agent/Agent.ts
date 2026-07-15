@@ -1,5 +1,5 @@
 /**
- * Agent core：本地 Agent 核心入口与 facade。
+ * Agent：本地 Agent 核心入口与 facade。
  *
  * 职责说明（中文）
  * - 对外暴露 `Agent` 这一唯一的本地实例类。
@@ -7,15 +7,16 @@
  * - Session 集合由 `AgentSessions` 管理；长期运行状态由 `AgentState` 管理。
  */
 
-import type { LanguageModel, Tool } from "ai";
-import { AgentContext } from "@/agent/core/AgentContext.js";
+import type { Tool } from "ai";
+import type { AgentModel } from "@/agent/AgentModel.js";
+import { AgentContext } from "@/agent/AgentContext.js";
 import type { AgentOptions } from "@/types/agent/AgentOptions.js";
 import type { Shell } from "@downcity/shell";
 import { Logger } from "@/utils/logger/Logger.js";
 import { resolve_agent_env } from "@/config/AgentEnv.js";
-import { normalizeInstructionInput } from "@/agent/core/AgentInstructions.js";
-import { AgentSessions } from "@/agent/core/AgentSessions.js";
-import { AgentState } from "@/agent/core/AgentState.js";
+import { normalizeInstructionInput } from "@/agent/AgentInstructions.js";
+import { AgentSessions } from "@/agent/AgentSessions.js";
+import { AgentState } from "@/agent/AgentState.js";
 import { generateId } from "@/utils/Id.js";
 import { PluginRegistry } from "@/plugin/core/PluginRegistry.js";
 
@@ -45,7 +46,7 @@ export class Agent {
    * - Agent 只持有调用方传入的实例，不负责模型选择、持久化或恢复。
    * - Session 未设置自己的模型时，执行会回退使用该实例。
    */
-  readonly model?: LanguageModel;
+  readonly model?: AgentModel;
 
   /** 当前 Agent 独享的运行日志器。 */
   private readonly logger: Logger;

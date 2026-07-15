@@ -76,7 +76,7 @@ new Agent({
 
 ## `model`
 
-Agent 持有的默认运行时模型实例。
+Agent 持有的默认 `AgentModel` 实例。`AgentModel` 可以是 AI SDK `LanguageModel` 或 City `CityModel`，不需要调用方提前转换。
 
 ```ts
 new Agent({
@@ -88,7 +88,8 @@ new Agent({
 
 关键点：
 
-- SDK 不负责选择、保存或恢复模型 ID，只持有模型实例
+- SDK 不负责选择、保存或恢复模型 ID，只持有 `AgentModel` 实例
+- `CityModel` 在真正执行 LLM 任务时由 Agent 转换为 `LanguageModel`
 - Session 没有自己的模型时回退使用 Agent 模型
 - 本地 Session 可通过 `session.set({ model })` 覆盖 Agent 模型
 - 有效模型解析顺序固定为 Session 模型、Agent 模型

@@ -6,8 +6,9 @@
  * - RemoteAgent 与 Session 数据结构拆到独立类型文件。
  */
 
-import type { LanguageModel, Tool } from "ai";
+import type { Tool } from "ai";
 import type { Shell } from "@downcity/shell";
+import type { AgentModel } from "@/agent/AgentModel.js";
 import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import type {
   AgentManagedSession,
@@ -76,7 +77,7 @@ export interface AgentOptions {
    * - Agent 不选择或恢复模型，只持有宿主传入的实例。
    * - Session 未显式设置模型时，执行自动回退到该实例。
    */
-  model?: LanguageModel;
+  model?: AgentModel;
 
   /**
    * 当前 agent 显式持有的插件实例集合。

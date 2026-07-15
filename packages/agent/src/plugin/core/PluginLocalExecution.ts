@@ -16,7 +16,7 @@ import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import type { PluginActionResult } from "@/types/plugin/PluginAction.js";
 import type { PluginCommandContext } from "@/types/plugin/PluginCommand.js";
 import type { PluginAvailability } from "@/types/plugin/PluginRuntime.js";
-import type { AgentContext } from "@/agent/core/AgentContext.js";
+import type { AgentContext } from "@/agent/AgentContext.js";
 
 type LocalPluginCommandContextInput = {
   /** 当前项目根目录。 */

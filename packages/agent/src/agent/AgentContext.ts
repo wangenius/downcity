@@ -7,7 +7,7 @@
  * - Context 不复制 Agent 状态，env 与 systems 始终从唯一状态源读取。
  */
 
-import type { AgentSessions } from "@/agent/core/AgentSessions.js";
+import type { AgentSessions } from "@/agent/AgentSessions.js";
 import type { AgentPlugins } from "@/types/plugin/PluginRuntime.js";
 import type { Logger } from "@/utils/logger/Logger.js";
 

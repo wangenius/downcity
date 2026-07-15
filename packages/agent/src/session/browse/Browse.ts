@@ -432,7 +432,6 @@ export function buildSessionInfo(
     ...(input.metadata.modelLabel
       ? { modelLabel: input.metadata.modelLabel }
       : {}),
-    ...(input.metadata.modelId ? { modelId: input.metadata.modelId } : {}),
     ...(typeof input.metadata.timezone === "string" && input.metadata.timezone.trim()
       ? { timezone: input.metadata.timezone.trim() }
       : {}),
@@ -666,7 +665,6 @@ export async function listAgentSessionSummaryPage(params: {
       ...(typeof info.createdAt === "number" ? { createdAt: info.createdAt } : {}),
       ...(typeof info.updatedAt === "number" ? { updatedAt: info.updatedAt } : {}),
       ...(info.modelLabel ? { modelLabel: info.modelLabel } : {}),
-      ...(info.modelId ? { modelId: info.modelId } : {}),
       ...(info.executing ? { executing: true } : {}),
     };
 
@@ -767,7 +765,6 @@ export async function listArchivedAgentSessionSummaryPage(params: {
       ...(typeof info.createdAt === "number" ? { createdAt: info.createdAt } : {}),
       ...(typeof info.updatedAt === "number" ? { updatedAt: info.updatedAt } : {}),
       ...(info.modelLabel ? { modelLabel: info.modelLabel } : {}),
-      ...(info.modelId ? { modelId: info.modelId } : {}),
     };
 
     if (query) {

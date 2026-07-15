@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 模型候选项唯一来源是当前 Federation user client 的 `ai.listModels()`。
  * - Agent 默认模型写入全局 DB 的 `execution.modelId`，下次启动或重启生效。
- * - Session 模型通过 RemoteAgent 更新，下一轮立即生效且不修改 Agent 默认值。
+ * - Session 模型覆盖写入 City 全局数据库，由运行中 Agent 在下一轮注入模型实例。
  */
 
 import path from "node:path";
@@ -23,6 +23,10 @@ import {
 import { emitCliBlock } from "@/shared/CliReporter.js";
 import { CliError } from "@/shared/CliError.js";
 import type { RemoteAgent } from "@downcity/agent";
+import {
+  read_session_model_override,
+  write_session_model_override,
+} from "@/city/agent/CitySessionModelRuntime.js";
 import type {
   AgentModelAgentTarget,
   AgentModelCommandOptions,
@@ -91,7 +95,11 @@ async function resolve_model_target(params: {
     const sessions = await listRemoteChatSessions({ remote_agent: params.remote_agent });
     choices.push(...sessions.map((session) => ({
       title: session.title || session.sessionId,
-      description: [session.sessionId, session.modelId || "agent default"]
+      description: [
+        session.sessionId,
+        read_session_model_override(params.project_root, session.sessionId) ||
+          "agent default",
+      ]
         .filter(Boolean)
         .join(" · "),
       value: `${SESSION_TARGET_PREFIX}${session.sessionId}`,
@@ -257,9 +265,11 @@ export async function configure_agent_model(
     assert_session_target_available(agent, project_root);
     const session_id = String(target.session_id || "").trim();
     if (!session_id || !remote_agent) throw new Error("Session model target is unavailable");
-    const session = await getOrCreateRemoteSession({ remote_agent, session_id });
-    const current_info = await session.get_info();
-    const previous_model_id = String(current_info.modelId || "").trim();
+    await getOrCreateRemoteSession({ remote_agent, session_id });
+    const previous_model_id = String(
+      read_session_model_override(project_root, session_id) ||
+        read_agent_default_model_id(project_root),
+    ).trim();
     const selected_model_id = await resolve_model_id({
       current_model_id: previous_model_id,
       requested_model_id: options.set,
@@ -268,7 +278,13 @@ export async function configure_agent_model(
     });
     if (!selected_model_id) return null;
     const changed = selected_model_id !== previous_model_id;
-    if (changed) await session.set({ modelId: selected_model_id });
+    if (changed) {
+      write_session_model_override(
+        project_root,
+        session_id,
+        selected_model_id,
+      );
+    }
     return emit_model_result({
       project_root,
       agent_id: agent.agent_id,

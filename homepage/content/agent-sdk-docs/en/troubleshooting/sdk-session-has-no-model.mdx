@@ -17,7 +17,7 @@ You can fix it in either way:
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
-  model,
+  prepare_session: async (session) => await session.set({ model }),
 });
 ```
 

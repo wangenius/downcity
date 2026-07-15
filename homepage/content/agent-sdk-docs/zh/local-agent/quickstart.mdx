@@ -25,7 +25,9 @@ const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
   tools: {},
-  model: openai.responses("gpt-5"),
+  prepare_session: async (session) => {
+    await session.set({ model: openai.responses("gpt-5") });
+  },
 });
 
 const session = await agent.sessions.create();
@@ -47,8 +49,8 @@ console.log(result.text);
 
 第 3 步有两种做法：
 
-- 在 `new Agent({ model })` 里传默认模型
-- 或者对某个 session 单独调用 `await session.set({ model })`
+- 由宿主通过 `prepare_session` 注入运行时模型
+- 或者对某个本地 Session 单独调用 `await session.set({ model })`
 
 如果两种都没做，本地 session 没有模型，无法执行。
 
@@ -58,8 +60,8 @@ console.log(result.text);
 
 如果你是直接把 `@downcity/agent` 嵌到自己的 Node 应用里，最常见就是：
 
-- `new Agent({ model })`
-- 或 `session.set({ model })`
+- `new Agent({ prepare_session })`
+- 或本地 `session.set({ model })`
 
 模型实例由你的宿主代码直接持有。
 

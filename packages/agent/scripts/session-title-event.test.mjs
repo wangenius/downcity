@@ -130,9 +130,12 @@ test("Session logs title generation failure without blocking the session", async
   const agent = new Agent({
     id: "title_log_agent",
     path: agent_path,
-    model: create_failing_title_model(),
+    prepare_session: async (session) => {
+      await session.set({ model: create_failing_title_model() });
+    },
   });
   const session = await agent.sessions.create();
+  await session.set({ model: create_failing_title_model() });
 
   try {
     await session.append_user_message({

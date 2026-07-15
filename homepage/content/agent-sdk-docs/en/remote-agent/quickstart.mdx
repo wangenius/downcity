@@ -27,7 +27,11 @@ downcity agent start
 import { Agent } from "@downcity/agent";
 import { AgentRPC } from "@downcity/server";
 
-const agent = new Agent({ id, path, model });
+const agent = new Agent({
+  id,
+  path,
+  prepare_session: async (session) => await session.set({ model }),
+});
 await agent.ready();
 
 const rpc = new AgentRPC(agent);
@@ -65,19 +69,14 @@ const agent = new RemoteAgent({
 
 ## One important limitation
 
-Remote sessions do not accept a local model instance:
+Remote Sessions do not expose model configuration:
 
 ```ts
 await session.set({ model });
-```
-
-They can request a server-side model by stable ID:
-
-```ts
 await session.set({ modelId: "quality" });
 ```
 
-The server owns the model instance and resolves this ID through `resolve_model`.
+The server host owns model IDs, defaults, recovery, and runtime model injection.
 
 If you are in pure SDK mode, configure the model on the server-side local `Agent` or local session.
 

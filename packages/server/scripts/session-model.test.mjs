@@ -2,8 +2,7 @@
  * @file 验证 RemoteAgent 通过 RPC 控制 Session。
  *
  * 关键点（中文）
- * - 远程只传稳定 modelId，运行时模型由 Agent 宿主 resolver 创建。
- * - 切换结果立即反映在同一个 Session，不重启 AgentRPC。
+ * - RemoteAgent 不暴露模型选择协议，模型实例由 Agent 宿主准备钩子注入。
  * - compact 只验证 command 被远程 Session 接受，不应自行启动 turn。
  */
 
@@ -30,20 +29,20 @@ async function reserve_port() {
   return port;
 }
 
-test("RPC updates model and queues compact without restarting Agent", async () => {
+test("RPC uses the host-prepared runtime model and queues compact", async () => {
   const project_root = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-server-session-model-"),
   );
-  const resolve_model = async (model_id) => ({
-    modelId: model_id,
+  const model = {
+    modelId: "host-model",
     provider: "test",
-  });
+  };
   const agent = new Agent({
     id: "rpc_model_agent",
     path: project_root,
-    model: await resolve_model("default-model"),
-    model_id: "default-model",
-    resolve_model,
+    prepare_session: async (session) => {
+      await session.set({ model });
+    },
   });
   const rpc = new AgentRPC(agent);
   const port = await reserve_port();
@@ -56,13 +55,7 @@ test("RPC updates model and queues compact without restarting Agent", async () =
     const session = await remote_agent.sessions.create({
       sessionId: "rpc-model-session",
     });
-    assert.equal((await session.get_info()).modelId, "default-model");
-
-    await session.set({ modelId: "session-model" });
-
-    assert.equal((await session.get_info()).modelId, "session-model");
-    assert.equal(session.config.modelId, "session-model");
-
+    assert.equal("modelId" in (await session.get_info()), false);
     await session.compact();
   } finally {
     await remote_agent.close();

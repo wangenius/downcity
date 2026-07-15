@@ -14,7 +14,7 @@ import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
 
-import { Agent } from "../bin/index.js";
+import { Agent, normalizeAgentModel } from "../bin/index.js";
 import {
   createAction,
   createPlugin,
@@ -250,13 +250,21 @@ test("multiple session prompts use only their owning Agent plugin registry", asy
     id: "agent_a",
     path: root_a,
     plugins: [create_owner_plugin("agent_a", executed_owners)],
-    model: create_test_model(base_url, "model_a"),
+    prepare_session: async (session) => {
+      await session.set({
+        model: normalizeAgentModel(create_test_model(base_url, "model_a")),
+      });
+    },
   });
   const agent_b = new Agent({
     id: "agent_b",
     path: root_b,
     plugins: [create_owner_plugin("agent_b", executed_owners)],
-    model: create_test_model(base_url, "model_b"),
+    prepare_session: async (session) => {
+      await session.set({
+        model: normalizeAgentModel(create_test_model(base_url, "model_b")),
+      });
+    },
   });
 
   try {

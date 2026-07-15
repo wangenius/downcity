@@ -28,7 +28,11 @@ RPC and HTTP are no longer Agent responsibilities.
 import { Agent } from "@downcity/agent";
 import { AgentRPC } from "@downcity/server";
 
-const agent = new Agent({ id, path, model });
+const agent = new Agent({
+  id,
+  path,
+  prepare_session: async (session) => await session.set({ model }),
+});
 await agent.ready();
 
 const rpc = new AgentRPC(agent);
@@ -52,7 +56,11 @@ await agent.dispose();
 import { Agent } from "@downcity/agent";
 import { AgentHTTP } from "@downcity/server";
 
-const agent = new Agent({ id, path, model });
+const agent = new Agent({
+  id,
+  path,
+  prepare_session: async (session) => await session.set({ model }),
+});
 await agent.ready();
 
 const http = new AgentHTTP(agent);

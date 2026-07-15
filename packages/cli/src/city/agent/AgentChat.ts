@@ -14,6 +14,11 @@ import {
   createRemoteChatSession,
   listRemoteChatSessions,
 } from "@/city/agent/AgentChatRemote.js";
+import {
+  read_session_model_override,
+  write_session_model_override,
+} from "@/city/agent/CitySessionModelRuntime.js";
+import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
 import { run_agent_chat_tui } from "@/city/agent/AgentChatTui.js";
 import type { AgentChatCliOptions } from "@/city/agent/AgentChatTypes.js";
 import {
@@ -114,8 +119,11 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
         }),
       list_models,
       update_session_model: async (session_id, model_id) => {
-        const session = await interactive.remote_agent.sessions.get(session_id);
-        await session.set({ modelId: model_id });
+        write_session_model_override(
+          interactive.target.projectRoot,
+          session_id,
+          model_id,
+        );
       },
       load_session_history: async (session_id) => {
         const session = await interactive.remote_agent.sessions.get(session_id);
@@ -124,7 +132,18 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
           session.messages(),
         ]);
         const title = info.title?.trim() || "Untitled";
-        const model_id = String(info.modelId || "").trim() || undefined;
+        const config = readAgentConfig(interactive.target.projectRoot);
+        const default_model_id = String(
+          config?.execution?.type === "api"
+            ? config.execution.modelId || ""
+            : "",
+        ).trim();
+        const model_id = String(
+          read_session_model_override(
+            interactive.target.projectRoot,
+            session_id,
+          ) || default_model_id,
+        ).trim() || undefined;
         let model_name = model_id;
         if (model_id) {
           try {

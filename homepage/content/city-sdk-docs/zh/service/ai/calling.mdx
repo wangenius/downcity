@@ -41,7 +41,7 @@ while (true) {
 `CityModel` 已经带有隐藏的运行时连接信息，Downcity Agent 和 City SDK 都可以直接使用它：
 
 ```ts
-import { Agent } from "@downcity/agent";
+import { Agent, normalizeAgentModel } from "@downcity/agent";
 
 const catalog = await client.ai.listModels();
 const model = catalog.get("deepseek-v4-flash");
@@ -53,12 +53,14 @@ await client.ai.text({
 });
 
 const agent = new Agent({
-  model,
+  prepare_session: async (session) => {
+    await session.set({ model: normalizeAgentModel(model) });
+  },
 });
 ```
 
-这条路径不需要产品侧创建 AI SDK provider。Agent SDK 会读取 `CityModel` 的连接信息，
-并在内部把它转换为可执行模型。
+这条路径不需要产品侧创建 AI SDK provider。宿主先把 `CityModel` 转换为运行时模型，
+再注入本地 Session。
 
 ## OpenAI 兼容通路
 

@@ -33,11 +33,6 @@ function normalizeModelLabel(input: unknown): string | undefined {
   return label || undefined;
 }
 
-function normalize_model_id(input: unknown): string | undefined {
-  const model_id = typeof input === "string" ? input.trim() : "";
-  return model_id || undefined;
-}
-
 /**
  * 归一化 session 标题。
  */
@@ -158,9 +153,6 @@ export async function readSessionMetadataFromPath(input: {
       ...(normalizeModelLabel(raw.modelLabel)
         ? { modelLabel: normalizeModelLabel(raw.modelLabel) }
         : {}),
-      ...(normalize_model_id(raw.modelId)
-        ? { modelId: normalize_model_id(raw.modelId) }
-        : {}),
       ...(normalize_message_count(raw.messageCount) !== undefined
         ? { messageCount: normalize_message_count(raw.messageCount) }
         : {}),
@@ -212,8 +204,6 @@ export async function patchSessionModelLabel(
      * 当前模型实例。
      */
     model?: LanguageModel;
-    /** 当前模型稳定 ID。 */
-    modelId?: string;
   },
 ): Promise<SessionHistoryMetaV1> {
   const current = await readSessionMetadata(input);
@@ -229,9 +219,6 @@ export async function patchSessionModelLabel(
       ? {
           modelLabel,
         }
-      : {}),
-    ...(normalize_model_id(input.modelId)
-      ? { modelId: normalize_model_id(input.modelId) }
       : {}),
   };
   await writeSessionMetadata({

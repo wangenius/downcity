@@ -5,11 +5,10 @@ description: Core RemoteAgent Session methods and their boundaries
 
 # Remote Session API
 
-Remote Sessions provide `get_info()`, `set({ modelId })`, `prompt()`, `stop()`, `subscribe()`, `messages()`, `system()`, approval methods, and `fork()`.
+Remote Sessions provide `get_info()`, `prompt()`, `stop()`, `subscribe()`, `messages()`, `system()`, approval methods, and `fork()`.
 
 ```ts
 const session = await agent.sessions.create();
-await session.set({ modelId: "quality" });
 
 const unsubscribe = session.subscribe(apply_mutation);
 const turn = await session.prompt({ query: "Continue" });
@@ -21,4 +20,4 @@ unsubscribe();
 
 The subscription emits `message | part | delta | turn | session`. An approval request is an approval-required Tool Part: read its complete payload from `mutation.part.approval` and resolve it with `session.resolve_approval(...)`.
 
-Remote clients cannot send a local model instance. The server resolves `modelId` and owns the resulting model instance.
+Remote clients do not select models through the Agent SDK. The server host owns model IDs, defaults, recovery, and runtime instance injection.

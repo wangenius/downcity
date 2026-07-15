@@ -89,7 +89,7 @@ new RemoteAgent({
 
 ## 一个重要限制
 
-远程 session 不支持客户端直接传本地模型实例，但支持 `session.set({ modelId })`。
+远程 Session 不提供模型配置方法；模型选择和实例注入由服务端宿主负责。
 
 也就是说：
 

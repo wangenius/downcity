@@ -45,13 +45,15 @@ Use `downcity chat send --delay/--time` or another plugin action with `--delay/-
 
 ## SDK Assembly
 
-`TaskPlugin` can be used with no options. By default, it uses the current machine timezone. If cron tasks should use a fixed timezone, pass `timezone` at the constructor root:
+`TaskPlugin` can be used with no options for task management and script tasks. Agent tasks also require the host to provide a runtime model resolver. By default, cron uses the current machine timezone:
 
 ```ts
 import { TaskPlugin } from "@downcity/plugins";
 
 const plugin = new TaskPlugin({
   timezone: "Asia/Shanghai",
+  resolve_session_model: async (session_id) =>
+    await host_model_runtime.resolve(session_id),
 });
 ```
 
@@ -76,6 +78,7 @@ The action names are `list`, `create`, `run`, `delete`, `update`, `status`, `ena
 
 - long-lived cron runtime belongs to the plugin instance
 - cron timezone comes from constructor `timezone`, defaulting to the local machine timezone
+- `resolve_session_model` returns a runtime model instance; TaskPlugin never reads model IDs from AgentContext
 - task scheduler reload is triggered after create, update, delete, or status mutation
 - the running-task lock belongs to the plugin instance, so reloads still keep each task serial
 - the plugin can also accept lifecycle commands such as reload or reschedule

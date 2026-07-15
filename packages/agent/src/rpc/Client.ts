@@ -19,7 +19,6 @@ import type {
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
-  AgentSessionSetInput,
 } from "@/types/agent/SessionTypes.js";
 import type {
   ListSessionMessagesInput,
@@ -166,23 +165,6 @@ export class RpcClient {
       method: "sdk.sessions.get",
       params: {
         sessionId: session_id,
-      },
-    });
-    return data.session;
-  }
-
-  /** 按稳定模型 ID 更新远程 Session。 */
-  async set_session(params: {
-    /** 目标 session id。 */
-    session_id: string;
-    /** Session 配置更新输入。 */
-    input: AgentSessionSetInput;
-  }): Promise<AgentSessionInfo> {
-    const data = await this.request<{ session: AgentSessionInfo }>({
-      method: "sdk.sessions.set",
-      params: {
-        sessionId: params.session_id,
-        input: params.input,
       },
     });
     return data.session;

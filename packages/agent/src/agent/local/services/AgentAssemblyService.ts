@@ -7,7 +7,7 @@
  * - session/lifecycle service 通过它暴露的长期对象协作，避免在 facade 中重复拼装。
  */
 
-import type { LanguageModel, Tool } from "ai";
+import type { Tool } from "ai";
 import type { Plugin } from "@/types/plugin/PluginDefinition.js";
 import { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
@@ -49,12 +49,6 @@ type AgentAssemblyServiceOptions = {
    */
   get_session_port: (session_id: string) => SessionPort;
 
-  /**
-   * 解析指定 session 当前绑定的模型实例。
-   */
-  resolve_session_model: (
-    session_id: string,
-  ) => Promise<LanguageModel | undefined>;
 };
 
 /**
@@ -124,13 +118,11 @@ export class AgentAssemblyService {
   private readonly options: AgentOptions;
   private readonly list_cached_sessions: AgentAssemblyServiceOptions["list_cached_sessions"];
   private readonly get_session_port: AgentAssemblyServiceOptions["get_session_port"];
-  private readonly resolve_session_model: AgentAssemblyServiceOptions["resolve_session_model"];
 
   constructor(options: AgentAssemblyServiceOptions) {
     this.options = options.options;
     this.list_cached_sessions = options.list_cached_sessions;
     this.get_session_port = options.get_session_port;
-    this.resolve_session_model = options.resolve_session_model;
   }
 
   /**
@@ -180,7 +172,6 @@ export class AgentAssemblyService {
       tools.plugin_read = tools.plugin_read || plugin_tools.plugin_read;
       tools.plugin_call = tools.plugin_call || plugin_tools.plugin_call;
     }
-    const resolve_session_model = this.resolve_session_model;
     const paths = createAgentPathRuntime(path, id);
     const pluginConfig = this.options.plugin_config || createAgentPluginConfigRuntime(path);
     agent_context = new AgentContext({
@@ -202,8 +193,6 @@ export class AgentAssemblyService {
         getExecutingSessionCount: () =>
           this.list_cached_sessions()
             .filter((session) => session.isExecuting()).length,
-        resolveModel: async (session_id) =>
-          await resolve_session_model(session_id),
       },
       plugins,
     });

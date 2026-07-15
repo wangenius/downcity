@@ -11,7 +11,6 @@ import type { Tool } from "ai";
 import type { AgentContext } from "@/types/runtime/agent/AgentContext.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { AgentPlugins } from "@/types/plugin/PluginRuntime.js";
-import type { AgentModel } from "@/model/CityModelAdapter.js";
 import type { AgentOptions } from "@/types/agent/AgentOptions.js";
 import type { AgentSessions as AgentSessionsApi } from "@/types/agent/SessionActor.js";
 import type {
@@ -42,10 +41,9 @@ export class Agent {
   private readonly agentContext: AgentContext;
   private readonly config: DowncityConfig;
   private readonly env: Record<string, string>;
-  private readonly defaultModel?: AgentModel;
-  private readonly default_model_id?: string;
-  private readonly resolve_model?: AgentOptions["resolve_model"];
   private readonly SessionClass: AgentOptions["Session"];
+  private readonly prepare_session?: AgentOptions["prepare_session"];
+  private readonly release_session?: AgentOptions["release_session"];
   private readonly backgroundService: AgentBackgroundService;
   private readonly shell?: AgentOptions["shell"];
   private readonly local_sessions: LocalAgentSessions;
@@ -53,10 +51,9 @@ export class Agent {
   private instruction: string[];
 
   constructor(options: AgentOptions) {
-    this.defaultModel = options.model;
-    this.default_model_id = String(options.model_id || "").trim() || undefined;
-    this.resolve_model = options.resolve_model;
     this.SessionClass = options.Session;
+    this.prepare_session = options.prepare_session;
+    this.release_session = options.release_session;
     let sessions_ref: LocalAgentSessions | null = null;
     const assembly_service = new AgentAssemblyService({
       options,
@@ -66,11 +63,6 @@ export class Agent {
           throw new Error("Agent sessions are not initialized");
         }
         return sessions_ref.get_session_port(session_id);
-      },
-      resolve_session_model: async (session_id) => {
-        if (!sessions_ref) return undefined;
-        const session = await sessions_ref.get(session_id);
-        return session.config.model;
       },
     });
     const assembly = assembly_service.assemble();
@@ -240,10 +232,9 @@ export class Agent {
       ensure_agent_ready: async () => {
         await this.backgroundService.ready();
       },
-      default_model: this.defaultModel,
-      default_model_id: this.default_model_id,
-      resolve_model: this.resolve_model,
       SessionClass: this.SessionClass,
+      prepare_session: this.prepare_session,
+      release_session: this.release_session,
     });
   }
 }

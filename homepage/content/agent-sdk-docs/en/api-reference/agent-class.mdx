@@ -38,18 +38,21 @@ The local `Agent` exposes the following main public API:
 
 - `id`
 - `path`
-- `model`
 - `env`
 - `tools`
 - `instruction`
 - `plugins`
 - `Session`
-- `model_id`
-- `resolve_model`
+- `prepare_session`
+- `release_session`
 - `config`
 - `plugin_config`
 
 There is currently no `mode` constructor option.
+
+`prepare_session(session)` runs before every turn. The host owns model selection, IDs, defaults, and recovery; the SDK only consumes the runtime model instance injected with `session.set({ model })`.
+
+`release_session(session_id)` runs after a Session is archived so the host can clean up its own orchestration data.
 
 ## `ready()` and `dispose()`
 

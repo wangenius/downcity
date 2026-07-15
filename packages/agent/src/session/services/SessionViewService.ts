@@ -271,9 +271,6 @@ export class SessionViewService<TSession extends Pick<AgentSession, "set">> {
         await forked_bundle.state_service.set(
           {
             model: session_config.model,
-            ...(session_config.modelId
-              ? { modelId: session_config.modelId }
-              : {}),
           },
           { emit_action: false },
         );

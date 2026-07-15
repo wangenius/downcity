@@ -81,6 +81,7 @@ export class TaskPlugin extends BasePlugin {
     this.actions = createTaskPluginActions({
       reloadSchedulerAfterMutation: async (params) =>
         this.reloadSchedulerAfterMutation(params),
+      resolve_session_model: this.options.resolve_session_model,
     });
 
     this.lifecycle = {
@@ -134,6 +135,7 @@ export class TaskPlugin extends BasePlugin {
       engine,
       timezone: this.resolveTimezone(),
       runningTaskIds: this.runningTaskIds,
+      resolve_session_model: this.options.resolve_session_model,
     });
     await engine.start();
     this.cronEngine = engine;

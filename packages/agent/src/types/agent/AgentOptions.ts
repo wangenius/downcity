@@ -9,13 +9,13 @@
 import type { Tool } from "ai";
 import type { Shell } from "@downcity/shell";
 import type { Plugin } from "@/types/plugin/PluginDefinition.js";
-import type { AgentModel } from "@/model/CityModelAdapter.js";
 import type { DowncityConfig } from "@/types/config/DowncityConfig.js";
 import type { AgentPluginConfigRuntime } from "@/types/agent/AgentRuntimeAssembly.js";
 import type {
   AgentManagedSession,
   SessionOptions,
 } from "@/types/session/SessionOptions.js";
+import type { AgentSession } from "@/types/agent/SessionActor.js";
 
 /**
  * Agent 可使用的 Session 类。
@@ -73,26 +73,24 @@ export interface AgentOptions {
   instruction?: string | string[];
 
   /**
-   * 当前 agent 为新建 session 提供的默认模型实例。
+   * Session 每次执行前调用的宿主准备钩子。
    *
    * 关键点（中文）
-   * - SDK 仍不负责“选择哪个模型”，这里只接收宿主已经创建好的模型实例。
-   * - 支持 AI SDK `LanguageModel`，也支持 City City 返回的 `CityModel`。
-   * - 该模型会作为 session 首次执行前的默认注入值。
+   * - Agent SDK 不选择、持久化或恢复模型。
+   * - 宿主可在这里注入当前执行所需的模型实例与其他运行时依赖。
+   * - 钩子在每次 turn 开始前执行，因此宿主配置变更可在下一轮生效。
    */
-  model?: AgentModel;
-
-  /** 当前 Agent 默认模型对应的稳定 ID。 */
-  model_id?: string;
+  prepare_session?: (session: AgentSession) => Promise<void>;
 
   /**
-   * 按稳定 ID 解析 Session 运行时模型。
+   * Session 离开当前 Agent 活跃集合后的宿主释放钩子。
    *
    * 关键点（中文）
-   * - Session 热切换与进程重启后的恢复统一使用该 resolver。
-   * - SDK 不维护模型目录，具体目录与鉴权由宿主负责。
+   * - 当前在 Session 归档成功后调用。
+   * - 宿主可清理模型绑定等自身持有的编排数据。
+   * - SDK 不感知宿主具体清理的数据类型。
    */
-  resolve_model?: (model_id: string) => Promise<AgentModel>;
+  release_session?: (session_id: string) => Promise<void>;
 
   /**
    * 当前 agent 显式持有的插件实例集合。

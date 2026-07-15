@@ -99,11 +99,6 @@ export async function touchSessionMetadata(
           modelLabel: params.sessionConfig.modelLabel,
         }
       : {}),
-    ...(params.sessionConfig.modelId
-      ? {
-          modelId: params.sessionConfig.modelId,
-        }
-      : {}),
     ...(typeof params.message_count === "number"
       ? { messageCount: params.message_count }
       : {}),

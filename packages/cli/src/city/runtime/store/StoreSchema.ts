@@ -45,6 +45,19 @@ export function ensurePlatformStoreSchema(context: PlatformStoreContext): void {
     ON agent_configs(updated_at);
   `);
   context.sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS agent_session_models (
+      project_root TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      model_id TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (project_root, session_id)
+    );
+  `);
+  context.sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS agent_session_models_project_root_idx
+    ON agent_session_models(project_root);
+  `);
+  context.sqlite.exec(`
     CREATE INDEX IF NOT EXISTS env_entries_scope_idx
     ON env_entries(scope);
   `);

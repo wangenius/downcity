@@ -45,13 +45,15 @@ downcity task delete daily-summary
 
 ## SDK 装配
 
-`TaskPlugin` 可以无参使用，默认采用当前运行机器的本机时区。需要固定 cron 时区时，可以在 constructor 根层传入 `timezone`：
+`TaskPlugin` 在任务管理和 script task 场景可以无参使用；agent task 还需要宿主提供运行时模型解析函数。cron 默认采用当前运行机器的本机时区：
 
 ```ts
 import { TaskPlugin } from "@downcity/plugins";
 
 const plugin = new TaskPlugin({
   timezone: "Asia/Shanghai",
+  resolve_session_model: async (session_id) =>
+    await host_model_runtime.resolve(session_id),
 });
 ```
 
@@ -76,6 +78,7 @@ action 名称是 `list`、`create`、`run`、`delete`、`update`、`status`、`e
 
 - 长期 cron runtime 归属于 plugin 实例
 - cron 时区来自 constructor `timezone`，默认本机时区
+- `resolve_session_model` 只返回运行时模型实例，TaskPlugin 不从 AgentContext 读取模型 ID
 - create / update / delete / status 变更后会触发 scheduler reload
 - task 运行中锁归属于 plugin 实例，reload 时也会保持同一 task 串行执行
 - plugin 也支持 reload / reschedule 这类 lifecycle command

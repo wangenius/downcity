@@ -43,7 +43,7 @@ const turn = await session.prompt({
 await turn.finished;
 ```
 
-你也可以直接在 `new Agent({ model })` 里提供默认模型。
+多个 Session 共用宿主模型策略时，使用 `prepare_session` 钩子统一注入。
 
 ## 远程典型流程
 
@@ -165,13 +165,13 @@ await turn.finished;
 一个关键差异：
 
 - 本地 `AgentSession` 支持 `set({ model })`
-- 远程 `RemoteAgentSession` 不接受客户端直接传本地模型实例，但支持 `set({ modelId })`
+- 远程 `RemoteAgentSession` 不提供模型配置方法
 
 ## Agent 项目和 Federation AIService 的关系
 
 如果你在正常的 Downcity Agent 项目里使用这套 SDK，还要额外区分：
 
-- 纯 SDK 嵌入：本地直接传 `model`
+- 纯 SDK 嵌入：宿主通过 `prepare_session` 或本地 `session.set({ model })` 注入实例
 - Downcity 项目：通过 `execution.modelId` 绑定到 `Federation AIService`
 
 也就是说，`session.set({ model })` 不是所有场景都该用的默认路径。

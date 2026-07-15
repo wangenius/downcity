@@ -39,18 +39,21 @@ description: 本地 Agent SDK 的核心公开接口
 
 - `id`
 - `path`
-- `model`
 - `env`
 - `tools`
 - `instruction`
 - `plugins`
 - `Session`
-- `model_id`
-- `resolve_model`
+- `prepare_session`
+- `release_session`
 - `config`
 - `plugin_config`
 
 当前没有 `mode` 这个构造参数。
+
+`prepare_session(session)` 在每个 turn 执行前调用。模型选择、模型 ID、默认模型和恢复策略由宿主实现；SDK 只消费宿主通过 `session.set({ model })` 注入的运行时模型实例。
+
+`release_session(session_id)` 在 Session 归档成功后调用，供宿主清理自己持有的编排数据。
 
 ## 核心语义
 

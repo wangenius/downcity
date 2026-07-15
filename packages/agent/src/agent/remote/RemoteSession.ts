@@ -8,7 +8,6 @@ import type {
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
   AgentSessionInfo,
-  AgentSessionSetInput,
   AgentSessionSystemSnapshot,
 } from "@/types/agent/SessionTypes.js";
 import type { RemoteAgentSession } from "@/types/agent/SessionActor.js";
@@ -77,20 +76,9 @@ export class RemoteSession implements RemoteAgentSession {
     this.id = info.sessionId;
     this.agentId = info.agentId;
     this.config = {
-      ...(info.modelId ? { modelId: info.modelId } : {}),
       ...(info.modelLabel ? { modelLabel: info.modelLabel } : {}),
     };
     this.event_hub = new SessionEventHub();
-  }
-
-  /** 按稳定模型 ID 更新远程 Session 模型。 */
-  async set(input: AgentSessionSetInput): Promise<void> {
-    if (input.model) throw new Error("Remote session.set does not accept a local model instance.");
-    const model_id = String(input.modelId || "").trim();
-    if (!model_id) throw new Error("Remote session.set requires modelId.");
-    const info = await this.transport.set(this.id, { modelId: model_id });
-    this.config.modelId = info.modelId;
-    this.config.modelLabel = info.modelLabel;
   }
 
   /** 读取当前远程 Session 详情。 */

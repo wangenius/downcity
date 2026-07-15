@@ -193,14 +193,6 @@ export interface SessionCollectionPort {
    * 返回当前执行中的 session 数量。
    */
   getExecutingSessionCount(): number;
-  /**
-   * 解析指定 session 当前绑定的模型实例。
-   *
-   * 关键点（中文）
-   * - 模型归属于 session，而不是 agent 全局运行时。
-   * - 这里会触发 session 初始化/宿主配置，适合 task 等后台链路按 session 读取模型。
-   */
-  resolveModel(sessionId: string): Promise<LanguageModel | undefined>;
 }
 
 /**

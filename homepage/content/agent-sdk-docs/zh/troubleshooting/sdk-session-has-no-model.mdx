@@ -17,7 +17,7 @@ description: 本地 Agent SDK 执行时报 session 没有 model 时该怎么办
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
-  model,
+  prepare_session: async (session) => await session.set({ model }),
 });
 ```
 

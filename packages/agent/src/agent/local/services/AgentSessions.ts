@@ -22,7 +22,6 @@ import type {
   AgentSessionSummaryPage,
   AgentSessionSystemBlock,
 } from "@/types/agent/SessionTypes.js";
-import type { AgentModel } from "@/model/CityModelAdapter.js";
 import type { AgentSessionConstructor } from "@/types/agent/AgentOptions.js";
 import type { AgentSession, AgentSessions as AgentSessionsApi } from "@/types/agent/SessionActor.js";
 import type { AgentManagedSession } from "@/types/session/SessionOptions.js";
@@ -95,20 +94,15 @@ type AgentSessionsOptions = {
   ensure_agent_ready: () => Promise<void>;
 
   /**
-   * 当前默认模型实例。
-   */
-  default_model?: AgentModel;
-
-  /** 当前默认模型的稳定 ID。 */
-  default_model_id?: string;
-
-  /** 按稳定 ID 解析 Session 模型。 */
-  resolve_model?: (model_id: string) => Promise<AgentModel>;
-
-  /**
    * 当前 agent 使用的本地 Session 类。
    */
   SessionClass?: AgentSessionConstructor;
+
+  /** Session 每次执行前调用的宿主准备钩子。 */
+  prepare_session?: (session: AgentSession) => Promise<void>;
+
+  /** Session 归档后的宿主释放钩子。 */
+  release_session?: (session_id: string) => Promise<void>;
 };
 
 /**
@@ -124,12 +118,10 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
   private readonly get_agent_env: AgentSessionsOptions["get_agent_env"];
   private readonly get_agent_plugins: AgentSessionsOptions["get_agent_plugins"];
   private readonly ensure_agent_ready: AgentSessionsOptions["ensure_agent_ready"];
-  private readonly default_model?: AgentModel;
-  private readonly default_model_id?: string;
-  private readonly resolve_model?: AgentSessionsOptions["resolve_model"];
   private readonly SessionClass: AgentSessionConstructor;
+  private readonly prepare_session?: AgentSessionsOptions["prepare_session"];
+  private readonly release_session?: AgentSessionsOptions["release_session"];
   private readonly sessions_by_id = new Map<string, AgentManagedSession>();
-  private readonly configured_session_ids = new Set<string>();
 
   constructor(options: AgentSessionsOptions) {
     this.agent_id = options.agent_id;
@@ -141,10 +133,9 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
     this.get_agent_env = options.get_agent_env;
     this.get_agent_plugins = options.get_agent_plugins;
     this.ensure_agent_ready = options.ensure_agent_ready;
-    this.default_model = options.default_model;
-    this.default_model_id = options.default_model_id;
-    this.resolve_model = options.resolve_model;
     this.SessionClass = options.SessionClass || Session;
+    this.prepare_session = options.prepare_session;
+    this.release_session = options.release_session;
   }
 
   /**
@@ -236,7 +227,6 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
       session_id: explicit_session_id,
     });
     await session.initialize();
-    await this.apply_session_defaults(session);
     return session;
   }
 
@@ -263,7 +253,6 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
       session_id: resolved_session_id,
     });
     await session.initialize();
-    await this.apply_session_defaults(session);
     return session;
   }
 
@@ -325,7 +314,13 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
 
     // 关键点（中文）：归档后清理缓存，避免后续操作访问已移动目录。
     this.sessions_by_id.delete(session_id);
-    this.configured_session_ids.delete(session_id);
+    try {
+      await this.release_session?.(session_id);
+    } catch (error) {
+      this.logger.error(
+        `Agent session release failed: ${session_id} - ${String(error)}`,
+      );
+    }
 
     return {
       sessionId: session_id,
@@ -406,26 +401,16 @@ export class AgentSessions implements AgentSessionsApi<AgentSession> {
       getPluginSystemBlocks: async () => await this.load_plugin_system_blocks(),
       ensureConfigured: async (session) => {
         await this.ensure_agent_ready();
-        await this.apply_session_defaults(session);
       },
-      ...(this.resolve_model ? { resolve_model: this.resolve_model } : {}),
+      ...(this.prepare_session
+        ? {
+            prepareExecution: async (session) =>
+              await this.prepare_session?.(session),
+          }
+        : {}),
     });
     this.sessions_by_id.set(resolved_session_id, created);
     return created;
-  }
-
-  private async apply_session_defaults(
-    session: AgentManagedSession,
-  ): Promise<void> {
-    if (this.configured_session_ids.has(session.id)) return;
-    const persisted_model_id = String(session.config.modelId || "").trim();
-    if (!persisted_model_id && this.default_model) {
-      await session.set({
-        model: this.default_model,
-        ...(this.default_model_id ? { modelId: this.default_model_id } : {}),
-      });
-    }
-    this.configured_session_ids.add(session.id);
   }
 
   private load_instruction_system_blocks(): AgentSessionSystemBlock[] {

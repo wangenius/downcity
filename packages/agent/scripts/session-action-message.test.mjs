@@ -162,21 +162,18 @@ test("session.set only persists and publishes model-switching actions when model
     });
 
     await session.set({
-      modelId: "test-model",
-      model: create_model("test-model-label-v1", model_calls),
+      model: create_model("test-model-label", model_calls),
     });
 
     assert.deepEqual(events, []);
 
     await session.set({
-      modelId: "test-model",
-      model: create_model("test-model-label-v2", model_calls),
+      model: create_model("test-model-label", model_calls),
     });
 
     assert.deepEqual(events, []);
 
     await session.set({
-      modelId: "next-test-model",
       model: create_model("next-test-model-label", model_calls),
     });
 
@@ -196,8 +193,8 @@ test("session.set only persists and publishes model-switching actions when model
     assert.deepEqual(
       events.map((event) => `${event.title}:${event.status}`),
       [
-        "Session model switched from test-model-label-v2 to next-test-model-label:running",
-        "Session model switched from test-model-label-v2 to next-test-model-label:completed",
+        "Session model switched from test-model-label to next-test-model-label:running",
+        "Session model switched from test-model-label to next-test-model-label:completed",
       ],
     );
     assert.equal(new Set(events.map((event) => event.message_id)).size, 1);
@@ -209,7 +206,7 @@ test("session.set only persists and publishes model-switching actions when model
     assert.deepEqual(
       action_events.map((event) => `${event.title}:${event.status}`),
       [
-        "Session model switched from test-model-label-v2 to next-test-model-label:completed",
+        "Session model switched from test-model-label to next-test-model-label:completed",
       ],
     );
   } finally {
@@ -217,140 +214,33 @@ test("session.set only persists and publishes model-switching actions when model
   }
 });
 
-test("default model initialization does not persist model-switching actions", async () => {
+test("prepare_session injects the host model before every turn", async () => {
   const agent_path = await fs.mkdtemp(
-    path.join(os.tmpdir(), "downcity-agent-model-init-action-"),
+    path.join(os.tmpdir(), "downcity-agent-session-model-host-"),
   );
+  const model_calls = [];
+  let current_model = create_model("host-model-a", model_calls);
   const agent = new Agent({
-    id: "model_init_action_agent",
+    id: "session_model_host_agent",
     path: agent_path,
-    model: {
-      modelId: "default-test-model",
-      provider: "test",
+    prepare_session: async (session) => {
+      await session.set({ model: current_model });
     },
   });
   try {
     const session = await agent.sessions.create({
-      sessionId: "model_init_action_session",
+      sessionId: "host-model-session",
     });
-    const messages = await session.messages();
-    const action_events = messages.items.filter(
-      (item) => item.type === "action",
-    );
-    assert.deepEqual(action_events, []);
+    await (await session.prompt({ query: "first" })).finished;
+    current_model = create_model("host-model-b", model_calls);
+    await (await session.prompt({ query: "second" })).finished;
+    assert.deepEqual(model_calls, [
+      "host-model-a",
+      "host-model-a",
+      "host-model-b",
+    ]);
   } finally {
     await agent.dispose();
-  }
-});
-
-test("session model id persists and restores through the host resolver", async () => {
-  const agent_path = await fs.mkdtemp(
-    path.join(os.tmpdir(), "downcity-agent-session-model-id-"),
-  );
-  const resolved_model_ids = [];
-  const resolve_model = async (model_id) => {
-    resolved_model_ids.push(model_id);
-    return {
-      modelId: model_id,
-      provider: "test",
-    };
-  };
-  const first_agent = new Agent({
-    id: "session_model_id_agent",
-    path: agent_path,
-    model: await resolve_model("default-model"),
-    model_id: "default-model",
-    resolve_model,
-  });
-  try {
-    const session = await first_agent.sessions.create({
-      sessionId: "persisted-model-session",
-    });
-    await session.set({ modelId: "session-model" });
-    const info = await session.get_info();
-    assert.equal(info.modelId, "session-model");
-    assert.equal(session.config.modelId, "session-model");
-  } finally {
-    await first_agent.dispose();
-  }
-
-  const restored_agent = new Agent({
-    id: "session_model_id_agent",
-    path: agent_path,
-    model: await resolve_model("other-default-model"),
-    model_id: "other-default-model",
-    resolve_model,
-  });
-  try {
-    const restored_session = await restored_agent.sessions.get(
-      "persisted-model-session",
-    );
-    assert.equal(restored_session.config.modelId, "session-model");
-    assert.equal(restored_session.config.model.modelId, "session-model");
-    assert.equal(resolved_model_ids.at(-1), "session-model");
-  } finally {
-    await restored_agent.dispose();
-  }
-});
-
-test("runtime restoration does not publish a model switch when model id is unchanged", async () => {
-  const agent_path = await fs.mkdtemp(
-    path.join(os.tmpdir(), "downcity-agent-session-model-runtime-restore-"),
-  );
-  const first_agent = new Agent({
-    id: "session_model_runtime_restore_agent",
-    path: agent_path,
-    model: {
-      modelId: "default-model",
-      provider: "test",
-    },
-    model_id: "default-model",
-    resolve_model: async (model_id) => ({
-      modelId: model_id,
-      provider: "test",
-    }),
-  });
-  try {
-    const session = await first_agent.sessions.create({
-      sessionId: "runtime-restored-model-session",
-    });
-    await session.set({ modelId: "session-model" });
-  } finally {
-    await first_agent.dispose();
-  }
-
-  let resolve_count = 0;
-  const restored_agent = new Agent({
-    id: "session_model_runtime_restore_agent",
-    path: agent_path,
-    model: {
-      modelId: "other-default-model",
-      provider: "test",
-    },
-    model_id: "other-default-model",
-    resolve_model: async (model_id) => {
-      resolve_count += 1;
-      return {
-        modelId: model_id,
-        provider: "test",
-      };
-    },
-  });
-  try {
-    const session_port = restored_agent
-      .getContext()
-      .session.get("runtime-restored-model-session");
-    const events = [];
-    const unsubscribe = session_port.subscribe((event) => {
-      if (event.type === "action") events.push(event);
-    });
-    await session_port.stop();
-    unsubscribe();
-
-    assert.equal(resolve_count, 1);
-    assert.deepEqual(events, []);
-  } finally {
-    await restored_agent.dispose();
   }
 });
 

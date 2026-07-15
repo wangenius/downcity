@@ -25,7 +25,7 @@ import { Agent } from "@downcity/agent";
 const agent = new Agent({
   id: "repo-helper",
   path: process.cwd(),
-  model,
+  prepare_session: async (session) => await session.set({ model }),
 });
 
 const session = await agent.sessions.create();

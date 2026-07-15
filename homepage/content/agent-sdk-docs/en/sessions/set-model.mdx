@@ -5,7 +5,7 @@ description: How a local SDK session explicitly binds its default model instance
 
 # `session.set({ model })`
 
-`session.set({ model })` is one of the explicit ways to bind a model instance in local SDK usage.
+`session.set({ model })` is the only local SDK API for binding a runtime model instance to a Session.
 
 ```ts
 await session.set({
@@ -29,22 +29,25 @@ The config API reports whether the change succeeded. The action message reports 
 This is useful when:
 
 - you are using `@downcity/agent` in pure SDK embedding mode
-- you did not provide a default model through `new Agent({ model })`
-- you want to override the model for one specific session
+- you manage a local Session directly
+- or you are implementing the host's `prepare_session` hook
 
-## When you may not need it
+## Host-managed injection
 
-If you already wrote:
+When several Sessions share a host model policy, use the model-agnostic Agent hook:
 
 ```ts
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
-  model: openai.responses("gpt-5"),
+  prepare_session: async (session) => {
+    const model = await host_model_runtime.resolve(session.id);
+    await session.set({ model });
+  },
 });
 ```
 
-then new sessions automatically receive that default model, so you usually do not need another explicit `set`.
+The SDK does not know which IDs, defaults, or persistence strategy `host_model_runtime` uses.
 
 ## Why it works this way
 
@@ -57,25 +60,11 @@ That makes the local SDK more flexible, but it also makes the caller responsible
 
 ## What happens if you skip it
 
-If a local session has neither:
-
-- `new Agent({ model })`
-
-nor:
-
-- `session.set({ model })`
-
-then execution fails because the session has no default model.
+If a local Session has not received a model instance through `session.set({ model })` before execution, execution fails explicitly.
 
 ## What about remote sessions
 
-Remote sessions reject a local model instance, but can request a server-side model by stable ID:
-
-```ts
-await remote_session.set({ modelId: "quality" });
-```
-
-The server Agent must provide `resolve_model` to resolve that ID.
+Remote Sessions do not expose a model-setting API. Remote clients only send prompts; the server host selects and injects the model through `prepare_session`.
 
 ## What about Downcity Agent projects
 

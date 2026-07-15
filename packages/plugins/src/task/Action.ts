@@ -8,6 +8,7 @@
 
 import path from "node:path";
 import type { ShipTaskStatus } from "./types/Task.js";
+import type { TaskPluginOptions } from "./types/TaskPluginOptions.js";
 import type { AgentContext } from "@downcity/agent";
 import type { PluginRunContext } from "@downcity/agent";
 import type { JsonValue } from "@downcity/agent";
@@ -324,6 +325,7 @@ export async function runTaskDefinition(params: {
   projectRoot: string;
   request: TaskRunRequest;
   run_context?: PluginRunContext;
+  resolve_session_model?: TaskPluginOptions["resolve_session_model"];
 }): Promise<TaskRunResponse> {
   const root = path.resolve(params.projectRoot);
   const title = String(params.request.title || "").trim();
@@ -368,6 +370,7 @@ export async function runTaskDefinition(params: {
       ...(params.run_context?.agentSystems
         ? { agent_systems: [...params.run_context.agentSystems] }
         : {}),
+      resolve_session_model: params.resolve_session_model,
     })
       .then((result) => {
         params.context.logger.info(

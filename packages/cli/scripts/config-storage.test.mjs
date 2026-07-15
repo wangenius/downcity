@@ -122,6 +122,39 @@ test("Agent model 命令已注册到 CLI", () => {
   assert.match(result.stdout, /--session-id <session-id>/);
 });
 
+test("Session 模型覆盖只持久化在 City 全局数据库", async () => {
+  const platform_root = create_temp_root();
+  const project_root = create_temp_root();
+  process.env.DC_PLATFORM_ROOT = platform_root;
+  try {
+    const { PlatformStore } = await import("../bin/city/runtime/store/index.js");
+    const store = new PlatformStore();
+    assert.equal(
+      store.get_agent_session_model_binding(project_root, "session-a"),
+      null,
+    );
+    const written = store.upsert_agent_session_model_binding({
+      project_root,
+      session_id: "session-a",
+      model_id: "quality",
+    });
+    assert.equal(written.model_id, "quality");
+    assert.equal(
+      store.get_agent_session_model_binding(project_root, "session-a")?.model_id,
+      "quality",
+    );
+    store.remove_agent_session_model_binding(project_root, "session-a");
+    assert.equal(
+      store.get_agent_session_model_binding(project_root, "session-a"),
+      null,
+    );
+    store.close();
+  } finally {
+    fs.rmSync(platform_root, { recursive: true, force: true });
+    fs.rmSync(project_root, { recursive: true, force: true });
+  }
+});
+
 test("Agent 模型选择只接受对话执行模型", async () => {
   const binding = await import(
     "../bin/city/runtime/city-model/CityAiServiceBinding.js"

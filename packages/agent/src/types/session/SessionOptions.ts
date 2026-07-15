@@ -15,7 +15,6 @@ import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.j
 import type { AgentSessionCommand } from "@/types/session/SessionQueueCommand.js";
 import type { SessionComposerOptions } from "@/types/session/SessionComposerOptions.js";
 import type { Logger } from "@/utils/logger/Logger.js";
-import type { AgentModel } from "@/model/CityModelAdapter.js";
 
 /**
  * Agent 可管理的本地 Session 实例。
@@ -105,8 +104,14 @@ export interface SessionOptions {
    */
   ensureConfigured?: (session: AgentManagedSession) => Promise<void>;
 
-  /** 按稳定模型 ID 解析当前 Session 的运行时模型。 */
-  resolve_model?: (model_id: string) => Promise<AgentModel>;
+  /**
+   * 每次 Session 执行前调用的宿主准备钩子。
+   *
+   * 关键点（中文）
+   * - 钩子只负责注入运行时依赖，不把宿主的模型 ID 或恢复策略带入 SDK。
+   * - 每次 turn 都会调用，宿主配置可在下一轮生效。
+   */
+  prepareExecution?: (session: AgentManagedSession) => Promise<void>;
 
   /**
    * 当前 session 的 Composer 覆盖项。

@@ -5,7 +5,7 @@ description: What a Session owns, its lifecycle, and the shared local and remote
 
 # Session Overview
 
-`Agent` assembles the runtime: models, tools, plugins, configuration, and storage. A `Session` owns one continuous conversation, its history, streaming output, and tool approvals.
+`Agent` assembles tools, plugins, configuration, and storage. The host injects the model before execution. A `Session` owns one continuous conversation, its history, streaming output, and tool approvals.
 
 A Session is one persisted, linearly ordered Message sequence. It can be reopened with `get()` after a process restart, and local `Agent` and `RemoteAgent` share nearly the same calling model.
 
@@ -77,11 +77,11 @@ Both expose `prompt()`, `stop()`, `compact()`, `subscribe()`, `messages()`, `app
 
 | Context | Configure a model |
 | --- | --- |
-| Local `AgentSession` | `session.set({ model })` or `session.set({ modelId })` |
-| `RemoteAgentSession` | Only `session.set({ modelId })`; the server resolves the model instance |
-| Downcity Agent project | Usually `execution.modelId` and City AIService own this; the client does not inject a model |
+| Local `AgentSession` | `session.set({ model })`; only a runtime model instance is accepted |
+| `RemoteAgentSession` | No model configuration API; the remote client only executes the Session |
+| Downcity Agent project | City stores `execution.modelId` and Session overrides, then injects the model before each turn |
 
-Never send a local model instance to a `RemoteAgentSession`.
+Remote clients do not participate in model selection. IDs, defaults, and recovery belong to the server host.
 
 ## API map
 

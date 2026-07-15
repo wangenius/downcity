@@ -16,7 +16,6 @@ import type {
   AgentArchiveSessionsResult,
   AgentCleanArchiveResult,
   AgentSessionSystemSnapshot,
-  AgentSessionSetInput,
 } from "@/types/agent/SessionTypes.js";
 import type { SessionMutation } from "@/types/session/SessionMutation.js";
 import type {
@@ -62,19 +61,6 @@ export type RpcRequest =
       params: {
         /** 目标 session id。 */
         sessionId: string;
-      };
-    }
-  | {
-      /** 请求 id，用于匹配响应。 */
-      id: string;
-      /** 更新 session 模型。 */
-      method: "sdk.sessions.set";
-      /** Session 配置更新参数。 */
-      params: {
-        /** 目标 session id。 */
-        sessionId: string;
-        /** 仅包含稳定 modelId 的配置输入。 */
-        input: AgentSessionSetInput;
       };
     }
   | {

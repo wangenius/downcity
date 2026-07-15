@@ -9,6 +9,7 @@
  */
 
 import type { AgentContext } from "@downcity/agent";
+import type { LanguageModel } from "ai";
 import type {
   DialogueRoundRecord,
   UserSimulatorDecision,
@@ -84,6 +85,8 @@ export async function runTaskNow(params: {
   agent_env?: Readonly<Record<string, string>>;
   /** 发起该任务的 Session step 已提交生效的 instruction 快照。 */
   agent_systems?: readonly string[];
+  /** 由宿主提供任务绑定 Session 的运行时模型。 */
+  resolve_session_model?: (session_id: string) => Promise<LanguageModel>;
 }): Promise<{
   ok: boolean;
   status: ShipTaskRunStatusV1;
@@ -152,12 +155,12 @@ export async function runTaskNow(params: {
 
   const runSessionId = createTaskRunSessionId(task.taskId, timestamp);
   const userSimulatorSessionId = `task-user-sim:${task.taskId}:${timestamp}`;
-  const taskModel = await context.session.resolveModel(task.frontmatter.sessionId);
-  if (!taskModel) {
+  if (!params.resolve_session_model) {
     throw new Error(
-      `Task "${task.taskId}" requires a configured model on session "${task.frontmatter.sessionId}"`,
+      `Task "${task.taskId}" requires a host model resolver`,
     );
   }
+  const taskModel = await params.resolve_session_model(task.frontmatter.sessionId);
   const taskSessionRuntime = createTaskSessionRuntimePort({
     context,
     model: taskModel,

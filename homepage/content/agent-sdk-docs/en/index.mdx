@@ -13,7 +13,7 @@ description: Build local and remote Agent integrations with @downcity/agent
 const agent = new Agent({
   id: "repo-helper",
   path: process.cwd(),
-  model,
+  prepare_session: async (session) => await session.set({ model }),
   tools: { search: search_tool },
 });
 
@@ -23,17 +23,16 @@ await turn.finished;
 await agent.dispose();
 ```
 
-Supply a default `model`, set a local session model with `session.set({ model })`, or configure `model_id` with `resolve_model` when models are restored by stable ID.
+The host owns model selection and injects a runtime model through `prepare_session` or a direct local `session.set({ model })` call.
 
 ## Remote access
 
 ```ts
 const agent = new RemoteAgent({ url: "http://127.0.0.1:5314" });
 const session = await agent.sessions.create();
-await session.set({ modelId: "quality" });
 ```
 
-Remote Sessions reject local model instances. The server owns model resolution through `resolve_model`.
+Remote Sessions do not expose model configuration. The server host owns model IDs, defaults, recovery, and runtime injection.
 
 ## Session API
 

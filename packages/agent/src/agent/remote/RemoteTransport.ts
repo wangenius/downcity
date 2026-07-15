@@ -18,7 +18,6 @@ import type {
   AgentSessionInfo,
   AgentSessionSummaryPage,
   AgentSessionSystemSnapshot,
-  AgentSessionSetInput,
 } from "@/types/agent/SessionTypes.js";
 import type {
   RemoteAgentPluginActionInput,
@@ -53,8 +52,6 @@ export type TransportSubscription = {
 export type RemoteSessionTransport = {
   /** 读取 session 信息。 */
   get_info(session_id: string): Promise<AgentSessionInfo>;
-  /** 按稳定模型 ID 更新远程 session 配置。 */
-  set(session_id: string, input: AgentSessionSetInput): Promise<AgentSessionInfo>;
   /** 发送 prompt。 */
   prompt(
     session_id: string,

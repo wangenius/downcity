@@ -1,6 +1,6 @@
 ---
 title: Agent Constructor Options
-description: Detailed explanation of the local Agent id, path, instruction, model, env, tools, and plugins options
+description: Detailed explanation of the local Agent id, path, instruction, prepare_session, env, tools, and plugins options
 ---
 
 # Agent Constructor Options
@@ -11,7 +11,7 @@ The local Agent is constructed like this:
 new Agent({
   id,
   path,
-  model,
+  prepare_session,
   env,
   instruction,
   tools,
@@ -74,24 +74,26 @@ Key points:
 
 Hosts that need additional base instructions should pass them explicitly through `instruction`.
 
-## `model`
+## `prepare_session`
 
-The default `LanguageModel` instance for sessions created under this agent.
+A host hook called before every Session turn.
 
 ```ts
 new Agent({
   id: "repo-helper",
   path: "/path/to/project",
-  model: openai.responses("gpt-5"),
+  prepare_session: async (session) => {
+    await session.set({ model: openai.responses("gpt-5") });
+  },
 });
 ```
 
 Key points:
 
-- the SDK does not resolve provider or model IDs for you
-- the host must still create the `LanguageModel` instance first
-- this becomes the default model for session execution
-- `session.set({ model })` can still override it for one specific session
+- the SDK does not select, persist, or restore model IDs
+- the host creates the `LanguageModel` and injects it through this hook
+- the hook runs before every turn, so host configuration can change for the next turn
+- the hook may prepare other host-owned runtime dependencies too
 
 ## `env`
 

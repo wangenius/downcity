@@ -21,7 +21,13 @@ pnpm add @downcity/agent @downcity/server
 import { Agent } from "@downcity/agent";
 import { AgentRPC, AgentHTTP } from "@downcity/server";
 
-const agent = new Agent({ id, path, model });
+const agent = new Agent({
+  id,
+  path,
+  prepare_session: async (session) => {
+    await session.set({ model });
+  },
+});
 await agent.ready();
 
 const rpc = new AgentRPC(agent);

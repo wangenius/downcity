@@ -30,6 +30,6 @@ HTTP URLs use the server root such as `http://127.0.0.1:5314`; RPC uses `rpc://1
 
 Both local and remote Sessions provide `get_info()`, `prompt()`, `stop()`, `subscribe()`, `messages()`, `system()`, `approvals()`, `approval_mode()`, `set_approval_mode()`, `resolve_approval()`, and `fork()`.
 
-Local Sessions accept `set({ model })` or `set({ modelId })`. Remote Sessions reject a local model instance and accept only `set({ modelId })`.
+Local Sessions accept only `set({ model })` with a runtime model instance. Remote Sessions do not expose model configuration; the server host injects the model before execution.
 
 `subscribe()` emits the unified live Mutation stream after the subscription is established. Load initial Message and Session snapshots, and reload them after reconnecting.

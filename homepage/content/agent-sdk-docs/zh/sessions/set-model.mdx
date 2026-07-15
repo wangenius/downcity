@@ -5,7 +5,7 @@ description: 本地 SDK Session 如何显式绑定默认模型实例
 
 # `session.set({ model })`
 
-`session.set({ model })` 是本地 SDK 场景里显式绑定模型实例的方式之一。
+`session.set({ model })` 是本地 SDK Session 绑定运行时模型实例的唯一方式。
 
 ```ts
 await session.set({
@@ -29,22 +29,25 @@ await session.set({
 适用于这些场景：
 
 - 你在纯 SDK 嵌入模式下使用 `@downcity/agent`
-- 你没有在 `new Agent({ model })` 里提供默认模型
-- 你想只覆写某一个 session 的模型
+- 你直接管理本地 Session
+- 或者你正在实现宿主的 `prepare_session` 钩子
 
-## 什么时候不一定需要它
+## 宿主统一注入
 
-如果你已经这样写了：
+多个 Session 使用统一模型策略时，在 Agent 上提供模型无关的准备钩子：
 
 ```ts
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
-  model: openai.responses("gpt-5"),
+  prepare_session: async (session) => {
+    const model = await host_model_runtime.resolve(session.id);
+    await session.set({ model });
+  },
 });
 ```
 
-那么新建 session 时会自动应用这个默认模型，通常不需要再额外 `set` 一次。
+SDK 不知道 `host_model_runtime` 内部使用的模型 ID、默认值或持久化方式。
 
 ## 为什么会这样设计
 
@@ -57,25 +60,11 @@ const agent = new Agent({
 
 ## 如果不设置会怎样
 
-如果本地 session 既没有：
-
-- `new Agent({ model })`
-
-也没有：
-
-- `session.set({ model })`
-
-那么执行时会报错，因为 session 没有默认模型。
+如果本地 Session 在执行前没有通过 `session.set({ model })` 获得模型实例，执行会明确失败。
 
 ## 远程 session 呢
 
-远程 session 不接受本地模型实例，但可以请求服务端按稳定 ID 切换模型：
-
-```ts
-await remote_session.set({ modelId: "quality" });
-```
-
-服务端 Agent 必须配置 `resolve_model`，才能把这个 ID 解析成实际模型。
+远程 Session 不提供模型设置 API。远程客户端只发送 prompt；服务端宿主在 `prepare_session` 中完成模型选择和注入。
 
 ## Downcity Agent 项目呢
 

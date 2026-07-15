@@ -8,7 +8,11 @@ description: Construct, ready, execute, and dispose an Agent
 `new Agent(options)` starts plugin lifecycle and ActionSchedule during construction. There is no `agent.start()` or `agent.stop()`.
 
 ```ts
-const agent = new Agent({ id: "my-agent", path: process.cwd(), model });
+const agent = new Agent({
+  id: "my-agent",
+  path: process.cwd(),
+  prepare_session: async (session) => await session.set({ model }),
+});
 
 await agent.ready();
 

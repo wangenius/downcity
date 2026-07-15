@@ -18,9 +18,8 @@ description: 理解 @downcity/agent 提供的本地 Agent、远程 Agent、Sessi
 
 这种模式下，宿主自己持有模型实例：
 
-- `new Agent({ model })`
 - `await session.set({ model })`
-- 或由宿主传入 `model_id` 与 `resolve_model`
+- 或由宿主在 `prepare_session` 中按自己的策略注入模型实例
 
 适合：
 
@@ -114,10 +113,12 @@ import { RemoteAgent } from "@downcity/agent";
 
 ### 纯本地 SDK session
 
-本地 SDK session 的模型可以来自：
+本地 SDK session 的模型由宿主注入：
 
 ```ts
-new Agent({ model })
+new Agent({
+  prepare_session: async (session) => await session.set({ model }),
+})
 ```
 
 或者：
@@ -141,7 +142,7 @@ await session.set({ model })
 
 ### 远程 SDK session
 
-远程 session 不接受本地模型实例，但可以传稳定 ID：`await session.set({ modelId: "quality" })`。实际模型始终由服务端的 `resolve_model` 解析并持有。
+远程 Session 不提供模型配置 API。实际模型始终由服务端宿主选择并在执行前注入。
 
 ## 推荐阅读顺序
 

@@ -2,7 +2,7 @@
 
 This plugin injects general web-access methodology. It does not choose a provider and does not guarantee that any specific web tool exists.
 
-If web-related dependencies are needed, use the `web` plugin's `install` action to install capabilities such as `web-access`, `agent-browser`, or related skill/CLI dependencies. Installation only prepares capabilities; it does not mean the runtime must use a specific provider.
+If web-related dependencies are needed, use the `web` plugin's `install` action to receive instructions for capabilities such as `web-access` and `agent-browser`. The action never executes commands, accesses the network, installs dependencies, or changes files. Follow the returned prompt with the available plugin and Shell capabilities.
 
 When a task needs internet access, verification, webpage reading, webpage interaction, or browser use, choose the path based on the currently available tools, skills, and user goal.
 
@@ -43,7 +43,7 @@ When a task needs internet access, verification, webpage reading, webpage intera
 
 ## Available Action
 
-- `install`: prepare web-related skill/CLI dependencies.
+- `install`: return installation instructions for web-related Skills and CLIs without executing them.
 
 Example:
 
@@ -57,3 +57,5 @@ plugin_call({
   },
 });
 ```
+
+After calling `install`, follow `data.prompt`. Skill installation is delegated to the `skill.install` instruction action so that the active SkillPlugin scan roots remain the source of truth. After running the instructed Shell commands, verify Skills with `skill.list` and read them with `skill.lookup`.

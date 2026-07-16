@@ -1,95 +1,15 @@
 ---
 title: web Plugin
-description: A detailed guide to the web built-in plugin as web methodology plus an install action for web-related skills and CLIs
+description: How the built-in web plugin injects web methodology and returns installation guidance for web Skills and CLIs
 ---
 
 # web Plugin
 
-`web` is a very thin system text plugin.
+`web` is the methodology layer for web tasks. It injects general strategies for search, source verification, page reading, and browser interaction, but it does not provide concrete web execution capability.
 
-It mainly does two things:
+It exposes an `install` action that only returns instructions. The action does not execute commands, access the network, install dependencies, or change files. The Agent reads `data.prompt` and follows it with the currently available Plugin and Shell capabilities.
 
-- inject general methodology for web research, page reading, and browser work into the agent
-- expose an `install` action for preparing web-related skills and CLIs such as `web-access` and `agent-browser`
-
-It does not:
-
-- choose a provider
-- decide which web implementation the agent must use at runtime
-- perform actual web search or browser interaction
-- persist project-level web configuration
-
-## What it does
-
-`web` appends a methodology block when the agent system prompt is assembled.
-
-That text tells the agent to:
-
-- avoid assuming any specific web tool exists
-- inspect current tools, skills, and context first
-- choose different paths for search, fetch, browser, and logged-in tasks
-- verify research conclusions against primary sources where possible
-- state missing web capability directly instead of pretending it browsed
-
-So its role is not “web executor.” It is the web-task thinking layer.
-
-## What the install action does
-
-`install` is a setup action. It prepares capability, but it does not mean the agent must use a specific provider at runtime.
-
-```ts
-await agent.plugins.runAction({
-  plugin: "web",
-  action: "install",
-  payload: {
-    target: "agent-browser",
-    scope: "user",
-  },
-});
-```
-
-Available `target` values:
-
-- `web-access`: install the web-access skill, default
-- `agent-browser`: install the agent-browser skill and prepare the `agent-browser` CLI package
-- `all`: prepare both capabilities
-
-Available `scope` values:
-
-- `user`: install into user-level skills / global CLI, default
-- `project`: install into the current project's skills / devDependency
-
-## Relationship to concrete web capabilities
-
-Concrete web capability comes from the current agent environment: tools, skills, or other plugins.
-
-For example:
-
-- If search or fetch tools are available, the agent can use them for public web discovery and page reading.
-- If browser, Chrome, agent-browser, or computer-use capabilities are available, the agent can handle dynamic pages, logged-in pages, and real browser interaction.
-- If a `web-access` style skill is available, the agent can follow that skill for web search, page extraction, and source verification.
-
-`web` itself does not decide which one to use. The agent chooses during execution based on the current capabilities and the user's goal.
-
-## Which plugin capabilities it uses
-
-`web` uses:
-
-- `actions`
-- `setup`
-- `system`
-
-It does not use:
-
-- `config`
-- `usage`
-- `availability`
-- hooks
-- runtime HTTP
-
-That is the clean part of the current design: prompt handles methodology, `install` prepares dependencies, and provider choice, project config, and actual web execution stay separate.
-
-## How to register it in the SDK
+## Registration
 
 ```ts
 import { Agent } from "@downcity/agent";
@@ -98,58 +18,100 @@ import { WebPlugin } from "@downcity/plugins";
 const agent = new Agent({
   id: "research-agent",
   path: "/path/to/project",
-  tools: {},
   plugins: [new WebPlugin()],
 });
 ```
 
-After registration, the methodology returned by `WebPlugin.system()` is automatically included in the agent's plugin system prompt.
+After registration, the methodology returned by `WebPlugin.system()` is automatically included in the Agent's system prompt.
 
-## How to call it
-
-`web` has one action: `install`.
+## install Action
 
 ```ts
-await agent.plugins.runAction({
+const result = await agent.plugins.runAction({
   plugin: "web",
   action: "install",
   payload: {
-    target: "web-access",
-    scope: "user",
+    target: "agent-browser",
+    scope: "project",
   },
 });
 ```
 
-The right model is:
+The core result shape is:
 
-- `new WebPlugin()` adds web methodology to the agent system prompt
-- `web.install` prepares web-related skill / CLI dependencies
-- the agent chooses a concrete web path from its current tools and skills during execution
-- actual search, fetching, clicking, and browser operation still happens in the concrete tool or skill
+```ts
+{
+  kind: "instructions",
+  target: "agent-browser",
+  scope: "project",
+  prompt: "...installation steps for the Agent...",
+}
+```
 
-## Natural boundary
+Available `target` values:
 
-`web` does not read or write project config files.
+- `web-access`: return the `web-access` Skill installation workflow; this is the default
+- `agent-browser`: return the `agent-browser` Skill and CLI installation workflow
+- `all`: return the workflows for both capabilities
 
-If you want the agent to have a concrete web capability, provide that capability explicitly through tools, skills, or another plugin instead of putting it into `web`.
+The optional `scope` controls only the `agent-browser` CLI guidance:
 
-## When to use it
+- `user`: direct the Agent to use a global npm installation; this is the default
+- `project`: direct the Agent to inspect the lockfile and use the project's existing package manager to add a devDependency
 
-Use it when:
+`scope` does not choose where a Skill is installed. Skill placement comes from the active `SkillPlugin` `use / paths` scan configuration.
 
-- the agent often needs web research, page reading, or browser work
-- you want the agent to reason about the right web path before using a capability
-- real web capability is already provided by tools, skills, or other plugins
+## Installation Workflow
 
-Do not use it when:
+`web.install` directs the Agent through this workflow:
 
-- you want it to switch the runtime default provider
-- you want it to directly perform web search or browser clicks
-- you want to persist web settings into project configuration
+1. Call `skill.install` for every required Skill.
+2. Follow the scan-aware Shell guidance returned by `skill.install`.
+3. When `agent-browser` also needs its CLI, install and verify it with the commands for the requested `scope`.
+4. Call `skill.list` to confirm that every new Skill is discoverable.
+5. Call `skill.lookup` to read `SKILL.md` before using the capability.
 
-## Related docs
+For example, the Skill Plugin remains responsible for the `agent-browser` Skill installation guidance:
+
+```ts
+plugin_call({
+  plugin: "skill",
+  action: "install",
+  payload: {
+    spec: "agent-browser",
+  },
+});
+```
+
+This keeps the active SkillPlugin scan roots as the single source of truth. WebPlugin does not duplicate project, home, or custom-root installation rules.
+
+## Capability Boundary
+
+`web` does not:
+
+- choose a web provider
+- decide which web implementation the Agent must use at runtime
+- perform actual search, fetching, clicking, or browser interaction
+- execute Skill or CLI installation commands
+- read or write project-level web configuration
+
+Concrete web capability comes from the tools, Skills, or other Plugins in the current Agent environment. Search and fetch tools can handle public discovery, while browser, Chrome, agent-browser, or computer-use capabilities can handle dynamic pages and logged-in interaction.
+
+If a required capability is missing, the Agent should state that directly instead of pretending it accessed the web.
+
+## System Prompt
+
+The WebPlugin methodology directs the Agent to:
+
+- inspect the tools and Skills that are actually available
+- choose a path for search, reading, structured extraction, or browser interaction
+- verify conclusions against primary sources such as official pages, original documentation, and source code
+- switch methods when the current path stops making progress
+- stop when the goal is complete instead of adding unnecessary steps
+
+## Related Docs
 
 - [Built-in Plugin Overview](/en/plugins-docs/builtins/overview)
-- [Plugin system](/en/agent-sdk-docs/plugins/plugin-system)
-- [Plugin actions](/en/agent-sdk-docs/plugins/plugin-actions)
 - [Skill Plugin](/en/plugins-docs/builtins/skill)
+- [Plugin Actions](/en/agent-sdk-docs/plugins/plugin-actions)
+- [Plugin System](/en/agent-sdk-docs/plugins/plugin-system)

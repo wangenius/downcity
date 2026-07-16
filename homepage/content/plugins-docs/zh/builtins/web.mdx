@@ -1,95 +1,15 @@
 ---
 title: web Plugin
-description: 详细说明 web 内建 plugin 如何注入联网方法论，并通过 install action 准备联网相关 skill / CLI 依赖
+description: 说明 web 内建 plugin 如何注入联网方法论，并向 Agent 返回联网 Skill 与 CLI 的安装指引
 ---
 
 # web Plugin
 
-`web` 是一个很薄的 system text plugin。
+`web` 是联网任务的方法论层。它向 Agent 注入网页搜索、资料核实、网页读取和浏览器操作的通用策略，但不提供真实的联网执行能力。
 
-它主要做两件事：
+它提供一个 `install` action。这个 action 只返回安装指引，不执行命令、不访问网络，也不会安装依赖或修改文件。Agent 需要读取返回的 `data.prompt`，再使用当前可用的 Plugin 与 Shell 能力完成安装。
 
-- 向 agent 注入联网研究、网页阅读、浏览器操作的通用方法论
-- 通过 `install` action 准备 `web-access`、`agent-browser` 等联网相关 skill / CLI 依赖
-
-它不负责：
-
-- 选择 provider
-- 决定运行时默认使用哪个联网实现
-- 执行真实网页搜索或浏览器操作
-- 保存项目级 web 配置
-
-## 它到底做什么
-
-`web` 会在 agent 组装 system prompt 时追加一段方法论文本。
-
-这段文本告诉 agent：
-
-- 不要假设某个联网工具一定存在
-- 先查看当前可用 tools、skills 和上下文
-- 搜索、抓取、浏览器、登录态任务应该分别怎么选路径
-- 调研结论优先回到一手来源核实
-- 缺少必要联网能力时要直接说明，不要假装已经联网
-
-所以它的角色不是“联网执行器”，而是“联网任务心智层”。
-
-## install action 做什么
-
-`install` 是 setup action，只负责准备能力，不代表 agent 运行时必须使用某个 provider。
-
-```ts
-await agent.plugins.runAction({
-  plugin: "web",
-  action: "install",
-  payload: {
-    target: "agent-browser",
-    scope: "user",
-  },
-});
-```
-
-可选 `target`：
-
-- `web-access`：安装 web-access skill，默认值
-- `agent-browser`：安装 agent-browser skill，并准备 `agent-browser` CLI 包
-- `all`：同时准备以上能力
-
-可选 `scope`：
-
-- `user`：安装到用户级 skill / 全局 CLI，默认值
-- `project`：安装到当前项目级 skill / devDependency
-
-## 和具体联网能力的关系
-
-具体联网能力来自当前 agent 环境里的 tools、skills 或其他 plugin。
-
-例如：
-
-- 有搜索或 fetch 工具时，agent 可以用它们做公开网页检索与读取。
-- 有 browser、Chrome、agent-browser 或 computer-use 能力时，agent 可以处理动态页面、登录态页面和真实浏览器交互。
-- 有 `web-access` 类 skill 时，agent 可以按该 skill 的说明执行联网搜索、网页抓取和资料核实。
-
-`web` 本身不决定使用哪一个。选择发生在 agent 执行任务时，由当前可用能力和用户目标共同决定。
-
-## 它使用了哪些 plugin 能力
-
-`web` 用到了：
-
-- `actions`
-- `setup`
-- `system`
-
-它没有使用：
-
-- `config`
-- `usage`
-- `availability`
-- hooks
-- runtime HTTP
-
-这也是它现在最干净的地方：prompt 负责方法论，`install` 只负责准备依赖，不把 provider 选择、项目配置和真实联网执行混在一起。
-
-## 在 SDK 里怎么挂载
+## 注册
 
 ```ts
 import { Agent } from "@downcity/agent";
@@ -98,58 +18,100 @@ import { WebPlugin } from "@downcity/plugins";
 const agent = new Agent({
   id: "research-agent",
   path: "/path/to/project",
-  tools: {},
   plugins: [new WebPlugin()],
 });
 ```
 
-挂载后，`WebPlugin.system()` 返回的方法论会自动进入 agent 的 plugin system prompt。
+注册后，`WebPlugin.system()` 返回的方法论会自动进入 Agent 的 system prompt。
 
-## 如何调用
-
-`web` 只有一个 action：`install`。
+## install action
 
 ```ts
-await agent.plugins.runAction({
+const result = await agent.plugins.runAction({
   plugin: "web",
   action: "install",
   payload: {
-    target: "web-access",
-    scope: "user",
+    target: "agent-browser",
+    scope: "project",
   },
 });
 ```
 
-正确理解是：
+返回结果的核心结构为：
 
-- `new WebPlugin()` 负责把联网方法论放进 agent system prompt
-- `web.install` 负责准备联网相关 skill / CLI 依赖
-- agent 执行时根据当前 tools / skills 决定具体联网路径
-- 真实搜索、抓取、点击和浏览器操作仍由具体 tool / skill 执行
+```ts
+{
+  kind: "instructions",
+  target: "agent-browser",
+  scope: "project",
+  prompt: "...给 Agent 的安装步骤...",
+}
+```
 
-## 自然边界
+可选 `target`：
 
-`web` 不读取或写入项目配置文件。
+- `web-access`：返回 `web-access` Skill 安装工作流，默认值
+- `agent-browser`：返回 `agent-browser` Skill 与 CLI 安装工作流
+- `all`：返回以上全部能力的安装工作流
 
-如果你需要让 agent 拥有某个具体联网能力，应在 agent 环境中显式提供对应 tool、skill 或 plugin，而不是把它塞进 `web`。
+可选 `scope` 只控制 `agent-browser` CLI 的安装提示：
 
-## 什么时候使用它
+- `user`：提示使用 npm 全局安装，默认值
+- `project`：提示检查项目锁文件，并使用现有包管理器安装 devDependency
 
-适合：
+Skill 的安装位置不由 `scope` 决定。它由当前 `SkillPlugin` 的 `use / paths` 扫描配置决定。
 
-- agent 经常需要联网研究、网页阅读或浏览器操作
-- 你希望 agent 在使用联网能力前先做路径判断
-- 你已经通过 tools、skills 或其他 plugin 提供了真实联网能力
+## 安装工作流
 
-不适合：
+`web.install` 会告诉 Agent 按以下流程操作：
 
-- 你想让它切换运行时默认 provider
-- 你想让它直接执行网页搜索或浏览器点击
-- 你想把联网配置持久化到项目配置里
+1. 对每个需要的 Skill 调用 `skill.install`。
+2. 按 `skill.install` 返回的扫描感知 Shell 指引完成安装。
+3. `agent-browser` 还需要 CLI 时，按 `scope` 对应的提示安装并验证命令。
+4. 调用 `skill.list`，确认新 Skill 已进入当前扫描范围。
+5. 调用 `skill.lookup` 读取 `SKILL.md`，然后再使用该能力。
+
+例如，`agent-browser` 的 Skill 安装仍由 Skill Plugin 提供指引：
+
+```ts
+plugin_call({
+  plugin: "skill",
+  action: "install",
+  payload: {
+    spec: "agent-browser",
+  },
+});
+```
+
+这样可以保证 SkillPlugin 的实际扫描根始终是安装位置的唯一事实源，WebPlugin 不需要复制项目目录、用户目录或自定义目录的规则。
+
+## 能力边界
+
+`web` 不负责：
+
+- 选择联网 provider
+- 决定运行时默认使用哪个联网实现
+- 执行真实搜索、抓取、点击或浏览器操作
+- 执行 Skill 或 CLI 安装命令
+- 读取或写入项目级 web 配置
+
+真实联网能力来自当前 Agent 环境中的 tools、skills 或其他 Plugin。例如，搜索或 fetch 工具适合公开网页检索，browser、Chrome、agent-browser 或 computer-use 能力适合动态页面与登录态交互。
+
+如果必要能力不存在，Agent 应直接说明，不应假装已经联网。
+
+## System Prompt
+
+WebPlugin 注入的方法论会引导 Agent：
+
+- 先检查当前实际可用的 tools 与 skills
+- 根据搜索、读取、结构化抓取或浏览器交互选择路径
+- 优先回到官方页面、原始文档和源码等一手来源核实结论
+- 路径不再产生进展时及时切换方法
+- 达成目标后停止，不为形式完整继续增加无效步骤
 
 ## 相关文档
 
 - [内建 Plugin 总览](/zh/plugins-docs/builtins/overview)
-- [Plugin System](/zh/agent-sdk-docs/plugins/plugin-system)
-- [Plugin Actions](/zh/agent-sdk-docs/plugins/plugin-actions)
 - [Skill Plugin](/zh/plugins-docs/builtins/skill)
+- [Plugin Actions](/zh/agent-sdk-docs/plugins/plugin-actions)
+- [Plugin System](/zh/agent-sdk-docs/plugins/plugin-system)

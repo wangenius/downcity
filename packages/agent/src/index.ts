@@ -127,6 +127,17 @@ export { DefaultSessionComposer } from "./session/DefaultSessionComposer.js";
 export { SessionMessages } from "./session/SessionMessages.js";
 export { JsonlSessionMessageStore } from "./session/messages/JsonlSessionMessageStore.js";
 export type {
+  AppendCompletedAssistantMessageInput,
+  AppendExternalSessionAssistantMessageInput,
+  AppendExternalSessionUserMessageInput,
+  AppendSessionErrorMessageInput,
+  AppendSessionPromptMessageInput,
+  AppendSessionUserMessageInput,
+  OpenSessionActionMessageInput,
+  OpenSessionAssistantMessageInput,
+  SessionMessagesOptions,
+} from "./types/session/SessionMessages.js";
+export type {
   SessionComposer,
   SessionCompactionInput,
   SessionCompactionPlan,

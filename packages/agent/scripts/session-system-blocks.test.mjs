@@ -10,7 +10,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { createInstructionSystemBlocks } from "../bin/agent/AgentInstructions.js";
-import { buildSessionSystemBlocks } from "../bin/session/SessionSystem.js";
+import { build_session_system_blocks } from "../bin/session/SessionSystem.js";
 
 test("instruction blocks keep Downcity core after custom instruction", () => {
   const blocks = createInstructionSystemBlocks(
@@ -37,19 +37,19 @@ test("instruction blocks keep Downcity core after custom instruction", () => {
 });
 
 test("session system blocks are ordered as instruction, core, plugin, session", async () => {
-  const blocks = await buildSessionSystemBlocks({
-    agentId: "agent-test",
-    projectRoot: "/tmp/downcity-project",
-    sessionId: "session-test",
-    createdAt: Date.UTC(2026, 6, 9, 8, 0, 0),
+  const blocks = await build_session_system_blocks({
+    agent_id: "agent-test",
+    project_root: "/tmp/downcity-project",
+    session_id: "session-test",
+    created_at: Date.UTC(2026, 6, 9, 8, 0, 0),
     timezone: "Asia/Shanghai",
-    getInstructionSystemBlocks: () =>
+    get_instruction_system_blocks: () =>
       createInstructionSystemBlocks(
         ["使用中文回复。"],
         "/tmp/downcity-project",
       ),
-    getManagedPluginSystemBlocks: async () => [],
-    getPluginSystemBlocks: async () => [
+    get_managed_plugin_system_blocks: async () => [],
+    get_plugin_system_blocks: async () => [
       {
         source: "plugin",
         name: "task",

@@ -14,7 +14,6 @@ import type {
   SessionRecordV1,
   SessionMessageRecordV1,
 } from "@/executor/types/SessionRecords.js";
-import type { SessionMutation } from "@/types/session/SessionMutation.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type { SessionQueueCommand } from "@/types/session/SessionQueue.js";
@@ -37,81 +36,21 @@ import { from_ui_assistant_parts } from "@/session/messages/SessionMessageCodec.
 import { generateId } from "@/utils/Id.js";
 import type { SessionApprovalBroker } from "@/session/approval/SessionApprovalBroker.js";
 import { SessionQueue } from "@/session/SessionQueue.js";
+import type {
+  ActiveSessionTurnState,
+  SessionDeferred,
+  SessionTurnOptions,
+} from "@/types/session/SessionTurn.js";
 
 const TURN_STOPPED_MESSAGE = "Turn stopped";
 const QUEUED_PROMPT_CANCELLED_MESSAGE =
   "Prompt cancelled because session was stopped";
 
 /**
- * Promise 延迟控制器。
- */
-interface Deferred<T> {
-  /**
-   * 延迟 Promise。
-   */
-  promise: Promise<T>;
-
-  /**
-   * 兑现 Promise。
-   */
-  resolve: (value: T) => void;
-}
-
-/**
- * 当前活跃 turn 的运行态。
- */
-interface ActiveTurnState {
-  /**
-   * 当前 turnId。
-   */
-  turnId: string;
-
-  /**
-   * 当前 turn 的最终结果快照。
-   */
-  result: AgentSessionTurnResult | null;
-
-  /**
-   * 当前 turn 完成 Promise 控制器。
-   */
-  deferredFinished: Deferred<AgentSessionTurnResult>;
-
-  /**
-   * 当前 turn 的取消控制器。
-   */
-  abortController: AbortController;
-}
-
-/**
- * SessionTurn 构造参数。
- */
-export interface SessionTurnOptions {
-  /** 当前 Session 标识。 */
-  session_id: string;
-  /** 当前项目绝对根目录。 */
-  project_root: string;
-  /** 当前 Session 的模型执行器。 */
-  executor: Executor;
-  /** 当前 Session 的配置与 metadata 状态。 */
-  state: SessionState;
-  /** 当前 Session 的 Message 领域入口。 */
-  messages: SessionMessages;
-  /** 当前 Session 的 Mutation 总线。 */
-  events: SessionEventHub;
-  /** 当前 Session 的 Tool 审批入口。 */
-  approvals: SessionApprovalBroker;
-  /** 在 Step 检查点提交 Session 或 Agent 状态命令。 */
-  apply_command: (
-    command: Exclude<SessionQueueCommand, { type: "compact" }>,
-    turn_id: string,
-  ) => Promise<void>;
-}
-
-/**
  * Session 输入队列与 Turn 编排器。
  */
 export class SessionTurn {
-  private readonly sessionId: string;
+  private readonly session_id: string;
   private readonly project_root: string;
   private readonly executor: Executor;
   private readonly state: SessionState;
@@ -120,13 +59,13 @@ export class SessionTurn {
   private readonly approvals: SessionApprovalBroker;
   private readonly apply_command: SessionTurnOptions["apply_command"];
   private readonly queue = new SessionQueue();
-  private processingPromise: Promise<void> | null = null;
-  private activeTurn: ActiveTurnState | null = null;
+  private processing_promise: Promise<void> | null = null;
+  private active_turn: ActiveSessionTurnState | null = null;
   private active_run_context: SessionRunContext | null = null;
   private request_active_history_reload: (() => void) | null = null;
 
   constructor(options: SessionTurnOptions) {
-    this.sessionId = String(options.session_id || "").trim();
+    this.session_id = String(options.session_id || "").trim();
     this.project_root = String(options.project_root || "").trim();
     this.executor = options.executor;
     this.state = options.state;
@@ -134,7 +73,7 @@ export class SessionTurn {
     this.events = options.events;
     this.approvals = options.approvals;
     this.apply_command = options.apply_command;
-    if (!this.sessionId) {
+    if (!this.session_id) {
       throw new Error("SessionTurn requires a non-empty sessionId");
     }
     if (!this.project_root) {
@@ -151,7 +90,7 @@ export class SessionTurn {
     }
     await this.state.ensure_runnable();
     const handle_promise = this.queue.enqueue_prompt(input);
-    this.ensureProcessing();
+    this.ensure_processing();
     return await handle_promise;
   }
 
@@ -189,21 +128,21 @@ export class SessionTurn {
    * - 只要还有排队 prompt，或处理循环尚未结束，就视为活跃。
    * - Session 会用它阻止内部 direct execution 与 actor 模式并发混用。
    */
-  isActive(): boolean {
-    return this.processingPromise !== null || this.has_pending_prompt();
+  is_active(): boolean {
+    return this.processing_promise !== null || this.has_pending_prompt();
   }
 
   /**
    * 停止当前 turn，并取消尚未被吸收的排队 prompt。
    */
   stop(): AgentSessionStopResult {
-    const active_turn = this.activeTurn;
-    const cancelled_queued_prompts = this.cancelQueuedPrompts();
+    const active_turn = this.active_turn;
+    const cancelled_queued_prompts = this.cancel_queued_prompts();
     let executor_stop_requested = false;
 
     if (active_turn) {
-      if (!active_turn.abortController.signal.aborted) {
-        active_turn.abortController.abort(new Error(TURN_STOPPED_MESSAGE));
+      if (!active_turn.abort_controller.signal.aborted) {
+        active_turn.abort_controller.abort(new Error(TURN_STOPPED_MESSAGE));
       }
       executor_stop_requested = this.executor.stop();
     }
@@ -215,63 +154,63 @@ export class SessionTurn {
     );
     return {
       stopped,
-      ...(active_turn ? { turnId: active_turn.turnId } : {}),
+      ...(active_turn ? { turnId: active_turn.turn_id } : {}),
       cancelledQueuedPrompts: cancelled_queued_prompts,
       reason: stopped ? "stopped" : "idle",
     };
   }
 
-  private ensureProcessing(): void {
-    if (this.processingPromise) return;
-    this.processingPromise = this.processLoop().finally(() => {
-      this.processingPromise = null;
+  private ensure_processing(): void {
+    if (this.processing_promise) return;
+    this.processing_promise = this.process_loop().finally(() => {
+      this.processing_promise = null;
       if (this.has_pending_prompt()) {
-        this.ensureProcessing();
+        this.ensure_processing();
       }
     });
   }
 
-  private async processLoop(): Promise<void> {
+  private async process_loop(): Promise<void> {
     while (this.has_pending_prompt()) {
       const next = this.queue.take_next_prompt();
       if (!next) break;
       const current = next.prompt;
 
-      const turnId = `turn:${this.sessionId}:${Date.now()}:${nanoid(6)}`;
-      const activeTurn = createActiveTurnState(turnId);
-      this.activeTurn = activeTurn;
+      const turn_id = `turn:${this.session_id}:${Date.now()}:${nanoid(6)}`;
+      const active_turn = create_active_session_turn_state(turn_id);
+      this.active_turn = active_turn;
       this.events.publish({
         mutation_id: nanoid(),
         variant: "turn",
         type: "start",
-        session_id: this.sessionId,
-        turn_id: turnId,
+        session_id: this.session_id,
+        turn_id,
         status: "running",
         created_at: Date.now(),
       });
-      current.deferred_handle.resolve(createTurnHandle(activeTurn));
+      current.deferred_handle.resolve(create_turn_handle(active_turn));
 
       try {
         await this.execute_commands(
           next.commands,
-          activeTurn,
+          active_turn,
         );
         await this.persist_prompt_message(
           current.input,
-          turnId,
+          turn_id,
           "prompt",
         );
         const result = await this.execute_prompt_turn({
-          turn_id: turnId,
+          turn_id,
           prompt_input: current.input,
           on_step_merge: async () => {
-            return await this.drain_queued_inputs(activeTurn);
+            return await this.drain_queued_inputs(active_turn);
           },
-          abort_signal: activeTurn.abortController.signal,
+          abort_signal: active_turn.abort_controller.signal,
         });
-        const stopped = activeTurn.abortController.signal.aborted;
-        const finalResult: AgentSessionTurnResult = {
-          turnId,
+        const stopped = active_turn.abort_controller.signal.aborted;
+        const final_result: AgentSessionTurnResult = {
+          turnId: turn_id,
           text: result.text,
           success: stopped ? false : result.success,
           ...(result.assistantMessage
@@ -281,39 +220,39 @@ export class SessionTurn {
             ? { error: TURN_STOPPED_MESSAGE }
             : result.error ? { error: result.error } : {}),
         };
-        activeTurn.result = finalResult;
+        active_turn.result = final_result;
         this.events.publish({
           mutation_id: nanoid(),
           variant: "turn",
           type: "finish",
-          session_id: this.sessionId,
-          turn_id: turnId,
-          status: stopped ? "stopped" : finalResult.success ? "completed" : "failed",
+          session_id: this.session_id,
+          turn_id,
+          status: stopped ? "stopped" : final_result.success ? "completed" : "failed",
           created_at: Date.now(),
-          text: finalResult.text,
-          ...(finalResult.error ? { error: finalResult.error } : {}),
+          text: final_result.text,
+          ...(final_result.error ? { error: final_result.error } : {}),
         });
-        activeTurn.deferredFinished.resolve(finalResult);
+        active_turn.deferred_finished.resolve(final_result);
       } catch (error) {
-        const message = activeTurn.abortController.signal.aborted
+        const message = active_turn.abort_controller.signal.aborted
           ? TURN_STOPPED_MESSAGE
           : error instanceof Error ? error.message : String(error);
-        const finalResult: AgentSessionTurnResult = {
-          turnId,
+        const final_result: AgentSessionTurnResult = {
+          turnId: turn_id,
           text: "",
           success: false,
-          assistantMessage: buildPromptRuntimeErrorAssistantMessage({
-            sessionId: this.sessionId,
+          assistantMessage: build_prompt_runtime_error_assistant_message({
+            session_id: this.session_id,
             message,
           }),
           error: message,
         };
-        activeTurn.result = finalResult;
+        active_turn.result = final_result;
         if (message !== TURN_STOPPED_MESSAGE) {
           try {
             await this.messages.append_error_message({
               scope: "turn",
-              turn_id: turnId,
+              turn_id,
               code: "turn_execution_failed",
               message,
               recoverable: true,
@@ -326,46 +265,46 @@ export class SessionTurn {
           mutation_id: nanoid(),
           variant: "turn",
           type: "finish",
-          session_id: this.sessionId,
-          turn_id: turnId,
-          status: activeTurn.abortController.signal.aborted ? "stopped" : "failed",
+          session_id: this.session_id,
+          turn_id,
+          status: active_turn.abort_controller.signal.aborted ? "stopped" : "failed",
           created_at: Date.now(),
           text: "",
           error: message,
         });
-        activeTurn.deferredFinished.resolve(finalResult);
+        active_turn.deferred_finished.resolve(final_result);
       } finally {
-        if (this.activeTurn === activeTurn) {
-          this.activeTurn = null;
+        if (this.active_turn === active_turn) {
+          this.active_turn = null;
         }
       }
     }
   }
 
-  private cancelQueuedPrompts(): number {
+  private cancel_queued_prompts(): number {
     const cancelled = this.queue.cancel_prompts();
     if (cancelled.length <= 0) return 0;
     for (const item of cancelled) {
-      const turnId = `turn:${this.sessionId}:cancelled:${Date.now()}:${nanoid(6)}`;
-      const cancelledTurn = createActiveTurnState(turnId);
-      const finalResult: AgentSessionTurnResult = {
-        turnId,
+      const turn_id = `turn:${this.session_id}:cancelled:${Date.now()}:${nanoid(6)}`;
+      const cancelled_turn = create_active_session_turn_state(turn_id);
+      const final_result: AgentSessionTurnResult = {
+        turnId: turn_id,
         text: "",
         success: false,
-        assistantMessage: buildPromptRuntimeErrorAssistantMessage({
-          sessionId: this.sessionId,
+        assistantMessage: build_prompt_runtime_error_assistant_message({
+          session_id: this.session_id,
           message: QUEUED_PROMPT_CANCELLED_MESSAGE,
         }),
         error: QUEUED_PROMPT_CANCELLED_MESSAGE,
       };
-      cancelledTurn.result = finalResult;
-      cancelledTurn.deferredFinished.resolve(finalResult);
+      cancelled_turn.result = final_result;
+      cancelled_turn.deferred_finished.resolve(final_result);
       this.events.publish({
         mutation_id: nanoid(),
         variant: "turn",
         type: "start",
-        session_id: this.sessionId,
-        turn_id: turnId,
+        session_id: this.session_id,
+        turn_id,
         status: "running",
         created_at: Date.now(),
       });
@@ -373,14 +312,14 @@ export class SessionTurn {
         mutation_id: nanoid(),
         variant: "turn",
         type: "finish",
-        session_id: this.sessionId,
-        turn_id: turnId,
+        session_id: this.session_id,
+        turn_id,
         status: "failed",
         created_at: Date.now(),
         text: "",
         error: QUEUED_PROMPT_CANCELLED_MESSAGE,
       });
-      item.deferred_handle.resolve(createTurnHandle(cancelledTurn));
+      item.deferred_handle.resolve(create_turn_handle(cancelled_turn));
     }
     return cancelled.length;
   }
@@ -389,7 +328,7 @@ export class SessionTurn {
    * 在下一 Session step 检查点按入队顺序提交配置并持久化 steer。
    */
   private async drain_queued_inputs(
-    activeTurn: ActiveTurnState,
+    active_turn: ActiveSessionTurnState,
   ): Promise<SessionUserMessageV1[]> {
     const drained = this.queue.drain();
     if (drained.length <= 0) return [];
@@ -399,7 +338,7 @@ export class SessionTurn {
       const item = drained[index];
       if (item.type !== "prompt") {
         try {
-          await this.execute_queue_command(item, activeTurn.turnId);
+          await this.execute_queue_command(item, active_turn.turn_id);
         } catch {
           // command 自己负责失败观测；单条失败不能吞掉后续 steer 或 command。
         }
@@ -408,10 +347,10 @@ export class SessionTurn {
       try {
         const message = await this.persist_prompt_message(
           item.input,
-          activeTurn.turnId,
+          active_turn.turn_id,
           "steer",
         );
-        item.deferred_handle.resolve(createTurnHandle(activeTurn));
+        item.deferred_handle.resolve(create_turn_handle(active_turn));
         merged.push(message);
       } catch {
         // 关键点（中文）：若某条消息持久化失败，把未处理部分重新放回队列头部，避免静默丢失。
@@ -429,12 +368,12 @@ export class SessionTurn {
    */
   private async execute_commands(
     commands: SessionQueueCommand[],
-    active_turn: ActiveTurnState,
+    active_turn: ActiveSessionTurnState,
   ): Promise<void> {
     if (commands.length <= 0) return;
     for (const command of commands) {
       try {
-        await this.execute_queue_command(command, active_turn.turnId);
+        await this.execute_queue_command(command, active_turn.turn_id);
       } catch {
         // command 自己负责失败观测；单条失败不能阻断当前 prompt。
       }
@@ -464,14 +403,14 @@ export class SessionTurn {
     if (result.reason === "nothing_to_compact") {
       await this.persist_action_event({
         type: "action",
-        id: `compacting:${this.sessionId}:${command.command_id}`,
+        id: `compacting:${this.session_id}:${command.command_id}`,
         title: "Session messages already compact",
         description: "The Session has no active messages to compact.",
         state: "completed",
         metadata: {
           v: 1,
           ts: Date.now(),
-          sessionId: this.sessionId,
+          sessionId: this.session_id,
           turnId: turn_id,
         },
       });
@@ -515,7 +454,7 @@ export class SessionTurn {
 
     const run_context: SessionRunContext = {
       turnId: input.turn_id,
-      sessionId: this.sessionId,
+      sessionId: this.session_id,
       projectRoot: this.project_root,
       onStepCallback: async () => {
         if (this.has_pending_command() && assistant_writer_ref.current) {
@@ -638,7 +577,7 @@ export class SessionTurn {
   private create_compaction_run_context(turn_id: string): SessionRunContext {
     return {
       turnId: turn_id,
-      sessionId: this.sessionId,
+      sessionId: this.session_id,
       projectRoot: this.project_root,
       onActionCallback: async (event) => {
         await this.persist_action_event(event);
@@ -689,17 +628,17 @@ function is_assistant_content_chunk(type: string): boolean {
   );
 }
 
-function buildPromptRuntimeErrorAssistantMessage(input: {
-  sessionId: string;
+function build_prompt_runtime_error_assistant_message(input: {
+  session_id: string;
   message: string;
 }): SessionMessageRecordV1 {
   return {
-    id: `a:${input.sessionId}:${Date.now()}:${nanoid(6)}`,
+    id: `a:${input.session_id}:${Date.now()}:${nanoid(6)}`,
     role: "assistant",
     metadata: {
       v: 1,
       ts: Date.now(),
-      sessionId: input.sessionId,
+      sessionId: input.session_id,
       source: "egress",
       kind: "normal",
       extra: {
@@ -710,10 +649,10 @@ function buildPromptRuntimeErrorAssistantMessage(input: {
   };
 }
 
-function createDeferred<T>(): Deferred<T> {
+function create_deferred<T>(): SessionDeferred<T> {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((innerResolve) => {
-    resolve = innerResolve;
+  const promise = new Promise<T>((inner_resolve) => {
+    resolve = inner_resolve;
   });
   return {
     promise,
@@ -721,23 +660,25 @@ function createDeferred<T>(): Deferred<T> {
   };
 }
 
-function createActiveTurnState(turnId: string): ActiveTurnState {
+function create_active_session_turn_state(
+  turn_id: string,
+): ActiveSessionTurnState {
   return {
-    turnId,
+    turn_id,
     result: null,
-    deferredFinished: createDeferred<AgentSessionTurnResult>(),
-    abortController: new AbortController(),
+    deferred_finished: create_deferred<AgentSessionTurnResult>(),
+    abort_controller: new AbortController(),
   };
 }
 
-function createTurnHandle(
-  activeTurn: ActiveTurnState,
+function create_turn_handle(
+  active_turn: ActiveSessionTurnState,
 ): AgentSessionTurnHandle {
   return {
-    id: activeTurn.turnId,
+    id: active_turn.turn_id,
     get result() {
-      return activeTurn.result;
+      return active_turn.result;
     },
-    finished: activeTurn.deferredFinished.promise,
+    finished: active_turn.deferred_finished.promise,
   };
 }

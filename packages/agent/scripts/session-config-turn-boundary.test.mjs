@@ -258,7 +258,7 @@ test("config remains effective when its action message cannot be persisted", asy
     const session = await agent.sessions.create({
       sessionId: "config_action_observability_session",
     });
-    session.stateService.emit_action_event = async () => {
+    session.emit_action_event = async () => {
       throw new Error("action store unavailable");
     };
 

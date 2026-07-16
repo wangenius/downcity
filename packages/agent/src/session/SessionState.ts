@@ -23,89 +23,21 @@ import type {
   AgentSessionConfigSnapshot,
   AgentSessionSetInput,
 } from "@/types/agent/SessionTypes.js";
-import type { SessionMutation } from "@/types/session/SessionMutation.js";
 import type { SessionLocalState } from "@/types/session/SessionLocalState.js";
-import type {
-  SessionModelQueueCommand,
-  SessionQueueCommand,
-} from "@/types/session/SessionQueue.js";
+import type { SessionModelQueueCommand } from "@/types/session/SessionQueue.js";
 import { generateId } from "@/utils/Id.js";
 import type { Logger } from "@/utils/logger/Logger.js";
 import { SessionMessages } from "@/session/SessionMessages.js";
 import { to_executor_history } from "@/session/messages/SessionMessageCodec.js";
 import type { SessionMessage } from "@/types/session/SessionMessage.js";
-import type { LanguageModel } from "ai";
-
-type SessionStateOptions = {
-  /**
-   * 当前 agent 稳定标识。
-   */
-  agent_id: string;
-
-  /**
-   * 当前项目根目录。
-   */
-  project_root: string;
-
-  /**
-   * 当前 session 标识。
-   */
-  session_id: string;
-
-  /** 当前 Session Message SessionMessages。 */
-  messages: SessionMessages;
-
-  /**
-   * 当前 session 可变运行态。
-   */
-  state: SessionLocalState;
-
-  /**
-   * 当前 session 运行日志器。
-   */
-  logger: Logger;
-
-  /**
-   * 在执行前补齐宿主级配置。
-   */
-  ensure_configured_hook?: () => Promise<void>;
-
-  /** 按 Session 优先、Agent 兜底规则读取当前运行时模型。 */
-  get_model: () => LanguageModel | undefined;
-
-  /**
-   * 发布 session 事件。
-   */
-  publish_event: (mutation: SessionMutation) => void;
-};
-
-type SessionSetOptions = {
-  /**
-   * 是否写入并发布 model-switching action。
-   *
-   * 说明（中文）
-   * - 公开 `session.set()` 应保持默认开启。
-   * - fork 内部复制模型配置时关闭，避免污染 forked session 历史。
-   */
-  emit_action?: boolean;
-};
+import type {
+  SessionConfiguredCommandResult,
+  SessionSetOptions,
+  SessionStateOptions,
+} from "@/types/session/SessionState.js";
 
 /**
- * Session 配置成功写入后的队列提交结果。
- */
-export interface SessionConfiguredCommandResult {
-  /**
-   * 等待在下一 Session step 检查点执行的 command。
-   *
-   * 说明（中文）
-   * - 输入未产生实际配置变化时为空。
-   * - fork 等内部初始化路径可以选择立即提交而不返回 command。
-   */
-  command?: SessionQueueCommand;
-}
-
-/**
- * 本地 Session 状态与持久化服务。
+ * 本地 Session 配置与 Metadata 状态管理器。
  */
 export class SessionState {
   private readonly agent_id: string;
@@ -135,7 +67,7 @@ export class SessionState {
    */
   get_config(): AgentSessionConfigSnapshot {
     return {
-      ...this.state.sessionConfig,
+      ...this.state.session_config,
     };
   }
 
@@ -143,7 +75,7 @@ export class SessionState {
    * 读取当前 session 创建时间。
    */
   get_created_at(): number {
-    return this.state.createdAt;
+    return this.state.created_at;
   }
 
   /**
@@ -157,11 +89,11 @@ export class SessionState {
    * 初始化当前 session metadata 与内存快照。
    */
   async initialize(): Promise<void> {
-    if (this.state.initializePromise) {
-      await this.state.initializePromise;
+    if (this.state.initialize_promise) {
+      await this.state.initialize_promise;
       return;
     }
-    this.state.initializePromise = (async () => {
+    this.state.initialize_promise = (async () => {
       const metadata = await readSessionMetadata({
         projectRoot: this.project_root,
         agentId: this.agent_id,
@@ -184,14 +116,14 @@ export class SessionState {
           timezone,
         },
       });
-      this.state.createdAt = created_at;
+      this.state.created_at = created_at;
       this.state.timezone = timezone;
-      this.state.sessionConfig = {};
+      this.state.session_config = {};
       this.state.effective_session_config = {
-        ...this.state.sessionConfig,
+        ...this.state.session_config,
       };
     })();
-    await this.state.initializePromise;
+    await this.state.initialize_promise;
   }
 
   /**
@@ -199,18 +131,18 @@ export class SessionState {
    */
   async ensure_ready_for_execution(): Promise<void> {
     await this.initialize();
-    if (this.state.ensureConfiguredPromise) {
-      await this.state.ensureConfiguredPromise;
+    if (this.state.ensure_configured_promise) {
+      await this.state.ensure_configured_promise;
       return;
     }
-    this.state.ensureConfiguredPromise = (async () => {
+    this.state.ensure_configured_promise = (async () => {
       if (!this.ensure_configured_hook) return;
       await this.ensure_configured_hook();
     })();
     try {
-      await this.state.ensureConfiguredPromise;
+      await this.state.ensure_configured_promise;
     } catch (error) {
-      this.state.ensureConfiguredPromise = null;
+      this.state.ensure_configured_promise = null;
       throw error;
     }
   }
@@ -233,7 +165,7 @@ export class SessionState {
     options?: SessionSetOptions,
   ): Promise<SessionConfiguredCommandResult> {
     const should_emit_action = options?.emit_action !== false;
-    const previous_model_label = this.state.sessionConfig.modelLabel;
+    const previous_model_label = this.state.session_config.modelLabel;
     const next_model = input.model;
     const next_model_label = next_model
       ? inferAgentModelLabel(next_model)
@@ -243,58 +175,53 @@ export class SessionState {
     const should_emit_model_switch_action = Boolean(
       next_model &&
         should_emit_action &&
-        this.state.sessionConfig.model &&
+        this.state.session_config.model &&
         previous_model_name &&
         next_model_name &&
         previous_model_name !== next_model_name,
     );
     const action_id = `model-switching:${this.session_id}:${Date.now()}:${generateId()}`;
 
-    try {
-      const next_config: AgentSessionConfigSnapshot = {
-        ...this.state.sessionConfig,
-      };
-      if (next_model) {
-        next_config.model = next_model;
-        next_config.modelLabel = next_model_label;
-        next_config.model_context_window =
-          read_agent_model_context_window(next_model);
-      }
-      await patchSessionModelLabel({
-        projectRoot: this.project_root,
-        agentId: this.agent_id,
-        sessionId: this.session_id,
-        model: next_config.model,
-      });
-      this.state.sessionConfig = next_config;
-
-      if (options?.emit_action === false) {
-        await this.apply_model_command({
-          type: "session_model",
-          command_id: generateId(),
-          config: next_config,
-        });
-        return {};
-      }
-
-      const command_id = generateId();
-      return {
-        command: {
-          type: "session_model",
-          command_id,
-          config: next_config,
-          ...(should_emit_model_switch_action
-            ? {
-                action_id,
-                action_title:
-                  `Session model switched from ${previous_model_name} to ${next_model_name}`,
-              }
-            : {}),
-        },
-      };
-    } catch (error) {
-      throw error;
+    const next_config: AgentSessionConfigSnapshot = {
+      ...this.state.session_config,
+    };
+    if (next_model) {
+      next_config.model = next_model;
+      next_config.modelLabel = next_model_label;
+      next_config.model_context_window =
+        read_agent_model_context_window(next_model);
     }
+    await patchSessionModelLabel({
+      projectRoot: this.project_root,
+      agentId: this.agent_id,
+      sessionId: this.session_id,
+      model: next_config.model,
+    });
+    this.state.session_config = next_config;
+
+    if (options?.emit_action === false) {
+      await this.apply_model_command({
+        type: "session_model",
+        command_id: generateId(),
+        config: next_config,
+      });
+      return {};
+    }
+
+    return {
+      command: {
+        type: "session_model",
+        command_id: generateId(),
+        config: next_config,
+        ...(should_emit_model_switch_action
+          ? {
+              action_id,
+              action_title:
+                `Session model switched from ${previous_model_name} to ${next_model_name}`,
+            }
+          : {}),
+      },
+    };
   }
 
   /** 在 Session Step 检查点提交模型配置。 */
@@ -318,7 +245,7 @@ export class SessionState {
       projectRoot: this.project_root,
       agentId: this.agent_id,
       sessionId: this.session_id,
-      sessionConfig: this.state.sessionConfig,
+      sessionConfig: this.state.session_config,
       message_count: stats.message_count,
       history_bytes: stats.history_bytes,
       ...(preview_text ? { preview_text } : {}),
@@ -354,8 +281,8 @@ export class SessionState {
             model: this.get_model(),
           }
         : {}),
-      ...(this.state.sessionConfig.modelLabel
-        ? { modelLabel: this.state.sessionConfig.modelLabel }
+      ...(this.state.session_config.modelLabel
+        ? { modelLabel: this.state.session_config.modelLabel }
         : {}),
       logger: this.logger,
       generate: input?.generate === true,

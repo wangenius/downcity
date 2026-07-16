@@ -45,93 +45,19 @@ import {
   to_executor_ui_message,
 } from "@/session/messages/SessionMessageCodec.js";
 import { hydrateUserPromptFileParts } from "@executor/messages/SessionAttachmentMapper.js";
-import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
+import type {
+  AppendCompletedAssistantMessageInput,
+  AppendExternalSessionAssistantMessageInput,
+  AppendExternalSessionUserMessageInput,
+  AppendSessionErrorMessageInput,
+  AppendSessionPromptMessageInput,
+  AppendSessionUserMessageInput,
+  OpenSessionActionMessageInput,
+  OpenSessionAssistantMessageInput,
+  SessionMessagesOptions,
+} from "@/types/session/SessionMessages.js";
 
 export { SessionAssistantMessageWriter } from "@/session/messages/SessionAssistantMessageWriter.js";
-
-/** SessionMessages 构造参数。 */
-export interface SessionMessagesOptions {
-  /** 当前 Session 标识。 */
-  session_id: string;
-  /** Message 快照 store。 */
-  store: JsonlSessionMessageStore;
-  /** 持久化成功后的实时 Mutation 发布函数。 */
-  publish: (mutation: SessionMutation) => void;
-}
-
-/** User Message 创建参数。 */
-export interface AppendSessionUserMessageInput {
-  /** 当前输入所属 turn。 */
-  turn_id: string;
-  /** 普通 prompt 或 steering 输入。 */
-  input_type: "prompt" | "steer";
-  /** User 结构化 parts。 */
-  parts: SessionUserMessagePart[];
-  /** 可选指定 Message ID，通常由 Recorder 生成。 */
-  message_id?: string;
-  /** 默认展示范围。 */
-  visibility?: "visible" | "internal";
-}
-
-/** Assistant Message 创建参数。 */
-export interface OpenSessionAssistantMessageInput {
-  /** 当前 assistant 所属 turn。 */
-  turn_id: string;
-  /** 当前 assistant 在 turn 内的 segment 序号。 */
-  segment_index: number;
-  /** 普通 assistant 或 compact summary。 */
-  kind?: "normal" | "summary";
-  /** 默认展示范围。 */
-  visibility?: "visible" | "internal";
-  /** 可选指定 Message ID。 */
-  message_id?: string;
-  /** Summary 已覆盖到的来源 Message。 */
-  summary_through_message_id?: string;
-}
-
-/** 已完成 Assistant Message 直接写入参数。 */
-export interface AppendCompletedAssistantMessageInput {
-  /** Assistant 所属 turn。 */
-  turn_id?: string;
-  /** Assistant 完整 parts。 */
-  parts: SessionAssistantMessagePart[];
-  /** 普通 assistant 或 compact summary。 */
-  kind?: "normal" | "summary";
-  /** 默认展示范围。 */
-  visibility?: "visible" | "internal";
-  /** Summary 已覆盖到的来源 Message。 */
-  summary_through_message_id?: string;
-}
-
-/** Action Message 创建参数。 */
-export interface OpenSessionActionMessageInput {
-  /** 可选稳定 Message ID；业务 action 生命周期使用该值定位。 */
-  message_id?: string;
-  /** Action 所属 turn。 */
-  turn_id?: string;
-  /** Action 业务类型。 */
-  action_type: string;
-  /** Action 标题。 */
-  title: string;
-  /** Action 描述。 */
-  description?: string;
-  /** Action 附加数据。 */
-  data?: JsonObject;
-}
-
-/** Error Message 创建参数。 */
-export interface AppendSessionErrorMessageInput {
-  /** 错误影响范围。 */
-  scope: "session" | "turn";
-  /** 错误所属 turn。 */
-  turn_id?: string;
-  /** 稳定错误码。 */
-  code: string;
-  /** 用户可见错误文本。 */
-  message: string;
-  /** 是否允许恢复。 */
-  recoverable: boolean;
-}
 
 /** 唯一 Session Message 写入服务。 */
 export class SessionMessages {
@@ -294,12 +220,9 @@ export class SessionMessages {
   }
 
   /** 把公开 Session API 的 User 输入转换为 canonical Message 并持久化。 */
-  async append_external_user_message(input: {
-    /** 可选的结构化 User record。 */
-    message?: SessionRecordV1 | null;
-    /** 未提供结构化 record 时使用的纯文本。 */
-    text?: string;
-  }): Promise<boolean> {
+  async append_external_user_message(
+    input: AppendExternalSessionUserMessageInput,
+  ): Promise<boolean> {
     const parts = input.message && "role" in input.message
       ? from_ui_user_parts(input.message.parts)
       : [{
@@ -318,12 +241,9 @@ export class SessionMessages {
   }
 
   /** 把公开 Session API 的 Assistant 输入转换为 canonical Message 并持久化。 */
-  async append_external_assistant_message(input: {
-    /** 可选的结构化 Assistant record。 */
-    message?: SessionRecordV1 | null;
-    /** 未提供结构化 record 时使用的纯文本。 */
-    fallback_text?: string;
-  }): Promise<boolean> {
+  async append_external_assistant_message(
+    input: AppendExternalSessionAssistantMessageInput,
+  ): Promise<boolean> {
     const parts = input.message && "role" in input.message
       ? from_ui_assistant_parts(input.message.parts)
       : [{
@@ -339,16 +259,9 @@ export class SessionMessages {
   }
 
   /** 把 Session prompt 转换为 canonical User Message 并持久化。 */
-  async append_prompt_message(input: {
-    /** 当前 Agent 项目的绝对根目录，用于解析本地附件。 */
-    project_root: string;
-    /** 当前 Session prompt 输入。 */
-    prompt: AgentSessionPromptInput;
-    /** 当前输入所属 Turn。 */
-    turn_id: string;
-    /** 普通 prompt 或 steering 输入。 */
-    input_type: "prompt" | "steer";
-  }): Promise<SessionUserMessageV1> {
+  async append_prompt_message(
+    input: AppendSessionPromptMessageInput,
+  ): Promise<SessionUserMessageV1> {
     const query = input.prompt.query;
     const ui_parts = typeof query === "string"
       ? [{ type: "text" as const, text: query.trim() }]

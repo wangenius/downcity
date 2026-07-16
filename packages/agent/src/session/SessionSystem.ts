@@ -11,53 +11,9 @@ import type {
   AgentSessionSystemBlock,
   AgentSessionSystemSessionInfo,
 } from "@/types/agent/SessionTypes.js";
+import type { BuildSessionSystemBlocksInput } from "@/types/session/SessionSystem.js";
 
-/**
- * 解析 SDK session system blocks 的输入。
- */
-export interface BuildSessionSystemBlocksParams {
-  /**
-   * 当前 agent 的稳定标识。
-   */
-  agentId: string;
-
-  /**
-   * 当前 agent 绑定的项目根目录。
-   */
-  projectRoot: string;
-
-  /**
-   * 当前 sessionId。
-   */
-  sessionId: string;
-
-  /**
-   * 当前 session 首次创建时间（ms）。
-   */
-  createdAt: number;
-
-  /**
-   * 当前 session 初始化时解析到的系统时区。
-   */
-  timezone: string;
-
-  /**
-   * 读取当前 SDK 调用方传入的 instruction system blocks。
-   */
-  getInstructionSystemBlocks: () => AgentSessionSystemBlock[];
-
-  /**
-   * 读取当前显式注入的受托管 plugin system blocks。
-   */
-  getManagedPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
-
-  /**
-   * 读取当前显式注册 plugin 的 system blocks。
-   */
-  getPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
-}
-
-function normalizeSystemBlocks(
+function normalize_system_blocks(
   blocks: AgentSessionSystemBlock[],
 ): AgentSessionSystemBlock[] {
   if (!Array.isArray(blocks)) return [];
@@ -83,23 +39,23 @@ function normalizeSystemBlocks(
     .filter((block): block is AgentSessionSystemBlock => Boolean(block));
 }
 
-function createSessionInfo(
-  params: Pick<
-    BuildSessionSystemBlocksParams,
-    "agentId" | "sessionId" | "projectRoot" | "createdAt" | "timezone"
+function create_session_info(
+  input: Pick<
+    BuildSessionSystemBlocksInput,
+    "agent_id" | "session_id" | "project_root" | "created_at" | "timezone"
   >,
 ): AgentSessionSystemSessionInfo {
-  const createdAt = Number.isFinite(params.createdAt) ? params.createdAt : 0;
+  const created_at = Number.isFinite(input.created_at) ? input.created_at : 0;
   return {
-    agentId: String(params.agentId || "").trim(),
-    sessionId: String(params.sessionId || "").trim(),
-    projectRoot: String(params.projectRoot || "").trim(),
-    createdAt: new Date(createdAt).toISOString(),
-    timezone: String(params.timezone || "").trim() || "UTC",
+    agentId: String(input.agent_id || "").trim(),
+    sessionId: String(input.session_id || "").trim(),
+    projectRoot: String(input.project_root || "").trim(),
+    createdAt: new Date(created_at).toISOString(),
+    timezone: String(input.timezone || "").trim() || "UTC",
   };
 }
 
-function createSessionSystemBlock(
+function create_session_system_block(
   session: AgentSessionSystemSessionInfo,
 ): AgentSessionSystemBlock {
   const content = [
@@ -120,36 +76,42 @@ function createSessionSystemBlock(
 /**
  * 解析 SDK session 当前生效的 system blocks。
  */
-export async function buildSessionSystemBlocks(
-  params: BuildSessionSystemBlocksParams,
+export async function build_session_system_blocks(
+  input: BuildSessionSystemBlocksInput,
 ): Promise<AgentSessionSystemBlock[]> {
-  const agentId = String(params.agentId || "").trim();
-  const projectRoot = String(params.projectRoot || "").trim();
-  const sessionId = String(params.sessionId || "").trim();
-  const createdAt = Number(params.createdAt || 0);
-  const timezone = String(params.timezone || "").trim();
-  if (!agentId) {
-    throw new Error("buildSessionSystemBlocks requires a non-empty agentId");
+  const agent_id = String(input.agent_id || "").trim();
+  const project_root = String(input.project_root || "").trim();
+  const session_id = String(input.session_id || "").trim();
+  const created_at = Number(input.created_at || 0);
+  const timezone = String(input.timezone || "").trim();
+  if (!agent_id) {
+    throw new Error("build_session_system_blocks requires a non-empty agent_id");
   }
-  if (!projectRoot) {
-    throw new Error("buildSessionSystemBlocks requires a non-empty projectRoot");
+  if (!project_root) {
+    throw new Error("build_session_system_blocks requires a non-empty project_root");
   }
-  if (!sessionId) {
-    throw new Error("buildSessionSystemBlocks requires a non-empty sessionId");
+  if (!session_id) {
+    throw new Error("build_session_system_blocks requires a non-empty session_id");
   }
-  if (!Number.isFinite(createdAt) || createdAt <= 0) {
-    throw new Error("buildSessionSystemBlocks requires a valid createdAt");
+  if (!Number.isFinite(created_at) || created_at <= 0) {
+    throw new Error("build_session_system_blocks requires a valid created_at");
   }
   if (!timezone) {
-    throw new Error("buildSessionSystemBlocks requires a non-empty timezone");
+    throw new Error("build_session_system_blocks requires a non-empty timezone");
   }
   return [
-    ...normalizeSystemBlocks(params.getInstructionSystemBlocks()),
-    ...normalizeSystemBlocks(await params.getManagedPluginSystemBlocks()),
-    ...normalizeSystemBlocks(await params.getPluginSystemBlocks()),
+    ...normalize_system_blocks(input.get_instruction_system_blocks()),
+    ...normalize_system_blocks(await input.get_managed_plugin_system_blocks()),
+    ...normalize_system_blocks(await input.get_plugin_system_blocks()),
     // session block 放在最后，尽量保留前缀 system blocks 的跨 session 缓存命中。
-    createSessionSystemBlock(
-      createSessionInfo({ agentId, projectRoot, sessionId, createdAt, timezone }),
+    create_session_system_block(
+      create_session_info({
+        agent_id,
+        project_root,
+        session_id,
+        created_at,
+        timezone,
+      }),
     ),
   ];
 }

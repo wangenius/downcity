@@ -5,7 +5,7 @@
  * 压缩只生成计划，实际 Segment 提交仍由 SessionMessages 负责。
  */
 
-import { buildSessionSystemBlocks } from "@/session/SessionSystem.js";
+import { build_session_system_blocks } from "@/session/SessionSystem.js";
 import { compose_session_compaction } from "@/session/messages/SessionMessageCompaction.js";
 import { to_executor_history } from "@/session/messages/SessionMessageCodec.js";
 import type {
@@ -22,19 +22,19 @@ export class DefaultSessionComposer implements SessionComposer {
 
   /** 组装当前 Step 的 system、history 与 tools。 */
   async compose(input: SessionComposeInput): Promise<SessionStepInput> {
-    const system_blocks = await buildSessionSystemBlocks({
-      agentId: input.session.agent_id,
-      projectRoot: input.session.project_root,
-      sessionId: input.session.session_id,
-      createdAt: input.session.created_at,
+    const system_blocks = await build_session_system_blocks({
+      agent_id: input.session.agent_id,
+      project_root: input.session.project_root,
+      session_id: input.session.session_id,
+      created_at: input.session.created_at,
       timezone: input.session.timezone,
-      getInstructionSystemBlocks: () => [
+      get_instruction_system_blocks: () => [
         ...input.state.instruction_system_blocks,
       ],
-      getManagedPluginSystemBlocks: async () => [
+      get_managed_plugin_system_blocks: async () => [
         ...input.state.managed_plugin_system_blocks,
       ],
-      getPluginSystemBlocks: async () => [
+      get_plugin_system_blocks: async () => [
         ...input.state.plugin_system_blocks,
       ],
     });

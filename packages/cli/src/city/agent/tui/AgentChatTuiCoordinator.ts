@@ -20,8 +20,10 @@ import {
   ChatFooterComponent,
   CommandHelpPanelComponent,
   InlinePanelSlotComponent,
+  QueuedMessagesComponent,
 } from "@/city/agent/tui/components/index.js";
 import { MessageListComponent } from "@/city/agent/tui/components/MessageList.js";
+import { QueuedInputQueue } from "@/city/agent/tui/controllers/QueuedInputQueue.js";
 import { SessionPickerComponent } from "@/city/agent/tui/dialogs/SessionPicker.js";
 import { ApprovalPanelComponent } from "@/city/agent/tui/dialogs/ApprovalDialog.js";
 import { PiTuiChatRenderer } from "@/city/agent/tui/PiTuiChatRenderer.js";
@@ -97,8 +99,10 @@ export class AgentChatTuiCoordinator {
   private readonly footer: ChatFooterComponent;
   private readonly message_list: MessageListComponent;
   private readonly editor: ChatEditorComponent;
+  private readonly queued_messages: QueuedMessagesComponent;
   private readonly approval_panel: InlinePanelSlotComponent;
   private readonly command_panel: InlinePanelSlotComponent;
+  private readonly input_queue = new QueuedInputQueue();
   private app_state: AppState;
   private current_session_id: string;
   private running = false;
@@ -106,6 +110,7 @@ export class AgentChatTuiCoordinator {
   private resolve_run: (() => void) | null = null;
   private remove_input_listener: (() => void) | null = null;
   private command_panel_loading = false;
+  private draining_input_queue = false;
 
   /**
    * 全局 tool output 展开状态。
@@ -130,7 +135,7 @@ export class AgentChatTuiCoordinator {
     return {
       is_streaming: this.app_state.is_executing,
       send_normal_user_input: async (text: string) => {
-        await this.run_turn(text);
+        await this.run_message_sequence(text);
       },
       show_error: (text: string) => {
         this.add_error_message(text);
@@ -170,7 +175,7 @@ export class AgentChatTuiCoordinator {
       session_id: options.session_id,
       session_title: undefined,
       is_executing: false,
-      status_text: "",
+      queued_message_count: 0,
       transcript_scroll_offset: 0,
     };
 
@@ -179,8 +184,9 @@ export class AgentChatTuiCoordinator {
     this.terminal.setTitle(this.build_title());
 
     this.editor = new ChatEditorComponent(this.tui);
-    this.header = new AgentHeaderComponent(this.app_state, this.tui);
+    this.header = new AgentHeaderComponent(this.app_state);
     this.footer = new ChatFooterComponent(this.app_state);
+    this.queued_messages = new QueuedMessagesComponent();
     this.approval_panel = new InlinePanelSlotComponent();
     this.command_panel = new InlinePanelSlotComponent();
 
@@ -208,6 +214,13 @@ export class AgentChatTuiCoordinator {
       this.request_render();
     };
     this.editor.on_up_arrow_empty = () => {
+      const recalled = this.input_queue.recall_latest();
+      if (recalled) {
+        this.editor.set_text(recalled.text);
+        this.sync_input_queue_state();
+        this.request_render();
+        return true;
+      }
       this.scroll_transcript(3);
       return true;
     };
@@ -233,6 +246,7 @@ export class AgentChatTuiCoordinator {
     this.tui.addChild(this.header as Component);
     this.tui.addChild(this.message_list as Component);
     this.tui.addChild(this.approval_panel as Component);
+    this.tui.addChild(this.queued_messages as Component);
     this.tui.addChild(this.editor as Component);
     this.tui.addChild(this.command_panel as Component);
     this.tui.addChild(this.footer as Component);
@@ -383,7 +397,6 @@ export class AgentChatTuiCoordinator {
     this.hide_session_picker();
     this.hide_approval_panel();
     this.remove_input_listener?.();
-    this.header.dispose();
     this.terminal.write(TRANSCRIPT_MOUSE_TRACKING_DISABLE);
     this.tui.stop();
     this.resolve_run?.();
@@ -406,6 +419,7 @@ export class AgentChatTuiCoordinator {
     const width = this.terminal.columns;
     const header_lines = this.header.render(width).length;
     const approval_lines = this.approval_panel.render(width).length;
+    const queued_messages_lines = this.queued_messages.render(width).length;
     const editor_lines = this.editor.render(width).length;
     const command_lines = this.command_panel.render(width).length;
     const footer_lines = this.footer.render(width).length;
@@ -414,6 +428,7 @@ export class AgentChatTuiCoordinator {
       this.terminal.rows
         - header_lines
         - approval_lines
+        - queued_messages_lines
         - editor_lines
         - command_lines
         - footer_lines,
@@ -445,11 +460,9 @@ export class AgentChatTuiCoordinator {
       is_streaming: this.app_state.is_executing,
     });
 
-    if (
-      this.app_state.is_executing &&
-      (intent.kind === "not-command" || intent.kind === "message")
-    ) {
-      this.add_error_message("Cannot send a new message while the current turn is running.");
+    if (this.app_state.is_executing && (intent.kind === "not-command" || intent.kind === "message")) {
+      this.input_queue.enqueue(intent.input);
+      this.sync_input_queue_state();
       this.request_render();
       return;
     }
@@ -465,11 +478,25 @@ export class AgentChatTuiCoordinator {
     }
 
     if (intent.kind === "message") {
-      await this.run_turn(intent.input);
+      await this.run_message_sequence(intent.input);
       return;
     }
 
-    await this.run_turn(text);
+    await this.run_message_sequence(text);
+  }
+
+  /**
+   * 执行一条立即消息，并在成功后按 FIFO 消费本地排队输入。
+   *
+   * @param message 要立即发送的用户消息。
+   */
+  private async run_message_sequence(message: string): Promise<void> {
+    const success = await this.run_turn(message);
+    if (success) {
+      await this.drain_input_queue();
+      return;
+    }
+    this.drop_queued_messages();
   }
 
   /**
@@ -477,9 +504,8 @@ export class AgentChatTuiCoordinator {
    *
    * @param message 用户消息。
    */
-  private async run_turn(message: string): Promise<void> {
+  private async run_turn(message: string): Promise<boolean> {
     this.app_state.is_executing = true;
-    this.app_state.status_text = "working...";
     this.header.set_state(this.app_state);
     this.footer.set_state(this.app_state);
     this.message_list.scroll_to_bottom();
@@ -500,7 +526,6 @@ export class AgentChatTuiCoordinator {
     });
 
     this.app_state.is_executing = false;
-    this.app_state.status_text = "";
     this.header.set_state(this.app_state);
     this.footer.set_state(this.app_state);
 
@@ -511,6 +536,53 @@ export class AgentChatTuiCoordinator {
     }
 
     this.request_render();
+    return outcome.success;
+  }
+
+  /**
+   * 在前一轮成功后按 FIFO 执行本地排队消息。
+   *
+   * 关键点（中文）：执行中的新 Enter 会继续追加到同一队列，当前循环自然在后续迭代中消费。
+   */
+  private async drain_input_queue(): Promise<void> {
+    if (this.draining_input_queue || this.stopped || this.app_state.is_executing) return;
+
+    this.draining_input_queue = true;
+    try {
+      while (!this.stopped) {
+        const queued_input = this.input_queue.take_next();
+        if (!queued_input) return;
+        this.sync_input_queue_state();
+        const success = await this.run_turn(queued_input.text);
+        if (!success) {
+          this.drop_queued_messages();
+          return;
+        }
+      }
+    } finally {
+      this.draining_input_queue = false;
+    }
+  }
+
+  /**
+   * 丢弃当前未发送的本地消息，并在 transcript 中留下可见原因。
+   */
+  private drop_queued_messages(): void {
+    const dropped_inputs = this.input_queue.clear();
+    this.sync_input_queue_state();
+    if (dropped_inputs.length <= 0 || this.stopped) return;
+    this.add_error_message(
+      `Dropped ${dropped_inputs.length} queued message${dropped_inputs.length === 1 ? "" : "s"} because the previous turn failed.`,
+    );
+    this.request_render();
+  }
+
+  /** 同步队列数量、队列预览与依赖该状态的固定区域。 */
+  private sync_input_queue_state(): void {
+    this.app_state.queued_message_count = this.input_queue.count;
+    this.queued_messages.set_queued_inputs(this.input_queue.items);
+    this.header.set_state(this.app_state);
+    this.footer.set_state(this.app_state);
   }
 
   /** 在输入框下方显示 Session 选择器。 */

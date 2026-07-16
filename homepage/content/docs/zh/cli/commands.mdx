@@ -58,13 +58,15 @@ downcity agent chat -m "hello"
 
 启动或重启 Agent 时，如果已保存的默认模型不在当前 Federation 模型目录中，交互式终端会直接展示当前 Federation 的模型选择器；选择完成后会更新默认模型并继续原启动流程。非交互模式不会自动选择，而会返回可用模型和对应的 `agent model --set` 修复命令。
 
-交互式 Agent Chat 顶部会显示当前 Session 和运行状态。在聊天中输入 `/session` 后，选择器会直接显示在输入框下方，不会遮挡消息历史。
+交互式 Agent Chat 顶部会显示当前 Session。执行中的状态会跟随 Assistant 消息显示在消息流内。在聊天中输入 `/session` 后，选择器会直接显示在输入框下方，不会遮挡消息历史。
 
 消息历史支持鼠标滚轮、空输入时的 `↑` / `↓`、`PageUp` / `PageDown`；`Ctrl+L` 可直接返回最新消息。工具执行默认折叠，使用 `Ctrl+O` 统一展开或收起参数与结果。
 
 当 unrestricted shell 操作需要审批时，Agent 会直接发起工具请求，由运行时在执行前暂停并显示审批面板，不需要先在聊天中重复确认。同一条 Tool 更新会携带完整命令、工作目录、申请原因和审批 ID，内联面板不需要再次请求详情；选择 Approve 或 Deny 后提交，`Esc` / `Ctrl+C` 按安全语义执行 Deny。远端提交失败时，请求会保留并重新显示，不会让当前轮次失去审批入口。
 
-Agent 执行期间仍可提交 `/approve`、`/deny`、`/help` 和 `/quit`。会改变会话或 transcript 的 `/session`、`/new`、`/clear` 仅在空闲时可用；普通消息也不会并发开启第二个 turn。
+Agent 执行期间仍可提交 `/approve`、`/deny`、`/help` 和 `/quit`。会改变会话或 transcript 的 `/session`、`/new`、`/clear` 仅在空闲时可用。
+
+Agent 执行期间按 `Enter` 发送普通消息会将其加入本地队列，而不是并发开启第二个 turn。队列会显示在输入框上方；当前 turn 成功结束后，消息会按提交顺序逐条发送。空输入框按 `↑` 可取回最近一条排队消息继续编辑。若某一 turn 失败，剩余排队消息会被丢弃并在消息流中提示。
 
 ### Agent 历史
 

@@ -147,6 +147,20 @@ export interface ErrorEntry extends BaseEntry {
 }
 
 /**
+ * 当前 TUI 本地排队的用户输入。
+ *
+ * 关键点（中文）
+ * - 排队输入尚未提交到远端 Session，因此不会被当前 Turn 合并为 steer。
+ * - 协调器在当前 Turn 成功结束后按 FIFO 顺序把它们作为独立 Turn 提交。
+ */
+export interface QueuedInput {
+  /** 仅在当前 TUI 进程内唯一的排队条目 ID。 */
+  id: string;
+  /** 用户提交的、已标准化的完整输入文本。 */
+  text: string;
+}
+
+/**
  * TUI 应用状态。
  */
 export interface AppState {
@@ -168,8 +182,8 @@ export interface AppState {
   /** 是否正在等待助手回复。 */
   is_executing: boolean;
 
-  /** 当前状态栏提示文本。 */
-  status_text: string;
+  /** 当前 TUI 本地等待发送的消息数量。 */
+  queued_message_count: number;
 
   /**
    * Transcript 相对最新内容向上偏移的行数。

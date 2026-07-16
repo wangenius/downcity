@@ -9,7 +9,10 @@
 
 import { Container, Markdown, truncateToWidth, type Component } from "@earendil-works/pi-tui";
 
-import { MESSAGE_INDENT } from "@/city/agent/tui/constant/rendering.js";
+import {
+  BRAILLE_SPINNER_FRAMES,
+  MESSAGE_INDENT,
+} from "@/city/agent/tui/constant/rendering.js";
 import { current_theme } from "@/city/agent/tui/theme/index.js";
 import { createMarkdownTheme } from "@/city/agent/tui/theme/pi-tui-theme.js";
 
@@ -80,7 +83,8 @@ export class AssistantMessageComponent implements Component {
    * @returns 渲染后的行数组。
    */
   render(width: number): string[] {
-    if (this.last_text.trim().length === 0) {
+    const has_content = this.last_text.trim().length > 0;
+    if (!has_content && !this.streaming) {
       return [];
     }
 
@@ -90,11 +94,13 @@ export class AssistantMessageComponent implements Component {
     }
 
     const content_width = Math.max(1, safe_width - MESSAGE_INDENT.length);
-    const content_lines = this.content_container.render(content_width);
+    const content_lines = has_content
+      ? this.content_container.render(content_width)
+      : [];
 
     const role = current_theme.bold_fg("primary", "Assistant");
     const state = this.streaming
-      ? current_theme.dim_fg("primary", " · working")
+      ? current_theme.dim_fg("primary", ` · ${get_working_frame()} working`)
       : "";
     const lines: string[] = ["", this.show_bullet ? `${role}${state}` : state.trimStart()];
     for (const content_line of content_lines) {
@@ -103,4 +109,10 @@ export class AssistantMessageComponent implements Component {
 
     return lines.map((line) => truncateToWidth(line, safe_width, "…"));
   }
+}
+
+/** 根据当前时间计算 working 动画帧；重绘节拍由 StreamingUIController 驱动。 */
+function get_working_frame(): string {
+  const frame_index = Math.floor(Date.now() / 80) % BRAILLE_SPINNER_FRAMES.length;
+  return BRAILLE_SPINNER_FRAMES[frame_index] ?? BRAILLE_SPINNER_FRAMES[0];
 }

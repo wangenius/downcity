@@ -149,8 +149,17 @@ export class ChatEditorComponent extends Editor {
    * 清空当前输入。
    */
   clear(): void {
-    this.setText("");
-    this.update_border_highlight("");
+    this.set_text("");
+  }
+
+  /**
+   * 设置编辑器文本并同步 slash 边框状态。
+   *
+   * @param text 要显示在编辑器内的完整文本。
+   */
+  set_text(text: string): void {
+    this.setText(text);
+    this.update_border_highlight(text);
   }
 
   /**

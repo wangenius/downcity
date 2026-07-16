@@ -13,9 +13,11 @@ import { ChatFooterComponent } from "../bin/city/agent/tui/components/ChatFooter
 import { CommandHelpPanelComponent } from "../bin/city/agent/tui/components/CommandHelpPanel.js";
 import { InlinePanelSlotComponent } from "../bin/city/agent/tui/components/InlinePanelSlot.js";
 import { MessageListComponent } from "../bin/city/agent/tui/components/MessageList.js";
+import { QueuedMessagesComponent } from "../bin/city/agent/tui/components/QueuedMessages.js";
 import { ToolCallBlockComponent } from "../bin/city/agent/tui/components/ToolCallBlock.js";
 import { UserMessageComponent } from "../bin/city/agent/tui/components/UserMessage.js";
 import { resolve_transcript_scroll_delta } from "../bin/city/agent/tui/controllers/TranscriptNavigation.js";
+import { QueuedInputQueue } from "../bin/city/agent/tui/controllers/QueuedInputQueue.js";
 import { PiTuiChatRenderer } from "../bin/city/agent/tui/PiTuiChatRenderer.js";
 import { ApprovalPanelComponent } from "../bin/city/agent/tui/dialogs/ApprovalDialog.js";
 import { SessionPickerComponent } from "../bin/city/agent/tui/dialogs/SessionPicker.js";
@@ -34,6 +36,36 @@ test("transcript 导航同时识别分页键和鼠标滚轮", () => {
   assert.equal(resolve_transcript_scroll_delta("\u001B[<64;20;8M", 12), 3);
   assert.equal(resolve_transcript_scroll_delta("\u001B[<65;20;8M", 12), -3);
   assert.equal(resolve_transcript_scroll_delta("a", 12), null);
+});
+
+test("执行中输入队列按 FIFO 消费，并允许用 ↑ 召回最新消息", () => {
+  const input_queue = new QueuedInputQueue();
+  input_queue.enqueue("first queued message");
+  input_queue.enqueue("second queued message");
+  input_queue.enqueue("third queued message");
+
+  assert.equal(input_queue.count, 3);
+  assert.equal(input_queue.recall_latest()?.text, "third queued message");
+  assert.equal(input_queue.take_next()?.text, "first queued message");
+  assert.equal(input_queue.take_next()?.text, "second queued message");
+  assert.equal(input_queue.count, 0);
+});
+
+test("排队消息组件显示数量、最新预览与召回提示", () => {
+  const input_queue = new QueuedInputQueue();
+  for (let index = 1; index <= 4; index += 1) {
+    input_queue.enqueue(`queued message ${index}`);
+  }
+  const queued_messages = new QueuedMessagesComponent();
+  queued_messages.set_queued_inputs(input_queue.items);
+
+  const rendered = plain(queued_messages.render(40)).join("\n");
+  assert.match(rendered, /Queued · 4/);
+  assert.match(rendered, /… 1 earlier message/);
+  assert.doesNotMatch(rendered, /> queued message 1/);
+  assert.match(rendered, /> queued message 4/);
+  assert.match(rendered, /↑ edit latest queued message/);
+  assert.ok(queued_messages.render(24).every((line) => visibleWidth(line) <= 24));
 });
 
 test("MessageList 可以离开底部查看历史并重新返回最新消息", () => {
@@ -75,7 +107,7 @@ test("角色消息和工具执行块保持稳定层级且不超过可用宽度",
   const assistant_component = new AssistantMessageComponent(true, true);
   assistant_component.update_content("I am checking the build.", true);
   const assistant = plain(assistant_component.render(48));
-  assert.match(assistant.join("\n"), /Assistant · working/);
+  assert.match(assistant.join("\n"), /Assistant · .* working/);
 
   const tool = new ToolCallBlockComponent({
     id: "tool-1",
@@ -95,6 +127,19 @@ test("角色消息和工具执行块保持稳定层级且不超过可用宽度",
 
   const narrow_tool_lines = plain(tool.render(24));
   assert.ok(narrow_tool_lines.find((line) => line.startsWith("┌"))?.endsWith("┐"));
+});
+
+test("Turn 启动后立即在消息流显示 Assistant working，并在结束后移除", () => {
+  const message_list = new MessageListComponent({
+    get_viewport_height: () => 30,
+  });
+  const renderer = new PiTuiChatRenderer(message_list, () => {});
+
+  renderer.start_turn();
+  assert.match(plain(message_list.render(80)).join("\n"), /Assistant · .* working/);
+
+  renderer.finish_turn();
+  assert.doesNotMatch(plain(message_list.render(80)).join("\n"), /working/);
 });
 
 test("tool 输入从流式占位更新为完整参数且不重复创建卡片", () => {
@@ -200,22 +245,28 @@ test("Header 与 Footer 在宽屏和窄屏下保持上下文与操作层级", ()
     session_id: "session-123456789",
     session_title: "Build diagnostics",
     is_executing: false,
-    status_text: "",
+    queued_message_count: 0,
     transcript_scroll_offset: 0,
   };
-  const header = new AgentHeaderComponent(app_state, { requestRender() {} });
+  const header = new AgentHeaderComponent(app_state);
   const footer = new ChatFooterComponent(app_state);
 
   for (const width of [96, 48, 24]) {
     const header_lines = header.render(width);
     const footer_lines = footer.render(width);
     assert.ok([...header_lines, ...footer_lines].every((line) => visibleWidth(line) <= width));
-    assert.match(plain(header_lines).join("\n"), /READY/);
+    assert.match(plain(header_lines).join("\n"), /DOWNCITY AGENT/);
   }
 
   app_state.transcript_scroll_offset = 9;
   footer.set_state(app_state);
   assert.match(plain(footer.render(48)).join("\n"), /HISTORY · 9 lines/);
+
+  app_state.transcript_scroll_offset = 0;
+  app_state.is_executing = true;
+  app_state.queued_message_count = 2;
+  footer.set_state(app_state);
+  assert.match(plain(footer.render(96)).join("\n"), /Enter queue · 2 queued/);
 });
 
 test("审批 part 展示请求详情且 Esc 按安全语义拒绝", () => {

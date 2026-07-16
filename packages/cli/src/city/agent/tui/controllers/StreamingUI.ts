@@ -10,8 +10,8 @@
 
 import type { SessionMutation } from "@downcity/agent";
 
-import { AssistantMessageComponent } from "@/city/agent/tui/components/AssistantMessage.js";
 import type { MessageListComponent } from "@/city/agent/tui/components/MessageList.js";
+import { BRAILLE_SPINNER_INTERVAL_MS } from "@/city/agent/tui/constant/rendering.js";
 import { STREAMING_UI_FLUSH_MS } from "@/city/agent/tui/constant/streaming.js";
 import { generateTuiId } from "@/city/agent/tui/utils/id.js";
 import type { TranscriptEntry } from "@/city/agent/tui/types.js";
@@ -29,8 +29,6 @@ export interface StreamingUIOptions {
 interface StreamingBlock {
   /** assistant 条目 ID。 */
   entry_id: string;
-  /** assistant 渲染组件。 */
-  component: AssistantMessageComponent;
 }
 
 /**
@@ -46,6 +44,7 @@ export class StreamingUIController {
   private flush_timer: ReturnType<typeof setTimeout> | null = null;
   private last_flush_at = 0;
   private pending_render = false;
+  private working_spinner_timer: ReturnType<typeof setInterval> | null = null;
   private readonly tool_call_ids = new Set<string>();
 
   /**
@@ -67,6 +66,9 @@ export class StreamingUIController {
     this.pending_assistant_flush = false;
     this.pending_render = false;
     this.clear_flush_timer();
+    this.start_working_spinner();
+    this.on_streaming_text_start();
+    this.request_render_fn();
   }
 
   /**
@@ -143,6 +145,7 @@ export class StreamingUIController {
   finish_turn(): void {
     this.finalize_assistant();
     this.flush();
+    this.stop_working_spinner();
   }
 
   /**
@@ -171,9 +174,8 @@ export class StreamingUIController {
       streaming: true,
       created_at: Date.now(),
     };
-    const component = new AssistantMessageComponent();
     this.message_list.add_entry(entry);
-    this.streaming_block = { entry_id, component };
+    this.streaming_block = { entry_id };
   }
 
   /**
@@ -188,7 +190,6 @@ export class StreamingUIController {
     this.last_flush_at = Date.now();
 
     if (this.streaming_block !== null) {
-      this.streaming_block.component.update_content(this.assistant_draft);
       this.message_list.update_assistant_text(
         this.streaming_block.entry_id,
         this.assistant_draft,
@@ -271,5 +272,20 @@ export class StreamingUIController {
     }
     clearTimeout(this.flush_timer);
     this.flush_timer = null;
+  }
+
+  /** 启动消息流中 Assistant working 的低频重绘。 */
+  private start_working_spinner(): void {
+    if (this.working_spinner_timer !== null) return;
+    this.working_spinner_timer = setInterval(() => {
+      this.request_render_fn();
+    }, BRAILLE_SPINNER_INTERVAL_MS);
+  }
+
+  /** 当前 Turn 结束后停止 Assistant working 的动画重绘。 */
+  private stop_working_spinner(): void {
+    if (this.working_spinner_timer === null) return;
+    clearInterval(this.working_spinner_timer);
+    this.working_spinner_timer = null;
   }
 }

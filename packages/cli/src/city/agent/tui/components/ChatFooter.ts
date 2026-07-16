@@ -62,11 +62,16 @@ export class ChatFooterComponent implements Component {
   /** 根据终端宽度构建空闲或执行态快捷键。 */
   private build_action_hint(width: number): string {
     if (this.app_state.is_executing) {
+      const queued_count = this.app_state.queued_message_count;
+      const queue = current_theme.bold_fg(
+        "primary",
+        queued_count > 0 ? `Enter queue · ${queued_count} queued` : "Enter queue",
+      );
       const stop = current_theme.bold_fg("warning", "Ctrl+C stop");
       const rest = width >= MEDIUM_HINT_MIN_WIDTH
-        ? "↑/↓ scroll · Ctrl+O tools"
+        ? "↑ edit queue · Ctrl+O tools"
         : "↑/↓ scroll";
-      return `${stop}  ${current_theme.dim_fg("textMuted", rest)}`;
+      return `${queue}  ${stop}  ${current_theme.dim_fg("textMuted", rest)}`;
     }
     if (width >= WIDE_HINT_MIN_WIDTH) {
       return current_theme.dim_fg(

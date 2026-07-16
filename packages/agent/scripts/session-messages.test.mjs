@@ -15,18 +15,50 @@ import { compose_session_compaction } from "../bin/session/messages/SessionMessa
 import { to_executor_history } from "../bin/session/messages/SessionMessageCodec.js";
 import { MockLanguageModelV3 } from "ai/test";
 
-async function create_recorder(session_id = "session-recorder-test") {
+/** 可暂停一次 Assistant 草稿写入，用于稳定复现并发写入顺序。 */
+class PausingAssistantMessageStore extends JsonlSessionMessageStore {
+  next_assistant_write = null;
+
+  pause_next_assistant_write() {
+    let mark_started;
+    let release;
+    const started = new Promise((resolve) => {
+      mark_started = resolve;
+    });
+    const wait = new Promise((resolve) => {
+      release = resolve;
+    });
+    this.next_assistant_write = { mark_started, wait };
+    return { started, release };
+  }
+
+  async write_assistant_message(message) {
+    const pending = this.next_assistant_write;
+    if (pending) {
+      this.next_assistant_write = null;
+      pending.mark_started();
+      await pending.wait;
+    }
+    await super.write_assistant_message(message);
+  }
+}
+
+async function create_recorder(
+  session_id = "session-recorder-test",
+  create_store = (options) => new JsonlSessionMessageStore(options),
+) {
   const root_path = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-session-recorder-"));
   const file_path = path.join(root_path, "active.jsonl");
   const assistant_message_file_path = path.join(root_path, "assistant_message.json");
   const events = [];
+  const store = create_store({ session_id, file_path });
   const recorder = new SessionMessages({
     session_id,
-    store: new JsonlSessionMessageStore({ session_id, file_path }),
+    store,
     publish: (mutation) => events.push(mutation),
   });
   await recorder.initialize();
-  return { recorder, events, file_path, assistant_message_file_path };
+  return { recorder, store, events, file_path, assistant_message_file_path };
 }
 
 async function read_jsonl(file_path) {
@@ -247,6 +279,85 @@ test("Approval Broker 只接受已经准备完整输入的 Tool", async () => {
       .map((event) => event.part.state),
     ["ready", "approval-required", "failed"],
   );
+});
+
+test("流式更新与 Approval 共享 Assistant revision 写队列", async () => {
+  const session_id = "approval-revision-queue-test";
+  const { recorder, store, events } = await create_recorder(
+    session_id,
+    (options) => new PausingAssistantMessageStore(options),
+  );
+  const approval_broker = new SessionApprovalBroker({ session_id, messages: recorder });
+  const writer = await recorder.open_assistant_message({
+    turn_id: "turn-approval-race",
+    segment_index: 1,
+  });
+  await writer.prepare_tool_input({
+    tool_call_id: "call-approval-race",
+    tool_name: "shell_exec",
+    input: {
+      cmd: "ls -la ~",
+      sandbox: "unrestricted",
+      reason: "验证审批写入顺序",
+    },
+  });
+  await writer.apply_chunk({ type: "text-start", id: "text-race" });
+  await writer.apply_chunk({ type: "text-delta", id: "text-race", delta: "准备执行" });
+
+  const gate = store.pause_next_assistant_write();
+  const stream_write = writer.apply_chunk({
+    type: "text-delta",
+    id: "text-race",
+    delta: "命令",
+  });
+  await gate.started;
+  const approval_write = approval_broker.request({
+    shell_id: "shell-approval-race",
+    tool_call_id: "call-approval-race",
+    tool_name: "shell_exec",
+    session_id,
+    turn_id: "turn-approval-race",
+    command: "ls -la ~",
+    cwd: "/workspace",
+    reason: "验证审批写入顺序",
+    operation: "exec",
+    timeout_ms: 60_000,
+  });
+
+  // 让 Approval 路径有机会进入写入；旧实现会在这里基于同一 revision 提交。
+  await new Promise((resolve) => setImmediate(resolve));
+  gate.release();
+  const [, approval_handle] = await Promise.all([stream_write, approval_write]);
+
+  const assistant = recorder.get_message(writer.message_id);
+  const tool = assistant.parts.find((part) => part.type === "tool");
+  const text_part = assistant.parts.find((part) => part.type === "text");
+  assert.equal(assistant.revision, 6);
+  assert.equal(tool.state, "approval-required");
+  assert.equal(tool.approval.approval_id, approval_handle.approval_id);
+  assert.equal(tool.input.cmd, "ls -la ~");
+  assert.equal(text_part.text, "准备执行命令");
+  assert.deepEqual(
+    events
+      .filter((event) => event.message_id === writer.message_id)
+      .map((event) => event.revision),
+    [1, 2, 3, 4, 5, 6],
+  );
+  assert.equal(
+    events.some(
+      (event) =>
+        event.variant === "part" &&
+        event.type === "tool" &&
+        event.part.state === "approval-required",
+    ),
+    true,
+  );
+
+  await approval_broker.resolve({
+    approval_id: approval_handle.approval_id,
+    decision: "denied",
+  });
+  assert.equal(await approval_handle.decision, "denied");
 });
 
 test("不同模型 step 重复使用 Text chunk ID 时仍保持真实 Part 顺序", async () => {

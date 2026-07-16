@@ -2,6 +2,8 @@
  * SessionMessages：Session Message 的唯一领域入口。
  *
  * 完整 Message 与 Assistant 草稿先持久化，成功后再发布实时 Mutation。
+ * 同一 Assistant Message 的流式、审批与关闭操作共享一条写队列，保证 revision
+ * 从最新快照严格递增。
  */
 
 import type { UIMessage } from "ai";
@@ -65,6 +67,8 @@ export class SessionMessages {
   private readonly store: JsonlSessionMessageStore;
   private readonly publish: SessionMessagesOptions["publish"];
   private readonly messages_by_id = new Map<string, SessionMessage>();
+  /** 按 Assistant Message 隔离的完整写事务链。 */
+  private readonly assistant_write_chains = new Map<string, Promise<void>>();
   private initialized = false;
 
   constructor(options: SessionMessagesOptions) {
@@ -514,6 +518,18 @@ export class SessionMessages {
     delta: string,
   ): Promise<void> {
     if (!delta) return;
+    await this.enqueue_assistant_write(message_id, async () => {
+      await this.append_assistant_delta_serialized(message_id, part_id, type, delta);
+    });
+  }
+
+  /** 在 Assistant 写队列内追加文本 delta。 */
+  private async append_assistant_delta_serialized(
+    message_id: string,
+    part_id: string,
+    type: "text" | "reasoning",
+    delta: string,
+  ): Promise<void> {
     const current = require_message([...this.messages_by_id.values()], message_id, "assistant");
     require_streaming_assistant(current);
     const part = current.parts.find((item) => item.part_id === part_id);
@@ -552,6 +568,16 @@ export class SessionMessages {
     message_id: string,
     part: SessionAssistantMessagePart,
   ): Promise<void> {
+    await this.enqueue_assistant_write(message_id, async () => {
+      await this.update_assistant_part_serialized(message_id, part);
+    });
+  }
+
+  /** 在 Assistant 写队列内提交完整 Part 快照。 */
+  private async update_assistant_part_serialized(
+    message_id: string,
+    part: SessionAssistantMessagePart,
+  ): Promise<void> {
     const current = require_message([...this.messages_by_id.values()], message_id, "assistant");
     require_streaming_assistant(current);
     const existing = current.parts.find((item) => item.part_id === part.part_id);
@@ -586,6 +612,16 @@ export class SessionMessages {
 
   /** @internal 收口 Assistant Message。 */
   async complete_assistant_message(
+    message_id: string,
+    status: "completed" | "stopped" | "failed",
+  ): Promise<void> {
+    await this.enqueue_assistant_write(message_id, async () => {
+      await this.complete_assistant_message_serialized(message_id, status);
+    });
+  }
+
+  /** 在 Assistant 写队列内关闭草稿并写入 Active。 */
+  private async complete_assistant_message_serialized(
     message_id: string,
     status: "completed" | "stopped" | "failed",
   ): Promise<void> {
@@ -645,16 +681,22 @@ export class SessionMessages {
 
   /** 把完整审批请求写入对应的流式 Tool Part。 */
   async request_tool_approval(approval: SessionApproval): Promise<void> {
-    const tool = this.require_streaming_tool(approval.tool_call_id);
-    if (tool.part.state !== "ready") {
-      throw new Error(
-        `Tool approval requires ready input: ${approval.tool_call_id} (${tool.part.state})`,
-      );
-    }
-    await this.update_assistant_part(tool.message_id, {
-      ...tool.part,
-      state: "approval-required",
-      approval,
+    const { message_id } = this.require_streaming_tool(approval.tool_call_id);
+    await this.enqueue_assistant_write(message_id, async () => {
+      const tool = this.require_streaming_tool(approval.tool_call_id);
+      if (tool.message_id !== message_id) {
+        throw new Error(`Tool Assistant Message changed: ${approval.tool_call_id}`);
+      }
+      if (tool.part.state !== "ready") {
+        throw new Error(
+          `Tool approval requires ready input: ${approval.tool_call_id} (${tool.part.state})`,
+        );
+      }
+      await this.update_assistant_part_serialized(message_id, {
+        ...tool.part,
+        state: "approval-required",
+        approval,
+      });
     });
   }
 
@@ -667,22 +709,50 @@ export class SessionMessages {
     /** 当前审批关联的 Tool Call。 */
     tool_call_id: string;
   }): Promise<void> {
-    const tool = this.require_streaming_tool(input.tool_call_id);
-    if (tool.part.approval?.approval_id !== input.approval_id) {
-      throw new Error(`Tool approval identity mismatch: ${input.approval_id}`);
-    }
-    await this.update_assistant_part(tool.message_id, {
-      ...tool.part,
-      state: input.decision === "approved" ? "running" : "failed",
-      ...(input.decision === "approved"
-        ? {}
-        : {
-            error:
-              input.decision === "expired"
-                ? "Approval expired"
-                : "Approval denied",
-          }),
+    const { message_id } = this.require_streaming_tool(input.tool_call_id);
+    await this.enqueue_assistant_write(message_id, async () => {
+      const tool = this.require_streaming_tool(input.tool_call_id);
+      if (tool.message_id !== message_id) {
+        throw new Error(`Tool Assistant Message changed: ${input.tool_call_id}`);
+      }
+      if (tool.part.approval?.approval_id !== input.approval_id) {
+        throw new Error(`Tool approval identity mismatch: ${input.approval_id}`);
+      }
+      await this.update_assistant_part_serialized(message_id, {
+        ...tool.part,
+        state: input.decision === "approved" ? "running" : "failed",
+        ...(input.decision === "approved"
+          ? {}
+          : {
+              error:
+                input.decision === "expired"
+                  ? "Approval expired"
+                  : "Approval denied",
+            }),
+      });
     });
+  }
+
+  /**
+   * 串行执行同一 Assistant Message 的完整写事务。
+   *
+   * 失败事务不会阻塞后续写入；链尾仅用于排序，真实错误仍返回给调用方。
+   */
+  private async enqueue_assistant_write<T>(
+    message_id: string,
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    const previous = this.assistant_write_chains.get(message_id) || Promise.resolve();
+    const result = previous.then(operation, operation);
+    const chain = result.then(() => undefined, () => undefined);
+    this.assistant_write_chains.set(message_id, chain);
+    try {
+      return await result;
+    } finally {
+      if (this.assistant_write_chains.get(message_id) === chain) {
+        this.assistant_write_chains.delete(message_id);
+      }
+    }
   }
 
   /** 查找当前流式 Assistant 中的 Tool Part，否则抛出明确错误。 */

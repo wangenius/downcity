@@ -253,3 +253,23 @@ Key points:
 - Composer customization stays inside the custom Session class
 - Composer reads Session snapshots and composes system, history, tools, or compaction plans; it never persists messages directly
 - `RemoteAgent` does not support local Session classes because it only accesses a remote runtime
+
+### What a Session Composer can customize
+
+One `SessionComposer` replaces the previous System, History, Context, and Compaction composer pipeline. A custom Session only needs one composer:
+
+| Method | Purpose |
+| --- | --- |
+| `compose(input)` | Return the `system`, `messages`, and `tools` for the current model Step |
+| `compact(input)` | Return a `SessionCompactionPlan` from a read-only Message snapshot, or `null` when no compaction is needed |
+| `should_compact(error)` | Decide whether a model error should retry after persistent compaction |
+
+`compose(input)` may:
+
+- add, remove, or reorder system messages
+- filter, transform, or inject model messages for the current Step
+- change the tools visible to the current Step
+
+A Composer does not consume the Prompt Queue, control Turns, or write Messages, Metadata, Mutations, or JSONL. The Session persists the User Message before invoking the Composer, so a custom Composer does not need to append the current query to history.
+
+Compaction is also split into policy and commit stages. The Composer only returns a plan; the Session commits the Segment after the Assistant draft has closed. Custom policy therefore cannot bypass Session Message consistency and recovery.

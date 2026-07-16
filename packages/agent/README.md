@@ -5,9 +5,9 @@
 它负责把一个 agent 项目目录装配成可执行运行时，包括：
 
 - 本地 SDK：`Agent`、`Session`、`RemoteAgent`
-- 内部执行内核：history、system、tool loop、增量输出
-- Plugin 框架：hook、action、内建插件
-- 运行时实现：RPC runtime、sandbox、host
+- 内部执行内核：Session Composer、LLM/Tool Loop、增量输出
+- Plugin 框架：registry、action、tool bridge 与执行生命周期
+- 远程访问：`RemoteAgent`、HTTP/RPC transport
 
 `downcity` 负责多 Agent 管理、控制面网关、平台 CLI、共享模型目录接入与 daemon 进程管理；`@downcity/agent` 只负责单 Agent 的执行面。
 
@@ -15,14 +15,13 @@
 
 - 面向单个 Agent 项目的执行面
 - 对外通过 `@downcity/agent` 根入口暴露公共 API
-- 负责 session SDK、executor 内核、plugin、sandbox、RPC runtime、SDK 本地 Agent
+- 负责 session SDK、executor 内核、plugin runtime、sandbox、SDK 本地 Agent
 - 不负责多 Agent registry、control plane daemon、console UI 聚合和平台级编排
 
 ## 与其他包的边界
 
 - `@downcity/agent`
   - 单 Agent runtime
-  - 单 Agent RPC runtime
   - session SDK、executor 内核、plugin 框架、sandbox
   - 本地 SDK facade
 - `downcity`
@@ -49,21 +48,15 @@ packages/agent
 
 ```text
 src/
-├── index.ts               # 包公开入口，集中导出外部可依赖的 API 与协议类型
-├── agent/                 # Agent SDK 入口，按 local / remote 拆分本地与远程实现
-│   ├── local/             # 本地 Agent facade 与实例装配中心
-│   └── remote/            # RemoteAgent facade、RemoteSession 与 HTTP/RPC transport
-├── config/                # 项目环境、运行路径、execution binding 与初始化脚手架
-│   └── project/           # Agent 项目初始化与项目初始化类型
-├── executor/              # 内部执行内核，负责历史、system、tool loop、增量输出与消息持久化
-├── plugin/                # 插件系统，负责插件注册、hook、action、内建插件与插件类型
-├── rpc/                   # Agent 本机 RPC runtime，对外 HTTP gateway 由 downcity 提供
-├── runtime/               # 运行时实现细节层，统一收纳 host / sandbox / control 等内部能力
-│   ├── host/              # 宿主注入能力协议
-│   └── sandbox/           # 命令沙箱与沙箱协议
-├── session/               # SDK session actor、metadata、落盘路径、持久化与 runtime 端口适配
-├── types/                 # 跨模块共享协议类型，集中放置 common / config / runtime 等稳定契约
-└── utils/                 # 低层工具，负责 CLI、日志、存储与模板辅助
+├── index.ts               # 包公开入口
+├── agent/                 # Agent facade、AgentState、AgentSessions 与 AgentModel
+├── config/                # 项目环境、运行路径与初始化能力
+├── executor/              # LLM/Tool Loop、执行恢复与内存上下文折叠
+├── plugin/                # Plugin registry、执行视图、工具桥接与生命周期
+├── remote/                # RemoteAgent、RemoteSession 与 HTTP/RPC transport
+├── session/               # Session facade、State、Turn、Queue、Messages 与 Composer
+├── types/                 # agent / executor / session / plugin 等共享协议类型
+└── utils/                 # 日志、存储、资源和通用辅助能力
 ```
 
 ## 顶层目录职责
@@ -85,6 +78,7 @@ src/
   - `SessionMessages.ts` 是 canonical Message 唯一事实源
   - `DefaultSessionComposer.ts` 负责 system/history/tools 与压缩计划定制
   - `messages/` 放 JSONL Store、Assistant writer、Message codec 与 compaction
+  - 完整设计见 [`docs/session-runtime-architecture.md`](../../docs/session-runtime-architecture.md)
 
 - `src/executor/`
   - 内部执行内核
@@ -92,10 +86,8 @@ src/
   - 不持有 History Store，不负责 Message 或 metadata 持久化
 
 - `src/plugin/`
-  - 插件框架与内建插件
-  - `core/` 负责注册、启用态、hook 调度、本地 action
-  - `builtins/` 放 `auth`、`chat`、`contact`、`memory`、`shell`、`skill`、`task`、`web`、`sound`、`workboard` 等内建插件
-  - `types/` 放插件公共协议类型
+  - Agent 侧 Plugin registry、执行视图、生命周期与工具桥接
+  - 具体内建 Plugin 实现位于 `@downcity/plugins`
 
 - `src/remote/transports/` 放 HTTP、RPC transport 及其内部客户端；RPC Server 与 HTTP gateway 由上游宿主管理
 - Agent 与 Session 都持有宿主传入的 `AgentModel` 实例；`AgentModel` 可以是 AI SDK `LanguageModel` 或 City 返回的 `CityModel`
@@ -116,7 +108,7 @@ src/
 `@downcity/agent` 的核心是一条单 Agent 执行链：
 
 ```text
-入口协议 -> Agent facade -> Session / Plugin -> Executor -> Runtime 子系统 -> History / Reply
+入口协议 -> Agent facade -> SessionTurn -> SessionComposer -> Executor -> SessionMessages
 ```
 
 其中：
@@ -126,5 +118,5 @@ src/
 - `Agent` facade 是实例级装配中心，也是 env、instruction、model、tools、plugins 与 sessions 的唯一状态所有者
 - `AgentContext` 只向 Plugin 与宿主投影受限运行时能力，不保存完整项目 config 或第二份 Agent 状态
 - `session / executor / plugin` 是三大核心分层
-- `runtime` 是 control / sandbox / host 这类实现细节的统一容器
+- `SessionMessages` 是 Message 唯一事实源，Executor 不持有 Store
 - `types / utils` 提供横向公共支撑

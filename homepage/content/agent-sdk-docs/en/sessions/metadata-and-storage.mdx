@@ -54,29 +54,45 @@ It does not scan all old Segments. Old Segments serve historical UI, Fork, and a
 sequenceDiagram
     participant App
     participant Session
-    participant Recorder
+    participant Turn as SessionTurn
+    participant Composer as SessionComposer
+    participant Messages as SessionMessages
+    participant Store as Message Store
     participant Active as active.jsonl
     participant Segment as segments/<start>-<end>.jsonl
     participant Model
 
     App->>Session: prompt({ query })
-    Session->>Recorder: create User Message
-    Recorder->>Active: append complete User snapshot
-    Session->>Model: latest Summary + Active context
-    Model-->>Session: text / tool / file chunks
-    Session->>Recorder: update Assistant draft and Parts
-    Recorder->>Active: append final Assistant snapshot
+    Session->>Turn: Queue and Turn orchestration
+    Turn->>Messages: create User Message
+    Messages->>Store: persist complete User snapshot
+    Store->>Active: append Message
+    Session->>Composer: read-only Summary + Active snapshot
+    Composer-->>Session: system + messages + tools
+    Session->>Model: execute current Step
+    Model-->>Turn: text / tool / file chunks
+    Turn->>Messages: update Assistant draft and Parts
+    Messages->>Store: atomically replace assistant_message.json
+    Turn->>Messages: complete Assistant Message
+    Messages->>Store: persist final Assistant snapshot
+    Store->>Active: append Message
     Session->>Session: Provider usage reaches 95% of context_window
     Session->>Session: deep compact Parts/Tool transaction before next step
-    Recorder->>Model: old Summary + chunked Active context
-    Model-->>Recorder: new cumulative Summary
-    Recorder->>Segment: atomically create Messages + Summary footer
-    Recorder->>Active: atomically retain only Active tail
+    Session->>Composer: request read-only compaction plan
+    Composer->>Model: old Summary + chunked Active context
+    Model-->>Composer: new cumulative Summary
+    Composer-->>Session: SessionCompactionPlan
+    Session->>Messages: commit compaction plan
+    Messages->>Store: commit Active prefix and Summary
+    Store->>Segment: atomically create Messages + Summary footer
+    Store->>Active: atomically retain only Active tail
     App->>Session: messages()
     Session-->>App: every Active Message
     App->>Session: messages({ before_sequence })
     Session-->>App: Messages from previous whole Segment
 ```
+
+The Composer only reads snapshots and returns model input or a compaction plan. `SessionMessages` owns the actual writes for Messages, Assistant drafts, and Segments.
 
 ## `assistant_message.json`
 

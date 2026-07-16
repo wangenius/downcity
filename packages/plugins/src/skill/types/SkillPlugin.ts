@@ -15,11 +15,11 @@ import type { SkillRootSource } from "@/skill/types/SkillRoot.js";
  */
 export const SKILL_PLUGIN_ACTIONS = {
   /**
-   * 查找 skill。
+   * 返回查找 skill 的 Shell 操作提示。
    */
   find: "find",
   /**
-   * 安装 skill。
+   * 返回扫描感知的安装提示。
    */
   install: "install",
   /**
@@ -33,35 +33,23 @@ export const SKILL_PLUGIN_ACTIONS = {
 } as const;
 
 /**
- * skill 查找输入。
+ * skill 查找提示 action 输入。
  */
 export type SkillPluginFindPayload = {
   /**
-   * 用户输入的 skill 查询词。
+   * 需要查找的 skill 关键词。
    */
   query: string;
 };
 
 /**
- * skill 安装输入。
+ * skill 安装提示 action 输入。
  */
 export type SkillPluginInstallPayload = {
   /**
-   * skill 安装 spec。
+   * `skills` CLI 接受的安装来源或 skill spec。
    */
   spec: string;
-  /**
-   * 是否全局安装。
-   */
-  global?: boolean;
-  /**
-   * 是否跳过确认。
-   */
-  yes?: boolean;
-  /**
-   * 安装目标 agent 名称。
-   */
-  agent?: string;
 };
 
 /**

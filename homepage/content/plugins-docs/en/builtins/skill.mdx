@@ -1,99 +1,15 @@
 ---
 title: skill Plugin
-description: A detailed guide to the skill built-in plugin, how it handles skill discovery, installation, lookup, and system injection, and why the best workflow is find, install, then lookup
+description: How the built-in skill plugin discovers, verifies, and loads local skills, and how scan roots guide search and installation
 ---
 
 # skill Plugin
 
-`skill` is the built-in plugin that most clearly shows how a plugin is used by real users.
+`skill` is the Agent's local skill catalog. It discovers visible skills, reads `SKILL.md`, and injects the available skills and scan roots into the system prompt.
 
-It centralizes skill-related capability into one plugin:
+`find` and `install` are instruction-only actions. They use the input and active `SkillPlugin` scan configuration to return Shell guidance, but they never execute commands, access the network, or change files. The Agent follows the returned prompt with the `skills` CLI.
 
-- find a skill
-- install a skill
-- list locally learned skills
-- read skill content
-- inject the current skill overview into the system prompt
-
-## What it does
-
-You can think of `skill` as the agent's skill catalog layer.
-
-It is not the skill itself. It manages what the agent has already learned and what the next step should be before a skill is actually used.
-
-Its main value is not to replace skills, but to create one consistent entry point around them.
-
-## Which plugin capabilities it uses
-
-`skill` uses:
-
-- `actions`
-- `system`
-
-That means it combines:
-
-- explicit action invocation
-- runtime prompt augmentation
-
-## Why it is a great first reference
-
-Its runtime shape is straightforward:
-
-- you explicitly call an action
-- the plugin returns structured data
-- the system prompt automatically knows about learned skills
-
-There is no provider-installation mental model and no complicated hook chain to understand first.
-
-## Best workflow order
-
-For a skill the agent has not learned yet, the recommended order is:
-
-1. `find`
-2. `install`
-3. `lookup`
-
-Why not stop after `install`?
-
-Because `install` only means the skill now exists locally. Before using it correctly, the agent should still read the skill's `SKILL.md`.
-
-That is what `lookup` prepares: it reads the skill content and gets it ready for injection as a user message.
-
-## How users use it
-
-Use the `downcity skill` shortcut for the common workflow:
-
-```bash
-downcity skill list
-downcity skill find "web access"
-downcity skill install web-access
-downcity skill lookup web-access
-```
-
-`list` tells you what is already available locally. `find` is useful only when the skill is missing from `list`. After `install`, run `lookup` before expecting the agent to follow that skill's instructions.
-
-## Typical scenarios
-
-### Scenario 1: the user says “find me a skill for web access”
-
-Start with `find` so you can determine:
-
-- whether the skill already exists locally
-- whether installation is needed next
-
-### Scenario 2: the user says “install this new skill”
-
-Use `install`.
-
-After installation, do not assume the agent already knows how to use it. The next step should still be `lookup`.
-
-### Scenario 3: the skill already exists locally, but the agent has not read its instructions yet
-
-In that case, `lookup` matters more than `find`.
-
-The agent needs the `SKILL.md` content in the current context before it can follow the skill's rules correctly.
-
-## How to register it in the SDK
+## Registration
 
 ```ts
 import { Agent } from "@downcity/agent";
@@ -102,98 +18,51 @@ import { SkillPlugin } from "@downcity/plugins";
 const agent = new Agent({
   id: "skill-helper",
   path: "/path/to/project",
-  tools: {},
   plugins: [new SkillPlugin()],
 });
 ```
 
-By default, `SkillPlugin` only scans the current project's `.agents/skills`.
+By default, the plugin scans only `.agents/skills` in the current project.
 
-To opt into more sources, pass constructor options:
+Constructor options can extend the scan scope:
 
 ```ts
-const agent = new Agent({
-  id: "skill-helper",
-  path: "/path/to/project",
-  tools: {},
-  plugins: [
-    new SkillPlugin({
-      use: ["project", "home"],
-      paths: [".agents/shared-skills"],
-      ignore: ["legacy-skill"],
-    }),
-  ],
+const skill_plugin = new SkillPlugin({
+  use: ["project", "home"],
+  paths: [".agents/shared-skills"],
+  ignore: ["legacy-skill"],
 });
 ```
 
-Options:
+- `use: ["project"]` scans `<project>/.agents/skills`
+- `use: ["home"]` scans `~/.agents/skills`
+- `paths` adds custom scan directories; relative paths resolve from the project root
+- `ignore` excludes skills by ID, name, regular expression, or predicate
 
-- `use` controls built-in scan sources: `project` and `home`
-- `paths` adds extra scan directories, with relative paths resolved from the project root
-- `ignore` hides selected skills by name, regex, or predicate function
+For duplicate IDs, precedence is `project > paths > home`.
 
-## Main actions
+## Actions
 
-| Action | What it does | Recommended use |
+The Skill Plugin exposes four actions:
+
+| Action | Payload | Purpose |
 | --- | --- | --- |
-| `find` | search for an unlearned skill and suggest the next step | decide whether install is needed |
-| `install` | install a skill | follow immediately with `lookup` |
-| `list` | list locally learned skills | inspect the current capability catalog |
-| `lookup` | read the skill's `SKILL.md` | required before real skill use |
+| `find` | `{ query: string }` | Return Shell guidance for finding a skill without searching |
+| `install` | `{ spec: string }` | Return scan-aware installation guidance without installing |
+| `list` | `{}` | List skills discoverable from the configured scan roots |
+| `lookup` | `{ name: string }` | Find a skill and read its `SKILL.md` |
 
-## Scenario-driven usage examples
-
-### Find a skill first
-
-```ts
-const result = await agent.plugins.runAction({
-  plugin: "skill",
-  action: "find",
-  payload: {
-    query: "web-access",
-  },
-});
-```
-
-The main value is not “automatically do everything.”
-
-The real value is that it clarifies the current state:
-
-- is the skill already local
-- if not, should the next step be install
-
-### Install a skill
-
-```ts
-const result = await agent.plugins.runAction({
-  plugin: "skill",
-  action: "install",
-  payload: {
-    spec: "web-access",
-    global: true,
-    yes: true,
-  },
-});
-```
-
-On success, the plugin still points you to `lookup` as the next step.
-
-### List learned skills
+List skills:
 
 ```ts
 const result = await agent.plugins.runAction({
   plugin: "skill",
   action: "list",
+  payload: {},
 });
 ```
 
-This is especially useful for:
-
-- capability dashboards
-- debugging what the current environment already learned
-- checking the local catalog before task execution
-
-### Read skill content
+Read a skill:
 
 ```ts
 const result = await agent.plugins.runAction({
@@ -205,79 +74,115 @@ const result = await agent.plugins.runAction({
 });
 ```
 
-`lookup` is important because it:
+The model uses the same protocol during a Session:
 
-- finds skill metadata
-- reads `SKILL.md`
-- prepares the skill content as a message that can be injected next
+```ts
+plugin_call({
+  plugin: "skill",
+  action: "lookup",
+  payload: {
+    name: "web-access",
+  },
+});
+```
 
-That makes it the most important step before actually using a skill.
+## Search And Installation
 
-## What `system` does here
+Call `find` to get search instructions:
 
-`skill` is not only an action collection.
+```ts
+const find_instructions = await agent.plugins.runAction({
+  plugin: "skill",
+  action: "find",
+  payload: {
+    query: "web access",
+  },
+});
+```
 
-It also injects the current skill overview into the system prompt so the agent knows:
+Call `install` to get installation instructions:
 
-- which skills exist in the environment
-- which ones are already learned
-- how skills should be treated as external capability boundaries
+```ts
+const install_instructions = await agent.plugins.runAction({
+  plugin: "skill",
+  action: "install",
+  payload: {
+    spec: "owner/repository@web-access",
+  },
+});
+```
 
-This reduces the common problem where a skill is installed locally but the agent does not know it exists in the current runtime context.
+Both actions return instructions in `data.prompt` only. The system prompt lists the resolved scan roots and directs the Agent to these actions; the `install` prompt then derives the following from the active `use / paths` options:
 
-## Its boundary relative to the skill itself
+- resolved scan directories and scan order
+- the installation method for each scan-root type
+- the required post-installation verification
 
-The easiest confusion is this:
+The `find` prompt directs the Agent to use its available web or browser capability to search these Skill catalogs:
 
-- the `skill` plugin is not the skill
-- the `skill` plugin manages skill discovery, installation, lookup, and visibility
+- [skills.sh](https://www.skills.sh/)
+- [LobeHub Skill Community](https://app.lobehub.com/community/skill)
 
-In other words:
+It also provides the `npx skills find` command so the Agent can compare catalog and CLI results before choosing an installation spec.
 
-- the plugin is the catalog system
-- the skill is the capability unit inside that catalog
+Search for a missing skill through the shell:
 
-## Its natural boundary
+```bash
+npx -y skills find "<query>"
+```
 
-`skill` does not need a long-lived background instance.
+Install into a project scan root:
 
-It is closer to:
+```bash
+npx -y skills add "<spec>" -y
+```
 
-- a catalog query layer
-- an installation entry layer
-- a content injection layer
+Use global installation only when the configuration includes `use: ["home"]`:
 
-If your main job is to discover and bring external capability instructions into the agent context, a plugin like this is usually the right first design.
+```bash
+npx -y skills add "<spec>" -g -y
+```
 
-## Common boundaries and mistakes
+Custom `paths` do not have a universal `skills` CLI destination flag. After installing or copying, the final layout must be:
 
-### `install` does not mean “the agent can already use it correctly”
+```text
+<configured-root>/<skill-id>/SKILL.md
+```
 
-Installation is only step one.
+## Installation Verification Guidance
 
-If the agent has not read the skill content, it still may not know how to use the skill correctly.
+The `install` action does not execute or verify installation in code. Its returned prompt tells the Agent to call the following after the Shell command completes:
 
-### `lookup` is essential
+```ts
+plugin_call({
+  plugin: "skill",
+  action: "list",
+  payload: {},
+});
+```
 
-In many real scenarios, what makes a skill “actually learned” is not only that files exist locally, but that the current execution context has read the instructions.
+If the new skill appears in the `list` result, the prompt continues by directing the Agent to call `lookup`. This workflow is prompt-driven rather than an action-level state machine.
 
-### This plugin is mostly about workflow orchestration
+The complete workflow is:
 
-Its strength is not long-lived runtime state.
+1. Call `list` to check whether the skill already exists locally.
+2. If missing, call `find`, then follow its returned prompt to search through the Shell.
+3. After choosing a spec, call `install`, then follow its returned prompt to select a scan root and install.
+4. Call `list` again to verify discovery.
+5. Call `lookup` to read `SKILL.md`.
 
-Its strength is turning “find, install, read, use” into a clean workflow.
+## System Prompt
 
-## When to use it as a reference
+Whenever a Session system prompt is built, the Skill Plugin rescans the configured roots and injects:
 
-Use `skill` as your main reference for:
+- names and descriptions of available skills
+- scan roots and their resolved filesystem paths
+- the workflow for calling `find/install` when a skill is missing
 
-- explicit action-driven plugins
-- local catalog discovery
-- install-then-read workflows
-- exposing learned capability through `system`
+Concrete commands and follow-up `list` guidance are returned by the actions. The `install` action uses the same scan configuration instead of hard-coding project or global installation.
 
-## Related docs
+## Related Docs
 
 - [Built-in Plugin Overview](/en/plugins-docs/builtins/overview)
-- [Plugin actions](/en/agent-sdk-docs/plugins/plugin-actions)
-- [Plugin system](/en/agent-sdk-docs/plugins/plugin-system)
+- [Plugin Actions](/en/agent-sdk-docs/plugins/plugin-actions)
+- [Plugin System](/en/agent-sdk-docs/plugins/plugin-system)

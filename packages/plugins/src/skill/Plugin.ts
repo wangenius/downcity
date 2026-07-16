@@ -3,7 +3,8 @@
  *
  * 关键点（中文）
  * - skill 不再作为 service 存在，而是作为显式 action + system 提供者接入 plugin 体系。
- * - `find/install/list/lookup` 全部通过 plugin actions 暴露。
+ * - `find/install` action 只返回 Shell 操作提示，不执行命令或修改文件。
+ * - `list/lookup` action 负责读取当前可发现的本地 skill。
  * - skills overview 文本通过 `plugin.system` 注入，不再依赖 plugin.system。
  */
 
@@ -21,14 +22,15 @@ import type {
 } from "@/skill/types/SkillPlugin.js";
 import { SKILL_PLUGIN_ACTIONS } from "@/skill/types/SkillPlugin.js";
 import { resolveSkillPluginOptions } from "@/skill/Config.js";
-import { skillFindCommand, skillInstallCommand } from "@/skill/Command.js";
 import {
-  findLearnedSkillExact,
   listSkills,
   lookupSkill,
-  searchLearnedSkills,
 } from "@/skill/Action.js";
 import { buildSkillsSystemText } from "@/skill/runtime/SystemProvider.js";
+import {
+  render_skill_find_prompt,
+  render_skill_install_prompt,
+} from "@/skill/runtime/Prompt.js";
 import { SKILL_PLUGIN_PROMPT } from "@/skill/SkillPromptAssets.js";
 
 /**
@@ -42,28 +44,6 @@ function readJsonObject(value: JsonValue): JsonObject {
 }
 
 /**
- * 读取字符串选项。
- */
-function getStringOpt(
-  opts: Record<string, JsonValue>,
-  key: string,
-): string | undefined {
-  const value = opts[key];
-  return typeof value === "string" ? value.trim() : undefined;
-}
-
-/**
- * 读取布尔选项。
- */
-function getBooleanOpt(
-  opts: Record<string, JsonValue>,
-  key: string,
-): boolean | undefined {
-  const value = opts[key];
-  return typeof value === "boolean" ? value : undefined;
-}
-
-/**
  * XML 属性转义。
  */
 function sanitizeXmlAttr(value: string): string {
@@ -74,29 +54,12 @@ function sanitizeXmlAttr(value: string): string {
     .replace(/>/g, "&gt;");
 }
 
-/**
- * 从 install spec 推断候选 skill 标识。
- */
-function inferSkillQueryFromSpec(spec: string): string {
-  const raw = String(spec || "").trim();
-  if (!raw) return "";
-  const normalized = raw.split(/[?#]/, 1)[0]?.trim() || raw;
-
-  const atIndex = normalized.lastIndexOf("@");
-  if (atIndex > 0 && atIndex < normalized.length - 1) {
-    return normalized.slice(atIndex + 1).trim();
-  }
-
-  if (!normalized.includes("/")) return normalized;
-  return "";
-}
-
 function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
   return {
     name: "skill",
     title: "Skill Catalog And Loader",
     description:
-      "Finds, installs, lists, and reads local skills, and injects the current skill overview into system prompts so the agent knows what capabilities are available.",
+      "Lists and reads local skills, and injects scan-aware discovery and installation guidance into system prompts.",
     async system(context, run_context) {
       const dynamicText = String(
         await buildSkillsSystemText({
@@ -108,27 +71,32 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
     },
     actions: {
       [SKILL_PLUGIN_ACTIONS.find]: createAction({
-        description: "Find unlearned skills that are not in `list`; install only if missing.",
+        description:
+          "Return shell instructions for finding a skill. This action does not execute the search.",
         input_schema: {
           zod: z.object({
-            query: z.string(),
+            query: z.string().trim().min(1),
           }),
           json_schema: {
             type: "object",
             required: ["query"],
             properties: {
-              query: { type: "string", description: "Skill search query." },
+              query: {
+                type: "string",
+                description: "Skill search query.",
+              },
             },
           },
         },
         examples: [
           {
-            title: "Find skill",
-            payload: { query: "web-search" },
+            title: "Get skill search instructions",
+            payload: { query: "web access" },
           },
         ],
         command: {
-          description: "Find unlearned skills that are not in `list`; install only if missing.",
+          description:
+            "Return shell instructions for finding a skill without executing the search.",
           configure(command) {
             command.argument("<query>");
           },
@@ -138,144 +106,69 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
             return { query };
           },
         },
-        async execute(params): Promise<PluginActionResult<JsonObject>> {
+        execute(params): PluginActionResult<JsonObject> {
           const payload = params.input as SkillPluginFindPayload;
-          const rootPath = params.context.rootPath;
-          const exactLearned = findLearnedSkillExact(
-            rootPath,
-            payload.query,
-            options,
-          );
-          if (exactLearned) {
-            return {
-              success: true,
-              data: {
-                query: payload.query,
-                message: "This skill is already in list; installation is not needed. Run lookup before using it.",
-                workflow: ["list", "lookup"],
-                nextAction: "lookup",
-                learnedSkill: exactLearned,
-                learnedHints: [],
-              } as JsonObject,
-            };
-          }
-
-          const learnedHints = searchLearnedSkills(
-            rootPath,
-            payload.query,
-            5,
-            options,
-          );
-          await skillFindCommand(payload.query);
           return {
             success: true,
+            message: "Skill search instructions ready; no search was executed.",
             data: {
+              kind: "instructions",
               query: payload.query,
-              message: "Missing-skill search completed. If the target is not in list, install it and then run lookup.",
-              workflow: ["find", "install", "lookup"],
-              nextAction: "install",
-              learnedSkill: null,
-              learnedHints,
-            } as JsonObject,
+              prompt: render_skill_find_prompt(payload.query),
+            },
           };
         },
       }),
       [SKILL_PLUGIN_ACTIONS.install]: createAction({
-        description: "Install a skill that is not in `list`; run lookup after installation.",
+        description:
+          "Return scan-aware shell instructions for installing a skill. This action does not install anything.",
         input_schema: {
           zod: z.object({
-            spec: z.string(),
-            global: z.boolean().optional(),
-            yes: z.boolean().optional(),
-            agent: z.string().optional(),
+            spec: z.string().trim().min(1),
           }),
           json_schema: {
             type: "object",
             required: ["spec"],
             properties: {
-              spec: { type: "string", description: "Skill installation spec." },
-              global: { type: "boolean", description: "Whether to install globally." },
-              yes: { type: "boolean", description: "Skip confirmation." },
-              agent: { type: "string", description: "Target agent." },
+              spec: {
+                type: "string",
+                description: "Skill installation source or spec.",
+              },
             },
           },
         },
         examples: [
           {
-            title: "Install skill",
-            payload: { spec: "web-search", global: true, yes: true },
+            title: "Get skill installation instructions",
+            payload: { spec: "owner/repository@skill-name" },
           },
         ],
         command: {
-          description: "Install a skill that is not in `list`; run lookup after installation.",
+          description:
+            "Return scan-aware shell instructions without installing a skill.",
           configure(command) {
-            command
-              .argument("<spec>")
-              .option("-g, --global", "全局安装（默认 true）", true)
-              .option("-y, --yes", "跳过确认（默认 true）", true)
-              .option("--agent <agent>", "指定 agent");
+            command.argument("<spec>");
           },
-          mapInput({ args, opts }): SkillPluginInstallPayload {
+          mapInput({ args }): SkillPluginInstallPayload {
             const spec = String(args[0] || "").trim();
             if (!spec) throw new Error("Missing spec");
-            return {
-              spec,
-              global: getBooleanOpt(opts, "global"),
-              yes: getBooleanOpt(opts, "yes"),
-              agent: getStringOpt(opts, "agent"),
-            };
+            return { spec };
           },
         },
-        async execute(params): Promise<PluginActionResult<JsonObject>> {
+        execute(params): PluginActionResult<JsonObject> {
           const payload = params.input as SkillPluginInstallPayload;
-          const rootPath = params.context.rootPath;
-          const queryFromSpec = inferSkillQueryFromSpec(payload.spec);
-          const beforeList = listSkills(rootPath, options).skills;
-          const beforeIds = new Set(beforeList.map((item) => item.id));
-
-          const learnedBefore =
-            findLearnedSkillExact(rootPath, queryFromSpec, options) ||
-            findLearnedSkillExact(rootPath, payload.spec, options);
-          if (learnedBefore) {
-            return {
-              success: true,
-              data: {
-                spec: payload.spec,
-                skipped: true,
-                message: "The skill is already in list; installation is not needed. Run lookup before using it.",
-                workflow: ["list", "lookup"],
-                nextAction: "lookup",
-                queryFromSpec,
-                addedSkills: [],
-                learnedSkill: learnedBefore,
-              } as JsonObject,
-            };
-          }
-
-          await skillInstallCommand(payload.spec, {
-            global: payload.global,
-            yes: payload.yes,
-            agent: payload.agent,
-          });
-          const afterList = listSkills(rootPath, options).skills;
-          const addedSkills = afterList.filter((item) => !beforeIds.has(item.id));
-          const learnedAfter =
-            findLearnedSkillExact(rootPath, queryFromSpec, options) ||
-            findLearnedSkillExact(rootPath, payload.spec, options) ||
-            (addedSkills.length === 1 ? addedSkills[0] : undefined);
-
           return {
             success: true,
+            message: "Skill installation instructions ready; no files were changed.",
             data: {
+              kind: "instructions",
               spec: payload.spec,
-              message: "Skill learning completed. Before using the skill, run lookup to read its SKILL.md content.",
-              workflow: ["find", "install", "lookup"],
-              nextAction: "lookup",
-              skipped: false,
-              queryFromSpec,
-              addedSkills,
-              learnedSkill: learnedAfter || null,
-            } as JsonObject,
+              prompt: render_skill_install_prompt(
+                params.context.rootPath,
+                options,
+                payload.spec,
+              ),
+            },
           };
         },
       }),
@@ -405,7 +298,7 @@ function createSkillPluginDefinition(options: SkillPluginOptions): Plugin {
 }
 
 /**
- * SkillPlugin：技能发现、安装、读取与 system 注入。
+ * SkillPlugin：技能发现、读取与扫描感知的 system 注入。
  */
 export class SkillPlugin extends BasePlugin {
   readonly name = "skill";

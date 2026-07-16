@@ -1,99 +1,15 @@
 ---
 title: skill Plugin
-description: 详细说明 skill 内建 plugin 如何负责技能发现、安装、读取与 system 注入，以及为什么推荐按 find、install、lookup 的顺序使用
+description: 说明 skill 内建 plugin 如何发现、验证和读取本地 Skill，以及如何根据扫描区域完成查找与安装
 ---
 
 # skill Plugin
 
-`skill` 是当前最适合拿来理解“plugin 到底怎么被用户使用”的内建 plugin。
+`skill` 是 Agent 的本地技能目录。它负责发现当前可见的 Skill、读取 `SKILL.md`，并把可用 Skill 与扫描区域注入 system prompt。
 
-它把 skill 相关能力统一收敛到了一个插件里：
+`find` 和 `install` 是纯提示 action：它们根据输入和 `SkillPlugin` 的实际扫描配置返回 Shell 操作提示，但不会执行命令、访问网络或修改文件。Agent 再按提示使用 `skills` CLI。
 
-- 查找 skill
-- 安装 skill
-- 列出本地已学会 skill
-- 读取 skill 内容
-- 把 skills 概览注入到 system prompt
-
-## 它到底做什么
-
-你可以把 `skill` 理解成“agent 的技能目录层”。
-
-它不是 skill 本身，而是负责管理“agent 已经学会了什么”和“下一步如何真正使用 skill”。
-
-它的核心价值不是替代 skill，而是给 skill 建立一个统一入口。
-
-## 它使用了哪些 plugin 能力
-
-`skill` 用到了：
-
-- `actions`
-- `system`
-
-这意味着它同时承担：
-
-- 显式动作调用
-- 运行时提示词增强
-
-## 为什么它很适合作为第一篇参考
-
-因为 `skill` 的运行方式足够直接：
-
-- 你主动调用 action
-- plugin 返回结构化结果
-- system prompt 会自动知道当前已学会的 skills
-
-整个链路没有额外的 provider 安装心智，也没有复杂的 hook 链路。
-
-## 最推荐的使用顺序
-
-对于一个还没学会的 skill，最推荐的顺序是：
-
-1. `find`
-2. `install`
-3. `lookup`
-
-为什么不是直接 `install` 后就结束？
-
-因为 `install` 只代表 skill 已经装到了本地，真正使用前，agent 仍然应该先读取该 skill 的 `SKILL.md` 内容。
-
-`lookup` 的作用就是把 skill 内容读出来，并准备成后续可注入的 user message。
-
-## 用户怎么使用
-
-常见工作流直接走 `downcity skill` 快捷命令：
-
-```bash
-downcity skill list
-downcity skill find "web access"
-downcity skill install web-access
-downcity skill lookup web-access
-```
-
-`list` 用来确认本地已经有哪些 skill。只有当目标 skill 不在 `list` 里时，才需要 `find`。`install` 之后还要执行 `lookup`，agent 才能在当前上下文里按这个 skill 的说明使用它。
-
-## 典型场景
-
-### 场景一：用户说“帮我找一个能联网抓网页的 skill”
-
-这时你通常先调用 `find`，判断：
-
-- 本地是否已经学过
-- 是否需要进入安装流程
-
-### 场景二：用户说“安装这个新 skill”
-
-这时走 `install`。
-
-安装完成后，不建议立刻假设 agent 已经掌握了全部用法，下一步仍应先 `lookup`。
-
-### 场景三：某个 skill 已经在本地，但 agent 还没读过说明
-
-这时最关键的动作不是 `find`，而是 `lookup`。
-
-因为 agent 需要把 `SKILL.md` 读进当前对话上下文，才能按 skill 的规则工作。
-
-## 在 SDK 里怎么挂载
+## 注册
 
 ```ts
 import { Agent } from "@downcity/agent";
@@ -102,96 +18,51 @@ import { SkillPlugin } from "@downcity/plugins";
 const agent = new Agent({
   id: "skill-helper",
   path: "/path/to/project",
-  tools: {},
   plugins: [new SkillPlugin()],
 });
 ```
 
-默认情况下，`SkillPlugin` 只扫描当前项目的 `.agents/skills`。
+默认只扫描当前项目的 `.agents/skills`。
 
-如果你希望显式使用更多来源，可以在构造函数里传入配置：
+可以通过构造参数扩展扫描范围：
 
 ```ts
-const agent = new Agent({
-  id: "skill-helper",
-  path: "/path/to/project",
-  tools: {},
-  plugins: [
-    new SkillPlugin({
-      use: ["project", "home"],
-      paths: [".agents/shared-skills"],
-      ignore: ["legacy-skill"],
-    }),
-  ],
+const skill_plugin = new SkillPlugin({
+  use: ["project", "home"],
+  paths: [".agents/shared-skills"],
+  ignore: ["legacy-skill"],
 });
 ```
 
-配置字段含义：
+- `use: ["project"]`：扫描 `<project>/.agents/skills`
+- `use: ["home"]`：扫描 `~/.agents/skills`
+- `paths`：添加自定义扫描目录；相对路径基于项目根目录解析
+- `ignore`：按 Skill ID、名称、正则或判断函数排除 Skill
 
-- `use` 控制内置扫描来源，支持 `project` 与 `home`
-- `paths` 添加额外扫描目录，相对路径基于当前项目解析
-- `ignore` 忽略指定 skill，支持名称、正则或函数
+发生同 ID 冲突时，优先级为 `project > paths > home`。
 
-## 主要动作
+## Actions
 
-| Action | 作用 | 推荐用法 |
+Skill Plugin 提供四个 action：
+
+| Action | Payload | 作用 |
 | --- | --- | --- |
-| `find` | 查找未学会 skill，并给出下一步 | 先判断要不要 install |
-| `install` | 安装 skill | 安装完后立刻接 `lookup` |
-| `list` | 列出本地已学会 skill | 想先看当前能力目录 |
-| `lookup` | 读取 skill 的 `SKILL.md` | 真正使用 skill 前必做 |
+| `find` | `{ query: string }` | 返回查找 Skill 的 Shell 提示，不执行搜索 |
+| `install` | `{ spec: string }` | 返回扫描感知的安装提示，不执行安装 |
+| `list` | `{}` | 列出当前扫描范围内可发现的 Skill |
+| `lookup` | `{ name: string }` | 查找 Skill 并读取它的 `SKILL.md` |
 
-## 场景化用法示例
-
-### 先找 skill
-
-```ts
-const result = await agent.plugins.runAction({
-  plugin: "skill",
-  action: "find",
-  payload: {
-    query: "web-access",
-  },
-});
-```
-
-这个动作的重要意义不是“帮你自动完成一切”，而是给出当前状态判断：
-
-- skill 是不是已经在本地
-- 如果不在，下一步是不是该 install
-
-### 安装 skill
-
-```ts
-const result = await agent.plugins.runAction({
-  plugin: "skill",
-  action: "install",
-  payload: {
-    spec: "web-access",
-    global: true,
-    yes: true,
-  },
-});
-```
-
-安装成功后，返回结果会强调下一步应该 `lookup`。
-
-### 列出已学会 skill
+列出 Skill：
 
 ```ts
 const result = await agent.plugins.runAction({
   plugin: "skill",
   action: "list",
+  payload: {},
 });
 ```
 
-这个动作最适合：
-
-- 做能力面板
-- 调试当前环境到底学过什么
-- 在真正执行任务前先看本地技能目录
-
-### 读取 skill 内容
+读取 Skill：
 
 ```ts
 const result = await agent.plugins.runAction({
@@ -203,74 +74,112 @@ const result = await agent.plugins.runAction({
 });
 ```
 
-`lookup` 的关键价值是：
+模型在 Session 中使用相同协议：
 
-- 找到 skill 元信息
-- 读取 `SKILL.md`
-- 生成适合后续注入的 skill 内容消息
+```ts
+plugin_call({
+  plugin: "skill",
+  action: "lookup",
+  payload: {
+    name: "web-access",
+  },
+});
+```
 
-所以它是“真正开始使用 skill”之前最关键的一步。
+## 查找和安装
 
-## `system` 在这里起什么作用
+调用 `find` 获取查找提示：
 
-`skill` 不只是一组 action。
+```ts
+const find_instructions = await agent.plugins.runAction({
+  plugin: "skill",
+  action: "find",
+  payload: {
+    query: "web access",
+  },
+});
+```
 
-它还会把当前 skill 概览注入 system prompt，让 agent 在运行时知道：
+调用 `install` 获取安装提示：
 
-- 当前环境有哪些 skills
-- 哪些 skill 已经学会
-- 应该如何把 skill 用作外部能力边界
+```ts
+const install_instructions = await agent.plugins.runAction({
+  plugin: "skill",
+  action: "install",
+  payload: {
+    spec: "owner/repository@web-access",
+  },
+});
+```
 
-这能显著降低“skill 已安装，但 agent 当前上下文不知道它存在”的问题。
+两个 action 都只在返回结果的 `data.prompt` 中提供操作说明。system prompt 会列出实际扫描目录，并引导 Agent 调用这两个 action；`install` 提示再根据当前实例的 `use / paths` 动态列出：
 
-## 它和 skill 本身的边界
+- 实际扫描目录和扫描顺序
+- 每类扫描目录对应的安装方式
+- 安装后的验证要求
 
-最容易混淆的一点是：
+`find` 提示会引导 Agent 使用当前可用的 Web 或浏览器能力搜索以下 Skill 目录：
 
-- `skill` plugin 不是 skill
-- `skill` plugin 管的是 skill 的发现、安装、读取与可见性
+- [skills.sh](https://www.skills.sh/)
+- [LobeHub Skill 社区](https://app.lobehub.com/community/skill)
 
-换句话说：
+同时也会提供 `npx skills find` 命令，便于结合目录页面与 CLI 结果确定安装 spec。
 
-- plugin 是“技能目录系统”
-- 具体 skill 是“被目录管理的能力单元”
+查找缺失 Skill 使用 Shell：
 
-## 它的自然边界
+```bash
+npx -y skills find "<query>"
+```
 
-`skill` 不需要长期持有后台实例。
+安装到项目扫描区域：
 
-它更像一个：
+```bash
+npx -y skills add "<spec>" -y
+```
 
-- 目录查询层
-- 安装入口层
-- 内容注入层
+只有配置包含 `use: ["home"]` 时，才应选择全局安装：
 
-如果你要做的事情主要是“发现并引入外部能力说明”，那优先考虑这种 plugin 模式。
+```bash
+npx -y skills add "<spec>" -g -y
+```
 
-## 常见边界与误区
+自定义 `paths` 没有统一的 `skills` CLI 目标参数。安装或复制后，最终结构必须是：
 
-### `install` 不等于“现在就能正确使用”
+```text
+<configured-root>/<skill-id>/SKILL.md
+```
 
-安装完成只是第一步。
+## 安装验证提示
 
-如果 agent 没有读取 skill 内容，它仍然可能不会按正确方式使用这个 skill。
+`install` action 不会在代码层执行或验证安装。它返回的提示词会要求 Agent 在 Shell 命令完成后调用：
 
-### `lookup` 很重要
+```ts
+plugin_call({
+  plugin: "skill",
+  action: "list",
+  payload: {},
+});
+```
 
-很多场景里，真正决定 agent 是否“已经学会”某个 skill 的，不只是本地文件是否存在，而是当前执行上下文有没有把 skill 说明读进来。
+如果新 Skill 出现在 `list` 结果中，提示词会继续引导 Agent 调用 `lookup`。整个流程由提示词驱动，不是 action 内部的强制状态机。
 
-### 这个 plugin 更偏工作流编排
+完整流程是：
 
-它的强项不是复杂运行时状态，而是把“找、装、读、用”变成清晰的步骤。
+1. 调用 `list` 确认本地是否已经存在。
+2. 缺失时调用 `find`，再按返回提示通过 Shell 执行查找。
+3. 选定 spec 后调用 `install`，再按返回提示选择扫描区域并执行安装。
+4. 再次调用 `list` 验证是否可发现。
+5. 调用 `lookup` 读取 `SKILL.md`。
 
-## 什么时候优先参考它
+## System Prompt
 
-如果你要设计这些能力，优先参考 `skill`：
+每次构建 Session system prompt 时，Skill Plugin 会重新扫描配置的根目录，并注入：
 
-- 显式 action 驱动型 plugin
-- 本地目录发现
-- 安装后再读取内容
-- 通过 `system` 暴露当前已学会能力
+- 当前可用 Skill 的名称与描述
+- 当前扫描根及其解析后的真实路径
+- 缺失 Skill 应调用 `find/install` action 的工作流
+
+具体命令和安装后的 `list` 检查提示由 action 返回。`install` action 使用同一份扫描配置，不会把项目安装或全局安装写死。
 
 ## 相关文档
 

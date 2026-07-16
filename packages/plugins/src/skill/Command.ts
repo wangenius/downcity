@@ -1,15 +1,12 @@
 /**
- * `downcity skill` 命令 helper。
+ * Skill 安装命令 helper。
  *
  * 设计目标（中文）
- * - 尽量不自建 registry：直接复用社区的 `npx skills` 生态（find/install）。
- * - 同时提供本地视角的 `list`：按 SkillPlugin 默认构造参数列出当前项目 skills。
+ * - 不自建 registry，直接复用社区的 `npx skills` 安装生态。
+ * - 当前 helper 由需要准备 skill 依赖的其他 plugin 复用，不作为 SkillPlugin action 暴露。
  */
 
-import path from "node:path";
 import { execa } from "execa";
-import { discoverSkillsSync } from "@/skill/runtime/Discovery.js";
-import { getSkillSearchRoots } from "@/skill/runtime/Paths.js";
 
 async function runNpxSkills(args: string[], opts?: { yes?: boolean }): Promise<number> {
   const yes = opts?.yes !== false;
@@ -17,15 +14,6 @@ async function runNpxSkills(args: string[], opts?: { yes?: boolean }): Promise<n
     stdio: "inherit",
   });
   return result.exitCode ?? 0;
-}
-
-/**
- * 执行远程 skill 查找。
- */
-export async function skillFindCommand(query: string): Promise<void> {
-  const q = String(query || "").trim();
-  if (!q) throw new Error("Missing query");
-  await runNpxSkills(["find", q], { yes: true });
 }
 
 /**
@@ -67,22 +55,4 @@ export async function skillInstallCommand(
   if (globalInstall) args.push("-g");
 
   await runNpxSkills(args, { yes });
-}
-
-/**
- * 输出当前项目的本地 skill 列表。
- */
-export async function skillListCommand(cwd: string = "."): Promise<void> {
-  const projectRoot = path.resolve(String(cwd || "."));
-  const roots = getSkillSearchRoots(projectRoot);
-  const skills = discoverSkillsSync(projectRoot);
-
-  console.log("Skill roots:");
-  for (const root of roots) console.log(`- [${root.source}] ${root.display}`);
-
-  console.log(`\nFound: ${skills.length}`);
-  for (const skill of skills) {
-    const desc = skill.description ? ` — ${skill.description}` : "";
-    console.log(`- [${skill.source}] ${skill.id}: ${skill.name}${desc}`);
-  }
 }

@@ -18,4 +18,8 @@ plugin_call({
 });
 ```
 
-Available actions include `list`, `find`, `install`, and `lookup`.
+Available actions are `find`, `install`, `list`, and `lookup`.
+
+`find` and `install` are instruction-only actions. They return the Shell steps the agent should take, but never execute commands, access the network, install a skill, or change files themselves. The `install` instructions are generated from this SkillPlugin instance's configured scan roots.
+
+The returned installation prompt tells the agent to call `list` after running the Shell command. This is workflow guidance, not code-level enforcement. If the installed skill appears in `list`, call `lookup` before using it.

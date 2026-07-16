@@ -9,7 +9,7 @@
 
 import type { PluginRunContext } from "@downcity/agent";
 import { discoverSkillsSync } from "./Discovery.js";
-import { renderSkillsPromptSection } from "./Prompt.js";
+import { render_skills_prompt_section } from "./Prompt.js";
 import { setSessionAvailableSkills } from "./Store.js";
 import type { SkillPluginOptions } from "@/skill/types/SkillPlugin.js";
 
@@ -40,7 +40,7 @@ export async function buildSkillsSystemText(
     setSessionAvailableSkills(sessionId, discoveredSkills);
   }
 
-  return renderSkillsPromptSection(
+  return render_skills_prompt_section(
     runtime.rootPath,
     runtime.options,
     discoveredSkills,

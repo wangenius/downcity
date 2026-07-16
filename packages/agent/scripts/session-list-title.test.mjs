@@ -142,7 +142,7 @@ test("list_sessions returns persisted title from active session metadata", async
   }
 });
 
-test("list_sessions reflects canonical Recorder history changes", async () => {
+test("list_sessions reflects canonical SessionMessages changes", async () => {
   const { agent, collection, session } = await create_agent_with_titled_session({
     tmp_prefix: "downcity-agent-session-summary-repair-",
     agent_id: "summary_repair_agent",
@@ -166,7 +166,7 @@ test("list_sessions reflects canonical Recorder history changes", async () => {
     await session.append_assistant_message({
       text: "Recorder appended history",
     });
-    await session.recorder.compact_active({
+    await session.session_messages.compact_active({
       through_sequence: 1,
       summary: {
         record_type: "summary",

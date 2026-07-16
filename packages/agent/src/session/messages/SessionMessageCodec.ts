@@ -8,7 +8,7 @@
  */
 
 import type { UIMessage } from "ai";
-import { to_session_json_value } from "@/session/recorder/SessionJsonValue.js";
+import { to_session_json_value } from "@/session/messages/SessionJsonValue.js";
 import type {
   SessionAssistantMessage,
   SessionAssistantMessagePart,
@@ -19,7 +19,40 @@ import type {
 import type {
   SessionMessageRecordV1,
   SessionMetadataV1,
+  SessionRecordV1,
 } from "@/executor/types/SessionRecords.js";
+import type { SessionContextSnapshot } from "@/types/session/SessionSegment.js";
+
+/** 把 canonical Session 历史快照投影为内部 UIMessage records。 */
+export function to_executor_history(
+  session_id: string,
+  snapshot: Readonly<SessionContextSnapshot>,
+): SessionRecordV1[] {
+  const records: SessionRecordV1[] = [];
+  if (snapshot.summary) {
+    records.push({
+      id: snapshot.summary.summary_id,
+      role: "assistant",
+      metadata: {
+        v: 1,
+        ts: snapshot.summary.created_at,
+        sessionId: session_id,
+        source: "compact",
+        kind: "summary",
+        extra: {
+          visibility: "internal",
+          summaryThroughSequence: snapshot.summary.through_sequence,
+        },
+      },
+      parts: [{ type: "text", text: snapshot.summary.text }],
+    });
+  }
+  for (const message of snapshot.messages) {
+    const record = to_executor_ui_message(message);
+    if (record) records.push(record);
+  }
+  return records;
+}
 
 /** 把 Session Message 投影成 Executor 可消费的 UIMessage。 */
 export function to_executor_ui_message(

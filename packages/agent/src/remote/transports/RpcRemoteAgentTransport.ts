@@ -30,7 +30,7 @@ import type {
 import type { SessionMutation } from "@/types/session/SessionMutation.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
-import { RpcClient, parse_rpc_url } from "@/rpc/Client.js";
+import { RpcClient, parse_rpc_url } from "@/remote/transports/RpcClient.js";
 import type {
   RemoteAgentTransport,
   TransportSubscription,

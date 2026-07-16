@@ -1,5 +1,5 @@
 /**
- * SDK Session 默认 system composer。
+ * SDK Session 默认 system block 组装逻辑。
  *
  * 关键点（中文）
  * - 面向 `Agent` SDK 的本地会话执行场景。
@@ -7,13 +7,10 @@
  * - SDK 不在 system 中注入动态变量；动态上下文应由调用方放入 user message。
  */
 
-import type { SessionSystemComposer } from "@executor/composer/system/SessionSystemComposer.js";
-import type { SessionSystemMessage } from "@/executor/types/SessionPrompts.js";
 import type {
   AgentSessionSystemBlock,
   AgentSessionSystemSessionInfo,
 } from "@/types/agent/SessionTypes.js";
-import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 
 /**
  * 解析 SDK session system blocks 的输入。
@@ -59,43 +56,6 @@ export interface BuildSessionSystemBlocksParams {
    */
   getPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
 }
-
-type SessionSystemBuilderOptions = {
-  /**
-   * 当前 agent 的稳定标识。
-   */
-  agentId: string;
-
-  /**
-   * 当前 agent 绑定的项目根目录。
-   */
-  projectRoot: string;
-
-  /**
-   * 读取当前 session 首次创建时间（ms）。
-   */
-  getSessionCreatedAt: () => number;
-
-  /**
-   * 读取当前 session 初始化时解析到的系统时区。
-   */
-  getSessionTimezone: () => string;
-
-  /**
-   * 读取当前 SDK 调用方传入的 instruction system blocks。
-   */
-  getInstructionSystemBlocks: () => AgentSessionSystemBlock[];
-
-  /**
-   * 读取当前显式注册 plugin 的 system blocks。
-   */
-  getPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
-
-  /**
-   * 读取当前显式注入的受托管 plugin system blocks。
-   */
-  getManagedPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
-};
 
 function normalizeSystemBlocks(
   blocks: AgentSessionSystemBlock[],
@@ -192,71 +152,4 @@ export async function buildSessionSystemBlocks(
       createSessionInfo({ agentId, projectRoot, sessionId, createdAt, timezone }),
     ),
   ];
-}
-
-/**
- * 解析 SDK session 当前生效的 system messages。
- */
-export async function buildSessionSystemMessages(
-  params: BuildSessionSystemBlocksParams,
-): Promise<SessionSystemMessage[]> {
-  const blocks = await buildSessionSystemBlocks(params);
-  return blocks.map((block) => ({
-    role: "system" as const,
-    content: block.content,
-  }));
-}
-
-/**
- * SDK Session system composer 实现。
- */
-export class SessionSystemBuilder implements SessionSystemComposer {
-  readonly name = "sdk_prompt_system";
-
-  private readonly agentId: string;
-  private readonly projectRoot: string;
-  private readonly getSessionCreatedAt: SessionSystemBuilderOptions["getSessionCreatedAt"];
-  private readonly getSessionTimezone: SessionSystemBuilderOptions["getSessionTimezone"];
-  private readonly getInstructionSystemBlocks: SessionSystemBuilderOptions["getInstructionSystemBlocks"];
-  private readonly getManagedPluginSystemBlocks: SessionSystemBuilderOptions["getManagedPluginSystemBlocks"];
-  private readonly getPluginSystemBlocks: SessionSystemBuilderOptions["getPluginSystemBlocks"];
-
-  constructor(options: SessionSystemBuilderOptions) {
-    this.agentId = String(options.agentId || "").trim();
-    this.projectRoot = String(options.projectRoot || "").trim();
-    this.getSessionCreatedAt = options.getSessionCreatedAt;
-    this.getSessionTimezone = options.getSessionTimezone;
-    this.getInstructionSystemBlocks = options.getInstructionSystemBlocks;
-    this.getManagedPluginSystemBlocks = options.getManagedPluginSystemBlocks;
-    this.getPluginSystemBlocks = options.getPluginSystemBlocks;
-    if (!this.agentId) {
-      throw new Error("SessionSystemBuilder requires a non-empty agentId");
-    }
-    if (!this.projectRoot) {
-      throw new Error("SessionSystemBuilder requires a non-empty projectRoot");
-    }
-  }
-
-  /**
-   * 解析本轮 SDK session system messages。
-   */
-  async resolve(run_context: SessionRunContext) {
-    const sessionId = String(run_context.sessionId || "").trim();
-    if (!sessionId) {
-      throw new Error("SessionSystemBuilder.resolve requires a non-empty sessionId");
-    }
-    return await buildSessionSystemMessages({
-      agentId: this.agentId,
-      projectRoot: this.projectRoot,
-      sessionId,
-      createdAt: this.getSessionCreatedAt(),
-      timezone: this.getSessionTimezone(),
-      getInstructionSystemBlocks: this.getInstructionSystemBlocks,
-      getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
-      getPluginSystemBlocks: async () =>
-        run_context.agentPlugins
-          ? await run_context.agentPlugins.systemBlocks(run_context)
-          : await this.getPluginSystemBlocks(),
-    });
-  }
 }

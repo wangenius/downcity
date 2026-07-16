@@ -13,7 +13,6 @@ import {
   should_compact_after_usage,
 } from "../bin/executor/core-engine/CoreEngineContextCompaction.js";
 import { CoreEngineRunner } from "../bin/executor/core-engine/CoreEngineRunner.js";
-import { LocalSessionContextComposer } from "../bin/executor/composer/context/LocalSessionContextComposer.js";
 
 function create_stream_text_result(text, input_tokens, output_tokens) {
   return {
@@ -47,26 +46,16 @@ function create_stream_text_result(text, input_tokens, output_tokens) {
 }
 
 function create_runner() {
-  const context_composer = new LocalSessionContextComposer({
-    sessionId: "compact-runner-session",
-    getTools: () => ({}),
-  });
   return new CoreEngineRunner({
-    history_store: { sessionId: "compact-runner-session" },
-    context_composer,
+    session_id: "compact-runner-session",
     logger: { log: async () => {} },
     should_compact_on_error: () => false,
   });
 }
 
 function create_context_error_runner() {
-  const context_composer = new LocalSessionContextComposer({
-    sessionId: "compact-runner-session",
-    getTools: () => ({}),
-  });
   return new CoreEngineRunner({
-    history_store: { sessionId: "compact-runner-session" },
-    context_composer,
+    session_id: "compact-runner-session",
     logger: { log: async () => {} },
     should_compact_on_error: (error) =>
       String(error || "").includes("context length"),
@@ -94,6 +83,7 @@ function create_run_input(model, messages, context_window = 100) {
       tools: {},
       context_window,
     }),
+    reload_history: async () => messages,
   };
 }
 
@@ -191,16 +181,8 @@ test("显式 compact 后在下一次 provider 调用前重载 canonical history"
     },
     parts: [{ type: "text", text: "compacted checkpoint" }],
   }];
-  const context_composer = new LocalSessionContextComposer({
-    sessionId: "compact-runner-session",
-    getTools: () => ({}),
-  });
   const runner = new CoreEngineRunner({
-    history_store: {
-      sessionId: "compact-runner-session",
-      list_records: async () => compacted_records,
-    },
-    context_composer,
+    session_id: "compact-runner-session",
     logger: { log: async () => {} },
     should_compact_on_error: () => false,
   });
@@ -229,6 +211,7 @@ test("显式 compact 后在下一次 provider 调用前重载 canonical history"
     reload_requested = false;
     return requested;
   };
+  input.reload_history = async () => compacted_records;
 
   const result = await runner.run(input);
 

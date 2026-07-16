@@ -213,25 +213,30 @@ SDK 会为当前 `Agent` 创建独立的 plugin registry。
 ```ts
 import {
   Agent,
+  DefaultSessionComposer,
   Session,
   type SessionOptions,
-  type SessionSystemComposer,
+  type SessionComposeInput,
 } from "@downcity/agent";
 
-const systemComposer: SessionSystemComposer = {
-  name: "custom_system",
-  async resolve() {
-    return [{ role: "system", content: "始终简洁回答。" }];
-  },
-};
+class CustomSessionComposer extends DefaultSessionComposer {
+  override async compose(input: SessionComposeInput) {
+    const step = await super.compose(input);
+    return {
+      ...step,
+      system: [
+        ...step.system,
+        { role: "system" as const, content: "始终简洁回答。" },
+      ],
+    };
+  }
+}
 
 class CustomSession extends Session {
   constructor(options: SessionOptions) {
     super({
       ...options,
-      composers: {
-        systemComposer,
-      },
+      composer: new CustomSessionComposer(),
     });
   }
 }
@@ -248,4 +253,5 @@ const agent = new Agent({
 - 传入的是 class，不是已经创建好的 session 实例
 - 这样 `Agent` 可以按不同 `sessionId` 创建多个 session
 - Composer 自定义留在自定义 Session 类内部
+- Composer 只读取 Session 快照并组装 system、history、tools 或压缩计划，不直接持久化消息
 - `RemoteAgent` 不支持本地 Session 类，因为它只是远程 runtime 的访问器

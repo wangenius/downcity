@@ -2,8 +2,8 @@
  * TaskRunnerSession：task runner 的 session 装配模块。
  *
  * 关键点（中文）
- * - 负责构建 task 专用 Executor / JsonlSessionHistoryStore 运行时。
- * - 负责把每轮 user/assistant 消息写入 run 目录对应的 messages.jsonl。
+ * - 负责构建 task 专用 Executor / SessionMessages 运行时。
+ * - 负责把每轮 user/assistant 消息写入 run 目录对应的 canonical Message Store。
  * - 这些能力与任务编排逻辑解耦后，task 主流程会更聚焦于状态流转。
  * - 当前只有 api 执行模式。
  */
@@ -14,13 +14,18 @@ import type { AgentContext } from "@downcity/agent";
 import { Executor } from "@downcity/agent";
 import type { SessionRunResult } from "@downcity/agent";
 import type { TaskSessionRuntimePort } from "@/task/runtime/TaskRunnerTypes.js";
-import { JsonlSessionHistoryComposer } from "@downcity/agent";
-import { JsonlSessionHistoryStore } from "@downcity/agent";
-import { JsonlSessionCompactionComposer } from "@downcity/agent";
-import { LocalSessionContextComposer } from "@downcity/agent";
+import {
+  DefaultSessionComposer,
+  JsonlSessionMessageStore,
+  SessionMessages,
+} from "@downcity/agent";
 import { DefaultSessionSystemComposer } from "@downcity/agent";
 import { Shell } from "@downcity/shell";
 import type { SessionExecutor } from "@downcity/agent";
+import type {
+  SessionComposeInput,
+  SessionStepInput,
+} from "@downcity/agent";
 
 /**
  * 把 task round 的 user query 落盘到对应 run context。
@@ -35,20 +40,18 @@ export async function appendTaskRoundUserMessage(params: {
 }): Promise<void> {
   const text = String(params.query || "").trim();
   if (!text) return;
-  const historyStore = params.taskSessionRuntime.getHistoryStore(params.sessionId);
-  await historyStore.write_record(
-    historyStore.userText({
+  const messages = params.taskSessionRuntime.get_messages(params.sessionId);
+  await messages.append_user_message({
+    turn_id:
+      `task:${params.taskId}:${params.actorId}:${Date.now()}`,
+    input_type: "prompt",
+    parts: [{
+      part_id: `task-user:${Date.now()}`,
+      type: "text",
       text,
-      metadata: {
-        sessionId: params.sessionId,
-        extra: {
-          taskId: params.taskId,
-          actorId: params.actorId,
-          actorName: params.actorName,
-        },
-      },
-    }),
-  );
+      state: "done",
+    }],
+  });
 }
 
 /**
@@ -82,15 +85,14 @@ export function createTaskSessionRuntimePort(params: {
   const effective_systems = params.agent_systems
     ? [...params.agent_systems]
     : [...context.systems];
-  const compactionComposer = new JsonlSessionCompactionComposer();
   const systemComposer = new DefaultSessionSystemComposer({
     projectRoot: context.rootPath,
     getStaticSystemPrompts: () => [...effective_systems],
     getContext: () => context,
     profile: "task",
   });
-  const historyStoresBySessionId = new Map<string, JsonlSessionHistoryStore>();
-  const historyComposersBySessionId = new Map<string, JsonlSessionHistoryComposer>();
+  const messages_by_session_id = new Map<string, SessionMessages>();
+  const created_at_by_session_id = new Map<string, number>();
   const runtimesBySessionId = new Map<string, SessionExecutor>();
   const shell = new Shell({
     root_path: context.rootPath,
@@ -99,11 +101,11 @@ export function createTaskSessionRuntimePort(params: {
   });
   const shell_tools = shell.tools as unknown as Record<string, Tool>;
 
-  const resolveTaskHistoryStore = (sessionId: string): JsonlSessionHistoryStore => {
-    const existing = historyStoresBySessionId.get(sessionId);
+  const resolve_task_messages = (session_id: string): SessionMessages => {
+    const existing = messages_by_session_id.get(session_id);
     if (existing) return existing;
 
-    const key = String(sessionId || "").trim();
+    const key = String(session_id || "").trim();
     if (!key) {
       throw new Error("TaskSessionRuntimePort requires a non-empty sessionId");
     }
@@ -114,39 +116,45 @@ export function createTaskSessionRuntimePort(params: {
           ? path.join(runDirAbs, "user-simulator")
           : undefined;
 
-    const created = new JsonlSessionHistoryStore({
-      rootPath: context.rootPath,
-      sessionId: key,
-      ...(runMessagesDirPath
-        ? {
-            paths: {
-              sessionDirPath: runMessagesDirPath,
-              messagesDirPath: runMessagesDirPath,
-              messagesFilePath: path.join(runMessagesDirPath, "messages.jsonl"),
-              metaFilePath: path.join(runMessagesDirPath, "meta.json"),
-              archiveDirPath: path.join(runMessagesDirPath, "archive"),
-            },
-          }
-        : {}),
+    const messages_dir_path = runMessagesDirPath || path.join(runDirAbs, key);
+    const created = new SessionMessages({
+      session_id: key,
+      store: new JsonlSessionMessageStore({
+        session_id: key,
+        file_path: path.join(messages_dir_path, "active.jsonl"),
+        assistant_message_file_path: path.join(
+          messages_dir_path,
+          "assistant_message.json",
+        ),
+      }),
+      publish: () => {},
     });
-    historyStoresBySessionId.set(key, created);
+    messages_by_session_id.set(key, created);
+    created_at_by_session_id.set(key, Date.now());
     return created;
   };
 
-  const resolveTaskHistoryComposer = (sessionId: string): JsonlSessionHistoryComposer => {
-    const key = String(sessionId || "").trim();
-    const existing = historyComposersBySessionId.get(key);
-    if (existing) return existing;
-    const created = new JsonlSessionHistoryComposer({
-      store: resolveTaskHistoryStore(key),
-    });
-    historyComposersBySessionId.set(key, created);
-    return created;
-  };
+  class TaskSessionComposer extends DefaultSessionComposer {
+    override async compose(input: SessionComposeInput): Promise<SessionStepInput> {
+      const composed = await super.compose(input);
+      return {
+        ...composed,
+        system: await systemComposer.resolve({
+          sessionId: input.session.session_id,
+          agentEnv: input.state.env,
+          agentSystems: input.state.systems,
+          injectedUserMessages: [],
+          deferredPersistedUserMessages: [],
+          pendingAssistantFileParts: [],
+        }),
+        system_blocks: undefined,
+      };
+    }
+  }
 
   return {
-    getHistoryStore(sessionId: string): JsonlSessionHistoryStore {
-      return resolveTaskHistoryStore(sessionId);
+    get_messages(session_id: string): SessionMessages {
+      return resolve_task_messages(session_id);
     },
     getExecutor(sessionId: string): SessionExecutor {
       const key = String(sessionId || "").trim();
@@ -156,23 +164,42 @@ export function createTaskSessionRuntimePort(params: {
       const existing = runtimesBySessionId.get(key);
       if (existing) return existing;
 
-      const historyStore = resolveTaskHistoryStore(key);
-      const historyComposer = resolveTaskHistoryComposer(key);
-      const contextComposer = new LocalSessionContextComposer({
-        sessionId: key,
-        getTools: () => shell_tools,
-      });
+      const messages = resolve_task_messages(key);
+      const composer = new TaskSessionComposer();
       const created = new Executor({
         sessionId: key,
+        composer,
+        get_compose_input: async (run_context, retry_count) => ({
+          session: {
+            agent_id: "task",
+            session_id: key,
+            project_root: context.rootPath,
+            created_at: created_at_by_session_id.get(key) || Date.now(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+          },
+          state: {
+            model,
+            env: effective_env,
+            systems: effective_systems,
+            tools: shell_tools,
+            instruction_system_blocks: [],
+            managed_plugin_system_blocks: [],
+            plugin_system_blocks: [],
+          },
+          history: await messages.context_snapshot(),
+          turn: {
+            ...(run_context.turnId ? { turn_id: run_context.turnId } : {}),
+            retry_count,
+          },
+        }),
+        commit_compaction: async (plan) => {
+          await messages.compact_active({
+            through_sequence: plan.through_sequence,
+            summary: plan.summary,
+          });
+        },
         getModel: () => model,
         logger: context.logger,
-        historyStore,
-        historyComposer,
-        compactionComposer,
-        contextComposer,
-        systemComposer,
-        getTools: () => shell_tools,
-        getEnv: () => ({ ...effective_env }),
       });
       runtimesBySessionId.set(key, created);
       return created;
@@ -190,12 +217,12 @@ export async function appendTaskAssistantMessage(params: {
   rawResult: SessionRunResult;
 }): Promise<void> {
   const { taskSessionRuntime, sessionId, rawResult } = params;
-  const historyStore = taskSessionRuntime.getHistoryStore(sessionId);
+  const messages = taskSessionRuntime.get_messages(sessionId);
   if (rawResult.assistantMessage) {
-    await historyStore.write_record(rawResult.assistantMessage);
+    await messages.append_record(rawResult.assistantMessage);
   }
   const deferredUserMessages = rawResult.deferredPersistedUserMessages || [];
   for (const deferred of deferredUserMessages) {
-    await historyStore.write_record(deferred);
+    await messages.append_record(deferred);
   }
 }

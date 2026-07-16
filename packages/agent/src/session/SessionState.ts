@@ -1,10 +1,10 @@
 /**
- * SessionStateService：本地 Session 状态与持久化服务。
+ * SessionState：本地 Session 配置与 Metadata 状态。
  *
  * 关键点（中文）
- * - 统一管理本地 Session 的初始化、配置、标题、metadata 与消息持久化。
- * - 该服务只关心状态事实源与持久化副作用，不负责 turn 编排。
- * - `Session` facade 与 turn/view service 都通过它访问可变 session 运行态。
+ * - 统一管理本地 Session 的初始化、配置、标题与 metadata。
+ * - Message 持久化统一交给 `SessionMessages`，这里仅读取 Message 快照更新 metadata。
+ * - 不负责 Turn 编排、Message 创建或 Action 生命周期。
  */
 
 import {
@@ -17,39 +17,26 @@ import {
   resolveSystemTimezone,
   writeSessionMetadata,
 } from "@/session/storage/Metadata.js";
-import { touchSessionMetadata } from "@/session/storage/Persistence.js";
+import { touchSessionMetadata } from "@/session/storage/Metadata.js";
 import { ensureSessionTitle } from "@/session/SessionTitle.js";
-import { hydrateUserPromptFileParts } from "@executor/messages/SessionAttachmentMapper.js";
-import type { Executor } from "@executor/Executor.js";
-import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
 import type {
   AgentSessionConfigSnapshot,
   AgentSessionSetInput,
 } from "@/types/agent/SessionTypes.js";
 import type { SessionMutation } from "@/types/session/SessionMutation.js";
-import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
-import type {
-  SessionActionRecordInputV1,
-  SessionActionRecordV1,
-  SessionRecordV1,
-  SessionMessageRecordV1,
-  SessionUserMessageV1,
-} from "@/executor/types/SessionRecords.js";
 import type { SessionLocalState } from "@/types/session/SessionLocalState.js";
-import type { SessionQueueCommand } from "@/types/session/SessionQueueCommand.js";
+import type {
+  SessionModelQueueCommand,
+  SessionQueueCommand,
+} from "@/types/session/SessionQueue.js";
 import { generateId } from "@/utils/Id.js";
 import type { Logger } from "@/utils/logger/Logger.js";
-import { SessionRecorder } from "@/session/recorder/SessionRecorder.js";
-import { normalize_session_user_parts } from "@/session/recorder/SessionRecorder.js";
-import {
-  from_ui_assistant_parts,
-  from_ui_user_parts,
-  to_executor_ui_message,
-} from "@/session/recorder/SessionMessageCodec.js";
+import { SessionMessages } from "@/session/SessionMessages.js";
+import { to_executor_history } from "@/session/messages/SessionMessageCodec.js";
 import type { SessionMessage } from "@/types/session/SessionMessage.js";
 import type { LanguageModel } from "ai";
 
-type SessionStateServiceOptions = {
+type SessionStateOptions = {
   /**
    * 当前 agent 稳定标识。
    */
@@ -65,18 +52,8 @@ type SessionStateServiceOptions = {
    */
   session_id: string;
 
-  /**
-   * 当前 session 历史事实源。
-   */
-  history_store: SessionHistoryStore;
-
-  /** 当前 Session Message Recorder。 */
-  recorder: SessionRecorder;
-
-  /**
-   * 当前 session 执行器。
-   */
-  executor: Executor;
+  /** 当前 Session Message SessionMessages。 */
+  messages: SessionMessages;
 
   /**
    * 当前 session 可变运行态。
@@ -113,8 +90,6 @@ type SessionSetOptions = {
   emit_action?: boolean;
 };
 
-type EmitActionInput = SessionActionRecordInputV1 | SessionActionRecordV1;
-
 /**
  * Session 配置成功写入后的队列提交结果。
  */
@@ -132,26 +107,22 @@ export interface SessionConfiguredCommandResult {
 /**
  * 本地 Session 状态与持久化服务。
  */
-export class SessionStateService {
+export class SessionState {
   private readonly agent_id: string;
   private readonly project_root: string;
   private readonly session_id: string;
-  private readonly history_store: SessionHistoryStore;
-  private readonly recorder: SessionRecorder;
-  private readonly executor: Executor;
+  private readonly messages: SessionMessages;
   private readonly state: SessionLocalState;
   private readonly logger: Logger;
-  private readonly ensure_configured_hook?: SessionStateServiceOptions["ensure_configured_hook"];
-  private readonly get_model: SessionStateServiceOptions["get_model"];
-  private readonly publish_event: SessionStateServiceOptions["publish_event"];
+  private readonly ensure_configured_hook?: SessionStateOptions["ensure_configured_hook"];
+  private readonly get_model: SessionStateOptions["get_model"];
+  private readonly publish_event: SessionStateOptions["publish_event"];
 
-  constructor(options: SessionStateServiceOptions) {
+  constructor(options: SessionStateOptions) {
     this.agent_id = options.agent_id;
     this.project_root = options.project_root;
     this.session_id = options.session_id;
-    this.history_store = options.history_store;
-    this.recorder = options.recorder;
-    this.executor = options.executor;
+    this.messages = options.messages;
     this.state = options.state;
     this.logger = options.logger;
     this.ensure_configured_hook = options.ensure_configured_hook;
@@ -297,33 +268,28 @@ export class SessionStateService {
       });
       this.state.sessionConfig = next_config;
 
-      const apply_effective_config = async (turn_id?: string): Promise<void> => {
-        this.state.effective_session_config = {
-          ...next_config,
-        };
-        if (!should_emit_model_switch_action) return;
-        await this.emit_config_action_event({
-          id: action_id,
-          title: `Session model switched from ${previous_model_name} to ${next_model_name}`,
-          state: "completed",
-          ...(turn_id ? { turnId: turn_id } : {}),
-        });
-      };
-
       if (options?.emit_action === false) {
-        await apply_effective_config();
+        await this.apply_model_command({
+          type: "session_model",
+          command_id: generateId(),
+          config: next_config,
+        });
         return {};
       }
 
       const command_id = generateId();
       return {
         command: {
-          type: "command",
+          type: "session_model",
           command_id,
-          scope: "session",
-          execute: async ({ turn_id }) => {
-            await apply_effective_config(turn_id);
-          },
+          config: next_config,
+          ...(should_emit_model_switch_action
+            ? {
+                action_id,
+                action_title:
+                  `Session model switched from ${previous_model_name} to ${next_model_name}`,
+              }
+            : {}),
         },
       };
     } catch (error) {
@@ -331,57 +297,20 @@ export class SessionStateService {
     }
   }
 
-  /**
-   * 追加一条 user 消息并刷新标题与 metadata。
-   */
-  async append_user_message(params: {
-    message?: SessionRecordV1 | null;
-    text?: string;
-  }): Promise<void> {
-    const parts = params.message && "role" in params.message
-      ? from_ui_user_parts(params.message.parts)
-      : [{
-          part_id: `external-user-text:${Date.now()}`,
-          type: "text" as const,
-          text: String(params.text || "").trim(),
-          state: "done" as const,
-        }];
-    if (parts.length === 0) return;
-    await this.recorder.append_user_message({
-      turn_id: `external:${this.session_id}:${Date.now()}`,
-      input_type: "prompt",
-      parts,
-    });
-    await this.ensure_title_from_history({ generate: true });
-    await this.touch_metadata();
-  }
-
-  /**
-   * 追加一条 assistant 消息并刷新 metadata。
-   */
-  async append_assistant_message(params: {
-    message?: SessionRecordV1 | null;
-    fallbackText?: string;
-  }): Promise<void> {
-    const parts = params.message && "role" in params.message
-      ? from_ui_assistant_parts(params.message.parts)
-      : [{
-          part_id: `external-assistant-text:${Date.now()}`,
-          sequence: 1,
-          type: "text" as const,
-          text: String(params.fallbackText || "").trim(),
-          state: "done" as const,
-        }];
-    if (parts.length === 0) return;
-    await this.recorder.append_completed_assistant_message({ parts });
-    await this.touch_metadata();
+  /** 在 Session Step 检查点提交模型配置。 */
+  async apply_model_command(
+    command: SessionModelQueueCommand,
+  ): Promise<void> {
+    this.state.effective_session_config = {
+      ...command.config,
+    };
   }
 
   /**
    * 仅刷新当前 session metadata。
    */
   async touch_metadata(): Promise<void> {
-    const stats = await this.recorder.storage_stats();
+    const stats = await this.messages.storage_stats();
     const preview_text = resolve_message_preview(
       stats.latest_message || undefined,
     ).slice(0, 180);
@@ -405,7 +334,10 @@ export class SessionStateService {
      */
     generate?: boolean;
   }): Promise<void> {
-    const messages = await this.history_store.list_records();
+    const messages = to_executor_history(
+      this.session_id,
+      await this.messages.context_snapshot(),
+    );
     const before_metadata = await readSessionMetadata({
       projectRoot: this.project_root,
       agentId: this.agent_id,
@@ -440,134 +372,6 @@ export class SessionStateService {
     });
   }
 
-  /**
-   * 持久化最终 assistant 结果。
-   */
-  async persist_assistant_result(
-    assistant_message?: SessionMessageRecordV1 | null,
-  ): Promise<void> {
-    void assistant_message;
-    await this.touch_metadata();
-  }
-
-  /**
-   * 持久化一条 action record。
-   */
-  async persist_action_event(
-    event: SessionActionRecordV1,
-  ): Promise<void> {
-    const existing = this.recorder.get_message(event.id);
-    if (!existing) {
-      const writer = await this.recorder.open_action_message({
-        message_id: event.id,
-        turn_id: event.metadata.turnId,
-        action_type: infer_action_type(event.id),
-        title: event.title,
-        description: event.description,
-      });
-      if (event.state === "completed") await writer.complete();
-      if (event.state === "failed") await writer.fail(event.description || event.title);
-    } else if (existing.type === "action" && event.state !== "running") {
-      await this.recorder.update_action_message(event.id, event.state, {
-        title: event.title,
-        description: event.description,
-      });
-    }
-    await this.touch_metadata();
-  }
-
-  /**
-   * 写入并发布一条 action。
-   */
-  async emit_action_event(input: EmitActionInput): Promise<void> {
-    const action_id = String(input.id || "").trim() ||
-      `action:${this.session_id}:${Date.now()}`;
-    const turn_id = "turnId" in input
-      ? input.turnId
-      : input.metadata?.turnId;
-    await this.persist_action_event({
-      type: "action",
-      id: action_id,
-      title: input.title,
-      ...(input.description ? { description: input.description } : {}),
-      state: input.state,
-      metadata: {
-        v: 1,
-        ts: input.metadata?.ts || Date.now(),
-        sessionId: this.session_id,
-        ...(turn_id
-          ? { turnId: turn_id }
-          : {}),
-      },
-    });
-  }
-
-  /**
-   * 尽力写入配置生效 action，不让 timeline 故障改变 effective state。
-   */
-  async emit_config_action_event(input: EmitActionInput): Promise<boolean> {
-    try {
-      await this.emit_action_event(input);
-      return true;
-    } catch (error) {
-      try {
-        await this.logger.log("warn", "[agent] config action persistence failed", {
-          sessionId: this.session_id,
-          actionId: String(input.id || ""),
-          error: error instanceof Error ? error.message : String(error),
-        });
-      } catch {
-        // 配置已经提交，日志失败也不能反向改变 effective state。
-      }
-      return false;
-    }
-  }
-
-  /**
-   * 构造并持久化一条 prompt user 消息。
-   */
-  async create_and_persist_user_prompt_message(
-    input: AgentSessionPromptInput,
-    turn_id: string,
-    input_type: "prompt" | "steer" = "prompt",
-  ): Promise<SessionUserMessageV1> {
-    const query = input.query;
-    const ui_parts = typeof query === "string"
-      ? [{ type: "text" as const, text: query.trim() }]
-      : await hydrateUserPromptFileParts(
-          Array.isArray(query) ? query : [],
-          this.project_root,
-        );
-    const canonical = await this.recorder.append_user_message({
-      turn_id,
-      input_type,
-      parts: normalize_session_user_parts(ui_parts),
-    });
-    const message = to_executor_ui_message(canonical) as SessionUserMessageV1;
-    await this.ensure_title_from_history({ generate: true });
-    await this.touch_metadata();
-    return message;
-  }
-
-  /**
-   * 持久化本轮执行期间延迟写入的 user 消息。
-   */
-  async persist_deferred_user_messages(
-    deferred_messages?: SessionUserMessageV1[],
-  ): Promise<void> {
-    const normalized_messages = Array.isArray(deferred_messages)
-      ? deferred_messages
-      : [];
-    if (normalized_messages.length <= 0) return;
-    for (const message of normalized_messages) {
-      await this.recorder.append_user_message({
-        turn_id: String(message.metadata?.turnId || `deferred:${this.session_id}:${Date.now()}`),
-        input_type: "steer",
-        parts: from_ui_user_parts(message.parts),
-      });
-    }
-    await this.touch_metadata();
-  }
 }
 
 function resolve_message_preview(message: SessionMessage | undefined): string {
@@ -588,8 +392,4 @@ function resolve_message_preview(message: SessionMessage | undefined): string {
     return [message.title, message.description].filter(Boolean).join("\n");
   }
   return message.message.trim();
-}
-
-function infer_action_type(message_id: string): string {
-  return String(message_id || "").split(":")[0] || "action";
 }

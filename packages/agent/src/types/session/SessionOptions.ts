@@ -13,8 +13,8 @@ import type { AgentSession } from "@/types/agent/SessionActor.js";
 import type { SessionPort } from "@/types/session/SessionPort.js";
 import type { AgentSessionSystemBlock } from "@/types/agent/SessionTypes.js";
 import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.js";
-import type { AgentSessionCommand } from "@/types/session/SessionQueueCommand.js";
-import type { SessionComposerOptions } from "@/types/session/SessionComposerOptions.js";
+import type { AgentSessionCommand } from "@/types/session/SessionQueue.js";
+import type { SessionComposer } from "@/types/session/SessionComposer.js";
 import type { Logger } from "@/utils/logger/Logger.js";
 
 /**
@@ -96,11 +96,6 @@ export interface SessionOptions {
   getManagedPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
 
   /**
-   * 读取当前 agent 显式注册 plugin 的 system blocks。
-   */
-  getPluginSystemBlocks: () => Promise<AgentSessionSystemBlock[]>;
-
-  /**
    * 在执行前确保当前 session 已完成宿主侧默认配置。
    */
   ensureConfigured?: (session: AgentManagedSession) => Promise<void>;
@@ -108,8 +103,6 @@ export interface SessionOptions {
   /** 读取 Agent 当前持有的运行时模型实例。 */
   getAgentModel: () => AgentModel | undefined;
 
-  /**
-   * 当前 session 的 Composer 覆盖项。
-   */
-  composers?: SessionComposerOptions;
+  /** 当前 Session 使用的统一执行策略；省略时使用默认 Composer。 */
+  composer?: SessionComposer;
 }

@@ -211,25 +211,30 @@ Use this when you want to replace the local session implementation or inject cus
 ```ts
 import {
   Agent,
+  DefaultSessionComposer,
   Session,
   type SessionOptions,
-  type SessionSystemComposer,
+  type SessionComposeInput,
 } from "@downcity/agent";
 
-const systemComposer: SessionSystemComposer = {
-  name: "custom_system",
-  async resolve() {
-    return [{ role: "system", content: "Always answer tersely." }];
-  },
-};
+class CustomSessionComposer extends DefaultSessionComposer {
+  override async compose(input: SessionComposeInput) {
+    const step = await super.compose(input);
+    return {
+      ...step,
+      system: [
+        ...step.system,
+        { role: "system" as const, content: "Always answer tersely." },
+      ],
+    };
+  }
+}
 
 class CustomSession extends Session {
   constructor(options: SessionOptions) {
     super({
       ...options,
-      composers: {
-        systemComposer,
-      },
+      composer: new CustomSessionComposer(),
     });
   }
 }
@@ -246,4 +251,5 @@ Key points:
 - pass a class, not an already-created session instance
 - `Agent` can then create multiple sessions with different `sessionId` values
 - Composer customization stays inside the custom Session class
+- Composer reads Session snapshots and composes system, history, tools, or compaction plans; it never persists messages directly
 - `RemoteAgent` does not support local Session classes because it only accesses a remote runtime

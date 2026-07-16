@@ -6,7 +6,7 @@
  * - 这些类型服务于 task 运行链路，统一归档到 `src/types/task/`。
  */
 
-import type { JsonlSessionHistoryStore } from "@downcity/agent";
+import type { SessionMessages } from "@downcity/agent";
 import type { SessionExecutor } from "@downcity/agent";
 import type {
   ShipTaskRunExecutionStatusV1,
@@ -171,7 +171,7 @@ export type ScriptExecutionResult = {
  *
  * 关键点（中文）
  * - task runner 不直接依赖具体 SDK `Session` 实现。
- * - 这里暴露的是 task 场景最小可用端口：执行器 + history Store。
+ * - 这里暴露的是 task 场景最小可用端口：执行器 + canonical Messages。
  */
 export type TaskSessionRuntimePort = {
   /**
@@ -179,9 +179,9 @@ export type TaskSessionRuntimePort = {
    */
   getExecutor(sessionId: string): SessionExecutor;
   /**
-   * 获取指定 sessionId 对应的 JsonlSessionHistoryStore。
+   * 获取指定 sessionId 对应的 canonical Session Messages。
    */
-  getHistoryStore(sessionId: string): JsonlSessionHistoryStore;
+  get_messages(session_id: string): SessionMessages;
 };
 
 /**

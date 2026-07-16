@@ -95,7 +95,7 @@ export interface AgentOptions {
    *
    * 关键点（中文）
    * - Agent 只负责用这个类创建/恢复 session，不感知具体 Composer 策略。
-   * - 如果需要自定义 Composer，请在自定义 Session 类内部传给 `super({ composers })`。
+   * - 如果需要自定义 Composer，请在自定义 Session 类内部传给 `super({ composer })`。
    * - 该能力仅适用于本地 `Agent`。
    */
   Session?: AgentSessionConstructor;

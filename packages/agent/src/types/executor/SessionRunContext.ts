@@ -20,7 +20,7 @@ import type { SessionUserMessageV1 } from "@/executor/types/SessionRecords.js";
 import type { FileUIPart } from "ai";
 import type { AgentPluginExecutionLease } from "@/types/plugin/PluginRuntime.js";
 import type { ShellApprovalGateway } from "@downcity/shell";
-import type { SessionToolInputReady } from "@/types/session/SessionToolRuntime.js";
+import type { SessionToolInputReady } from "@/types/session/SessionTool.js";
 
 /**
  * 单次 session run 的运行上下文。

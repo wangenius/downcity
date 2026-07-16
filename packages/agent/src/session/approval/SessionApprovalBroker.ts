@@ -21,12 +21,12 @@ import type {
   SessionApprovalResult,
 } from "@/types/session/SessionApproval.js";
 import type { SessionPendingApproval } from "@/types/session/SessionApprovalBroker.js";
-import type { SessionToolRuntime } from "@/session/tool/SessionToolRuntime.js";
+import type { SessionMessages } from "@/session/SessionMessages.js";
 
 /** 单个 Session 的审批状态与决定入口。 */
 export class SessionApprovalBroker implements ShellApprovalGateway {
   private readonly session_id: string;
-  private readonly tool_runtime: SessionToolRuntime;
+  private readonly messages: SessionMessages;
   private readonly pending_by_id = new Map<string, SessionPendingApproval>();
   private mode: SessionApprovalMode = "ask";
 
@@ -36,11 +36,11 @@ export class SessionApprovalBroker implements ShellApprovalGateway {
   constructor(options: {
     /** 当前 Broker 所属 Session。 */
     session_id: string;
-    /** 当前 Session 的 Tool 生命周期协调器。 */
-    tool_runtime: SessionToolRuntime;
+    /** 当前 Session 的 Message 领域入口。 */
+    messages: SessionMessages;
   }) {
     this.session_id = options.session_id;
-    this.tool_runtime = options.tool_runtime;
+    this.messages = options.messages;
   }
 
   /** Shell 调用的强类型审批网关入口。 */
@@ -86,7 +86,7 @@ export class SessionApprovalBroker implements ShellApprovalGateway {
     });
 
     try {
-      await this.tool_runtime.request_approval(approval);
+      await this.messages.request_tool_approval(approval);
     } catch (error) {
       clearTimeout(timer);
       this.pending_by_id.delete(approval_id);
@@ -148,7 +148,7 @@ export class SessionApprovalBroker implements ShellApprovalGateway {
     const pending = this.pending_by_id.get(approval_id);
     if (!pending) return false;
     try {
-      await this.tool_runtime.resolve_approval({
+      await this.messages.resolve_tool_approval({
         approval_id,
         decision,
         tool_call_id: pending.approval.tool_call_id,

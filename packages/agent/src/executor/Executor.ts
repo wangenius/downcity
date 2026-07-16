@@ -7,27 +7,10 @@
  * - 负责 history 写入、显式运行上下文、executing 状态、Composer 编排与 tool-loop 执行。
  */
 
-import { streamText, type LanguageModel, type Tool, type ToolExecutionOptions } from "ai";
-import { SessionHistoryWriter } from "@executor/composer/history/SessionHistoryWriter.js";
-import type { SessionHistoryComposer } from "@executor/composer/history/SessionHistoryComposer.js";
-import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
-import { buildSessionStepParts } from "@executor/messages/SessionStepEventMapper.js";
-import { JsonlSessionCompactionComposer } from "@executor/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
-import { LocalSessionContextComposer } from "@executor/composer/context/LocalSessionContextComposer.js";
+import type { LanguageModel, Tool, ToolExecutionOptions } from "ai";
 import { CoreEngineRunner } from "@executor/core-engine/CoreEngineRunner.js";
-import type { SessionCompactionComposer } from "@executor/composer/compaction/SessionCompactionComposer.js";
-import type { SessionContextComposer } from "@executor/composer/context/SessionContextComposer.js";
-import type { SessionSystemComposer } from "@executor/composer/system/SessionSystemComposer.js";
-import { ExecutorInflightService } from "@executor/services/ExecutorInflightService.js";
 import { ExecutorRecoveryPolicy } from "@executor/services/ExecutorRecoveryPolicy.js";
-import { generateId } from "@/utils/Id.js";
 import type { Logger } from "@/utils/logger/Logger.js";
-import type { JsonObject } from "@/types/common/Json.js";
-import type {
-  SessionActionRecordV1,
-  SessionRecordV1,
-} from "@/executor/types/SessionRecords.js";
-import { to_session_action_record } from "@/executor/types/SessionRecords.js";
 import type { SessionExecutor } from "@/executor/types/SessionExecutor.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 import type { SessionToolExecutionContext } from "@/types/executor/SessionToolExecutionContext.js";
@@ -37,6 +20,12 @@ import type {
   SessionExecuteInput,
   SessionRunResult,
 } from "@/executor/types/SessionRun.js";
+import type {
+  SessionComposer,
+  SessionCompactionPlan,
+  SessionComposeInput,
+  SessionStepInput,
+} from "@/types/session/SessionComposer.js";
 
 type ExecutorOptions = {
   /**
@@ -44,18 +33,20 @@ type ExecutorOptions = {
    */
   sessionId: string;
 
-  /**
-   * 当前 session 对应的 history 事实源。
-   */
-  historyStore: SessionHistoryStore;
+  /** 当前 Session 使用的统一 Composer。 */
+  composer: SessionComposer;
 
-  /**
-   * 当前 session 对应的 history Composer。
-   *
-   * 关键点（中文）
-   * - Composer 只负责组装本轮 messages，不负责落盘。
-   */
-  historyComposer: SessionHistoryComposer;
+  /** 为 Composer 创建当前 Step 的只读输入快照。 */
+  get_compose_input: (
+    run_context: SessionRunContext,
+    retry_count: number,
+  ) => Promise<SessionComposeInput>;
+
+  /** 提交 Composer 生成的持久化压缩计划。 */
+  commit_compaction: (
+    plan: SessionCompactionPlan,
+    run_context: SessionRunContext,
+  ) => Promise<void>;
 
   /**
    * 读取当前 session 使用的模型实例。
@@ -63,46 +54,12 @@ type ExecutorOptions = {
   getModel: () => LanguageModel | undefined;
 
   /**
-   * 读取当前 session 模型支持的总上下文窗口长度。
-   */
-  get_model_context_window?: () => number | undefined;
-
-  /**
    * 统一日志器。
    */
   logger: Logger;
 
-  /**
-   * 当前 session 对应的 compaction Composer。
-   */
-  compactionComposer?: SessionCompactionComposer;
-
-  /**
-   * 当前 session 对应的 system Composer。
-   */
-  systemComposer: SessionSystemComposer;
-
-  /**
-   * 获取当前可用工具集合。
-   */
-  getTools: () => Record<string, Tool>;
-
-  /**
-   * 读取当前 Session effective Agent env。
-   */
-  getEnv: () => Record<string, string>;
-
-  /** 读取当前 Session effective Agent instruction 文本。 */
-  get_systems?: () => string[];
-
   /** 创建当前 Session effective Plugin 执行视图。 */
   get_plugins?: () => AgentPluginExecutionRuntime;
-
-  /**
-   * 可选自定义 context Composer。
-   */
-  contextComposer?: SessionContextComposer;
-
 };
 
 /**
@@ -114,19 +71,12 @@ export class Executor implements SessionExecutor {
    */
   readonly sessionId: string;
 
-  private readonly historyComposer: SessionHistoryComposer;
-  private readonly historyStore: SessionHistoryStore;
+  private readonly composer: SessionComposer;
+  private readonly get_compose_input: ExecutorOptions["get_compose_input"];
+  private readonly commit_compaction: ExecutorOptions["commit_compaction"];
   private readonly getModel: ExecutorOptions["getModel"];
-  private readonly getEnv: ExecutorOptions["getEnv"];
-  private readonly get_systems: ExecutorOptions["get_systems"];
   private readonly get_plugins: ExecutorOptions["get_plugins"];
-  private readonly get_model_context_window?: ExecutorOptions["get_model_context_window"];
   private readonly logger: Logger;
-  private readonly compactionComposer: SessionCompactionComposer;
-  private readonly systemComposer: SessionSystemComposer;
-  protected readonly contextComposer: SessionContextComposer;
-  private readonly historyWriter: SessionHistoryWriter;
-  private readonly inflight_service: ExecutorInflightService;
   private readonly recovery_policy: ExecutorRecoveryPolicy;
   private readonly core_engine_runner: CoreEngineRunner;
 
@@ -140,42 +90,22 @@ export class Executor implements SessionExecutor {
     }
 
     this.sessionId = sessionId;
-    this.historyStore = options.historyStore;
-    this.historyComposer = options.historyComposer;
+    this.composer = options.composer;
+    this.get_compose_input = options.get_compose_input;
+    this.commit_compaction = options.commit_compaction;
     this.getModel = options.getModel;
-    this.getEnv = options.getEnv;
-    this.get_systems = options.get_systems;
     this.get_plugins = options.get_plugins;
-    this.get_model_context_window = options.get_model_context_window;
     this.logger = options.logger;
-    this.compactionComposer =
-      options.compactionComposer || new JsonlSessionCompactionComposer();
-    this.systemComposer = options.systemComposer;
-    this.contextComposer =
-      options.contextComposer ||
-      new LocalSessionContextComposer({
-        sessionId: this.sessionId,
-        getTools: options.getTools,
-      });
-    this.historyWriter = new SessionHistoryWriter({
-      sessionId,
-      getHistoryStore: () => this.getHistoryStore(),
-    });
-    this.inflight_service = new ExecutorInflightService({
-      session_id: this.sessionId,
-      history_store: this.historyStore,
-    });
     this.recovery_policy = new ExecutorRecoveryPolicy({
-      compaction_composer: this.compactionComposer,
-      context_composer: this.contextComposer,
+      session_id: this.sessionId,
+      should_compact: (error) => this.composer.should_compact(error),
       logger: this.logger,
     });
     this.core_engine_runner = new CoreEngineRunner({
-      history_store: this.historyStore,
-      context_composer: this.contextComposer,
+      session_id: this.sessionId,
       logger: this.logger,
       should_compact_on_error: (error) =>
-        this.compactionComposer.shouldCompactOnError(error),
+        this.composer.should_compact(error),
     });
   }
 
@@ -198,13 +128,6 @@ export class Executor implements SessionExecutor {
   }
 
   /**
-   * 获取当前 session 的 history 事实源。
-   */
-  getHistoryStore(): SessionHistoryStore {
-    return this.historyStore;
-  }
-
-  /**
    * 获取当前 session 的执行端口。
    *
    * 关键点（中文）
@@ -212,28 +135,6 @@ export class Executor implements SessionExecutor {
    */
   getExecutor(): SessionExecutor {
     return this;
-  }
-
-  /**
-   * 追加一条 user 消息。
-   */
-  async append_user_message(params: {
-    message?: SessionRecordV1 | null;
-    text?: string;
-    extra?: JsonObject;
-  }): Promise<void> {
-    await this.historyWriter.append_user_message(params);
-  }
-
-  /**
-   * 追加一条 assistant 消息。
-   */
-  async append_assistant_message(params: {
-    message?: SessionRecordV1 | null;
-    fallbackText?: string;
-    extra?: JsonObject;
-  }): Promise<void> {
-    await this.historyWriter.append_assistant_message(params);
   }
 
   /**
@@ -254,31 +155,6 @@ export class Executor implements SessionExecutor {
     }
     const query = String(params.query || "").trim();
     const run_context = this.createRunContext(params.runContext);
-    const providedOnAssistantStepCallback =
-      run_context.onAssistantStepCallback;
-
-    const wrappedOnAssistantStepCallback = async (step: {
-      text: string;
-      stepIndex: number;
-      visibility?: "visible" | "internal";
-      stepResult?: unknown;
-    }): Promise<void> => {
-      const step_parts = buildSessionStepParts({
-        stepIndex: step.stepIndex,
-        stepResult: step.stepResult,
-        text: step.text,
-        visibility: step.visibility,
-      });
-      if (step_parts.length > 0) {
-        await this.inflight_service.append_assistant_step_parts(step_parts);
-      }
-
-      if (typeof providedOnAssistantStepCallback === "function") {
-        await providedOnAssistantStepCallback(step);
-      }
-    };
-    run_context.onAssistantStepCallback = wrappedOnAssistantStepCallback;
-
     const upstream_abort_signal = run_context.abortSignal;
     const abort_controller = new AbortController();
     const abort_from_upstream = () => {
@@ -342,79 +218,22 @@ export class Executor implements SessionExecutor {
    */
   private async prepareExecuteInput(
     query: string,
-    model: LanguageModel,
+    _model: LanguageModel,
     run_context: SessionRunContext,
     retry_count: number,
   ): Promise<SessionExecuteInput> {
-    if (!String(this.historyComposer.sessionId || "").trim()) {
-      throw new Error("Executor.run requires historyComposer.sessionId");
-    }
-
-    await this.refresh_step_runtime(run_context);
-    const composed_context = await this.contextComposer.compose(run_context);
-    const tools = this.bind_run_context_to_tools(composed_context.tools, run_context);
-    const system = await this.systemComposer.resolve(run_context);
-    let compaction_action_id = "";
-
-    try {
-      if (retry_count > 0) {
-        await this.logger.log("info", "[agent] compacting", {
-          retryCount: retry_count,
-        });
-      }
-
-      const emit_compaction_action = async (
-        action: SessionActionRecordV1,
-      ): Promise<void> => {
-        if (action.state === "running") {
-          compaction_action_id = action.id;
-        }
-        await this.emitAction(run_context, action);
-      };
-      const context_window = this.get_model_context_window?.();
-
-      if (retry_count > 0) {
-        await this.compactionComposer.run({
-          historyStore: this.historyStore,
-          model,
-          ...(context_window !== undefined ? { context_window } : {}),
-          system,
-          retryCount: retry_count,
-          force: true,
-          onAction: emit_compaction_action,
-        });
-      }
-    } catch (error) {
-      await this.emitAction(run_context, {
-        type: "action",
-        id:
-          compaction_action_id ||
-          `compacting:${this.sessionId}:failed:${Date.now()}:${generateId()}`,
-        title: "Session records compact failed",
-        description: error instanceof Error ? error.message : String(error),
-        state: "failed",
-        metadata: {
-          v: 1,
-          ts: Date.now(),
-          sessionId: this.sessionId,
-        },
+    if (retry_count > 0) {
+      await this.logger.log("info", "[agent] compacting", {
+        retryCount: retry_count,
       });
-      // 压缩失败不阻断主流程，继续使用当前历史消息执行。
+      await this.compact_history(run_context, retry_count);
     }
-
-    const messages = await this.historyComposer.prepare({
-      query,
-      tools,
-      system,
-      model,
-      retryCount: retry_count,
-    });
-
+    const step = await this.compose_step(run_context, retry_count, true);
     return {
       query,
-      system,
-      messages,
-      tools,
+      system: step.input.system,
+      messages: step.input.messages,
+      tools: step.input.tools,
     };
   }
 
@@ -432,6 +251,8 @@ export class Executor implements SessionExecutor {
       run_context,
       resolve_step_inputs: async () =>
         await this.resolve_step_inputs(run_context),
+      reload_history: async () =>
+        (await this.compose_step(run_context, 0, false)).input.messages,
     });
   }
 
@@ -439,48 +260,29 @@ export class Executor implements SessionExecutor {
    * 在 Assistant writer 完成后归档当前 canonical 历史。
    *
    * 关键点（中文）：持久化 compact 不能发生在流式 Assistant 草稿仍打开时，
-   * 因此由 SessionTurnService 在 writer complete/fail 之后显式调用。
+   * 因此由 SessionTurn 在 writer complete/fail 之后显式调用。
    */
-  async compact_history(run_context: SessionRunContext): Promise<{
+  async compact_history(
+    run_context: SessionRunContext,
+    retry_count = 0,
+  ): Promise<{
     compacted: boolean;
     reason?: string;
   }> {
-    let compaction_action_id = "";
     try {
-      await this.refresh_step_runtime(run_context);
-      const model = this.resolveModelOrThrow();
-      const system = await this.systemComposer.resolve(run_context);
-      const emit_compaction_action = async (
-        action: SessionActionRecordV1,
-      ): Promise<void> => {
-        if (action.state === "running") compaction_action_id = action.id;
-        await this.emitAction(run_context, action);
-      };
-      const context_window = this.get_model_context_window?.();
-      return await this.compactionComposer.run({
-        historyStore: this.historyStore,
-        model,
-        ...(context_window !== undefined ? { context_window } : {}),
-        system,
-        retryCount: 0,
+      const composed = await this.compose_step(
+        run_context,
+        retry_count,
+        true,
+      );
+      const plan = await this.composer.compact({
+        ...composed.compose_input,
         force: true,
-        onAction: emit_compaction_action,
       });
+      if (!plan) return { compacted: false, reason: "nothing_to_compact" };
+      await this.commit_compaction(plan, run_context);
+      return { compacted: true };
     } catch (error) {
-      await this.emitAction(run_context, {
-        type: "action",
-        id:
-          compaction_action_id ||
-          `compacting:${this.sessionId}:failed:${Date.now()}:${generateId()}`,
-        title: "Session records compact failed",
-        description: error instanceof Error ? error.message : String(error),
-        state: "failed",
-        metadata: {
-          v: 1,
-          ts: Date.now(),
-          sessionId: this.sessionId,
-        },
-      });
       return { compacted: false, reason: "compact_failed" };
     } finally {
       await this.release_step_plugins(run_context);
@@ -500,17 +302,48 @@ export class Executor implements SessionExecutor {
     tools: SessionExecuteInput["tools"];
     context_window?: number;
   }> {
-    await this.refresh_step_runtime(run_context);
-    const composed_context = await this.contextComposer.compose(run_context);
-    const context_window = this.get_model_context_window?.();
+    const composed = await this.compose_step(run_context, 0, true);
     return {
-      model: this.resolveModelOrThrow(),
-      system: await this.systemComposer.resolve(run_context),
+      model: composed.model,
+      system: composed.input.system,
       tools: this.bind_run_context_to_tools(
-        composed_context.tools,
+        composed.input.tools,
         run_context,
       ),
-      ...(context_window !== undefined ? { context_window } : {}),
+      ...(composed.compose_input.state.model_context_window !== undefined
+        ? {
+            context_window:
+              composed.compose_input.state.model_context_window,
+          }
+        : {}),
+    };
+  }
+
+  /** 读取只读 Session 快照并交给统一 Composer。 */
+  private async compose_step(
+    run_context: SessionRunContext,
+    retry_count: number,
+    refresh_plugins: boolean,
+  ): Promise<{
+    compose_input: SessionComposeInput;
+    input: SessionStepInput;
+    model: LanguageModel;
+  }> {
+    if (refresh_plugins) await this.refresh_step_runtime(run_context);
+    const compose_input = await this.get_compose_input(
+      run_context,
+      retry_count,
+    );
+    const model = compose_input.state.model;
+    if (!model) throw new Error("requires a configured model.");
+    run_context.agentEnv = Object.freeze({ ...compose_input.state.env });
+    run_context.agentSystems = Object.freeze([
+      ...compose_input.state.systems,
+    ]);
+    return {
+      compose_input,
+      input: await this.composer.compose(compose_input),
+      model,
     };
   }
 
@@ -521,12 +354,6 @@ export class Executor implements SessionExecutor {
     run_context: SessionRunContext,
   ): Promise<void> {
     await this.release_step_plugins(run_context);
-    run_context.agentEnv = Object.freeze({ ...this.getEnv() });
-    if (this.get_systems) {
-      run_context.agentSystems = Object.freeze([...this.get_systems()]);
-    } else {
-      delete run_context.agentSystems;
-    }
     if (this.get_plugins) {
       run_context.agentPlugins = this.get_plugins().acquire();
     } else {
@@ -638,31 +465,6 @@ export class Executor implements SessionExecutor {
         ? [...pendingAssistantFileParts]
         : [],
     };
-  }
-
-  /**
-   * 发布一次 session action。
-   */
-  private async emitAction(
-    run_context: SessionRunContext,
-    action: SessionActionRecordV1,
-  ): Promise<void> {
-    if (typeof run_context.onActionCallback !== "function") return;
-    const action_id =
-      String(action.id || "").trim() ||
-      `action:${this.sessionId}:${Date.now()}:${generateId()}`;
-    const event = to_session_action_record({
-      ...action,
-      id: action_id,
-      metadata: {
-        ...action.metadata,
-        sessionId: run_context.sessionId || this.sessionId,
-        ...(run_context.turnId && !action.metadata.turnId
-          ? { turnId: run_context.turnId }
-          : {}),
-      },
-    }, run_context.sessionId || this.sessionId);
-    await run_context.onActionCallback(event);
   }
 
   /**

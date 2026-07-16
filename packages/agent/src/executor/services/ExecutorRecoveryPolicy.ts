@@ -9,8 +9,6 @@
 
 import type { LanguageModel } from "ai";
 import type { Logger } from "@/utils/logger/Logger.js";
-import type { SessionCompactionComposer } from "@executor/composer/compaction/SessionCompactionComposer.js";
-import type { SessionContextComposer } from "@executor/composer/context/SessionContextComposer.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 import type {
   SessionExecuteInput,
@@ -23,15 +21,11 @@ import type {
 const MAX_COMPACTION_RETRY_ATTEMPTS = 3;
 
 interface ExecutorRecoveryPolicyOptions {
-  /**
-   * 当前 session 对应的 compaction Composer。
-   */
-  compaction_composer: SessionCompactionComposer;
+  /** 当前 Session 稳定标识。 */
+  session_id: string;
 
-  /**
-   * 当前 session 对应的 context Composer。
-   */
-  context_composer: SessionContextComposer;
+  /** 判断错误是否需要持久化压缩后重试。 */
+  should_compact: (error: unknown) => boolean;
 
   /**
    * 当前 session 统一日志器。
@@ -113,15 +107,18 @@ interface ExecutorRecoveryRunInput {
  * 执行恢复与重试策略服务。
  */
 export class ExecutorRecoveryPolicy {
-  private readonly compaction_composer: SessionCompactionComposer;
-  private readonly context_composer: SessionContextComposer;
+  private readonly session_id: string;
+  private readonly should_compact: ExecutorRecoveryPolicyOptions["should_compact"];
   private readonly logger: Logger;
   private retry_count = 0;
 
   constructor(options: ExecutorRecoveryPolicyOptions) {
-    this.compaction_composer = options.compaction_composer;
-    this.context_composer = options.context_composer;
+    this.session_id = String(options.session_id || "").trim();
+    this.should_compact = options.should_compact;
     this.logger = options.logger;
+    if (!this.session_id) {
+      throw new Error("ExecutorRecoveryPolicy requires a non-empty session_id");
+    }
   }
 
   /**
@@ -150,7 +147,7 @@ export class ExecutorRecoveryPolicy {
         run_context: input.run_context,
       });
     } catch (error) {
-      if (this.compaction_composer.shouldCompactOnError(error)) {
+      if (this.should_compact(error)) {
         await this.logger.log("info", "[agent] compacting", {
           retryCount: this.retry_count,
           error: String(error),
@@ -201,10 +198,18 @@ export class ExecutorRecoveryPolicy {
     return {
       success: false,
       error: input.error_text,
-      assistantMessage: this.context_composer.buildFallbackAssistantMessage(
-        input.fallback_text,
-        input.run_context,
-      ),
+      assistantMessage: {
+        id: `a:${this.session_id}:${Date.now()}`,
+        role: "assistant",
+        metadata: {
+          v: 1,
+          ts: Date.now(),
+          sessionId: this.session_id,
+          source: "egress",
+          kind: "normal",
+        },
+        parts: [{ type: "text", text: input.fallback_text }],
+      },
       deferredPersistedUserMessages: [
         ...input.run_context.deferredPersistedUserMessages,
       ],

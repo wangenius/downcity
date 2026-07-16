@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 面向 `new Agent(...)` 的本地会话使用场景。
  * - 对外保留稳定 Session facade，把状态、turn、view 逻辑下沉到独立 service。
- * - 内部使用 `SessionRecorder` 统一管理 Active、Segment 与流式 Assistant 草稿。
+ * - 内部使用 `SessionMessages` 统一管理 Active、Segment 与流式 Assistant 草稿。
  */
 
 import { Executor } from "@executor/Executor.js";
@@ -14,10 +14,8 @@ import {
   read_agent_model_context_window,
   type AgentModel,
 } from "@/agent/AgentModel.js";
-import { JsonlSessionHistoryComposer } from "@executor/composer/history/jsonl/JsonlSessionHistoryComposer.js";
-import { SessionRecorderHistoryStore } from "@/session/recorder/SessionRecorderHistoryStore.js";
-import { JsonlSessionMessageStore } from "@/session/recorder/JsonlSessionMessageStore.js";
-import { SessionRecorder } from "@/session/recorder/SessionRecorder.js";
+import { JsonlSessionMessageStore } from "@/session/messages/JsonlSessionMessageStore.js";
+import { SessionMessages } from "@/session/SessionMessages.js";
 import type {
   AgentSessionConfigSnapshot,
   AgentSessionForkInput,
@@ -33,7 +31,6 @@ import {
 } from "@/session/storage/Paths.js";
 import { resolveSystemTimezone } from "@/session/storage/Metadata.js";
 import { createRuntimeSessionPort } from "@/session/storage/RuntimeSessionPort.js";
-import { SessionSystemBuilder } from "@/session/SessionSystemBuilder.js";
 import type { SessionPort } from "@/types/session/SessionPort.js";
 import type {
   SessionMutationSubscriber,
@@ -54,24 +51,35 @@ import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js"
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
 import { SessionEventHub } from "@/session/runtime/SessionEventHub.js";
-import { SessionStateService } from "@/session/services/SessionStateService.js";
-import { SessionTurnService } from "@/session/services/SessionTurnService.js";
-import { SessionViewService } from "@/session/services/SessionViewService.js";
+import { SessionState } from "@/session/SessionState.js";
+import { SessionTurn } from "@/session/SessionTurn.js";
 import type { SessionLocalState } from "@/types/session/SessionLocalState.js";
-import type { AgentSessionCommand } from "@/types/session/SessionQueueCommand.js";
 import type {
-  SessionComposerFactoryContext,
-  SessionComposerInput,
-  SessionComposerOptions,
-} from "@/types/session/SessionComposerOptions.js";
-import type { SessionCompactionComposer } from "@/executor/composer/compaction/SessionCompactionComposer.js";
-import type { SessionContextComposer } from "@/executor/composer/context/SessionContextComposer.js";
-import type { SessionHistoryComposer } from "@/executor/composer/history/SessionHistoryComposer.js";
-import type { SessionSystemComposer } from "@/executor/composer/system/SessionSystemComposer.js";
+  AgentSessionCommand,
+  SessionQueueCommand,
+} from "@/types/session/SessionQueue.js";
 import type { SessionOptions } from "@/types/session/SessionOptions.js";
 import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.js";
-import { SessionToolRuntime } from "@/session/tool/SessionToolRuntime.js";
 import { SessionApprovalBroker } from "@/session/approval/SessionApprovalBroker.js";
+import { DefaultSessionComposer } from "@/session/DefaultSessionComposer.js";
+import type {
+  SessionComposer,
+  SessionCompactionPlan,
+  SessionComposeInput,
+  SessionStepInput,
+} from "@/types/session/SessionComposer.js";
+import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
+import { generateId } from "@/utils/Id.js";
+import { nanoid } from "nanoid";
+import { buildSessionInfo } from "@/session/browse/Browse.js";
+import { ensureSessionTitle } from "@/session/SessionTitle.js";
+import { readSessionMetadata } from "@/session/storage/Metadata.js";
+import { to_executor_history } from "@/session/messages/SessionMessageCodec.js";
+import type { SessionMessage } from "@/types/session/SessionMessage.js";
+import type {
+  SessionActionRecordInputV1,
+  SessionActionRecordV1,
+} from "@/executor/types/SessionRecords.js";
 
 /**
  * SDK 本地 Session。
@@ -85,16 +93,12 @@ export class Session implements AgentSession {
   private readonly logger: SessionOptions["logger"];
   private readonly getInstructionSystemBlocks: SessionOptions["getInstructionSystemBlocks"];
   private readonly getManagedPluginSystemBlocks: SessionOptions["getManagedPluginSystemBlocks"];
-  private readonly getPluginSystemBlocks: SessionOptions["getPluginSystemBlocks"];
   private readonly ensureConfiguredHook?: SessionOptions["ensureConfigured"];
-  private readonly composers?: SessionComposerOptions;
-  private readonly historyStore: SessionRecorderHistoryStore;
+  private readonly composer: SessionComposer;
   private readonly messageStore: JsonlSessionMessageStore;
-  private readonly recorder: SessionRecorder;
-  private readonly historyComposer: SessionHistoryComposer;
+  private readonly session_messages: SessionMessages;
   private readonly executor: Executor;
   private readonly eventHub: SessionEventHub;
-  private readonly tool_runtime: SessionToolRuntime;
   private readonly approval_broker: SessionApprovalBroker;
   private readonly localState: SessionLocalState;
   private readonly getAgentEnv: SessionOptions["getAgentEnv"];
@@ -103,9 +107,8 @@ export class Session implements AgentSession {
   private effective_instruction_system_blocks: AgentSessionSystemBlock[];
   private effective_agent_env: Record<string, string>;
   private effective_agent_plugins: AgentPluginExecutionRuntime;
-  private readonly stateService: SessionStateService;
-  private readonly turnService: SessionTurnService;
-  private readonly viewService: SessionViewService<this>;
+  private readonly stateService: SessionState;
+  private readonly session_turn: SessionTurn;
   private runtimePort: SessionPort | null = null;
 
   constructor(options: SessionOptions) {
@@ -124,9 +127,8 @@ export class Session implements AgentSession {
     this.effective_agent_env = { ...options.getAgentEnv() };
     this.effective_agent_plugins = options.get_agent_plugins();
     this.getManagedPluginSystemBlocks = options.getManagedPluginSystemBlocks;
-    this.getPluginSystemBlocks = options.getPluginSystemBlocks;
     this.ensureConfiguredHook = options.ensureConfigured;
-    this.composers = options.composers;
+    this.composer = options.composer || new DefaultSessionComposer();
     if (!this.id) {
       throw new Error("Session requires a non-empty sessionId");
     }
@@ -139,38 +141,24 @@ export class Session implements AgentSession {
 
     this.eventHub = new SessionEventHub();
     this.messageStore = this.create_message_store();
-    this.recorder = new SessionRecorder({
+    this.session_messages = new SessionMessages({
       session_id: this.id,
       store: this.messageStore,
       publish: (mutation) => {
         this.eventHub.publish(mutation);
       },
     });
-    this.tool_runtime = new SessionToolRuntime(this.recorder);
     this.approval_broker = new SessionApprovalBroker({
       session_id: this.id,
-      tool_runtime: this.tool_runtime,
+      messages: this.session_messages,
     });
-    this.historyStore = this.create_history_store();
     this.localState = this.create_local_state();
-    const composer_context = this.create_composer_context();
-    this.historyComposer = this.create_history_composer(composer_context);
-    const system_composer = this.create_system_composer(composer_context);
-    const context_composer = this.create_context_composer(composer_context);
-    const compaction_composer =
-      this.create_compaction_composer(composer_context);
-    this.executor = this.create_executor(
-      system_composer,
-      context_composer,
-      compaction_composer,
-    );
-    this.stateService = new SessionStateService({
+    this.executor = this.create_executor();
+    this.stateService = new SessionState({
       agent_id: this.agentId,
       project_root: this.projectRoot,
       session_id: this.id,
-      history_store: this.historyStore,
-      recorder: this.recorder,
-      executor: this.executor,
+      messages: this.session_messages,
       state: this.localState,
       logger: this.logger,
       ensure_configured_hook: this.ensureConfiguredHook
@@ -183,43 +171,16 @@ export class Session implements AgentSession {
         this.eventHub.publish(event);
       },
     });
-    this.turnService = new SessionTurnService({
+    this.session_turn = new SessionTurn({
       session_id: this.id,
       project_root: this.projectRoot,
       executor: this.executor,
-      state_service: this.stateService,
-      event_hub: this.eventHub,
-      recorder: this.recorder,
-      tool_runtime: this.tool_runtime,
-      approval_broker: this.approval_broker,
-    });
-    this.viewService = new SessionViewService<this>({
-      agent_id: this.agentId,
-      project_root: this.projectRoot,
-      session_id: this.id,
-      history_store: this.historyStore,
-      recorder: this.recorder,
-      state_service: this.stateService,
-      logger: this.logger,
-      is_executing: () => this.isExecuting(),
-      get_instruction_system_blocks: () =>
-        this.effective_instruction_system_blocks.map((block) => ({ ...block })),
-      get_managed_plugin_system_blocks: this.getManagedPluginSystemBlocks,
-      get_plugin_system_blocks: async () =>
-        await this.effective_agent_plugins.systemBlocks(),
-      ...(this.composers?.systemComposer
-        ? { custom_system_composer: system_composer }
-        : {}),
-      create_fork_session: async (session_id) => {
-        const session = this.create_fork_session(session_id);
-        await session.initialize();
-        return {
-          session,
-          history_store: session.historyStore,
-          recorder: session.recorder,
-          state_service: session.stateService,
-        };
-      },
+      state: this.stateService,
+      events: this.eventHub,
+      messages: this.session_messages,
+      approvals: this.approval_broker,
+      apply_command: async (command, turn_id) =>
+        await this.apply_queue_command(command, turn_id),
     });
   }
 
@@ -227,7 +188,7 @@ export class Session implements AgentSession {
    * 初始化当前 session。
    */
   async initialize(): Promise<this> {
-    await this.recorder.initialize();
+    await this.session_messages.initialize();
     await this.stateService.initialize();
     return this;
   }
@@ -245,7 +206,7 @@ export class Session implements AgentSession {
   async set(input: AgentSessionSetInput): Promise<void> {
     const configured = await this.stateService.set(input);
     if (configured.command) {
-      this.turnService.enqueue_command(configured.command);
+      this.session_turn.enqueue_command(configured.command);
     }
   }
 
@@ -253,7 +214,7 @@ export class Session implements AgentSession {
    * 追加一条新的 Session prompt。
    */
   async prompt(input: AgentSessionPromptInput): Promise<AgentSessionTurnHandle> {
-    return await this.turnService.prompt(input);
+    return await this.session_turn.prompt(input);
   }
 
   /**
@@ -261,55 +222,89 @@ export class Session implements AgentSession {
    */
   async stop(): Promise<AgentSessionStopResult> {
     await this.approval_broker.expire_all();
-    return await this.turnService.stop();
+    return this.session_turn.stop();
   }
 
   /**
    * 把一次显式历史压缩加入当前 Session 的有序输入队列。
    */
   async compact(): Promise<void> {
-    await this.turnService.compact();
+    await this.session_turn.compact();
   }
 
   /**
    * 把 Agent configured state command 加入当前 Session 的统一输入队列。
    */
   enqueue_agent_command(command: AgentSessionCommand): void {
-    this.turnService.enqueue_command({
-      type: "command",
+    if (command.type === "instruction") {
+      this.session_turn.enqueue_command({
+        type: "agent_instruction",
+        command_id: command.command_id,
+        instruction_blocks: command.instruction_blocks,
+      });
+      return;
+    }
+    if (command.type === "env") {
+      this.session_turn.enqueue_command({
+        type: "agent_env",
+        command_id: command.command_id,
+        env: command.env,
+      });
+      return;
+    }
+    this.session_turn.enqueue_command({
+      type: "agent_plugins",
       command_id: command.command_id,
-      scope: "agent",
-      execute: async ({ turn_id }) => {
-        if (command.type === "instruction") {
-          this.effective_instruction_system_blocks = command
-            .instruction_blocks
-            .map((block) => ({ ...block }));
-          await this.stateService.emit_config_action_event({
-            id: `agent-instruction:${this.id}:${command.command_id}`,
-            title: "Agent instruction updated",
-            state: "completed",
-            turnId: turn_id,
-          });
-          return;
-        }
-        if (command.type === "env") {
-          this.effective_agent_env = { ...command.env };
-          await this.stateService.emit_config_action_event({
-            id: `agent-env:${this.id}:${command.command_id}`,
-            title: "Agent environment updated",
-            state: "completed",
-            turnId: turn_id,
-          });
-          return;
-        }
-        this.effective_agent_plugins = command.plugins;
-        await this.stateService.emit_config_action_event({
-          id: `agent-plugins:${this.id}:${command.command_id}`,
-          title: command.title,
+      title: command.title,
+      plugins: command.plugins,
+    });
+  }
+
+  /** 在 Step 检查点提交明确的 Session/Agent 状态命令。 */
+  private async apply_queue_command(
+    command: Exclude<SessionQueueCommand, { type: "compact" }>,
+    turn_id: string,
+  ): Promise<void> {
+    if (command.type === "session_model") {
+      await this.stateService.apply_model_command(command);
+      if (command.action_id && command.action_title) {
+        await this.emit_config_action_event({
+          id: command.action_id,
+          title: command.action_title,
           state: "completed",
           turnId: turn_id,
         });
-      },
+      }
+      return;
+    }
+    if (command.type === "agent_instruction") {
+      this.effective_instruction_system_blocks = command.instruction_blocks.map(
+        (block) => ({ ...block }),
+      );
+      await this.emit_config_action_event({
+        id: `agent-instruction:${this.id}:${command.command_id}`,
+        title: "Agent instruction updated",
+        state: "completed",
+        turnId: turn_id,
+      });
+      return;
+    }
+    if (command.type === "agent_env") {
+      this.effective_agent_env = { ...command.env };
+      await this.emit_config_action_event({
+        id: `agent-env:${this.id}:${command.command_id}`,
+        title: "Agent environment updated",
+        state: "completed",
+        turnId: turn_id,
+      });
+      return;
+    }
+    this.effective_agent_plugins = command.plugins;
+    await this.emit_config_action_event({
+      id: `agent-plugins:${this.id}:${command.command_id}`,
+      title: command.title,
+      state: "completed",
+      turnId: turn_id,
     });
   }
 
@@ -348,9 +343,12 @@ export class Session implements AgentSession {
   async append_user_message(input: {
     text: string;
   }): Promise<void> {
-    await this.stateService.append_user_message({
+    const appended = await this.session_messages.append_external_user_message({
       text: String(input.text || "").trim(),
     });
+    if (!appended) return;
+    await this.stateService.ensure_title_from_history({ generate: true });
+    await this.stateService.touch_metadata();
   }
 
   /**
@@ -359,44 +357,140 @@ export class Session implements AgentSession {
   async append_assistant_message(input: {
     text: string;
   }): Promise<void> {
-    await this.stateService.append_assistant_message({
-      fallbackText: String(input.text || "").trim(),
+    const appended = await this.session_messages.append_external_assistant_message({
+      fallback_text: String(input.text || "").trim(),
     });
+    if (appended) await this.stateService.touch_metadata();
   }
 
   /**
    * 读取当前 session 详情。
    */
   async get_info(): Promise<AgentSessionInfo> {
-    return await this.viewService.get_info();
+    const [metadata, snapshot] = await Promise.all([
+      readSessionMetadata({
+        projectRoot: this.projectRoot,
+        agentId: this.agentId,
+        sessionId: this.id,
+      }),
+      this.session_messages.context_snapshot(),
+    ]);
+    const records = to_executor_history(this.id, snapshot);
+    const metadata_with_title = metadata.title
+      ? metadata
+      : await ensureSessionTitle({
+          projectRoot: this.projectRoot,
+          agentId: this.agentId,
+          sessionId: this.id,
+          messages: records,
+          logger: this.logger,
+        });
+    return buildSessionInfo({
+      projectRoot: this.projectRoot,
+      agentId: this.agentId,
+      sessionId: this.id,
+      metadata: metadata_with_title,
+      messages: records,
+      executing: this.isExecuting(),
+    });
   }
 
   /**
    * 读取当前 session records 分页。
    */
   async messages(input?: ListSessionMessagesInput): Promise<SessionMessagePage> {
-    return await this.recorder.list_messages(input);
+    return await this.session_messages.list_messages(input);
   }
 
   /**
    * 读取当前 session 生效的 system 快照。
    */
   async system(): Promise<AgentSessionSystemSnapshot> {
-    return await this.viewService.system();
+    const composed = await this.compose_for_view();
+    const blocks = resolve_composed_system_blocks(composed);
+    return {
+      sessionId: this.id,
+      session: {
+        agentId: this.agentId,
+        sessionId: this.id,
+        projectRoot: this.projectRoot,
+        createdAt: new Date(this.stateService.get_created_at()).toISOString(),
+        timezone: this.stateService.get_timezone(),
+      },
+      blocks,
+    };
   }
 
   /**
    * 返回当前 session 是否正在执行。
    */
   isExecuting(): boolean {
-    return this.turnService.is_prompt_runtime_active() || this.executor.isExecuting();
+    return this.session_turn.isActive() || this.executor.isExecuting();
   }
 
   /**
    * 从当前 session 创建一个分叉会话。
    */
   async fork(input?: AgentSessionForkInput | string): Promise<this> {
-    return await this.viewService.fork(input);
+    const message_id = typeof input === "string"
+      ? String(input || "").trim() || undefined
+      : String(input?.messageId || "").trim() || undefined;
+    const messages = await this.session_messages.list_history_messages();
+    const fork_messages = message_id
+      ? this.resolve_fork_messages(messages, message_id)
+      : messages;
+    const action_id = `history-forking:${this.id}:${Date.now()}:${nanoid(8)}`;
+    await this.emit_action_event({
+      id: action_id,
+      title: "Forking session messages",
+      description: `Preparing ${String(fork_messages.length)} messages for the new session.`,
+      state: "running",
+    });
+    try {
+      const forked = this.create_fork_session(
+        `fork-${Date.now()}-${nanoid(8)}`,
+      );
+      await forked.initialize();
+      const session_config = this.stateService.get_config();
+      if (session_config.model) {
+        await forked.stateService.set(
+          { model: session_config.model },
+          { emit_action: false },
+        );
+      }
+      await forked.session_messages.import_messages(fork_messages);
+      await this.emit_action_event({
+        id: action_id,
+        title: "Session messages forked",
+        description: `Created ${forked.id} with ${String(fork_messages.length)} messages.`,
+        state: "completed",
+      });
+      return forked;
+    } catch (error) {
+      await this.emit_action_event({
+        id: action_id,
+        title: "Session messages fork failed",
+        description: error instanceof Error ? error.message : String(error),
+        state: "failed",
+      });
+      throw error;
+    }
+  }
+
+  /** 截取 Fork 目标 Message 及其之前的完整历史。 */
+  private resolve_fork_messages(
+    messages: SessionMessage[],
+    message_id: string,
+  ): SessionMessage[] {
+    const target_index = messages.findIndex(
+      (message) => message.message_id === message_id,
+    );
+    if (target_index < 0) {
+      throw new Error(
+        `Cannot fork session "${this.id}": messageId "${message_id}" not found.`,
+      );
+    }
+    return messages.slice(0, target_index + 1);
   }
 
   /**
@@ -412,13 +506,22 @@ export class Session implements AgentSession {
       stop: async () => await this.stop(),
       subscribe: (subscriber) => this.subscribe(subscriber),
       append_user_message: async (message_params) => {
-        await this.stateService.append_user_message(message_params);
+        const appended = await this.session_messages.append_external_user_message(
+          message_params,
+        );
+        if (!appended) return;
+        await this.stateService.ensure_title_from_history({ generate: true });
+        await this.stateService.touch_metadata();
       },
       append_assistant_message: async (message_params) => {
-        await this.stateService.append_assistant_message(message_params);
+        const appended = await this.session_messages.append_external_assistant_message({
+          message: message_params.message,
+          fallback_text: message_params.fallbackText,
+        });
+        if (appended) await this.stateService.touch_metadata();
       },
       isExecuting: () => this.isExecuting(),
-      historyStore: this.historyStore,
+      context: async () => await this.session_messages.context_snapshot(),
       ensureReadyForExecution: async () => {
         await this.ensureReadyForExecution();
       },
@@ -444,11 +547,9 @@ export class Session implements AgentSession {
       getAgentEnv: this.getAgentEnv,
       get_agent_plugins: this.get_agent_plugins,
       getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
-      getPluginSystemBlocks: async () =>
-        await this.effective_agent_plugins.systemBlocks(),
       ensureConfigured: this.ensureConfiguredHook,
       getAgentModel: this.getAgentModel,
-      composers: this.composers,
+      composer: this.composer,
     });
   }
 
@@ -484,13 +585,6 @@ export class Session implements AgentSession {
     });
   }
 
-  private create_history_store(): SessionRecorderHistoryStore {
-    return new SessionRecorderHistoryStore({
-      session_id: this.id,
-      recorder: this.recorder,
-    });
-  }
-
   private create_local_state(): SessionLocalState {
     return {
       sessionConfig: {},
@@ -502,92 +596,113 @@ export class Session implements AgentSession {
     };
   }
 
-  private create_composer_context(): SessionComposerFactoryContext {
-    return {
-      agentId: this.agentId,
-      projectRoot: this.projectRoot,
+  /** 创建只依赖统一 Composer 的 Turn Executor。 */
+  private create_executor(): Executor {
+    return new Executor({
       sessionId: this.id,
-      historyStore: this.historyStore,
-      getTools: () => this.tools,
-      getInstructionSystemBlocks: () =>
-        this.effective_instruction_system_blocks.map((block) => ({ ...block })),
-      getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
-      getPluginSystemBlocks: async () =>
-        await this.effective_agent_plugins.systemBlocks(),
-      getSessionCreatedAt: () => this.localState.createdAt,
-      getSessionTimezone: () => this.localState.timezone,
+      composer: this.composer,
+      get_compose_input: async (run_context, retry_count) =>
+        await this.create_compose_input(run_context, retry_count),
+      commit_compaction: async (plan, run_context) =>
+        await this.commit_compaction_plan(plan, run_context),
+      getModel: () => this.get_model(),
+      logger: this.logger,
+      get_plugins: () => this.effective_agent_plugins,
+    });
+  }
+
+  /** 为 Composer 创建当前 Step 的只读 Session 快照。 */
+  private async create_compose_input(
+    run_context: SessionRunContext,
+    retry_count: number,
+  ): Promise<SessionComposeInput> {
+    const plugin_system_blocks = run_context.agentPlugins
+      ? await run_context.agentPlugins.systemBlocks(run_context)
+      : await this.effective_agent_plugins.systemBlocks(run_context);
+    return {
+      session: {
+        agent_id: this.agentId,
+        session_id: this.id,
+        project_root: this.projectRoot,
+        created_at: this.localState.createdAt,
+        timezone: this.localState.timezone,
+      },
+      state: {
+        model: this.get_model(),
+        model_context_window: this.get_model_context_window(),
+        env: Object.freeze({ ...this.effective_agent_env }),
+        systems: Object.freeze(
+          this.effective_instruction_system_blocks.map(
+            (block) => block.content,
+          ),
+        ),
+        tools: Object.freeze({ ...this.tools }),
+        instruction_system_blocks:
+          this.effective_instruction_system_blocks.map(
+            (block) => ({ ...block }),
+          ),
+        managed_plugin_system_blocks:
+          await this.getManagedPluginSystemBlocks(),
+        plugin_system_blocks,
+      },
+      history: await this.session_messages.context_snapshot(),
+      turn: {
+        ...(run_context.turnId ? { turn_id: run_context.turnId } : {}),
+        retry_count,
+      },
     };
   }
 
-  private create_history_composer(
-    context: SessionComposerFactoryContext,
-  ): SessionHistoryComposer {
-    return this.resolve_composer(this.composers?.historyComposer, context, () =>
-      new JsonlSessionHistoryComposer({
-        store: this.historyStore,
-      }),
-    );
-  }
-
-  private create_system_composer(
-    context: SessionComposerFactoryContext,
-  ): SessionSystemComposer {
-    return this.resolve_composer(this.composers?.systemComposer, context, () =>
-      new SessionSystemBuilder({
-        agentId: this.agentId,
-        projectRoot: this.projectRoot,
-        getSessionCreatedAt: () => this.localState.createdAt,
-        getSessionTimezone: () => this.localState.timezone,
-        getInstructionSystemBlocks: () =>
-          this.effective_instruction_system_blocks.map((block) => ({ ...block })),
-        getManagedPluginSystemBlocks: this.getManagedPluginSystemBlocks,
-        getPluginSystemBlocks: async () =>
-          await this.effective_agent_plugins.systemBlocks(),
-      }),
-    );
-  }
-
-  private create_context_composer(
-    context: SessionComposerFactoryContext,
-  ): SessionContextComposer | undefined {
-    return this.resolve_optional_composer<SessionContextComposer>(
-      this.composers?.contextComposer,
-      context,
-    );
-  }
-
-  private create_compaction_composer(
-    context: SessionComposerFactoryContext,
-  ): SessionCompactionComposer | undefined {
-    return this.resolve_optional_composer<SessionCompactionComposer>(
-      this.composers?.compactionComposer,
-      context,
-    );
-  }
-
-  private create_executor(
-    system_composer: SessionSystemComposer,
-    context_composer?: SessionContextComposer,
-    compaction_composer?: SessionCompactionComposer,
-  ): Executor {
-    return new Executor({
+  /** 使用统一 Composer 生成只读 system/history 查询结果。 */
+  private async compose_for_view(): Promise<SessionStepInput> {
+    const run_context: SessionRunContext = {
       sessionId: this.id,
-      historyStore: this.historyStore,
-      historyComposer: this.historyComposer,
-      getModel: () => this.get_model(),
-      get_model_context_window: () => this.get_model_context_window(),
-      logger: this.logger,
-      systemComposer: system_composer,
-      getTools: () => this.tools,
-      getEnv: () => ({ ...this.effective_agent_env }),
-      get_systems: () =>
-        this.effective_instruction_system_blocks.map((block) => block.content),
-      get_plugins: () => this.effective_agent_plugins,
-      ...(context_composer ? { contextComposer: context_composer } : {}),
-      ...(compaction_composer
-        ? { compactionComposer: compaction_composer }
-        : {}),
+      injectedUserMessages: [],
+      deferredPersistedUserMessages: [],
+      pendingAssistantFileParts: [],
+    };
+    return await this.composer.compose(
+      await this.create_compose_input(run_context, 0),
+    );
+  }
+
+  /** 提交 Composer 生成的 Segment 压缩计划。 */
+  private async commit_compaction_plan(
+    plan: SessionCompactionPlan,
+    run_context: SessionRunContext,
+  ): Promise<void> {
+    const action_id = `compacting:${this.id}:${generateId()}`;
+    await this.emit_action_event({
+      id: action_id,
+      title: "Compacting session messages",
+      state: "running",
+      ...(run_context.turnId ? { turnId: run_context.turnId } : {}),
     });
+    try {
+      await this.session_messages.compact_active({
+        through_sequence: plan.through_sequence,
+        summary: plan.summary,
+      });
+      await this.emit_action_event({
+        id: action_id,
+        title: "Session messages compacted",
+        description: plan.used_fallback
+          ? `Closed Active through Message ${plan.boundary_message_id} with deterministic fallback Summary.`
+          : `Closed Active through Message ${plan.boundary_message_id}.`,
+        state: "completed",
+        ...(run_context.turnId ? { turnId: run_context.turnId } : {}),
+      });
+      await this.stateService.touch_metadata();
+    } catch (error) {
+      await this.emit_action_event({
+        id: action_id,
+        title: "Session messages compact failed",
+        description: error instanceof Error ? error.message : String(error),
+        state: "failed",
+        ...(run_context.turnId ? { turnId: run_context.turnId } : {}),
+      });
+      throw error;
+    }
   }
 
   /**
@@ -618,26 +733,82 @@ export class Session implements AgentSession {
     );
   }
 
-  private resolve_composer<TComposer>(
-    input: SessionComposerInput<TComposer> | undefined,
-    context: SessionComposerFactoryContext,
-    create_default: () => TComposer,
-  ): TComposer {
-    const composer = this.resolve_optional_composer(input, context);
-    return composer || create_default();
+  /** 持久化并发布一条 canonical Action Message。 */
+  private async emit_action_event(input: SessionActionRecordInputV1): Promise<void> {
+    const action_id = String(input.id || "").trim() ||
+      `action:${this.id}:${Date.now()}`;
+    await this.session_messages.persist_action_record({
+      type: "action",
+      id: action_id,
+      title: input.title,
+      ...(input.description ? { description: input.description } : {}),
+      state: input.state,
+      metadata: {
+        v: 1,
+        ts: Date.now(),
+        sessionId: this.id,
+        ...(input.turnId ? { turnId: input.turnId } : {}),
+      },
+    });
+    await this.stateService.touch_metadata();
   }
 
-  private resolve_optional_composer<TComposer>(
-    input: SessionComposerInput<TComposer> | undefined,
-    context: SessionComposerFactoryContext,
-  ): TComposer | undefined {
-    if (!input) return undefined;
-    if (typeof input === "function") {
-      const create_composer = input as (
-        context: SessionComposerFactoryContext,
-      ) => TComposer;
-      return create_composer(context);
+  /** 尽力记录配置 Action，不让 timeline 故障反向改变已提交配置。 */
+  private async emit_config_action_event(
+    input: SessionActionRecordInputV1 | SessionActionRecordV1,
+  ): Promise<boolean> {
+    try {
+      await this.emit_action_event({
+        id: input.id,
+        title: input.title,
+        description: input.description,
+        state: input.state,
+        turnId: "turnId" in input ? input.turnId : input.metadata?.turnId,
+      });
+      return true;
+    } catch (error) {
+      try {
+        await this.logger.log("warn", "[agent] config action persistence failed", {
+          sessionId: this.id,
+          actionId: String(input.id || ""),
+          error: error instanceof Error ? error.message : String(error),
+        });
+      } catch {
+        // 配置已提交，日志失败也不能反向改变 effective state。
+      }
+      return false;
     }
-    return input;
   }
+
+}
+
+/** 把自定义 Composer 的 system content 转为可展示文本。 */
+function stringify_system_content(content: unknown): string {
+  if (typeof content === "string") return content.trim();
+  if (content === null || content === undefined) return "";
+  try {
+    return JSON.stringify(content);
+  } catch {
+    return String(content || "").trim();
+  }
+}
+
+/** 以实际模型输入为准，保留仍与其一致的 system block 来源信息。 */
+function resolve_composed_system_blocks(
+  composed: SessionStepInput,
+): AgentSessionSystemBlock[] {
+  const declared_blocks = composed.system_blocks || [];
+  return composed.system.flatMap((message, index) => {
+    const content = stringify_system_content(message.content);
+    if (!content) return [];
+    const declared = declared_blocks[index];
+    if (declared && declared.content.trim() === content) {
+      return [{ ...declared, content }];
+    }
+    return [{
+      source: "session" as const,
+      name: `custom_system:${index + 1}`,
+      content,
+    }];
+  });
 }

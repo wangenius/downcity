@@ -6,27 +6,27 @@
  */
 
 import type { UIMessageChunk } from "ai";
-import type { SessionRecorder } from "@/session/recorder/SessionRecorder.js";
-import { to_session_json_value } from "@/session/recorder/SessionJsonValue.js";
+import type { SessionMessages } from "@/session/SessionMessages.js";
+import { to_session_json_value } from "@/session/messages/SessionJsonValue.js";
 import type {
   SessionAssistantFilePart,
   SessionAssistantMessage,
   SessionAssistantMessagePart,
   SessionAssistantToolPart,
 } from "@/types/session/SessionMessage.js";
-import type { SessionToolInputReady } from "@/types/session/SessionToolRuntime.js";
+import type { SessionToolInputReady } from "@/types/session/SessionTool.js";
 import { generateId } from "@/utils/Id.js";
 
 /** 单个 Assistant segment 的流式 writer。 */
 export class SessionAssistantMessageWriter {
   readonly message_id: string;
-  private readonly recorder: SessionRecorder;
+  private readonly recorder: SessionMessages;
   private readonly pending_text_parts = new Map<string, "text" | "reasoning">();
   private readonly active_text_part_ids = new Map<string, string>();
   private write_chain: Promise<void> = Promise.resolve();
   private closed = false;
 
-  constructor(recorder: SessionRecorder, message_id: string) {
+  constructor(recorder: SessionMessages, message_id: string) {
     this.recorder = recorder;
     this.message_id = message_id;
   }

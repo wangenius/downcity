@@ -13,6 +13,25 @@ import {
 } from "@/agent/AgentModel.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import { getSdkAgentSessionMetaPath } from "@/session/storage/Paths.js";
+import type { AgentSessionConfigSnapshot } from "@/types/agent/SessionTypes.js";
+
+/** 刷新 Session metadata 的参数。 */
+export interface TouchSessionMetadataParams {
+  /** 当前项目根目录。 */
+  projectRoot: string;
+  /** 当前 Agent 稳定标识。 */
+  agentId: string;
+  /** 当前 Session 稳定标识。 */
+  sessionId: string;
+  /** 当前 Session configured state。 */
+  sessionConfig: AgentSessionConfigSnapshot;
+  /** 当前 canonical Message 总数。 */
+  message_count?: number;
+  /** 当前 Message 日志总字节数。 */
+  history_bytes?: number;
+  /** 最近一条用户可见 Message 的文本摘要。 */
+  preview_text?: string;
+}
 
 type ReadSessionMetadataInput = {
   /**
@@ -212,4 +231,38 @@ export async function patchSessionModelLabel(
     meta: next,
   });
   return next;
+}
+
+/** 根据 canonical Message 统计刷新当前 Session metadata。 */
+export async function touchSessionMetadata(
+  params: TouchSessionMetadataParams,
+): Promise<void> {
+  const current = await readSessionMetadata({
+    projectRoot: params.projectRoot,
+    agentId: params.agentId,
+    sessionId: params.sessionId,
+  });
+  const next: SessionHistoryMetaV1 = {
+    ...current,
+    agentId: params.agentId,
+    createdAt:
+      typeof current.createdAt === "number" ? current.createdAt : Date.now(),
+    updatedAt: Date.now(),
+    ...(params.sessionConfig.modelLabel
+      ? { modelLabel: params.sessionConfig.modelLabel }
+      : {}),
+    ...(typeof params.message_count === "number"
+      ? { messageCount: params.message_count }
+      : {}),
+    ...(typeof params.history_bytes === "number"
+      ? { historyBytes: params.history_bytes }
+      : {}),
+    ...(params.preview_text ? { previewText: params.preview_text } : {}),
+  };
+  await writeSessionMetadata({
+    projectRoot: params.projectRoot,
+    agentId: params.agentId,
+    sessionId: params.sessionId,
+    meta: next,
+  });
 }

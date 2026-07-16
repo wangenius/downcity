@@ -7,7 +7,6 @@
  */
 
 import type { LanguageModel } from "ai";
-import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
 import type {
   SessionMetadataV1,
   SessionRecordV1,
@@ -23,6 +22,7 @@ import type {
   SessionMutationSubscriber,
   SessionMutationUnsubscribe,
 } from "@/types/session/SessionMutation.js";
+import type { SessionContextSnapshot } from "@/types/session/SessionSegment.js";
 
 /**
  * 单个 Session 执行端口。
@@ -52,8 +52,8 @@ export interface SessionPort {
   /** 获取当前 Session 的执行端口。 */
   getExecutor(): SessionExecutorPort;
 
-  /** 获取当前 Session 的持久化端口。 */
-  getHistoryStore(): SessionHistoryStore;
+  /** 读取当前 Session 的累计 Summary 与 Active Message 快照。 */
+  context(): Promise<SessionContextSnapshot>;
 
   /** 向当前 Session actor 追加一条新的 prompt。 */
   prompt(input: AgentSessionPromptInput): Promise<AgentSessionTurnHandle>;

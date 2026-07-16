@@ -12,6 +12,7 @@ import { isTextUIPart } from "ai";
 import type { PluginActionResult } from "@downcity/agent";
 import type { AgentContext } from "@downcity/agent";
 import type { JsonValue } from "@downcity/agent";
+import type { SessionMessage } from "@downcity/agent";
 import type {
   MemoryDigestPayload,
   MemoryDigestResponse,
@@ -65,6 +66,20 @@ function extractReadableLine(message: unknown): string {
     return "";
   }
   return `${role}: ${text}`;
+}
+
+/** 从 canonical Session Message 提取 Memory digest 文本。 */
+function extract_session_message_line(message: SessionMessage): string {
+  if (message.type !== "user" && message.type !== "assistant") return "";
+  const role = message.type === "user" ? "User" : "Assistant";
+  const text = message.parts
+    .flatMap((part) =>
+      part.type === "text" ? [String(part.text || "").trim()] : [],
+    )
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+  return text ? `${role}: ${text}` : "";
 }
 
 function readDigestPages(result: Awaited<ReturnType<NonNullable<MemoryPluginOptions["digest"]>>>): {
@@ -267,12 +282,12 @@ export async function digestMemoryAction(
     const maxMessages = Number.isFinite(payload.maxMessages)
       ? Math.max(1, Math.floor(payload.maxMessages as number))
       : 30;
-    const historyStore = context.sessions.runtime(sessionId).getHistoryStore();
-    const total = await historyStore.record_count();
+    const snapshot = await context.sessions.runtime(sessionId).context();
+    const total = snapshot.messages.length;
     const start = Math.max(0, total - maxMessages);
-    const messages = await historyStore.slice_records(start, total);
+    const messages = snapshot.messages.slice(start);
     const lines = messages
-      .map((msg) => extractReadableLine(msg))
+      .map((message) => extract_session_message_line(message))
       .filter((line) => line.length > 0);
     const transcript =
       lines.length > 0

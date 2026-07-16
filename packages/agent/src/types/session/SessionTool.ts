@@ -1,5 +1,5 @@
 /**
- * Session Tool Runtime 类型。
+ * Session Tool Message 类型。
  *
  * 这些类型描述 Tool 生命周期协调器与 Recorder 之间的稳定边界。
  */

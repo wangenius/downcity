@@ -123,26 +123,21 @@ export type {
 
 // Session 与即时执行集成
 export { Executor } from "./executor/Executor.js";
-export { JsonlSessionHistoryComposer } from "./executor/composer/history/jsonl/JsonlSessionHistoryComposer.js";
-export { LocalSessionContextComposer } from "./executor/composer/context/LocalSessionContextComposer.js";
-export { JsonlSessionHistoryStore } from "./executor/store/history/jsonl/JsonlSessionHistoryStore.js";
-export { JsonlSessionCompactionComposer } from "./executor/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
+export { DefaultSessionComposer } from "./session/DefaultSessionComposer.js";
+export { SessionMessages } from "./session/SessionMessages.js";
+export { JsonlSessionMessageStore } from "./session/messages/JsonlSessionMessageStore.js";
 export type {
-  SessionCompactionComposer,
+  SessionComposer,
   SessionCompactionInput,
-} from "./executor/composer/compaction/SessionCompactionComposer.js";
-export type {
-  SessionContextComposer,
-  SessionContextComposeResult,
-} from "./executor/composer/context/SessionContextComposer.js";
-export type {
-  SessionHistoryComposer,
-  SessionHistoryPrepareInput,
-} from "./executor/composer/history/SessionHistoryComposer.js";
-export type { SessionSystemComposer } from "./executor/composer/system/SessionSystemComposer.js";
+  SessionCompactionPlan,
+  SessionComposeIdentity,
+  SessionComposeInput,
+  SessionComposeState,
+  SessionComposeTurn,
+  SessionStepInput,
+} from "./types/session/SessionComposer.js";
 export { DefaultSessionSystemComposer } from "./executor/composer/system/default/DefaultSessionSystemComposer.js";
 export { resolveSessionSystemMessages } from "./executor/composer/system/default/SystemDomain.js";
-export type { SessionHistoryStore } from "./executor/store/history/SessionHistoryStore.js";
 export type { SessionExecutor } from "./executor/types/SessionExecutor.js";
 export type {
   SessionAssistantStepCallback,
@@ -163,11 +158,6 @@ export {
   is_session_message_record,
 } from "./executor/types/SessionRecords.js";
 export type { SessionSystemMessage } from "./executor/types/SessionPrompts.js";
-export type {
-  SessionComposerFactoryContext,
-  SessionComposerInput,
-  SessionComposerOptions,
-} from "./types/session/SessionComposerOptions.js";
 export { transformPromptsIntoSystemMessages } from "./executor/composer/system/default/PromptRenderer.js";
 // 通用 plugin 宿主工具
 export {

@@ -1,5 +1,5 @@
 /**
- * Agent 本机 RPC Client。
+ * RemoteAgent 本机 RPC Client。
  *
  * 职责说明（中文）
  * - 为 `RemoteAgent(rpc://...)` 提供最小客户端实现。

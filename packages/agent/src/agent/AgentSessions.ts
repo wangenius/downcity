@@ -441,7 +441,6 @@ export class AgentSessions implements AgentSessionsContract<AgentSession> {
       getAgentModel: () => this.get_agent_model(),
       get_agent_plugins: () => this.get_agent_plugins(),
       getManagedPluginSystemBlocks: async () => [],
-      getPluginSystemBlocks: async () => await this.load_plugin_system_blocks(),
       ensureConfigured: async (session) => {
         await this.ensure_agent_ready();
       },
@@ -457,7 +456,4 @@ export class AgentSessions implements AgentSessionsContract<AgentSession> {
     );
   }
 
-  private async load_plugin_system_blocks(): Promise<AgentSessionSystemBlock[]> {
-    return await this.get_agent_plugins().systemBlocks();
-  }
 }

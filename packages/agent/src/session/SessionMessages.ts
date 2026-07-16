@@ -1,14 +1,14 @@
 /**
- * SessionRecorder：Session Message 的唯一持久化与发布入口。
+ * SessionMessages：Session Message 的唯一领域入口。
  *
  * 完整 Message 与 Assistant 草稿先持久化，成功后再发布实时 Mutation。
  */
 
 import type { UIMessage } from "ai";
 import { generateId } from "@/utils/Id.js";
-import { SessionAssistantMessageWriter } from "@/session/recorder/SessionAssistantMessageWriter.js";
-import { to_session_json_value } from "@/session/recorder/SessionJsonValue.js";
-import { JsonlSessionMessageStore } from "@/session/recorder/JsonlSessionMessageStore.js";
+import { SessionAssistantMessageWriter } from "@/session/messages/SessionAssistantMessageWriter.js";
+import { to_session_json_value } from "@/session/messages/SessionJsonValue.js";
+import { JsonlSessionMessageStore } from "@/session/messages/JsonlSessionMessageStore.js";
 import type { JsonObject } from "@/types/common/Json.js";
 import type {
   ListSessionMessagesInput,
@@ -31,12 +31,26 @@ import type {
   SessionMessageStorageStats,
   SessionSegmentSummary,
 } from "@/types/session/SessionSegment.js";
-import type { SessionStreamingToolLocation } from "@/types/session/SessionToolRuntime.js";
+import type { SessionStreamingToolLocation } from "@/types/session/SessionTool.js";
+import type { SessionApproval } from "@/types/session/SessionApproval.js";
+import type {
+  SessionActionRecordV1,
+  SessionRecordV1,
+  SessionUserMessageV1,
+} from "@/executor/types/SessionRecords.js";
+import { is_session_action_record } from "@/executor/types/SessionRecords.js";
+import {
+  from_ui_assistant_parts,
+  from_ui_user_parts,
+  to_executor_ui_message,
+} from "@/session/messages/SessionMessageCodec.js";
+import { hydrateUserPromptFileParts } from "@executor/messages/SessionAttachmentMapper.js";
+import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 
-export { SessionAssistantMessageWriter } from "@/session/recorder/SessionAssistantMessageWriter.js";
+export { SessionAssistantMessageWriter } from "@/session/messages/SessionAssistantMessageWriter.js";
 
-/** SessionRecorder 构造参数。 */
-export interface SessionRecorderOptions {
+/** SessionMessages 构造参数。 */
+export interface SessionMessagesOptions {
   /** 当前 Session 标识。 */
   session_id: string;
   /** Message 快照 store。 */
@@ -120,18 +134,18 @@ export interface AppendSessionErrorMessageInput {
 }
 
 /** 唯一 Session Message 写入服务。 */
-export class SessionRecorder {
+export class SessionMessages {
   readonly session_id: string;
   private readonly store: JsonlSessionMessageStore;
-  private readonly publish: SessionRecorderOptions["publish"];
+  private readonly publish: SessionMessagesOptions["publish"];
   private readonly messages_by_id = new Map<string, SessionMessage>();
   private initialized = false;
 
-  constructor(options: SessionRecorderOptions) {
+  constructor(options: SessionMessagesOptions) {
     this.session_id = String(options.session_id || "").trim();
     this.store = options.store;
     this.publish = options.publish;
-    if (!this.session_id) throw new Error("SessionRecorder requires session_id");
+    if (!this.session_id) throw new Error("SessionMessages requires session_id");
   }
 
   /** 恢复已有 Message，并收口进程中断遗留的运行状态。 */
@@ -226,6 +240,173 @@ export class SessionRecorder {
     for (const part of input.parts) await writer.upsert_part(part);
     await writer.complete();
     return this.get_message(writer.message_id) as SessionAssistantMessage;
+  }
+
+  /** 把内部 Executor Record 收口为 canonical Session Message。 */
+  async append_record(record: SessionRecordV1): Promise<void> {
+    if (is_session_action_record(record)) {
+      const action = record as SessionActionRecordV1;
+      const existing = this.get_message(action.id);
+      if (existing?.type === "action") {
+        if (action.state !== "running") {
+          await this.update_action_message(action.id, action.state, {
+            title: action.title,
+            description: action.description,
+          });
+        }
+        return;
+      }
+      const writer = await this.open_action_message({
+        message_id: action.id,
+        turn_id: action.metadata.turnId,
+        action_type: String(action.id || "").split(":")[0] || "action",
+        title: action.title,
+        description: action.description,
+      });
+      if (action.state === "completed") await writer.complete();
+      if (action.state === "failed") {
+        await writer.fail(action.description || action.title);
+      }
+      return;
+    }
+
+    const turn_id = String(
+      record.metadata?.turnId || `external:${this.session_id}:${generateId()}`,
+    );
+    if (record.role === "user") {
+      await this.append_user_message({
+        turn_id,
+        input_type:
+          record.metadata?.extra?.inputType === "steer" ? "steer" : "prompt",
+        parts: from_ui_user_parts(record.parts),
+      });
+      return;
+    }
+    await this.append_completed_assistant_message({
+      turn_id,
+      parts: from_ui_assistant_parts(record.parts),
+      visibility:
+        record.metadata?.extra?.visibility === "internal"
+          ? "internal"
+          : "visible",
+      kind: record.metadata?.kind === "summary" ? "summary" : "normal",
+    });
+  }
+
+  /** 把公开 Session API 的 User 输入转换为 canonical Message 并持久化。 */
+  async append_external_user_message(input: {
+    /** 可选的结构化 User record。 */
+    message?: SessionRecordV1 | null;
+    /** 未提供结构化 record 时使用的纯文本。 */
+    text?: string;
+  }): Promise<boolean> {
+    const parts = input.message && "role" in input.message
+      ? from_ui_user_parts(input.message.parts)
+      : [{
+          part_id: `external-user-text:${Date.now()}`,
+          type: "text" as const,
+          text: String(input.text || "").trim(),
+          state: "done" as const,
+        }];
+    if (parts.length === 0) return false;
+    await this.append_user_message({
+      turn_id: `external:${this.session_id}:${Date.now()}`,
+      input_type: "prompt",
+      parts,
+    });
+    return true;
+  }
+
+  /** 把公开 Session API 的 Assistant 输入转换为 canonical Message 并持久化。 */
+  async append_external_assistant_message(input: {
+    /** 可选的结构化 Assistant record。 */
+    message?: SessionRecordV1 | null;
+    /** 未提供结构化 record 时使用的纯文本。 */
+    fallback_text?: string;
+  }): Promise<boolean> {
+    const parts = input.message && "role" in input.message
+      ? from_ui_assistant_parts(input.message.parts)
+      : [{
+          part_id: `external-assistant-text:${Date.now()}`,
+          sequence: 1,
+          type: "text" as const,
+          text: String(input.fallback_text || "").trim(),
+          state: "done" as const,
+        }];
+    if (parts.length === 0) return false;
+    await this.append_completed_assistant_message({ parts });
+    return true;
+  }
+
+  /** 把 Session prompt 转换为 canonical User Message 并持久化。 */
+  async append_prompt_message(input: {
+    /** 当前 Agent 项目的绝对根目录，用于解析本地附件。 */
+    project_root: string;
+    /** 当前 Session prompt 输入。 */
+    prompt: AgentSessionPromptInput;
+    /** 当前输入所属 Turn。 */
+    turn_id: string;
+    /** 普通 prompt 或 steering 输入。 */
+    input_type: "prompt" | "steer";
+  }): Promise<SessionUserMessageV1> {
+    const query = input.prompt.query;
+    const ui_parts = typeof query === "string"
+      ? [{ type: "text" as const, text: query.trim() }]
+      : await hydrateUserPromptFileParts(
+          Array.isArray(query) ? query : [],
+          input.project_root,
+        );
+    const canonical = await this.append_user_message({
+      turn_id: input.turn_id,
+      input_type: input.input_type,
+      parts: normalize_session_user_parts(ui_parts),
+    });
+    return to_executor_ui_message(canonical) as SessionUserMessageV1;
+  }
+
+  /** 持久化 Executor 在本轮延迟产生的 User Message。 */
+  async append_deferred_user_messages(
+    deferred_messages?: SessionUserMessageV1[],
+  ): Promise<number> {
+    const messages = Array.isArray(deferred_messages)
+      ? deferred_messages
+      : [];
+    for (const message of messages) {
+      await this.append_user_message({
+        turn_id: String(
+          message.metadata?.turnId ||
+            `deferred:${this.session_id}:${Date.now()}`,
+        ),
+        input_type: "steer",
+        parts: from_ui_user_parts(message.parts),
+      });
+    }
+    return messages.length;
+  }
+
+  /** 按稳定 Action ID 创建或更新 canonical Action Message。 */
+  async persist_action_record(event: SessionActionRecordV1): Promise<void> {
+    const existing = this.get_message(event.id);
+    if (!existing) {
+      const writer = await this.open_action_message({
+        message_id: event.id,
+        turn_id: event.metadata.turnId,
+        action_type: infer_action_type(event.id),
+        title: event.title,
+        description: event.description,
+      });
+      if (event.state === "completed") await writer.complete();
+      if (event.state === "failed") {
+        await writer.fail(event.description || event.title);
+      }
+      return;
+    }
+    if (existing.type === "action" && event.state !== "running") {
+      await this.update_action_message(event.id, event.state, {
+        title: event.title,
+        description: event.description,
+      });
+    }
   }
 
   /** 创建 running Action Message。 */
@@ -517,6 +698,7 @@ export class SessionRecorder {
     factory: (sequence: number, created_at: number) => SessionMessage,
     draft = false,
   ): Promise<SessionMessage> {
+    await this.ensure_initialized();
     if (draft) {
       const message = await this.store.create_assistant_message((state) => {
         const candidate = factory(state.message_sequence, Date.now());
@@ -546,6 +728,55 @@ export class SessionRecorder {
       if (part) return { message_id: message.message_id, part };
     }
     return undefined;
+  }
+
+  /** 把完整审批请求写入对应的流式 Tool Part。 */
+  async request_tool_approval(approval: SessionApproval): Promise<void> {
+    const tool = this.require_streaming_tool(approval.tool_call_id);
+    if (tool.part.state !== "ready") {
+      throw new Error(
+        `Tool approval requires ready input: ${approval.tool_call_id} (${tool.part.state})`,
+      );
+    }
+    await this.update_assistant_part(tool.message_id, {
+      ...tool.part,
+      state: "approval-required",
+      approval,
+    });
+  }
+
+  /** 在 Tool 恢复执行前提交审批决定对应的 Part 状态。 */
+  async resolve_tool_approval(input: {
+    /** 当前审批请求标识。 */
+    approval_id: string;
+    /** 当前审批最终决定。 */
+    decision: "approved" | "denied" | "expired";
+    /** 当前审批关联的 Tool Call。 */
+    tool_call_id: string;
+  }): Promise<void> {
+    const tool = this.require_streaming_tool(input.tool_call_id);
+    if (tool.part.approval?.approval_id !== input.approval_id) {
+      throw new Error(`Tool approval identity mismatch: ${input.approval_id}`);
+    }
+    await this.update_assistant_part(tool.message_id, {
+      ...tool.part,
+      state: input.decision === "approved" ? "running" : "failed",
+      ...(input.decision === "approved"
+        ? {}
+        : {
+            error:
+              input.decision === "expired"
+                ? "Approval expired"
+                : "Approval denied",
+          }),
+    });
+  }
+
+  /** 查找当前流式 Assistant 中的 Tool Part，否则抛出明确错误。 */
+  private require_streaming_tool(tool_call_id: string): SessionStreamingToolLocation {
+    const tool = this.find_streaming_tool(tool_call_id);
+    if (tool) return tool;
+    throw new Error(`Streaming Tool Part not found: ${tool_call_id}`);
   }
 
   private build_message_mutation(
@@ -582,25 +813,25 @@ export class SessionRecorder {
 /** 单个 Action Message 的生命周期 writer。 */
 export class SessionActionMessageWriter {
   readonly message_id: string;
-  private readonly recorder: SessionRecorder;
+  private readonly messages: SessionMessages;
   private closed = false;
 
-  constructor(recorder: SessionRecorder, message_id: string) {
-    this.recorder = recorder;
+  constructor(messages: SessionMessages, message_id: string) {
+    this.messages = messages;
     this.message_id = message_id;
   }
 
   /** 把 Action 更新为 completed。 */
   async complete(input?: { title?: string; description?: string; data?: JsonObject }): Promise<void> {
     if (this.closed) return;
-    await this.recorder.update_action_message(this.message_id, "completed", input);
+    await this.messages.update_action_message(this.message_id, "completed", input);
     this.closed = true;
   }
 
   /** 把 Action 更新为 failed。 */
   async fail(error: unknown): Promise<void> {
     if (this.closed) return;
-    await this.recorder.update_action_message(this.message_id, "failed", {
+    await this.messages.update_action_message(this.message_id, "failed", {
       description: error instanceof Error ? error.message : String(error),
     });
     this.closed = true;
@@ -674,6 +905,11 @@ function resolve_import_id(map: Map<string, string>, source_id: string, prefix: 
   const created = `${prefix}:${generateId()}`;
   map.set(source_id, created);
   return created;
+}
+
+/** 从 Action Message ID 提取稳定业务类型。 */
+function infer_action_type(message_id: string): string {
+  return String(message_id || "").split(":")[0] || "action";
 }
 
 /** 按真实 Message sequence 升序排序。 */

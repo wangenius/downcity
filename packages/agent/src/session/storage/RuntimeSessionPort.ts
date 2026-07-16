@@ -7,7 +7,6 @@
  */
 
 import type { SessionPort } from "@/types/session/SessionPort.js";
-import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionStopResult } from "@/types/sdk/AgentSessionStop.js";
 import type {
@@ -56,10 +55,8 @@ export interface CreateRuntimeSessionPortParams {
    * 返回当前 session 是否正在执行。
    */
   isExecuting: () => boolean;
-  /**
-   * 当前 session 历史持久化端口。
-   */
-  historyStore: SessionHistoryStore;
+  /** 读取当前 Session 的只读上下文快照。 */
+  context: SessionPort["context"];
   /**
    * 在执行前确保当前 session 已完成初始化与宿主级配置。
    */
@@ -76,7 +73,7 @@ export function createRuntimeSessionPort(
     sessionId: params.sessionId,
     getModel: () => params.getModel(),
     getExecutor: () => params.getExecutor(),
-    getHistoryStore: () => params.historyStore,
+    context: async () => await params.context(),
     prompt: async (input) => {
       await params.ensureReadyForExecution();
       return await params.prompt(input);

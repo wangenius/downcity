@@ -1,10 +1,9 @@
 /**
- * @file 验证 session compact prompt 与文件操作 XML 记录。
+ * @file 验证 Session compact prompt 的结构化摘要格式。
  *
  * 关键点（中文）
  * - compact prompt 必须保持结构化摘要格式稳定。
  * - 迭代更新 prompt 需要携带 previous-summary 标签。
- * - 文件操作 XML 由本地解析追加，不依赖模型复述工具日志。
  */
 
 import test from "node:test";
@@ -12,15 +11,10 @@ import assert from "node:assert/strict";
 
 import {
   SESSION_COMPACTION_SYSTEM_PROMPT,
-  append_session_compaction_file_operations,
   build_initial_session_compaction_prompt,
   build_turn_prefix_session_compaction_prompt,
   build_update_session_compaction_prompt,
 } from "../bin/executor/composer/compaction/jsonl/JsonlSessionCompactionPrompts.js";
-import {
-  collect_session_compaction_file_operations,
-  format_session_compaction_file_operations,
-} from "../bin/executor/composer/compaction/jsonl/JsonlSessionCompactionFileOperations.js";
 
 test("session compaction prompts preserve structured formats", () => {
   assert.match(
@@ -52,46 +46,4 @@ test("session compaction prompts preserve structured formats", () => {
   });
   assert.match(prefix_prompt, /## Original Request/);
   assert.match(prefix_prompt, /## Context for Suffix/);
-});
-
-test("session compaction file operations are appended as xml", () => {
-  const messages = [
-    {
-      id: "a:1",
-      role: "assistant",
-      parts: [
-        {
-          type: "tool-exec_command",
-          input: {
-            cmd: "sed -n '1,40p' packages/agent/src/foo.ts && rg -n compact packages/agent/src",
-          },
-          output: [
-            "*** Update File: packages/agent/src/bar.ts",
-            " M packages/agent/src/baz.ts",
-          ].join("\n"),
-        },
-      ],
-    },
-  ];
-
-  const operations = collect_session_compaction_file_operations(messages);
-  assert.deepEqual(operations.read_files, [
-    "packages/agent/src",
-    "packages/agent/src/foo.ts",
-  ]);
-  assert.deepEqual(operations.modified_files, [
-    "packages/agent/src/bar.ts",
-    "packages/agent/src/baz.ts",
-  ]);
-
-  const xml = format_session_compaction_file_operations(messages);
-  assert.match(xml, /<read-files>\npackages\/agent\/src/);
-  assert.match(xml, /<modified-files>\npackages\/agent\/src\/bar\.ts/);
-
-  const summary = append_session_compaction_file_operations({
-    summary: "## Goal\n完成 compact",
-    file_operations_xml: xml,
-  });
-  assert.match(summary, /## Goal\n完成 compact\n\n<read-files>/);
-  assert.match(summary, /<\/modified-files>$/);
 });

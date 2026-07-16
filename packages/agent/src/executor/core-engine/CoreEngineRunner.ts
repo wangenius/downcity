@@ -45,8 +45,7 @@ import {
   should_compact_after_usage,
 } from "@executor/core-engine/CoreEngineContextCompaction.js";
 import type { Logger } from "@/utils/logger/Logger.js";
-import type { SessionHistoryStore } from "@/executor/store/history/SessionHistoryStore.js";
-import type { SessionContextComposer } from "@executor/composer/context/SessionContextComposer.js";
+import type { JsonObject } from "@/types/common/Json.js";
 import type { SessionRunContext } from "@/types/executor/SessionRunContext.js";
 import type {
   SessionExecuteInput,
@@ -103,15 +102,8 @@ function mergePendingAssistantFileParts(
 }
 
 interface CoreEngineRunnerOptions {
-  /**
-   * 当前 session 对应的 history 事实源。
-   */
-  history_store: SessionHistoryStore;
-
-  /**
-   * 当前 session 对应的 context Composer。
-   */
-  context_composer: SessionContextComposer;
+  /** 当前 Session 稳定标识。 */
+  session_id: string;
 
   /**
    * 当前 session 统一日志器。
@@ -153,14 +145,16 @@ interface CoreEngineRunInput {
     /** 当前 Session step 模型支持的总上下文窗口长度。 */
     context_window?: number;
   }>;
+
+  /** 持久化 compact 后重新读取 Composer 生成的 canonical history。 */
+  reload_history: () => Promise<SessionRecordV1[]>;
 }
 
 /**
  * 模型与 tool-loop 主循环执行器。
  */
 export class CoreEngineRunner {
-  private readonly history_store: SessionHistoryStore;
-  private readonly context_composer: SessionContextComposer;
+  private readonly session_id: string;
   private readonly logger: Logger;
   private readonly should_compact_on_error: CoreEngineRunnerOptions["should_compact_on_error"];
 
@@ -168,10 +162,12 @@ export class CoreEngineRunner {
   private validated_compaction_summary_id = "";
 
   constructor(options: CoreEngineRunnerOptions) {
-    this.history_store = options.history_store;
-    this.context_composer = options.context_composer;
+    this.session_id = String(options.session_id || "").trim();
     this.logger = options.logger;
     this.should_compact_on_error = options.should_compact_on_error;
+    if (!this.session_id) {
+      throw new Error("CoreEngineRunner requires a non-empty session_id");
+    }
   }
 
   /**
@@ -179,7 +175,7 @@ export class CoreEngineRunner {
    */
   async run(input: CoreEngineRunInput): Promise<SessionRunResult> {
     const start_time = Date.now();
-    const session_id = String(this.history_store.sessionId || "").trim();
+    const session_id = this.session_id;
     let system = Array.isArray(input.execute_input.system)
       ? input.execute_input.system
       : [];
@@ -201,8 +197,6 @@ export class CoreEngineRunner {
       const append_merged_user_messages = (messages: SessionRecordV1[]) =>
         message_state.appendMergedUserMessages(messages);
 
-      const context_composer_on_step_finish =
-        this.context_composer.createOnStepFinishHandler(input.run_context);
       let step_count = 0;
       let total_tool_call_count = 0;
       let total_tool_result_count = 0;
@@ -220,14 +214,18 @@ export class CoreEngineRunner {
           stepIndex: step_count,
           ...summary,
         });
-        await context_composer_on_step_finish(step_result);
+        if (input.run_context.onAssistantStepCallback) {
+          try {
+            await input.run_context.onAssistantStepCallback({
+              text: String((step_result as { text?: unknown })?.text || "").trim(),
+              stepIndex: step_count,
+              stepResult: step_result,
+            });
+          } catch {
+            // Assistant step 观察回调失败不能改变模型执行结果。
+          }
+        }
       };
-
-      const prepare_step_inputs = this.context_composer.createPrepareStepHandler({
-        system,
-        appendMergedUserMessages: append_merged_user_messages,
-        runContext: input.run_context,
-      });
 
       let text_only_continuation_count = 0;
       let incomplete_response_recovery_count = 0;
@@ -243,12 +241,25 @@ export class CoreEngineRunner {
       while (step_count < MAX_TOOL_LOOP_STEPS) {
         // 关键点（中文）：steer 与 command 在同一个 Session step 检查点执行。
         // 当前流与 tool callback 保持原执行视图，下一 step 再统一读取 effective 配置。
-        await prepare_step_inputs({ messages: [] });
+        const injected_messages = [...input.run_context.injectedUserMessages];
+        input.run_context.injectedUserMessages = [];
+        let queued_messages: SessionRecordV1[] = [];
+        if (input.run_context.onStepCallback) {
+          try {
+            queued_messages = await input.run_context.onStepCallback();
+          } catch {
+            queued_messages = [];
+          }
+        }
+        await append_merged_user_messages([
+          ...injected_messages,
+          ...queued_messages,
+        ]);
         const step_inputs = await input.resolve_step_inputs();
         system = Array.isArray(step_inputs.system) ? step_inputs.system : [];
         tools = step_inputs.tools;
         if (input.run_context.consume_history_reload?.()) {
-          const canonical_records = await this.history_store.list_records();
+          const canonical_records = await input.reload_history();
           await message_state.replace_session_messages(canonical_records, tools);
           persisted_compaction_summary_id = resolve_compaction_summary_id(
             canonical_records,
@@ -312,10 +323,7 @@ export class CoreEngineRunner {
               sessionId: session_id,
               logger: this.logger,
               buildFallbackAssistantMessage: (text) =>
-                this.context_composer.buildFallbackAssistantMessage(
-                  text,
-                  input.run_context,
-                ),
+                build_fallback_assistant_message(session_id, text),
               onUiMessageChunkCallback: input.run_context.onUiMessageChunkCallback,
               abortSignal: input.run_context.abortSignal,
             });
@@ -441,17 +449,15 @@ export class CoreEngineRunner {
             reason: incomplete_response.reason,
             ...incomplete_response.details,
           });
-          const recovery_message = this.history_store.userText({
+          const recovery_message = build_internal_user_message({
+            session_id,
             text: buildIncompleteResponseRecoveryNudge(
               incomplete_response_recovery_count,
             ),
-            metadata: {
-              sessionId: session_id,
-              extra: {
-                internal: "agent_incomplete_response_recover",
-                reason: incomplete_response.reason,
-                stepIndex: step_count,
-              },
+            extra: {
+              internal: "agent_incomplete_response_recover",
+              reason: incomplete_response.reason,
+              stepIndex: step_count,
             },
           });
           await message_state.appendUserTextMessage(recovery_message);
@@ -485,15 +491,13 @@ export class CoreEngineRunner {
         if (loop_decision.continueForTextOnly) {
           text_only_continuation_count += 1;
           incomplete_response_recovery_count = 0;
-          const continuation_message = this.history_store.userText({
+          const continuation_message = build_internal_user_message({
+            session_id,
             text: buildTextOnlyContinuationNudge(text_only_continuation_count),
-            metadata: {
-              sessionId: session_id,
-              extra: {
-                internal: "agent_loop_auto_continue",
-                reason: text_only_continuation_reason,
-                stepIndex: step_count,
-              },
+            extra: {
+              internal: "agent_loop_auto_continue",
+              reason: text_only_continuation_reason,
+              stepIndex: step_count,
             },
           });
           await message_state.appendUserTextMessage(continuation_message);
@@ -533,10 +537,7 @@ export class CoreEngineRunner {
 
       const final_message = mergePendingAssistantFileParts(
         final_assistant_ui_message ||
-          this.context_composer.buildFallbackAssistantMessage(
-            "Execution completed",
-            input.run_context,
-          ),
+          build_fallback_assistant_message(session_id, "Execution completed"),
         input.run_context.pendingAssistantFileParts,
       );
 
@@ -602,9 +603,9 @@ export class CoreEngineRunner {
       return {
         success: false,
         error: error_text,
-        assistantMessage: this.context_composer.buildFallbackAssistantMessage(
+        assistantMessage: build_fallback_assistant_message(
+          session_id,
           `Execution failed: ${error_text}`,
-          input.run_context,
         ),
         ...(compact_required ? { compact_required: true } : {}),
         deferredPersistedUserMessages: [
@@ -613,6 +614,46 @@ export class CoreEngineRunner {
       };
     }
   }
+}
+
+/** 构造仅在当前 Turn 内使用的内部 User Message。 */
+function build_internal_user_message(input: {
+  session_id: string;
+  text: string;
+  extra: JsonObject;
+}): SessionRecordV1 {
+  return {
+    id: `u:${input.session_id}:${Date.now()}`,
+    role: "user",
+    metadata: {
+      v: 1,
+      ts: Date.now(),
+      sessionId: input.session_id,
+      source: "ingress",
+      kind: "normal",
+      extra: input.extra,
+    },
+    parts: [{ type: "text", text: input.text }],
+  };
+}
+
+/** 构造 Executor 失败或空结果使用的临时 Assistant Message。 */
+function build_fallback_assistant_message(
+  session_id: string,
+  text: string,
+): SessionMessageRecordV1 {
+  return {
+    id: `a:${session_id}:${Date.now()}`,
+    role: "assistant",
+    metadata: {
+      v: 1,
+      ts: Date.now(),
+      sessionId: session_id,
+      source: "egress",
+      kind: "normal",
+    },
+    parts: [{ type: "text", text }],
+  };
 }
 
 /** 读取当前模型上下文中最新的持久化 compact Summary 标识。 */

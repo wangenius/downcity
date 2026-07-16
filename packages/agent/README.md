@@ -75,17 +75,21 @@ src/
 
 - `src/agent/`
   - SDK facade 层
-  - `local/Agent.ts` 负责本地 Agent 实例装配、plugin/session/RPC 生命周期
-  - `remote/RemoteAgent.ts` 负责远程 Agent 客户端入口
-  - `remote/RemoteSession.ts` 负责远程 session actor 与 turn lifecycle
-  - `remote/transports/*` 负责 HTTP/RPC transport 适配
+  - `Agent.ts` 负责本地 Agent 实例装配
+  - `AgentSessions.ts` 负责 Session 集合生命周期
+
+- `src/session/`
+  - `Session.ts` 是公开 facade 与 Session 对象装配入口
+  - `SessionState.ts` 管理配置与 metadata
+  - `SessionTurn.ts` 管理输入队列和 Turn 生命周期
+  - `SessionMessages.ts` 是 canonical Message 唯一事实源
+  - `DefaultSessionComposer.ts` 负责 system/history/tools 与压缩计划定制
+  - `messages/` 放 JSONL Store、Assistant writer、Message codec 与 compaction
 
 - `src/executor/`
   - 内部执行内核
-  - `Session` 是 SDK 用户面对的会话整体，`Executor` 是内部单轮执行引擎
-  - Store 负责 history 事实源落盘，Composer 是可替换的 session 阶段策略协议，负责定义 system / history / context / compaction 等执行阶段逻辑
-  - `Executor.prepareExecuteInput()` 串起四类 Composer，`Executor.runCoreEngine()` 负责进入模型 tool loop
-  - 负责 history、system、context、CoreEngine、增量输出与消息持久化
+  - `Executor` 只负责单轮 LLM/Tool Loop、Step 状态和上下文恢复
+  - 不持有 History Store，不负责 Message 或 metadata 持久化
 
 - `src/plugin/`
   - 插件框架与内建插件
@@ -93,12 +97,7 @@ src/
   - `builtins/` 放 `auth`、`chat`、`contact`、`memory`、`shell`、`skill`、`task`、`web`、`sound`、`workboard` 等内建插件
   - `types/` 放插件公共协议类型
 
-- `src/runtime/`
-  - 单 Agent 的运行时实现细节层
-  - `host/` 放宿主注入能力协议
-  - `sandbox/` 放命令执行隔离与沙箱协议
-  - `control/` 放 runtime 控制面内部协议与处理器
-- `src/rpc/` 放 Agent 本机 RPC runtime；HTTP gateway 由 downcity CLI 基于 RPC 转发提供
+- `src/remote/transports/` 放 HTTP、RPC transport 及其内部客户端；RPC Server 与 HTTP gateway 由上游宿主管理
 - Agent 与 Session 都持有宿主传入的 `AgentModel` 实例；`AgentModel` 可以是 AI SDK `LanguageModel` 或 City 返回的 `CityModel`
 - Session 可通过 `session.set({ model })` 覆盖，执行时固定按 Session 模型、Agent 模型的顺序解析，并在 LLM 调用边界转换为 `LanguageModel`
 

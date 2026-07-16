@@ -45,7 +45,7 @@ import { getSdkAgentArchivedSessionsDirPath } from "@/session/storage/Paths.js";
 import { getSdkAgentArchivedSessionMessagesPath } from "@/session/storage/Paths.js";
 import { getSdkAgentArchivedSessionMetaPath } from "@/session/storage/Paths.js";
 import { readSessionMetadataFromPath } from "@/session/storage/Metadata.js";
-import { to_executor_ui_message } from "@/session/recorder/SessionMessageCodec.js";
+import { to_executor_ui_message } from "@/session/messages/SessionMessageCodec.js";
 import type { SessionMessage } from "@/types/session/SessionMessage.js";
 
 type AnyUiPart = UIMessagePart<Record<string, never>, Record<string, never>>;

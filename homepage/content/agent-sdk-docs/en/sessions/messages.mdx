@@ -48,11 +48,25 @@ A Session has one top-level Message sequence ordered by `sequence`. Tool calls a
 | --- | --- | --- |
 | `text` | `text`, `state` | Visible output, `streaming -> done` |
 | `reasoning` | `text`, `state` | Reasoning output; product decides whether to display it |
-| `tool` | `tool_call_id`, `tool_name`, `state` | Tool input, approval, execution, and result |
+| `tool` | `tool_call_id`, `tool_name`, `state`, `call_provider_metadata`, `result_provider_metadata` | Tool input, approval, execution, and result |
 | `file` | `url`, `media_type` | A file generated or referenced by the Assistant |
 | `data` | `data_type`, `data` | Structured UI data |
 
 Every Assistant Part has a stable `part_id` and immutable internal `sequence`. A tool state change updates the same Part; a UI should not create separate request and result rows.
+
+### Tool Provider metadata
+
+A Tool Part preserves metadata attached to the tool call and tool result by the AI SDK Provider:
+
+```ts
+interface SessionAssistantToolPart {
+  call_provider_metadata?: ProviderMetadata;
+  result_provider_metadata?: ProviderMetadata;
+  provider_executed?: boolean;
+}
+```
+
+These fields are opaque data required by capabilities such as Provider continuation. Applications may read and persist them unchanged, but should not modify Provider-specific fields. Older Sessions without these optional fields continue to load normally.
 
 ## Order, revision, and visibility
 

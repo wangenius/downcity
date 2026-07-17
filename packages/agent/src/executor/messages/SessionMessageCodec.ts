@@ -113,24 +113,3 @@ export async function toModelMessages(
     ignoreIncompleteToolCalls: true,
   });
 }
-
-/**
- * 构建 OpenAI Responses providerOptions。
- *
- * 关键点（中文）
- * - 用途：集中声明 provider 级运行选项，避免在主流程内硬编码。
- * - 当前策略：`store=false`，不在 provider 侧持久化响应。
- */
-export function buildOpenAIResponsesProviderOptions(): {
-  openai: {
-    store: boolean;
-  };
-} {
-  // 返回固定 provider 参数对象。
-  return {
-    openai: {
-      // 禁用 provider 侧存储。
-      store: false,
-    },
-  };
-}

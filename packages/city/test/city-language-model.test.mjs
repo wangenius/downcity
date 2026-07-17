@@ -30,7 +30,13 @@ function create_provider_stream() {
     { type: "tool-input-start", id: "call_1", toolName: "ping" },
     { type: "tool-input-delta", id: "call_1", delta: "{\"value\":\"hello\"}" },
     { type: "tool-input-end", id: "call_1" },
-    { type: "tool-call", toolCallId: "call_1", toolName: "ping", input: "{\"value\":\"hello\"}" },
+    {
+      type: "tool-call",
+      toolCallId: "call_1",
+      toolName: "ping",
+      input: "{\"value\":\"hello\"}",
+      providerMetadata: { openai: { itemId: "fc_1" } },
+    },
     {
       type: "finish",
       finishReason: { unified: "tool-calls", raw: "tool_calls" },
@@ -163,6 +169,9 @@ test("CityModel directly streams through Federation LanguageModelV3 runtime", as
   assert.equal(received_options.abortSignal, contexts[0].request.signal)
   assert.equal(received_parts.find((part) => part.type === "reasoning-delta")?.delta, "think")
   assert.equal(received_parts.find((part) => part.type === "tool-call")?.toolName, "ping")
+  assert.deepEqual(received_parts.find((part) => part.type === "tool-call")?.providerMetadata, {
+    openai: { itemId: "fc_1" },
+  })
   assert.deepEqual(received_parts.find((part) => part.type === "finish")?.usage, usage)
   assert.equal(charges.length, 1)
   assert.equal(charges[0].credits, 3)
@@ -201,6 +210,9 @@ test("CityModel doGenerate aggregates native text, reasoning and tool calls", as
   assert.equal(result.content[0].text, "think")
   assert.equal(result.content[1].text, "done")
   assert.equal(result.content[2].toolCallId, "call_1")
+  assert.deepEqual(result.content[2].providerMetadata, {
+    openai: { itemId: "fc_1" },
+  })
   assert.deepEqual(result.finishReason, { unified: "tool-calls", raw: "tool_calls" })
   assert.deepEqual(result.usage, usage)
   assert.equal(result.response.id, "response_1")

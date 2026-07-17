@@ -522,6 +522,8 @@ export class SessionTurn {
       for (const part of final_assistant_parts) {
         if (part.type === "file") {
           await final_assistant_writer.append_file_part(part);
+        } else if (part.type === "tool") {
+          await final_assistant_writer.reconcile_final_tool_part(part);
         }
       }
       if (input.abort_signal?.aborted) {

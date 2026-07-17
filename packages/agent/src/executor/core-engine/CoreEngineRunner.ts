@@ -14,7 +14,6 @@ import {
   type StepResult,
   type Tool,
 } from "ai";
-import { buildOpenAIResponsesProviderOptions } from "@executor/messages/SessionMessageCodec.js";
 import { logAssistantMessageNow } from "@executor/messages/SessionMessageLog.js";
 import {
   MAX_INCOMPLETE_RESPONSE_RECOVERIES,
@@ -307,7 +306,6 @@ export class CoreEngineRunner {
             messages: message_state.modelMessages,
             tools,
             abortSignal: input.run_context.abortSignal,
-            providerOptions: buildOpenAIResponsesProviderOptions(),
             onError: async ({ error }) => {
               last_observed_stream_error = error;
               await this.logger.log("error", "[agent] stream.error", {

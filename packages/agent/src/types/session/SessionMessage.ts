@@ -5,6 +5,7 @@
  * 均为内部 part，不提升为顶层消息。
  */
 
+import type { ProviderMetadata } from "ai";
 import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 import type { SessionApproval } from "@/types/session/SessionApproval.js";
 
@@ -133,6 +134,12 @@ export interface SessionAssistantToolPart {
   output?: JsonValue;
   /** 工具失败信息。 */
   error?: string;
+  /** 工具调用阶段由 AI SDK Provider 返回的可序列化 metadata。 */
+  call_provider_metadata?: ProviderMetadata;
+  /** 工具结果阶段由 AI SDK Provider 返回的可序列化 metadata。 */
+  result_provider_metadata?: ProviderMetadata;
+  /** 当前工具是否由模型 Provider 直接执行。 */
+  provider_executed?: boolean;
   /** 当前 Tool 等待或已经处理过的完整审批快照。 */
   approval?: SessionApproval;
 }

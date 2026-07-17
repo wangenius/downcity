@@ -8,7 +8,6 @@
  */
 
 import { streamText, type LanguageModel } from "ai";
-import { buildOpenAIResponsesProviderOptions } from "@executor/messages/SessionMessageCodec.js";
 import type { SessionHistoryMetaV1 } from "@/executor/types/SessionHistoryMeta.js";
 import type { SessionRecordV1 } from "@/executor/types/SessionRecords.js";
 import { is_session_message_record } from "@/executor/types/SessionRecords.js";
@@ -216,7 +215,12 @@ async function generateSessionTitle(input: {
         "",
         input.firstUserText,
       ].join("\n"),
-      providerOptions: buildOpenAIResponsesProviderOptions(),
+      // 标题生成是一次性调用，不参与 Responses continuation。
+      providerOptions: {
+        openai: {
+          store: false,
+        },
+      },
       onError: ({ error }) => {
         observedStreamError = error;
       },

@@ -288,6 +288,7 @@ test("deep compact 删除 reasoning，并完整保留最新并行 tool transacti
           toolCallId: "call-a",
           toolName: "tool_a",
           input: { value: "a" },
+          providerOptions: { openai: { itemId: "fc_a" } },
         },
         {
           type: "tool-call",
@@ -305,6 +306,7 @@ test("deep compact 删除 reasoning，并完整保留最新并行 tool transacti
           toolCallId: "call-a",
           toolName: "tool_a",
           output: { type: "text", value: large_output },
+          providerOptions: { openai: { resultId: "result_a" } },
         },
         {
           type: "tool-result",
@@ -341,6 +343,8 @@ test("deep compact 删除 reasoning，并完整保留最新并行 tool transacti
   assert.equal(active_tool_text.join("\n").includes("old-call"), false);
   assert.deepEqual([...tool_call_ids].sort(), ["call-a", "call-b"]);
   assert.deepEqual([...tool_result_ids].sort(), ["call-a", "call-b"]);
+  assert.equal(serialized.includes('"itemId":"fc_a"'), true);
+  assert.equal(serialized.includes('"resultId":"result_a"'), true);
 });
 
 test("单条 assistant 含大量 parts 时也会在消息内部折叠", () => {

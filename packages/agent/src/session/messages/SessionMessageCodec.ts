@@ -8,7 +8,10 @@
  */
 
 import type { UIMessage } from "ai";
-import { to_session_json_value } from "@/session/messages/SessionJsonValue.js";
+import {
+  to_session_json_value,
+  to_session_provider_metadata,
+} from "@/session/messages/SessionJsonValue.js";
 import type {
   SessionAssistantMessage,
   SessionAssistantMessagePart,
@@ -161,6 +164,12 @@ export function from_ui_assistant_parts(
     }
     if (type === "dynamic-tool" || type.startsWith("tool-")) {
       const state = String(candidate.state || "");
+      const call_provider_metadata = to_session_provider_metadata(
+        candidate.callProviderMetadata,
+      );
+      const result_provider_metadata = to_session_provider_metadata(
+        candidate.resultProviderMetadata,
+      );
       return [{
         part_id: String(candidate.toolCallId || `tool:${index + 1}`),
         sequence: index + 1,
@@ -189,6 +198,15 @@ export function from_ui_assistant_parts(
           ? { output: to_session_json_value(candidate.output) }
           : {}),
         ...(candidate.errorText ? { error: String(candidate.errorText) } : {}),
+        ...(call_provider_metadata !== undefined
+          ? { call_provider_metadata }
+          : {}),
+        ...(result_provider_metadata !== undefined
+          ? { result_provider_metadata }
+          : {}),
+        ...(typeof candidate.providerExecuted === "boolean"
+          ? { provider_executed: candidate.providerExecuted }
+          : {}),
       }];
     }
     return [];
@@ -251,6 +269,14 @@ function to_ui_assistant_parts(
       throw new Error(`Unsupported Assistant part: ${part.type}`);
     }
     const input = part.input ?? parse_json(part.input_text);
+    const call_provider_fields = {
+      ...(part.call_provider_metadata !== undefined
+        ? { callProviderMetadata: part.call_provider_metadata }
+        : {}),
+      ...(part.provider_executed !== undefined
+        ? { providerExecuted: part.provider_executed }
+        : {}),
+    };
     if (part.state === "completed") {
       return {
         type: "dynamic-tool",
@@ -259,6 +285,10 @@ function to_ui_assistant_parts(
         state: "output-available",
         input,
         output: part.output,
+        ...call_provider_fields,
+        ...(part.result_provider_metadata !== undefined
+          ? { resultProviderMetadata: part.result_provider_metadata }
+          : {}),
       };
     }
     if (part.state === "failed") {
@@ -269,6 +299,10 @@ function to_ui_assistant_parts(
         state: "output-error",
         input,
         errorText: part.error || "Tool failed",
+        ...call_provider_fields,
+        ...(part.result_provider_metadata !== undefined
+          ? { resultProviderMetadata: part.result_provider_metadata }
+          : {}),
       };
     }
     if (part.state === "approval-required") {
@@ -279,6 +313,7 @@ function to_ui_assistant_parts(
         state: "approval-requested",
         input,
         approval: { id: part.approval?.approval_id || `approval:${part.tool_call_id}` },
+        ...call_provider_fields,
       };
     }
     return {
@@ -287,6 +322,7 @@ function to_ui_assistant_parts(
       toolCallId: part.tool_call_id,
       state: part.state === "input-streaming" ? "input-streaming" : "input-available",
       input,
+      ...call_provider_fields,
     };
   }) as UIMessage["parts"];
 }

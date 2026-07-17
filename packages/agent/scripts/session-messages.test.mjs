@@ -12,7 +12,12 @@ import { JsonlSessionMessageStore } from "../bin/session/messages/JsonlSessionMe
 import { SessionMessages } from "../bin/session/SessionMessages.js";
 import { SessionApprovalBroker } from "../bin/session/approval/SessionApprovalBroker.js";
 import { compose_session_compaction } from "../bin/session/messages/SessionMessageCompaction.js";
-import { to_executor_history } from "../bin/session/messages/SessionMessageCodec.js";
+import {
+  from_ui_assistant_parts,
+  to_executor_history,
+  to_executor_ui_message,
+} from "../bin/session/messages/SessionMessageCodec.js";
+import { convertToModelMessages } from "ai";
 import { MockLanguageModelV3 } from "ai/test";
 
 /** 可暂停一次 Assistant 草稿写入，用于稳定复现并发写入顺序。 */
@@ -216,6 +221,171 @@ test("Tool Runtime 在文本中间保持输入、审批和输出的确定顺序"
       [2, "completed"],
     ],
   );
+});
+
+test("Streaming Tool Provider metadata 在输入和输出状态间完整保留", async () => {
+  const { recorder, file_path } = await create_recorder("tool-provider-metadata-test");
+  const writer = await recorder.open_assistant_message({
+    turn_id: "turn-provider-metadata",
+    segment_index: 1,
+  });
+  await writer.apply_chunk({
+    type: "tool-input-start",
+    toolCallId: "call_1",
+    toolName: "lookup",
+    providerMetadata: { openai: { itemId: "fc_start" } },
+  });
+  await writer.prepare_tool_input({
+    tool_call_id: "call_1",
+    tool_name: "lookup",
+    input: { q: "x" },
+  });
+  await writer.apply_chunk({
+    type: "tool-input-available",
+    toolCallId: "call_1",
+    toolName: "lookup",
+    input: { q: "x" },
+    providerExecuted: true,
+    providerMetadata: { openai: { itemId: "fc_1" } },
+  });
+  await writer.apply_chunk({
+    type: "tool-output-available",
+    toolCallId: "call_1",
+    output: "ok",
+    providerExecuted: true,
+    providerMetadata: { openai: { resultId: "result_1" } },
+  });
+  await writer.reconcile_final_tool_part({
+    part_id: "call_1",
+    sequence: 1,
+    type: "tool",
+    tool_call_id: "call_1",
+    tool_name: "lookup",
+    state: "completed",
+    input: { q: "x" },
+    output: "ok",
+    provider_executed: true,
+    call_provider_metadata: { openai: { itemId: "fc_final" } },
+  });
+  await writer.complete();
+
+  const assistant = (await read_jsonl(file_path))[0];
+  const tool_part = assistant.parts.find((part) => part.type === "tool");
+  assert.deepEqual(tool_part.call_provider_metadata, {
+    openai: { itemId: "fc_final" },
+  });
+  assert.deepEqual(tool_part.result_provider_metadata, {
+    openai: { resultId: "result_1" },
+  });
+  assert.equal(tool_part.provider_executed, true);
+  assert.equal(tool_part.state, "completed");
+});
+
+test("UI Tool Provider metadata 经 Session roundtrip 后恢复为 ModelMessage providerOptions", async () => {
+  const parts = from_ui_assistant_parts([{
+    type: "dynamic-tool",
+    toolName: "lookup",
+    toolCallId: "call_1",
+    state: "output-available",
+    input: { q: "x" },
+    output: "ok",
+    providerExecuted: false,
+    callProviderMetadata: { openai: { itemId: "fc_1" } },
+    resultProviderMetadata: { openai: { resultId: "result_1" } },
+  }]);
+  assert.deepEqual(parts[0].call_provider_metadata, {
+    openai: { itemId: "fc_1" },
+  });
+  assert.deepEqual(parts[0].result_provider_metadata, {
+    openai: { resultId: "result_1" },
+  });
+  assert.equal(parts[0].provider_executed, false);
+
+  const restored = to_executor_ui_message({
+    message_id: "assistant_1",
+    session_id: "session_1",
+    turn_id: "turn_1",
+    sequence: 1,
+    revision: 1,
+    visibility: "visible",
+    created_at: 1,
+    updated_at: 1,
+    type: "assistant",
+    kind: "normal",
+    segment_index: 1,
+    status: "completed",
+    parts,
+  });
+  assert.deepEqual(restored.parts[0].callProviderMetadata, {
+    openai: { itemId: "fc_1" },
+  });
+  assert.deepEqual(restored.parts[0].resultProviderMetadata, {
+    openai: { resultId: "result_1" },
+  });
+  assert.equal(restored.parts[0].providerExecuted, false);
+
+  const model_messages = await convertToModelMessages([restored]);
+  const model_parts = model_messages.flatMap((message) =>
+    Array.isArray(message.content) ? message.content : []
+  );
+  const tool_call = model_parts.find((part) => part.type === "tool-call");
+  const tool_result = model_parts.find((part) => part.type === "tool-result");
+  assert.equal(tool_call.toolCallId, "call_1");
+  assert.deepEqual(tool_call.providerOptions, {
+    openai: { itemId: "fc_1" },
+  });
+  assert.deepEqual(tool_result.providerOptions, {
+    openai: { itemId: "fc_1" },
+  });
+
+  const typed_parts = from_ui_assistant_parts([{
+    type: "tool-lookup",
+    toolCallId: "call_2",
+    state: "input-available",
+    input: { q: "typed" },
+    providerExecuted: true,
+    callProviderMetadata: { openai: { itemId: "fc_2" } },
+  }]);
+  assert.equal(typed_parts[0].tool_name, "lookup");
+  assert.equal(typed_parts[0].provider_executed, true);
+  assert.deepEqual(typed_parts[0].call_provider_metadata, {
+    openai: { itemId: "fc_2" },
+  });
+
+  const provider_executed = to_executor_ui_message({
+    message_id: "assistant_2",
+    session_id: "session_1",
+    turn_id: "turn_1",
+    sequence: 2,
+    revision: 1,
+    visibility: "visible",
+    created_at: 2,
+    updated_at: 2,
+    type: "assistant",
+    kind: "normal",
+    segment_index: 2,
+    status: "completed",
+    parts: from_ui_assistant_parts([{
+      type: "dynamic-tool",
+      toolName: "provider_lookup",
+      toolCallId: "call_3",
+      state: "output-available",
+      input: { q: "provider" },
+      output: "provider result",
+      providerExecuted: true,
+      callProviderMetadata: { openai: { itemId: "fc_3" } },
+      resultProviderMetadata: { openai: { resultId: "result_3" } },
+    }]),
+  });
+  const provider_model_messages = await convertToModelMessages([
+    provider_executed,
+  ]);
+  const provider_result = provider_model_messages
+    .flatMap((message) => Array.isArray(message.content) ? message.content : [])
+    .find((part) => part.type === "tool-result");
+  assert.deepEqual(provider_result.providerOptions, {
+    openai: { resultId: "result_3" },
+  });
 });
 
 test("Approval Broker 只接受已经准备完整输入的 Tool", async () => {

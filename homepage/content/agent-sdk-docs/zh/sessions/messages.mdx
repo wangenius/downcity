@@ -48,11 +48,25 @@ Session 内只有一条按 `sequence` 排序的顶层 Message 序列。工具调
 | --- | --- | --- |
 | `text` | `text`, `state` | 用户可见输出，`streaming -> done` |
 | `reasoning` | `text`, `state` | 推理输出，是否展示由产品决定 |
-| `tool` | `tool_call_id`, `tool_name`, `state` | 工具输入、审批、运行和结果 |
+| `tool` | `tool_call_id`, `tool_name`, `state`, `call_provider_metadata`, `result_provider_metadata` | 工具输入、审批、运行和结果 |
 | `file` | `url`, `media_type` | Assistant 生成或引用的文件 |
 | `data` | `data_type`, `data` | 结构化 UI 数据 |
 
 每个 Assistant Part 有稳定的 `part_id` 和不可变的内部 `sequence`。工具状态变化更新同一个 Part，不应在 UI 中创建“请求”和“结果”两个重复行。
+
+### Tool Provider metadata
+
+Tool Part 会保留 AI SDK Provider 附着在工具调用和工具结果上的 metadata：
+
+```ts
+interface SessionAssistantToolPart {
+  call_provider_metadata?: ProviderMetadata;
+  result_provider_metadata?: ProviderMetadata;
+  provider_executed?: boolean;
+}
+```
+
+这些字段是 Provider continuation 等能力所需的透明数据。应用可以读取并原样转存，但不应修改其中的 Provider 专属字段。旧 Session 没有这些可选字段时仍可正常读取。
 
 ## 顺序、版本与可见性
 

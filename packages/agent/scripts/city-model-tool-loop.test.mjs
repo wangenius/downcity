@@ -43,6 +43,7 @@ function create_tool_call_stream() {
           toolCallId: "call_1",
           toolName: "ping",
           input,
+          providerMetadata: { openai: { itemId: "fc_1" } },
         });
         controller.enqueue({
           type: "finish",
@@ -154,6 +155,8 @@ test("CityModel uses direct LanguageModel path and sends tool result back", asyn
     assert.equal(result.success, true);
     assert.equal(tool_executed, true);
     assert.equal(model_requests.length, 2);
+    assert.equal(model_requests[0].providerOptions, undefined);
+    assert.equal(model_requests[1].providerOptions, undefined);
     const plugin_call_tool = model_requests[0].tools.find((item) => item.name === "plugin_call");
     assert.ok(plugin_call_tool);
     assert.equal(plugin_call_tool.inputSchema.type, "object");
@@ -165,6 +168,12 @@ test("CityModel uses direct LanguageModel path and sends tool result back", asyn
     assert.match(serialized_second_prompt, /call_1/);
     assert.match(serialized_second_prompt, /echoed/);
     assert.match(serialized_second_prompt, /hello/);
+    const restored_tool_call = model_requests[1].prompt
+      .flatMap((message) => Array.isArray(message.content) ? message.content : [])
+      .find((part) => part.type === "tool-call" && part.toolCallId === "call_1");
+    assert.deepEqual(restored_tool_call.providerOptions, {
+      openai: { itemId: "fc_1" },
+    });
 
     const result_file = result.assistantMessage.parts.find((part) => part.type === "file");
     assert.deepEqual(result_file, {
@@ -175,6 +184,10 @@ test("CityModel uses direct LanguageModel path and sends tool result back", asyn
     });
     const session_messages = await session.messages({ include_internal: true });
     const persisted_assistant = session_messages.items.find((message) => message.type === "assistant");
+    const persisted_tool = persisted_assistant.parts.find((part) => part.type === "tool");
+    assert.deepEqual(persisted_tool.call_provider_metadata, {
+      openai: { itemId: "fc_1" },
+    });
     const persisted_file = persisted_assistant.parts.find((part) => part.type === "file");
     assert.equal(persisted_file.media_type, "image/png");
     assert.equal(persisted_file.url, ".downcity/resources/tool-output.png");

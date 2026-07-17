@@ -7,7 +7,10 @@
 
 import type { UIMessageChunk } from "ai";
 import type { SessionMessages } from "@/session/SessionMessages.js";
-import { to_session_json_value } from "@/session/messages/SessionJsonValue.js";
+import {
+  to_session_json_value,
+  to_session_provider_metadata,
+} from "@/session/messages/SessionJsonValue.js";
 import type {
   SessionAssistantFilePart,
   SessionAssistantMessage,
@@ -80,14 +83,41 @@ export class SessionAssistantMessageWriter {
         this.active_text_part_ids.delete(source_part_id);
         return;
       }
-      case "tool-input-start":
-        if (this.find_tool(chunk.toolCallId)) return;
+      case "tool-input-start": {
+        const tool = this.find_tool(chunk.toolCallId);
+        const call_provider_metadata = to_session_provider_metadata(
+          chunk.providerMetadata,
+        );
+        if (tool) {
+          if (
+            call_provider_metadata === undefined &&
+            chunk.providerExecuted === undefined
+          ) return;
+          await this.upsert_tool(chunk.toolCallId, {
+            tool_name: tool.tool_name,
+            state: tool.state,
+            ...(call_provider_metadata !== undefined
+              ? { call_provider_metadata }
+              : {}),
+            ...(chunk.providerExecuted !== undefined
+              ? { provider_executed: chunk.providerExecuted }
+              : {}),
+          });
+          return;
+        }
         await this.upsert_tool(chunk.toolCallId, {
           tool_name: chunk.toolName,
           state: "input-streaming",
           input_text: "",
+          ...(call_provider_metadata !== undefined
+            ? { call_provider_metadata }
+            : {}),
+          ...(chunk.providerExecuted !== undefined
+            ? { provider_executed: chunk.providerExecuted }
+            : {}),
         });
         return;
+      }
       case "tool-input-delta": {
         const tool = this.find_tool(chunk.toolCallId);
         if (tool && tool.state !== "input-streaming") return;
@@ -100,45 +130,103 @@ export class SessionAssistantMessageWriter {
       }
       case "tool-input-available": {
         const tool = this.find_tool(chunk.toolCallId);
-        if (tool && tool.state !== "input-streaming") return;
+        const call_provider_metadata = to_session_provider_metadata(
+          chunk.providerMetadata,
+        );
+        if (tool && tool.state !== "input-streaming") {
+          if (
+            call_provider_metadata === undefined &&
+            chunk.providerExecuted === undefined
+          ) return;
+          await this.upsert_tool(chunk.toolCallId, {
+            tool_name: tool.tool_name,
+            state: tool.state,
+            ...(call_provider_metadata !== undefined
+              ? { call_provider_metadata }
+              : {}),
+            ...(chunk.providerExecuted !== undefined
+              ? { provider_executed: chunk.providerExecuted }
+              : {}),
+          });
+          return;
+        }
         await this.upsert_tool(chunk.toolCallId, {
           tool_name: chunk.toolName,
           state: "ready",
           input: to_session_json_value(chunk.input),
+          ...(call_provider_metadata !== undefined
+            ? { call_provider_metadata }
+            : {}),
+          ...(chunk.providerExecuted !== undefined
+            ? { provider_executed: chunk.providerExecuted }
+            : {}),
         });
         return;
       }
-      case "tool-input-error":
+      case "tool-input-error": {
+        const call_provider_metadata = to_session_provider_metadata(
+          chunk.providerMetadata,
+        );
         await this.upsert_tool(chunk.toolCallId, {
           tool_name: chunk.toolName,
           state: "failed",
           input: to_session_json_value(chunk.input),
           error: chunk.errorText,
+          ...(call_provider_metadata !== undefined
+            ? { call_provider_metadata }
+            : {}),
+          ...(chunk.providerExecuted !== undefined
+            ? { provider_executed: chunk.providerExecuted }
+            : {}),
         });
         return;
+      }
       case "tool-output-available": {
         const tool = this.find_tool(chunk.toolCallId);
         if (
           tool?.state === "failed" &&
           (tool.error === "Approval denied" || tool.error === "Approval expired")
         ) return;
+        const result_provider_metadata = to_session_provider_metadata(
+          chunk.providerMetadata,
+        );
         await this.upsert_tool(chunk.toolCallId, {
           tool_name: tool?.tool_name || "unknown",
           state: "completed",
           output: to_session_json_value(chunk.output),
+          ...(result_provider_metadata !== undefined
+            ? { result_provider_metadata }
+            : {}),
+          ...(chunk.providerExecuted !== undefined
+            ? { provider_executed: chunk.providerExecuted }
+            : {}),
         });
         return;
       }
-      case "tool-output-error":
+      case "tool-output-error": {
+        const tool = this.find_tool(chunk.toolCallId);
+        const result_provider_metadata = to_session_provider_metadata(
+          chunk.providerMetadata,
+        );
+        await this.upsert_tool(chunk.toolCallId, {
+          tool_name: tool?.tool_name || "unknown",
+          state: "failed",
+          error: chunk.errorText,
+          ...(result_provider_metadata !== undefined
+            ? { result_provider_metadata }
+            : {}),
+          ...(chunk.providerExecuted !== undefined
+            ? { provider_executed: chunk.providerExecuted }
+            : {}),
+        });
+        return;
+      }
       case "tool-output-denied": {
         const tool = this.find_tool(chunk.toolCallId);
         await this.upsert_tool(chunk.toolCallId, {
           tool_name: tool?.tool_name || "unknown",
           state: "failed",
-          error:
-            chunk.type === "tool-output-error"
-              ? chunk.errorText
-              : "Tool output denied",
+          error: "Tool output denied",
         });
         return;
       }
@@ -156,6 +244,26 @@ export class SessionAssistantMessageWriter {
   /** 写入一个完整 Assistant part。 */
   async upsert_part(part: SessionAssistantMessagePart): Promise<void> {
     await this.recorder.update_assistant_part(this.message_id, part);
+  }
+
+  /**
+   * 用 AI SDK 最终 UIMessage 中的 Tool 快照校准流式写入结果。
+   *
+   * 关键点（中文）：最终快照只覆盖实际存在的字段；缺失 metadata 时继续保留
+   * 流式阶段已经写入的 Provider 快照。
+   */
+  async reconcile_final_tool_part(
+    part: SessionAssistantToolPart,
+  ): Promise<void> {
+    await this.enqueue_write(async () => {
+      const current = this.find_tool(part.tool_call_id);
+      await this.upsert_part({
+        ...(current || {}),
+        ...part,
+        part_id: current?.part_id || `tool:${part.tool_call_id}`,
+        sequence: current?.sequence || this.next_part_sequence(),
+      });
+    });
   }
 
   /** Executor 在调用 Tool 实现前写入完整输入。 */

@@ -95,6 +95,8 @@ export type ShellSessionSnapshot = {
   sandboxBackend?: string;
   /** 当前 shell 采用的 sandbox 网络模式。 */
   sandboxNetworkMode?: "off" | "restricted" | "full";
+  /** 当前 Safe Sandbox 策略摘要；unrestricted 执行时为空。 */
+  sandboxPolicyFingerprint?: string;
   /** 当前 agent 级 sandbox 的持久目录。 */
   sandboxDir?: string;
   /** 当前 shell 在 sandbox 中使用的 HOME。 */

@@ -45,6 +45,36 @@ shell_exec({
 
 Unrestricted 执行每次都需要用户审批。缺少 `reason` 会在执行前被拒绝。
 
+## 宿主只读目录
+
+Safe Sandbox 的写边界始终固定在项目目录。宿主可以为受信任的固定版本 CLI 增加额外只读目录，不需要把命令升级为 unrestricted：
+
+```ts
+const shell = new Shell({
+  safe_read_only_paths: [
+    "/Users/user/.vibecape/tools/officecli/v1.0.136",
+  ],
+});
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  shell,
+});
+```
+
+只读目录必须是已存在的绝对目录，不能位于项目目录内，也不能允许 group/world 写入。macOS 将其编译为 Seatbelt `file-read*` 规则，Linux 将其映射为 Bubblewrap `--ro-bind`；两端都不会增加写权限。
+
+宿主在工具安装、升级或停用后可以动态替换目录：
+
+```ts
+await shell.set_safe_read_only_paths([
+  "/Users/user/.vibecape/tools/officecli/v1.0.137",
+]);
+```
+
+权限收缩时，Shell 会关闭仍持有旧权限的活动 session。macOS 还会自动把当前 `xcode-select` 对应的 Xcode 运行目录加入系统只读路径，并显式设置 `DEVELOPER_DIR`，因此 `/usr/bin/git` 不需要额外配置或项目外写权限。
+
 ## 审批 API
 
 前端或 SDK 客户端通过发起工具调用的 Session 审批：
@@ -82,6 +112,7 @@ const current = await session.approval_mode();
 - Shell 归属于 `@downcity/shell`，不属于 `@downcity/plugins`。
 - Agent 只挂载 Shell tools；工具审批和实时 Mutation 都归属具体 Session。
 - Safe Sandbox 命令可读写项目，并使用配置的 sandbox 目录。
+- 宿主只读目录只能扩展读取能力，不能扩展项目外写权限。
 - Unrestricted 命令只有在逐次审批通过后才会离开 Safe Sandbox 执行。
 - `always-allow` 只影响当前 session 的新 approval 请求，不影响其它 session。
 - 对 unrestricted `shell_session` 会话执行的每一次 `send` 也需要审批。

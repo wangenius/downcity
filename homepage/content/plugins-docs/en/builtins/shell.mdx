@@ -45,6 +45,36 @@ shell_exec({
 
 Unrestricted execution always requires user approval. Missing `reason` is rejected before execution.
 
+## Host Read-Only Directories
+
+The Safe Sandbox write boundary always remains inside the project. A host can grant a trusted, version-pinned CLI an additional read-only directory without upgrading the command to unrestricted execution:
+
+```ts
+const shell = new Shell({
+  safe_read_only_paths: [
+    "/Users/user/.vibecape/tools/officecli/v1.0.136",
+  ],
+});
+
+const agent = new Agent({
+  id: "repo-helper",
+  path: "/path/to/project",
+  shell,
+});
+```
+
+Each entry must be an existing absolute directory outside the project and must not be group/world writable. macOS compiles it to a Seatbelt `file-read*` rule, while Linux maps it with Bubblewrap `--ro-bind`. Neither backend grants write access.
+
+The host can replace the directories after a tool install, upgrade, or shutdown:
+
+```ts
+await shell.set_safe_read_only_paths([
+  "/Users/user/.vibecape/tools/officecli/v1.0.137",
+]);
+```
+
+When access is removed, Shell closes active sessions that could retain the previous permission. On macOS, the Xcode runtime selected by `xcode-select` is added automatically as a system read-only path and `DEVELOPER_DIR` is set explicitly, so `/usr/bin/git` needs neither host configuration nor project-external write access.
+
 ## Approval API
 
 Clients approve shell requests through the Session that started the tool call:
@@ -82,6 +112,7 @@ const current = await session.approval_mode();
 - Shell is owned by `@downcity/shell`, not `@downcity/plugins`.
 - Agent only mounts Shell tools; approvals and live Mutations belong to a specific Session.
 - Safe Sandbox commands can read and write the project and use the configured sandbox directory.
+- Host read-only directories can extend read access but never project-external write access.
 - Unrestricted commands execute outside the Safe Sandbox only after per-request approval.
 - `always-allow` only affects new approval requests in the current session, not other sessions.
 - Every `send` to an unrestricted `shell_session` also requires approval.

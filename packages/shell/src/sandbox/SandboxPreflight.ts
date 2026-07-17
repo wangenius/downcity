@@ -10,7 +10,7 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import { delimiter } from "node:path";
-import type { SandboxBackend } from "@/sandbox/types/SandboxRuntime.js";
+import type { SandboxBackend } from "@/types/Sandbox.js";
 
 /**
  * sandbox 预检失败原因。

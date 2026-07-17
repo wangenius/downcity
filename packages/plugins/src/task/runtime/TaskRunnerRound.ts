@@ -9,7 +9,7 @@
 import path from "node:path";
 import fs from "fs-extra";
 import type { AgentContext } from "@downcity/agent";
-import { runSandboxCommand } from "@downcity/shell/sandbox/SandboxRunner.js";
+import { run_sandbox_command } from "@downcity/shell/sandbox/Sandbox.js";
 import type { ShellHostContext } from "@downcity/shell/types/ShellHostContext.js";
 import type { SessionRunResult } from "@downcity/agent";
 import type { SessionRunContext } from "@downcity/agent";
@@ -288,15 +288,15 @@ export async function runScriptTask(params: {
     DC_SESSION_ID: params.sessionId,
   };
   stripTaskSecretEnv(childEnv);
-  const execResult = await runSandboxCommand({
+  const execResult = await run_sandbox_command({
     context: params.context as unknown as ShellHostContext,
-    executionId: `task-script:${params.sessionId}`,
-    executionDir: params.runDirAbs,
+    execution_id: `task-script:${params.sessionId}`,
+    execution_dir: params.runDirAbs,
     cmd: `sh "${scriptAbs.replace(/(["\\$`])/g, "\\$1")}"`,
     cwd: params.runDirAbs,
-    shellPath: "/bin/sh",
+    shell_path: "/bin/sh",
     login: false,
-    baseEnv: childEnv,
+    base_env: childEnv,
   });
 
   const stdout = String(execResult.stdout || "").trim();

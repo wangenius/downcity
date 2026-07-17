@@ -9,9 +9,8 @@
 import { spawn as spawnPty } from "node-pty";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import type {
-  SandboxSpawnParams,
   ShellProcessHandle,
-} from "@/sandbox/types/SandboxRuntime.js";
+} from "@/types/Sandbox.js";
 
 /**
  * 把普通 pipe 子进程包装成 shell process handle。
@@ -61,7 +60,12 @@ export function spawnPtyProcessHandle(params: {
   args: string[];
   cwd: string;
   env: NodeJS.ProcessEnv;
-  terminal?: Pick<SandboxSpawnParams, "cols" | "rows">;
+  terminal?: {
+    /** PTY 列数。 */
+    cols?: number;
+    /** PTY 行数。 */
+    rows?: number;
+  };
 }): ShellProcessHandle {
   const env: Record<string, string> = {};
   for (const [key, value] of Object.entries(params.env)) {

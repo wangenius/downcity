@@ -43,6 +43,14 @@ export type ShellHostContext = {
    */
   env?: Record<string, string | undefined>;
   /**
+   * 宿主批准给 Safe Sandbox 的额外只读目录。
+   *
+   * 关键点（中文）
+   * - 该能力只能由 Shell 宿主配置，不能来自模型 tool input。
+   * - 目录不会获得写权限，且会在启动前完成 realpath 与权限校验。
+   */
+  safe_read_only_paths?: readonly string[];
+  /**
    * Agent 配置的最小视图。
    */
   config?: {

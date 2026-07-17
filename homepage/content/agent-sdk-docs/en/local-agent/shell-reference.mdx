@@ -38,7 +38,8 @@ When Shell is mounted through `Agent`, no path option is needed; the Agent confi
 
 ### Methods
 
-`shell.dispose()` — Release shell resources.
+- `shell.dispose()` — Release shell resources.
+- `shell.set_safe_read_only_paths(paths)` — Replace host-approved read-only directories.
 
 Approval requests appear as an `approval-required` Tool Part in `session.subscribe((mutation) => {})`. Read the complete request from `mutation.part.approval`, then submit the user's decision with `session.resolve_approval(...)`. A reconnected client can recover pending requests with `session.approvals()`. Do not call internal Shell Runtime approval methods directly.
 
@@ -76,11 +77,27 @@ Shell commands use the safe sandbox by default. The backend is selected automati
 - `linux-bubblewrap` — Linux sandbox
 - `unrestricted-host` — No sandboxing
 
-The SDK's internal sandbox runner handles shell subprocess creation, platform-specific backend invocation, and one-shot command execution. You do not normally need to interact with it directly.
+The internal `Sandbox` entry resolves an access policy and invokes the platform backend. Shell Session remains the only owner of process state, output, and stdin.
 
-### ConfigResolver
+### Additional read-only directories
 
-`SandboxConfigResolver` derives the fixed safe-sandbox boundary from the Agent project root.
+A host can expose a version-pinned CLI or runtime directory to the Safe Sandbox as read-only:
+
+```ts
+const shell = new Shell({
+  safe_read_only_paths: [
+    "/Users/user/.vibecape/tools/officecli/v1.0.136",
+  ],
+});
+```
+
+Each entry must be an existing absolute directory outside the project and must not be group/world writable. macOS emits a Seatbelt `file-read*` rule, while Linux uses Bubblewrap `--ro-bind`. This never expands project-external write access.
+
+On macOS, Shell resolves `xcode-select -p`, adds the selected Xcode runtime as a system read-only path, and sets `DEVELOPER_DIR` explicitly. This lets the system Git command load its complete runtime without project-external writes.
+
+### Policy
+
+`SandboxPolicy` combines system read-only paths, the fixed writable workspace, and host read-only paths, then validates realpaths, overlaps, and directory permissions.
 
 `SandboxPreflight` runs pre-execution checks to validate the sandbox setup.
 ## Approval

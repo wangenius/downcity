@@ -33,6 +33,7 @@ import { create_file_tools } from "@/tool/FileTools.js";
 import { run_file_action } from "@/file/FileActionRuntime.js";
 import { create_search_tools } from "@/tool/SearchTools.js";
 import { run_search_action } from "@/search/SearchActionRuntime.js";
+import { resolve_sandbox_policy } from "@/sandbox/SandboxPolicy.js";
 import type {
   FileToolActionRequest,
   FileToolActionResult,
@@ -64,7 +65,10 @@ export class Shell {
   readonly tools: ShellToolSet & FileToolSet & SearchToolSet;
 
   constructor(options: ShellOptions = {}) {
-    this.host_options = { ...options };
+    this.host_options = {
+      ...options,
+      safe_read_only_paths: [...(options.safe_read_only_paths || [])],
+    };
     this.state = createShellRuntimeState();
     this.tools = {
       ...createShellTools({
@@ -118,6 +122,44 @@ export class Shell {
     }
     this.state.sessions.clear();
     this.state.context = null;
+  }
+
+  /**
+   * 替换 Safe Sandbox 的宿主只读目录。
+   *
+   * 关键点（中文）
+   * - 权限收缩或切换时先关闭活动 shell，避免旧进程继续持有已撤销权限。
+   * - 只读目录只影响后续启动的进程，不会扩大 workspace 之外的写权限。
+   */
+  async set_safe_read_only_paths(paths: string[]): Promise<void> {
+    const current_paths = this.host_options.safe_read_only_paths || [];
+    const next_paths = Array.from(new Set(
+      paths.map((value) => String(value || "").trim()).filter(Boolean),
+    ));
+    if (
+      current_paths.length === next_paths.length &&
+      current_paths.every((value, index) => value === next_paths[index])
+    ) {
+      return;
+    }
+    const root_path = String(this.host_options.root_path || "").trim();
+    if (root_path) {
+      await resolve_sandbox_policy({
+        rootPath: root_path,
+        env: this.host_options.env,
+        safe_read_only_paths: next_paths,
+        logger: this.host_options.logger,
+      }, {
+        ...process.env,
+        ...this.host_options.env,
+      });
+    }
+    const next_path_set = new Set(next_paths);
+    const removes_access = current_paths.some((value) => !next_path_set.has(value));
+    if (removes_access) {
+      await closeAllShellSessions(this.state, true);
+    }
+    this.host_options.safe_read_only_paths = next_paths;
   }
 
   private async run_action(
@@ -202,6 +244,7 @@ export class Shell {
     return {
       rootPath: root_path,
       env: run_context.env || this.host_options.env,
+      safe_read_only_paths: this.host_options.safe_read_only_paths,
       config: {
         ...(this.host_options.agent_id ? { id: this.host_options.agent_id } : {}),
       },

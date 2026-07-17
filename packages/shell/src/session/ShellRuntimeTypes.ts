@@ -8,7 +8,7 @@
  */
 
 import type { ShellHostContext } from "@/types/ShellHostContext.js";
-import type { ShellProcessHandle } from "@/sandbox/types/SandboxRuntime.js";
+import type { ShellProcessHandle } from "@/types/Sandbox.js";
 import type {
   ShellSessionSnapshot,
 } from "@/types/ShellAction.js";

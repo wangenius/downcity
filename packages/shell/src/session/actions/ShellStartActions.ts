@@ -8,7 +8,7 @@
 
 import fs from "fs-extra";
 import type { ShellHostContext } from "@/types/ShellHostContext.js";
-import { spawnShellProcess } from "@/sandbox/SandboxRunner.js";
+import { spawn_shell_process } from "@/sandbox/Sandbox.js";
 import type {
   ShellRuntimeState,
   ShellSessionRuntimeState,
@@ -115,16 +115,16 @@ export async function startShellSession(
     }
   }
 
-  const spawnResult = await spawnShellProcess({
+  const spawnResult = await spawn_shell_process({
     context,
-    shellId,
-    shellDir,
+    execution_id: shellId,
+    execution_dir: shellDir,
     cmd,
     cwd,
-    shellPath,
+    shell_path: shellPath,
     login,
-    baseEnv: buildShellEnv(context, ownerContextId),
-    sandboxMode,
+    base_env: buildShellEnv(context, ownerContextId),
+    sandbox_mode: sandboxMode,
     terminal: request.terminal !== false,
     cols: request.cols,
     rows: request.rows,
@@ -145,13 +145,14 @@ export async function startShellSession(
       cwd: actualCwd,
       shellPath,
       sandboxed: spawnResult.sandboxed,
-      sandboxMode: spawnResult.sandboxMode || sandboxMode,
+      sandboxMode: spawnResult.sandbox_mode || sandboxMode,
       sandboxBackend: spawnResult.backend,
-      sandboxNetworkMode: spawnResult.networkMode,
-      sandboxDir: spawnResult.sandboxDir,
-      sandboxHomeDir: spawnResult.homeDir,
-      sandboxTmpDir: spawnResult.tmpDir,
-      sandboxCacheDir: spawnResult.cacheDir,
+      sandboxNetworkMode: spawnResult.network_mode,
+      sandboxDir: spawnResult.sandbox_dir,
+      sandboxHomeDir: spawnResult.home_dir,
+      sandboxTmpDir: spawnResult.tmp_dir,
+      sandboxCacheDir: spawnResult.cache_dir,
+      sandboxPolicyFingerprint: spawnResult.policy_fingerprint,
       ...(approvalStatus ? { approvalStatus } : {}),
       ...(approvalId ? { approvalId } : {}),
       ...(reason ? { approvalReason: reason } : {}),

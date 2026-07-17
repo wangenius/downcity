@@ -1,6 +1,6 @@
 {
   "name": "@downcity/shell",
-  "version": "0.1.113",
+  "version": "0.1.114",
   "type": "module",
   "description": "Downcity Shell — structured file tools, local command execution, sandboxing, shell sessions, and approvals",
   "main": "./bin/index.js",
@@ -38,10 +38,6 @@
     "./sandbox/*.js": {
       "types": "./bin/sandbox/*.d.ts",
       "import": "./bin/sandbox/*.js"
-    },
-    "./sandbox/types/*.js": {
-      "types": "./bin/sandbox/types/*.d.ts",
-      "import": "./bin/sandbox/types/*.js"
     },
     "./session/*.js": {
       "types": "./bin/session/*.d.ts",

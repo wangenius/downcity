@@ -71,6 +71,15 @@ export interface ShellOptions {
    */
   env?: Record<string, string | undefined>;
   /**
+   * Safe Sandbox 额外允许读取的宿主目录。
+   *
+   * 说明（中文）
+   * - 适合宿主托管的固定版本 CLI、shim 和只读运行时目录。
+   * - 目录必须是绝对路径，且不能与 workspace 写边界重叠。
+   * - 模型不能通过 `shell_exec` 或 `shell_session` 修改该配置。
+   */
+  safe_read_only_paths?: string[];
+  /**
    * @deprecated Safe Sandbox 边界由 Shell 内部固定，不再支持外部配置。
    */
   sandbox?: never;

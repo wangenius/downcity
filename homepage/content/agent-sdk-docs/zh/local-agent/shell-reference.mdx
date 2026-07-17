@@ -91,7 +91,7 @@ const shell = new Shell({
 
 目录必须是项目外已存在的绝对目录，且不能允许 group/world 写入。macOS 为它生成 Seatbelt `file-read*` 规则；Linux 使用 Bubblewrap `--ro-bind`。项目外写权限不会随之扩大。
 
-macOS 还会自动解析 `xcode-select -p`，把当前 Xcode 运行目录加入系统只读路径并显式设置 `DEVELOPER_DIR`，确保系统 Git 可以在不增加项目外写权限的情况下加载完整运行依赖。
+macOS 还会自动解析 `xcode-select -p`，把当前 Xcode 运行目录加入系统只读路径，并把真实的 `Developer/usr/bin` 放到 `PATH` 最前面。普通 `git` 会直接使用 Xcode Git，不经过会写宿主 cache 的 xcrun。
 
 ### Env
 

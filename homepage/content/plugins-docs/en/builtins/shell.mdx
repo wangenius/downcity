@@ -73,7 +73,7 @@ await shell.set_safe_read_only_paths([
 ]);
 ```
 
-When access is removed, Shell closes active sessions that could retain the previous permission. On macOS, the Xcode runtime selected by `xcode-select` is added automatically as a system read-only path and `DEVELOPER_DIR` is set explicitly, so `/usr/bin/git` needs neither host configuration nor project-external write access.
+When access is removed, Shell closes active sessions that could retain the previous permission. On macOS, the Xcode runtime selected by `xcode-select` is added as a system read-only path and its real `Developer/usr/bin` directory is prepended to `PATH`. Normal `git` calls therefore bypass xcrun without project-external write access.
 
 ## Approval API
 

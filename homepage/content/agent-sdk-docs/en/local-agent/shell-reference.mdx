@@ -93,7 +93,7 @@ const shell = new Shell({
 
 Each entry must be an existing absolute directory outside the project and must not be group/world writable. macOS emits a Seatbelt `file-read*` rule, while Linux uses Bubblewrap `--ro-bind`. This never expands project-external write access.
 
-On macOS, Shell resolves `xcode-select -p`, adds the selected Xcode runtime as a system read-only path, and sets `DEVELOPER_DIR` explicitly. This lets the system Git command load its complete runtime without project-external writes.
+On macOS, Shell resolves `xcode-select -p`, adds the selected Xcode runtime as a system read-only path, and prepends the real `Developer/usr/bin` directory to `PATH`. Normal `git` calls use the Xcode binary directly instead of the xcrun entry that writes a host cache.
 
 ### Policy
 

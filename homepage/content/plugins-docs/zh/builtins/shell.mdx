@@ -73,7 +73,7 @@ await shell.set_safe_read_only_paths([
 ]);
 ```
 
-权限收缩时，Shell 会关闭仍持有旧权限的活动 session。macOS 还会自动把当前 `xcode-select` 对应的 Xcode 运行目录加入系统只读路径，并显式设置 `DEVELOPER_DIR`，因此 `/usr/bin/git` 不需要额外配置或项目外写权限。
+权限收缩时，Shell 会关闭仍持有旧权限的活动 session。macOS 还会自动把当前 `xcode-select` 对应的 Xcode 运行目录加入系统只读路径，并把真实的 `Developer/usr/bin` 放到 `PATH` 最前面，因此普通 `git` 不会经过 xcrun，也不需要项目外写权限。
 
 ## 审批 API
 

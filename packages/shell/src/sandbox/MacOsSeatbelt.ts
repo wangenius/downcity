@@ -103,8 +103,15 @@ export function build_macos_sandbox_env(
     fs.existsSync(path.join(value, "Developer"))
   );
   if (!env.DEVELOPER_DIR && xcode_contents_path) {
-    // 关键点（中文）：显式指定 Developer 目录，避免系统 Git 依赖 xcrun 的宿主 lookup cache。
-    env.DEVELOPER_DIR = path.join(xcode_contents_path, "Developer");
+    const developer_path = path.join(xcode_contents_path, "Developer");
+    const developer_bin_path = path.join(developer_path, "usr", "bin");
+    // 关键点（中文）
+    // - `/usr/bin/git` 是 xcrun 入口，会尝试在真实用户临时目录写 lookup cache。
+    // - 优先使用 Xcode 内真实工具目录，既消除警告，也不需要开放项目外写权限。
+    env.DEVELOPER_DIR = developer_path;
+    env.PATH = [developer_bin_path, env.PATH]
+      .filter(Boolean)
+      .join(path.delimiter);
   }
   return env;
 }

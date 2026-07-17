@@ -97,7 +97,7 @@ test("macOS safe sandbox runs system Git through selected Xcode", {
       rootPath: fixture.project_root,
       env: {},
     }, {
-      cmd: "/usr/bin/git --version",
+      cmd: "git --version",
       cwd: fixture.project_root,
       shell: "/bin/sh",
       login: false,
@@ -105,7 +105,8 @@ test("macOS safe sandbox runs system Git through selected Xcode", {
       timeoutMs: 10_000,
     });
     assert.equal(result.shell.status, "completed", result.chunk.output);
-    assert.match(result.chunk.output, /git version /);
+    assert.match(result.chunk.output, /^git version /);
+    assert.doesNotMatch(result.chunk.output, /xcrun_db/);
     assert.equal(typeof result.shell.sandboxPolicyFingerprint, "string");
   } finally {
     await closeAllShellSessions(state, true);

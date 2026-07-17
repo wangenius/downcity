@@ -12,6 +12,10 @@ import type {
   CityModelReasoning,
 } from "@downcity/type";
 import type { LanguageModel } from "ai";
+import type {
+  CityProviderStreamCall,
+  CityProviderStreamResult,
+} from "../../types/CityLanguageModelRuntime.js";
 
 // ===========================================================================
 // 模型注册
@@ -59,15 +63,13 @@ export type CityLanguageModelV3 = Extract<
   { readonly specificationVersion: "v3" }
 >;
 
-/** Provider 为原生 City endpoint 暴露的模型运行时。 */
+/** Provider 为 CityModel stream endpoint 暴露的执行运行时。 */
 export interface ModelLanguageRuntime {
-  /** 根据最终路由 Context 创建实际 Provider LanguageModelV3。 */
-  create_language_model(ctx: import("../service.js").Context): CityLanguageModelV3;
-  /** 将 Federation 已校验的配置转换成当前 Provider options。 */
-  build_provider_options?(
+  /** 执行一次已解码的标准模型调用，并返回 LanguageModelV3 流事件。 */
+  stream(
     ctx: import("../service.js").Context,
-    model: CityLanguageModelV3,
-  ): import("../../types/AIReasoning.js").AIProviderOptions | undefined;
+    call: CityProviderStreamCall,
+  ): Promise<CityProviderStreamResult>;
 }
 
 

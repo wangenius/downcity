@@ -43,6 +43,10 @@ import {
 } from "./helpers.js";
 import { read_resolved_reasoning } from "./reasoning.js";
 import type { AIProviderOptions } from "../../types/AIReasoning.js";
+import type {
+  CityProviderStreamCall,
+  CityProviderStreamResult,
+} from "../../types/CityLanguageModelRuntime.js";
 
 // ===========================================================================
 // 内部类型
@@ -96,7 +100,7 @@ type ResolvedActionInput =
   * AI Provider 基类。
   *
   * 子类通过覆盖方法声明 action，model() 会自动收集并生成 ModelConfig。
-   * 默认 text 使用 OpenAI-compatible 协议，模型流统一由 create_language_model 提供。
+   * 默认 text 使用 OpenAI-compatible 协议，CityModel 模型流统一由 stream 提供。
   */
 export abstract class Provider {
    /** Provider 唯一 ID。 */
@@ -150,13 +154,8 @@ export abstract class Provider {
      return undefined;
    }
 
-   /**
-   * 创建当前请求实际使用的 LanguageModelV3。
-   *
-   * 子类可以覆盖该方法，让不同模型选择 Responses、Claude Messages 或 Gemini
-   * 原生实现。现有 text 与 CityModel `/v1/ai/stream` 都复用这里的结果。
-   */
-   protected create_language_model(ctx: Context): CityLanguageModelV3 {
+   /** 创建默认 OpenAI-compatible chat model。 */
+   private create_openai_compatible_model(ctx: Context): CityLanguageModelV3 {
      if (!this.envKey) {
        throw new Error(`Provider ${this.id} is missing envKey`);
      }
@@ -164,6 +163,24 @@ export abstract class Provider {
      const base_url = this.baseURL ?? "https://api.openai.com/v1";
      const upstream_model = resolveUpstreamModel(ctx, this.passthroughModel ?? "");
      return this.createClient({ apiKey: api_key, baseURL: base_url, name: this.id }).chat(upstream_model);
+   }
+
+   /**
+    * 执行一次 CityModel 标准模型流。
+    *
+    * 默认实现把调用交给 OpenAI-compatible chat model。Responses、Claude Messages、
+    * Gemini 或自定义上游协议应覆盖此方法，并返回标准 LanguageModelV3 流事件。
+    */
+   protected async stream(
+     ctx: Context,
+     call: CityProviderStreamCall,
+   ): Promise<CityProviderStreamResult> {
+     const model = this.create_openai_compatible_model(ctx);
+     const provider_options = this.build_reasoning_provider_options(ctx, model);
+     return model.doStream({
+       ...call,
+       ...(provider_options ? { providerOptions: provider_options } : {}),
+     });
    }
 
    /**
@@ -216,7 +233,7 @@ export abstract class Provider {
    async text(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
      const input = ctx.input as OpenAIActionInput;
      const resolved_input = await this.resolveActionInput(input);
-     const model = this.create_language_model(ctx);
+     const model = this.create_openai_compatible_model(ctx);
      const provider_options = this.build_reasoning_provider_options(ctx, model);
 
      if ("messages" in resolved_input) {
@@ -306,7 +323,7 @@ export abstract class Provider {
    }): ModelConfig {
      const actions: ModelActions = {};
      const has_language_model =
-       this.create_language_model !== Provider.prototype.create_language_model ||
+       this.stream !== Provider.prototype.stream ||
        this.createClient !== Provider.prototype.createClient;
      const all_modalities = [
        "text",
@@ -350,9 +367,7 @@ export abstract class Provider {
        actions,
        ...(has_language_model ? {
          language_model: {
-           create_language_model: (ctx: Context) => this.create_language_model(ctx),
-           build_provider_options: (ctx: Context, model: CityLanguageModelV3) =>
-             this.build_reasoning_provider_options(ctx, model),
+           stream: (ctx: Context, call: CityProviderStreamCall) => this.stream(ctx, call),
          },
        } : {}),
        bill: spec.bill ?? this.bill.bind(this),

@@ -646,7 +646,7 @@ test("AIService /stream keeps the model stream open until deferred charge settle
       name: "Stream Charge",
       actions: {},
       language_model: {
-        create_language_model: () => provider_model,
+        stream: (_ctx, call) => provider_model.doStream(call),
       },
       bill: () => ({ credits: 321, note: "stream charge" }),
     })

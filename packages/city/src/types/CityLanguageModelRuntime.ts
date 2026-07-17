@@ -6,7 +6,6 @@
  */
 
 import type { LanguageModel } from "ai";
-import type { AIProviderOptions } from "./AIReasoning.js";
 import type { CityLanguageModelStreamRequestV1 } from "./CityLanguageModelTransport.js";
 
 /** AI SDK LanguageModelV3。 */
@@ -20,6 +19,12 @@ export type CityRuntimeCallOptions = Parameters<CityRuntimeLanguageModelV3["doSt
 
 /** LanguageModelV3 的标准流结果。 */
 export type CityRuntimeStreamResult = Awaited<ReturnType<CityRuntimeLanguageModelV3["doStream"]>>;
+
+/** Provider `stream()` 收到的标准 CityModel 调用参数。 */
+export type CityProviderStreamCall = CityRuntimeCallOptions;
+
+/** Provider `stream()` 必须返回的标准 CityModel 流结果。 */
+export type CityProviderStreamResult = CityRuntimeStreamResult;
 
 /** LanguageModelV3 的标准流事件。 */
 export type CityRuntimeStreamPart =
@@ -37,14 +42,8 @@ export interface DecodedCityLanguageModelRequest {
 
 /** 创建 Federation SSE 响应所需的输入。 */
 export interface CreateCityLanguageModelStreamInput {
-  /** 已路由到最终 Provider 的 LanguageModelV3。 */
-  model: CityRuntimeLanguageModelV3;
-  /** 已解码的调用参数。 */
-  call: CityRuntimeCallOptions;
-  /** Federation 生成并允许传给 Provider 的选项。 */
-  provider_options?: AIProviderOptions;
-  /** 原始 HTTP 请求的取消信号。 */
-  signal?: AbortSignal;
+  /** 最终 Provider `stream()` 返回的标准 LanguageModelV3 流结果。 */
+  result: CityRuntimeStreamResult;
 }
 
 /** Federation SSE 响应及其最终完成事件。 */

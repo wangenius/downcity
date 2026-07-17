@@ -9,7 +9,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import { MockLanguageModelV3 } from "ai/test"
 
-import { AIService, CityModel } from "../bin/index.js"
+import { AIService, CityModel, Provider } from "../bin/index.js"
 
 const usage = {
   inputTokens: { total: 12, noCache: 8, cacheRead: 4, cacheWrite: 0 },
@@ -55,7 +55,7 @@ function create_context(input, signal) {
     locals: {},
     db: {},
     user: { user_id: "user_1", metadata: {} },
-    env: () => undefined,
+    env: () => "test-api-key",
     request: new Request("https://federation.test/v1/ai/stream", {
       method: "POST",
       signal,
@@ -81,29 +81,34 @@ test("CityModel directly streams through Federation LanguageModelV3 runtime", as
       charge: async (input) => charges.push(input),
     },
   })
-  ai.use({
+  const provider = new (class extends Provider {
+    createClient() {
+      return {
+        chat: () => provider_model,
+      }
+    }
+  })({
+    id: "mock",
+    env: {},
+    envKey: "MOCK_API_KEY",
+    passthroughModel: "upstream-model",
+  })
+  ai.use(provider.model({
     id: "city-model",
     name: "City Model",
     reasoning: {
       efforts: [{ id: "high", name: "High" }],
     },
-    actions: {},
-    language_model: {
-      create_language_model: () => provider_model,
-      build_provider_options: (ctx) => ({
-        mock: { reasoningEffort: ctx.input.reasoning_effort },
-      }),
-    },
     bill: () => ({ credits: 3, note: "language model test" }),
-  })
+  }))
   const action = ai.get("stream")
   assert.ok(action)
   assert.equal(ai.get("language-model/stream"), undefined)
   const catalog = AIService.listModels(ai, {
-    env: () => undefined,
+    env: () => "test-api-key",
     identity: "user",
   })
-  assert.deepEqual(catalog[0].modalities, ["stream"])
+  assert.ok(catalog[0].modalities.includes("stream"))
 
   const model = new CityModel({
     descriptor: {

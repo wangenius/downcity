@@ -98,7 +98,7 @@ User City.ai.text({ prompt: "hello", model: "deepseek-v4-flash" })
 Agent / client.ai.stream()
   -> CityModel.doStream()
   -> POST /v1/ai/stream
-  -> Provider create_language_model(ctx)
+  -> Provider stream(ctx, call)
   -> LanguageModelV3StreamPart
   -> Agent SessionMutation 或客户端 UIMessageChunk
 ```

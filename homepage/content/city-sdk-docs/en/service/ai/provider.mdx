@@ -46,10 +46,10 @@ description: Provider is an abstract base class for AI upstreams. Subclass it to
 
 `passthroughModel` is the upstream model id used during auto-passthrough.
 
-The default runtime created by `createClient()` uses `.chat()`. If a model must
-use Responses, Claude Messages, or another native protocol, override
-`create_language_model(ctx)` and return the correct `LanguageModelV3`.
-`text()` and the CityModel stream pathway both reuse this factory.
+The default `stream(ctx, call)` implementation uses `createClient().chat()`. If
+a model must use Responses, Claude Messages, Gemini, or another native protocol,
+override `stream()`, call that upstream, and return a standard
+`LanguageModelV3StreamPart` stream.
 
 ## Model context window
 
@@ -101,25 +101,34 @@ The default OpenAI-compatible `text` action and CityModel stream runtime convert
 
 `/v1/ai/chat/completions` is already OpenAI-compatible, so it does not use `providerOptions`; the validated `reasoning_effort` remains in the request body for the custom `openai` action or automatic passthrough.
 
- ## Overriding text
+ ## Overriding text / stream
 
- If the default OpenAI-compatible non-streaming implementation is not enough,
-override `text`. Model streaming no longer uses a Provider `stream` action;
-override `create_language_model(ctx)` to select another upstream protocol.
+`text()` is the non-streaming SDK action. `stream(ctx, call)` is the standard
+CityModel stream protocol. Providers can override them independently, and a
+custom stream does not need to construct a complete CityModel:
 
  ```ts
- import { Provider, type Context, type AIProviderChargedOutput } from "@downcity/city";
- import type { UIMessage } from "ai";
+ import {
+   Provider,
+   type CityProviderStreamCall,
+   type CityProviderStreamResult,
+   type Context,
+ } from "@downcity/city";
 
- class CustomTextProvider extends Provider {
+ class CustomProvider extends Provider {
    constructor() {
      super({ id: "custom", envKey: "CUSTOM_API_KEY" });
    }
 
-   async text(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
-     // custom implementation
+   protected async stream(
+     ctx: Context,
+     call: CityProviderStreamCall,
+   ): Promise<CityProviderStreamResult> {
+     const response = await requestCustomUpstream(ctx, call);
+     return {
+       stream: convertToLanguageModelStream(response.body),
+     };
    }
-
  }
  ```
 
@@ -515,7 +524,7 @@ ai.use(deepseek.model({
  | Method | Description |
  |---|---|
  | `createClient` | Override for text or CityModel streaming; returns an OpenAI-compatible client |
- | `create_language_model` | Select the LanguageModelV3 used by `/v1/ai/stream` |
+ | `stream` | Execute a CityModel call and return a LanguageModelV3 stream result |
  | `text` | SDK text action (default from base class) |
  | `image_create` | Create and start an image provider job |
  | `image_fetch` | Query image provider job state in the background and return the final result |

@@ -96,6 +96,11 @@ export type {
   AIResolvedReasoning,
 } from "./types/AIReasoning.js";
 
+export type {
+  CityProviderStreamCall,
+  CityProviderStreamResult,
+} from "./types/CityLanguageModelRuntime.js";
+
 export {
   buildAssistantMessage,
   buildImageMessage,

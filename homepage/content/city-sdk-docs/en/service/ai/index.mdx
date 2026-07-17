@@ -22,7 +22,7 @@ description: "AIService's two independent pathways: SDK pathway (User City) and 
        │                     OpenAI-format body
        ▼                    { model, messages, stream, tools }
   provider.text                            │
-  create_language_model                   ▼
+  provider.stream(ctx, call)              ▼
        │                       provider.openai
        ▼                      (passthrough or format conversion)
   UIMessage / LMV3 stream                 │

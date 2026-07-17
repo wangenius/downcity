@@ -5,6 +5,8 @@
 import type { UIMessage, UIMessageChunk } from "ai";
 import type {
   AIInvoker,
+  CityProviderStreamCall,
+  CityProviderStreamResult,
   CityModelDescriptor,
   City,
   ModelCatalog,
@@ -16,6 +18,11 @@ import type {
   UserPaymentMethod,
   UserServiceSummary,
 } from "../src/index.js";
+
+declare const provider_stream_call: CityProviderStreamCall;
+declare const provider_stream_result: CityProviderStreamResult;
+void provider_stream_call;
+void provider_stream_result;
 
 declare const client: City<"user">;
 declare const admin: City<"admin">;

@@ -20,7 +20,7 @@ Downcity's AI service has **two independent pathways** sharing a single model re
               │                         OpenAI-format body
               ▼                        { model, messages, stream }
    provider.text                                     │
-   create_language_model                            ▼
+   provider.stream(ctx, call)                       ▼
               │                             provider.openai
               ▼                         (passthrough or format conversion)
  UIMessage / LanguageModelV3StreamPart              │
@@ -141,8 +141,8 @@ const provider = new PricedProvider();
 ```
 
 When a CityModel stream finishes, AIService passes the final `finish` part with
-usage to the model's `bill(ctx, output)` and settles the deferred charge. No
-separate Provider stream action is required:
+usage to the model's `bill(ctx, output)` and settles the deferred charge.
+`stream()` only executes the protocol and does not return a charge promise:
 
 ```ts
 protected bill(ctx: Context, output: unknown) {

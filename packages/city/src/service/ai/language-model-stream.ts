@@ -1,8 +1,8 @@
 /**
  * Federation City LanguageModel Transport 流模块。
  *
- * 负责请求协议校验、LanguageModelV3 调用和 SSE 编码。模型路由、reasoning、
- * 计费与鉴权仍由 AIService 负责。
+ * 负责请求协议校验、调用参数清理和 SSE 编码。模型执行、路由、reasoning、
+ * 计费与鉴权仍由 Provider / AIService 负责。
  */
 
 import {
@@ -57,24 +57,31 @@ export function decode_city_language_model_request(
   };
 }
 
-/** 调用 Provider LanguageModelV3 并编码为 City transport SSE。 */
-export async function create_city_language_model_stream(
-  input: CreateCityLanguageModelStreamInput,
-): Promise<CityLanguageModelStreamExecution> {
+/**
+ * 清理客户端不能控制的调用字段，并绑定当前 HTTP 请求取消信号。
+ */
+export function prepare_city_language_model_call(
+  call: CityRuntimeCallOptions,
+  signal?: AbortSignal,
+): CityRuntimeCallOptions {
   const {
     abortSignal: _abort_signal,
     headers: _headers,
     includeRawChunks: _include_raw_chunks,
     providerOptions: _provider_options,
     ...safe_call
-  } = input.call;
-  const call: CityRuntimeCallOptions = {
+  } = call;
+  return {
     ...safe_call,
-    abortSignal: input.signal,
-    providerOptions: input.provider_options,
+    abortSignal: signal,
   };
-  const result = await input.model.doStream(call);
-  const reader = result.stream.getReader();
+}
+
+/** 将 Provider 标准模型流编码为 City transport SSE。 */
+export function create_city_language_model_stream(
+  input: CreateCityLanguageModelStreamInput,
+): CityLanguageModelStreamExecution {
+  const reader = input.result.stream.getReader();
   const encoder = new TextEncoder();
   let resolve_completion: (part: CityRuntimeStreamPart | undefined) => void = () => undefined;
   const completion = new Promise<CityRuntimeStreamPart | undefined>((resolve) => {

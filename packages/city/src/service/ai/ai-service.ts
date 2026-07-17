@@ -59,8 +59,12 @@ import { settle_response_charge } from "./charge-runtime.js";
 import {
   create_city_language_model_stream,
   decode_city_language_model_request,
+  prepare_city_language_model_call,
 } from "./language-model-stream.js";
-import type { CityRuntimeLanguageModelV3 } from "../../types/CityLanguageModelRuntime.js";
+import type {
+  CityRuntimeCallOptions,
+  CityRuntimeStreamResult,
+} from "../../types/CityLanguageModelRuntime.js";
 import {
   countImageOutputs,
   extractUsage,
@@ -104,13 +108,12 @@ const IMAGE_PENDING_TIMEOUT_ERROR = "upstream timeout";
 type Modality = (typeof MODALITIES)[number];
 type EnvReader = (key: string) => string | undefined;
 
-/** 判断 Provider runtime 是否返回了可直接调用的 LanguageModelV3。 */
-function is_language_model_v3(value: unknown): value is CityRuntimeLanguageModelV3 {
+/** 判断 Provider runtime 是否返回了标准模型流结果。 */
+function is_language_model_stream_result(value: unknown): value is CityRuntimeStreamResult {
   if (!value || typeof value !== "object") return false;
-  const model = value as Record<string, unknown>;
-  return model.specificationVersion === "v3" &&
-    typeof model.doStream === "function" &&
-    typeof model.doGenerate === "function";
+  const stream = (value as { stream?: unknown }).stream;
+  return Boolean(stream && typeof stream === "object" && "getReader" in stream &&
+    typeof (stream as { getReader?: unknown }).getReader === "function");
 }
 
 
@@ -212,7 +215,10 @@ export class AIService extends Service {
   private getAction(model: ModelConfig, mode?: string): ActionFn | undefined {
     if (mode === LANGUAGE_MODEL_MODE) {
       return model.language_model
-        ? (ctx) => model.language_model?.create_language_model(ctx)
+        ? (ctx) => model.language_model?.stream(
+            ctx,
+            ctx.input.call as CityRuntimeCallOptions,
+          )
         : undefined;
     }
     if (mode === "image" || IMAGE_ACTION_MODES.includes(mode as (typeof IMAGE_ACTION_MODES)[number])) {
@@ -331,14 +337,16 @@ export class AIService extends Service {
   /**
    * 执行 CityModel LanguageModelV3 模型流调用。
    *
-   * 路由、fallback、reasoning 和计费仍由 AIService 统一拥有；transport 模块只负责
-   * 调用最终模型并编码 SSE，避免把 Provider 决策泄漏到客户端。
+   * 路由、fallback、reasoning 和计费仍由 AIService 统一拥有；Provider 负责执行
+   * 标准模型流，transport 模块只编码 SSE，避免把 Provider 决策泄漏到客户端。
    */
   private async handleLanguageModelStream(ctx: Context): Promise<Response> {
     const request = decode_city_language_model_request(ctx.input);
+    const call = prepare_city_language_model_call(request.call, ctx.request?.signal);
     ctx.input = {
       ...ctx.input,
       model: request.model_id,
+      call,
       ...(request.reasoning_effort ? { reasoning_effort: request.reasoning_effort } : {}),
     };
     const initial_resolved = this.resolve({ model: request.model_id, mode: LANGUAGE_MODEL_MODE }, ctx.env);
@@ -350,15 +358,11 @@ export class AIService extends Service {
     const started_at = Date.now();
 
     const output = await resolved.action(ctx);
-    if (!is_language_model_v3(output)) {
-      throw httpError(500, "Model language runtime did not return LanguageModelV3");
+    if (!is_language_model_stream_result(output)) {
+      throw httpError(500, "Provider stream did not return a LanguageModelV3 stream result");
     }
-    const provider_options = resolved.model?.language_model?.build_provider_options?.(ctx, output);
-    const execution = await create_city_language_model_stream({
-      model: output,
-      call: request.call,
-      provider_options,
-      signal: ctx.request?.signal,
+    const execution = create_city_language_model_stream({
+      result: output,
     });
     const completion = execution.completion.then((part) => {
       if (part) this.attachOutputMetering(ctx, part, LANGUAGE_MODEL_MODE, started_at);

@@ -1,309 +1,172 @@
 /**
- * @file 验证 CityModel 会优先走 OpenAI-compatible LanguageModel 并完成 tool loop。
+ * @file 验证 Agent 直接调用实现 LanguageModelV3 的 CityModel 并完成 tool loop。
  *
  * 关键点（中文）
- * - 这里直接走编译后的 Agent 产物，避免测试只覆盖源码级辅助函数。
- * - CityModel 使用 @downcity/type 的共享协议构造，避免反向依赖 City SDK 实现。
- * - 重点锁住 CityModel -> LanguageModel -> tool-call -> 本地执行 -> tool-result 回传链路。
- * - 新路径不应再调用 `/v1/ai/stream`，避免 UIMessage stream 反向适配丢失 finish 语义。
+ * - 测试模型自身已经实现 LanguageModelV3，Agent 不再创建第二个 Provider 模型。
+ * - 第一次调用返回 tool-call，Agent 本地执行后把 tool-result 放进第二次调用。
+ * - CityModel 的目录信息继续用于上下文窗口和日志，不参与网络连接转换。
  */
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
-import { Agent } from "../bin/index.js";
-import { createAction, createPlugin } from "../bin/plugin/core/PluginActionFactory.js";
-import { CITY_MODEL_INVOKER, CITY_MODEL_KIND } from "@downcity/type";
+import { MockLanguageModelV3 } from "ai/test";
 import { tool } from "ai";
 import { z } from "zod";
 
-function write_openai_sse(res, chunks) {
-  res.writeHead(200, {
-    "content-type": "text/event-stream; charset=utf-8",
-    "cache-control": "no-cache",
-    connection: "keep-alive",
-  });
-  for (const chunk of chunks) {
-    const payload = typeof chunk === "string" ? chunk : JSON.stringify(chunk);
-    res.write(`data: ${payload}\n\n`);
-  }
-  res.end();
+import { Agent } from "../bin/index.js";
+import { createAction, createPlugin } from "../bin/plugin/core/PluginActionFactory.js";
+import { CITY_MODEL_KIND } from "@downcity/type";
+
+/** 构造 AI SDK V3 usage。 */
+function create_usage() {
+  return {
+    inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 },
+    outputTokens: { total: 3, text: 3, reasoning: 0 },
+  };
 }
 
-async function read_json_body(req) {
-  const raw = await new Promise((resolve, reject) => {
-    let data = "";
-    req.on("data", (chunk) => {
-      data += chunk;
-    });
-    req.on("end", () => resolve(data));
-    req.on("error", reject);
+/** 构造一次 ping tool-call。 */
+function create_tool_call_stream() {
+  const input = JSON.stringify({ value: "hello" });
+  return {
+    stream: new ReadableStream({
+      start(controller) {
+        controller.enqueue({ type: "stream-start", warnings: [] });
+        controller.enqueue({ type: "tool-input-start", id: "call_1", toolName: "ping" });
+        controller.enqueue({ type: "tool-input-delta", id: "call_1", delta: input });
+        controller.enqueue({ type: "tool-input-end", id: "call_1" });
+        controller.enqueue({
+          type: "tool-call",
+          toolCallId: "call_1",
+          toolName: "ping",
+          input,
+        });
+        controller.enqueue({
+          type: "finish",
+          finishReason: { unified: "tool-calls", raw: "tool_calls" },
+          usage: create_usage(),
+        });
+        controller.close();
+      },
+    }),
+  };
+}
+
+/** 构造普通文本完成流。 */
+function create_text_stream(text) {
+  return {
+    stream: new ReadableStream({
+      start(controller) {
+        controller.enqueue({ type: "stream-start", warnings: [] });
+        controller.enqueue({ type: "text-start", id: "text_1" });
+        controller.enqueue({ type: "text-delta", id: "text_1", delta: text });
+        controller.enqueue({ type: "text-end", id: "text_1" });
+        controller.enqueue({
+          type: "finish",
+          finishReason: { unified: "stop", raw: "stop" },
+          usage: create_usage(),
+        });
+        controller.close();
+      },
+    }),
+  };
+}
+
+/** 给标准 LanguageModelV3 附加 CityModel 目录协议。 */
+function create_city_model(model_requests) {
+  let request_count = 0;
+  const model = new MockLanguageModelV3({
+    modelId: "mock-model",
+    doStream: async (options) => {
+      if (!Array.isArray(options.tools) || options.tools.length === 0) {
+        return create_text_stream("Tool loop");
+      }
+      request_count += 1;
+      model_requests.push(options);
+      return request_count === 1
+        ? create_tool_call_stream()
+        : create_text_stream("done");
+    },
   });
-  return JSON.parse(String(raw || "{}"));
+  return Object.assign(model, {
+    id: "mock-model",
+    name: "Mock Model",
+    description: "Native CityModel tool loop test",
+    modalities: ["text", "stream"],
+    tags: [],
+    meta: {},
+    kind: CITY_MODEL_KIND,
+  });
 }
 
 test("CityModel uses direct LanguageModel path and sends tool result back", async () => {
-  const agent_requests = [];
-  let stream_requests = 0;
+  const model_requests = [];
   let tool_executed = false;
-
-  const server = http.createServer(async (req, res) => {
-    const url = new URL(String(req.url || "/"), "http://127.0.0.1");
-
-    if (req.method === "POST" && url.pathname === "/v1/ai/stream") {
-      stream_requests += 1;
-      res.writeHead(500, { "content-type": "application/json" });
-      res.end(JSON.stringify({ error: "legacy stream endpoint should not be called" }));
-      return;
-    }
-
-    if (req.method === "POST" && url.pathname === "/v1/ai/chat/completions") {
-      const body = await read_json_body(req);
-
-      if (!Array.isArray(body.tools)) {
-        write_openai_sse(res, [
-          {
-            id: "chatcmpl_title",
-            object: "chat.completion.chunk",
-            created: 1,
-            model: "mock-model",
-            choices: [
-              {
-                index: 0,
-                delta: { role: "assistant", content: "Tool loop" },
-                finish_reason: null,
-              },
-            ],
-          },
-          {
-            id: "chatcmpl_title",
-            object: "chat.completion.chunk",
-            created: 1,
-            model: "mock-model",
-            choices: [
-              {
-                index: 0,
-                delta: {},
-                finish_reason: "stop",
-              },
-            ],
-          },
-          "[DONE]",
-        ]);
-        return;
-      }
-
-      agent_requests.push(body);
-      if (agent_requests.length === 1) {
-        write_openai_sse(res, [
-          {
-            id: "chatcmpl_1",
-            object: "chat.completion.chunk",
-            created: 1,
-            model: "mock-model",
-            choices: [
-              {
-                index: 0,
-                delta: { role: "assistant" },
-                finish_reason: null,
-              },
-            ],
-          },
-          {
-            id: "chatcmpl_1",
-            object: "chat.completion.chunk",
-            created: 1,
-            model: "mock-model",
-            choices: [
-              {
-                index: 0,
-                delta: {
-                  tool_calls: [
-                    {
-                      index: 0,
-                      id: "call_1",
-                      type: "function",
-                      function: {
-                        name: "ping",
-                        arguments: "{\"value\":\"hello\"}",
-                      },
-                    },
-                  ],
-                },
-                finish_reason: null,
-              },
-            ],
-          },
-          {
-            id: "chatcmpl_1",
-            object: "chat.completion.chunk",
-            created: 1,
-            model: "mock-model",
-            choices: [
-              {
-                index: 0,
-                delta: {},
-                finish_reason: "tool_calls",
-              },
-            ],
-          },
-          "[DONE]",
-        ]);
-        return;
-      }
-
-      write_openai_sse(res, [
-        {
-          id: "chatcmpl_2",
-          object: "chat.completion.chunk",
-          created: 1,
-          model: "mock-model",
-          choices: [
-            {
-              index: 0,
-              delta: { role: "assistant" },
-              finish_reason: null,
-            },
-          ],
+  const agent_path = await fs.mkdtemp(
+    path.join(os.tmpdir(), "downcity-agent-city-model-tool-loop-"),
+  );
+  const skill_plugin = createPlugin({
+    name: "skill",
+    title: "Skill",
+    description: "Test skill plugin",
+    actions: {
+      lookup: createAction({
+        description: "Lookup a skill",
+        execute: async ({ input }) => ({
+          success: true,
+          data: { name: input.name },
+          message: "loaded",
+        }),
+      }),
+    },
+  });
+  const agent = new Agent({
+    id: "tool_loop_agent",
+    path: agent_path,
+    plugins: [skill_plugin],
+    tools: {
+      ping: tool({
+        description: "ping tool",
+        inputSchema: z.object({ value: z.string() }),
+        execute: async ({ value }, options) => {
+          tool_executed = true;
+          options.experimental_context.session_run_context.pendingAssistantFileParts.push({
+            type: "file",
+            mediaType: "image/png",
+            url: ".downcity/resources/tool-output.png",
+            filename: "tool-output.png",
+          });
+          return { echoed: value };
         },
-        {
-          id: "chatcmpl_2",
-          object: "chat.completion.chunk",
-          created: 1,
-          model: "mock-model",
-          choices: [
-            {
-              index: 0,
-              delta: { content: "done" },
-              finish_reason: null,
-            },
-          ],
-        },
-        {
-          id: "chatcmpl_2",
-          object: "chat.completion.chunk",
-          created: 1,
-          model: "mock-model",
-          choices: [
-            {
-              index: 0,
-              delta: {},
-              finish_reason: "stop",
-            },
-          ],
-        },
-        "[DONE]",
-      ]);
-      return;
-    }
-
-    res.writeHead(404);
-    res.end("not found");
+      }),
+    },
   });
 
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-
-  let agent;
   try {
-    const address = server.address();
-    assert.ok(address && typeof address === "object");
-    const model = Object.freeze({
-      id: "mock-model",
-      name: "Mock Model",
-      description: "mock",
-      modalities: ["text", "stream"],
-      tags: [],
-      meta: {},
-      kind: CITY_MODEL_KIND,
-      [CITY_MODEL_INVOKER]: {
-        connection: () => ({
-          base_url: `http://127.0.0.1:${String(address.port)}/v1/ai`,
-          api_key: "ub_test",
-          model_id: "mock-model",
-        }),
-      },
-    });
-
-    const agent_path = await fs.mkdtemp(
-      path.join(os.tmpdir(), "downcity-agent-city-model-tool-loop-"),
-    );
-    const skill_plugin = createPlugin({
-      name: "skill",
-      title: "Skill",
-      description: "Test skill plugin",
-      actions: {
-        lookup: createAction({
-          description: "Lookup a skill",
-          execute: async ({ input }) => ({
-            success: true,
-            data: { name: input.name },
-            message: "loaded",
-          }),
-        }),
-      },
-    });
-    agent = new Agent({
-      id: "tool_loop_agent",
-      path: agent_path,
-      plugins: [skill_plugin],
-      tools: {
-        ping: tool({
-          description: "ping tool",
-          inputSchema: z.object({
-            value: z.string(),
-          }),
-          execute: async ({ value }, options) => {
-            tool_executed = true;
-            options.experimental_context.session_run_context.pendingAssistantFileParts.push({
-              type: "file",
-              mediaType: "image/png",
-              url: ".downcity/resources/tool-output.png",
-              filename: "tool-output.png",
-            });
-            return { echoed: value };
-          },
-        }),
-      },
-    });
-
     const session = await agent.sessions.create();
-    await session.set({ model });
+    await session.set({ model: create_city_model(model_requests) });
     const turn = await session.prompt({ query: "please use the ping tool" });
     const result = await turn.finished;
 
     assert.equal(result.success, true);
     assert.equal(tool_executed, true);
-    assert.equal(stream_requests, 0);
-    assert.equal(agent_requests.length, 2);
-    assert.equal(agent_requests[0]?.model, "mock-model");
-    const plugin_call_tool = agent_requests[0]?.tools?.find(
-      (item) => item?.type === "function" && item?.function?.name === "plugin_call",
-    );
+    assert.equal(model_requests.length, 2);
+    const plugin_call_tool = model_requests[0].tools.find((item) => item.name === "plugin_call");
     assert.ok(plugin_call_tool);
-    const plugin_call_parameters = plugin_call_tool.function.parameters;
-    assert.equal(plugin_call_parameters.type, "object");
-    assert.deepEqual(plugin_call_parameters.required, ["plugin", "action"]);
-    assert.equal(plugin_call_parameters.additionalProperties, false);
-    assert.equal(
-      plugin_call_parameters.properties.payload.additionalProperties,
-      true,
-    );
+    assert.equal(plugin_call_tool.inputSchema.type, "object");
+    assert.deepEqual(plugin_call_tool.inputSchema.required, ["plugin", "action"]);
+    assert.equal(plugin_call_tool.inputSchema.additionalProperties, false);
 
-    const second_request_messages = Array.isArray(agent_requests[1]?.messages)
-      ? agent_requests[1].messages
-      : [];
-    const serialized_second_messages = JSON.stringify(second_request_messages);
-    assert.match(serialized_second_messages, /"role":"tool"/);
-    assert.match(serialized_second_messages, /call_1/);
-    assert.match(serialized_second_messages, /echoed/);
-    assert.match(serialized_second_messages, /hello/);
+    const serialized_second_prompt = JSON.stringify(model_requests[1].prompt);
+    assert.match(serialized_second_prompt, /"role":"tool"/);
+    assert.match(serialized_second_prompt, /call_1/);
+    assert.match(serialized_second_prompt, /echoed/);
+    assert.match(serialized_second_prompt, /hello/);
 
-    const result_file = result.assistantMessage.parts.find(
-      (part) => part.type === "file",
-    );
+    const result_file = result.assistantMessage.parts.find((part) => part.type === "file");
     assert.deepEqual(result_file, {
       type: "file",
       mediaType: "image/png",
@@ -311,32 +174,12 @@ test("CityModel uses direct LanguageModel path and sends tool result back", asyn
       filename: "tool-output.png",
     });
     const session_messages = await session.messages({ include_internal: true });
-    const persisted_assistant = session_messages.items.find(
-      (message) => message.type === "assistant",
-    );
-    const persisted_file = persisted_assistant.parts.find(
-      (part) => part.type === "file",
-    );
-    assert.deepEqual(persisted_file, {
-      part_id: persisted_file.part_id,
-      sequence: persisted_file.sequence,
-      type: "file",
-      media_type: "image/png",
-      url: ".downcity/resources/tool-output.png",
-      filename: "tool-output.png",
-    });
+    const persisted_assistant = session_messages.items.find((message) => message.type === "assistant");
+    const persisted_file = persisted_assistant.parts.find((part) => part.type === "file");
+    assert.equal(persisted_file.media_type, "image/png");
+    assert.equal(persisted_file.url, ".downcity/resources/tool-output.png");
+    assert.equal(persisted_file.filename, "tool-output.png");
   } finally {
-    if (agent) {
-      await agent.dispose();
-    }
-    await new Promise((resolve, reject) => {
-      server.close((error) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve();
-      });
-    });
+    await agent.dispose();
   }
 });

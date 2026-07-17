@@ -28,6 +28,7 @@ The right mental model is:
 ```text
 global downcity.db: agent.execution.modelId
   -> Downcity reads and validates it
-  -> Federation AIService resolves the target model
-  -> Agent runtime executes with that model
+  -> City SDK creates an executable CityModel
+  -> Agent calls CityModel.doStream() directly
+  -> Federation AIService resolves the Provider and upstream protocol
 ```

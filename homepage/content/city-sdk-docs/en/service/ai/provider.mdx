@@ -40,11 +40,17 @@ description: Provider is an abstract base class for AI upstreams. Subclass it to
  ```
  POST /v1/ai/text              → SDK path
  POST /v1/ai/stream            → SDK path
+ POST /v1/ai/language-model/stream → native CityModel LanguageModelV3 path
  POST /v1/ai/chat/completions  → auto-passthrough to DeepSeek
  GET  /v1/ai/models            → model catalog
  ```
 
 `passthroughModel` is the upstream model id used during auto-passthrough.
+
+The default runtime created by `createClient()` uses `.chat()`. If a model must
+use Responses, Claude Messages, or another native protocol, override
+`create_language_model(ctx)` and return the correct `LanguageModelV3`.
+`text()`, `stream()`, and the native CityModel pathway all reuse this factory.
 
 ## Model context window
 

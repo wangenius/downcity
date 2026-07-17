@@ -17,12 +17,16 @@ export interface RequestInitLike {
   method?: string;
   headers?: Record<string, string>;
   body?: string;
+  /** 取消当前请求的标准 AbortSignal。 */
+  signal?: AbortSignal;
 }
 
 /** fetch 返回对象的最小接口 */
 export interface FetchResponseLike {
   ok: boolean;
   status: number;
+  /** 响应头；自定义 fetch 可以省略，不影响非流式调用。 */
+  headers?: Pick<Headers, "get" | "forEach">;
   body: RawStreamBody;
   json(): Promise<unknown>;
   text(): Promise<string>;

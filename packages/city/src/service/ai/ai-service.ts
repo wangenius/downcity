@@ -13,6 +13,7 @@
  * - POST /v1/ai/image/create     — 创建图片生成任务
  * - POST /v1/ai/image/result     — 查询图片生成任务
  * - POST /v1/ai/chat/completions — OpenAI 兼容端点
+ * - POST /v1/ai/language-model/stream — CityModel 原生 LanguageModelV3 端点
  * - GET  /v1/ai/models           — 模型列表
  */
 
@@ -20,8 +21,7 @@ import { Service, type Context } from "../service.js";
 import { httpError } from "../../utils/helpers.js";
 import type { ActionFn } from "../action.js";
 import { sqliteAsyncJobs } from "../async-job/schema.js";
-import { normalizeAIUsage } from "./helpers.js";
-import type { AsyncJobRecord, AsyncJobStatus } from "../../types/AsyncJob.js";
+import type { AsyncJobRecord } from "../../types/AsyncJob.js";
 import type {
   AIServiceOptions,
   ModelConfig,
@@ -30,8 +30,6 @@ import type {
 } from "./types.js";
 import type {
   AIBalanceBridge,
-  AIProviderChargedOutput,
-  AIProviderChargedResponse,
   AIProviderChargeLine,
 } from "./charge.js";
 import type {
@@ -59,11 +57,40 @@ import {
   release_image_job_claim,
 } from "./image-job-store.js";
 import { settle_response_charge } from "./charge-runtime.js";
+import {
+  create_city_language_model_stream,
+  decode_city_language_model_request,
+} from "./language-model-stream.js";
+import type { CityRuntimeLanguageModelV3 } from "../../types/CityLanguageModelRuntime.js";
+import {
+  countImageOutputs,
+  extractUsage,
+  imageActionError,
+  isImageProviderCreateResult,
+  isImageProviderResult,
+  isPromiseLike,
+  isProviderChargedOutput,
+  isProviderChargedResponse,
+  isResponse,
+  isStorableRemoteFilePart,
+  normalizePositiveNumber,
+  normalizeUsage,
+  parseImageMessage,
+  parseRecordJson,
+  readFilePartFilename,
+  readFilePartMediaType,
+  readOptionalNumber,
+  readOptionalString,
+  rowToAsyncJobRecord,
+  type ResolvedProviderOutput,
+} from "./ai-service-values.js";
 
 /** AIService 直接暴露的 SDK 通路模态列表。图片只通过 image/create + image/result 暴露。 */
 const MODALITIES = ["text", "stream", "video", "tts", "asr"] as const;
 /** 用户侧默认以 text 模态排序模型 */
 const DEFAULT_MODEL_MODE = "text";
+/** CityModel 原生 LanguageModelV3 运行模式。 */
+const LANGUAGE_MODEL_MODE = "language_model";
 /** 图片任务的内部 action 列表。 */
 const IMAGE_ACTION_MODES = ["image_create", "image_fetch"] as const;
 /** 图片生成任务在通用 async_jobs 表中的类型。 */
@@ -77,255 +104,16 @@ const IMAGE_PENDING_TIMEOUT_ERROR = "upstream timeout";
 
 type Modality = (typeof MODALITIES)[number];
 type EnvReader = (key: string) => string | undefined;
-type UsageRecord = Record<string, unknown>;
-type ResolvedProviderOutput = {
-  output: unknown;
-  charge?: AIProviderChargeLine | Promise<AIProviderChargeLine | undefined>;
-};
-type StoredImagePart = Record<string, unknown> & {
-  type: "file";
-  url: string;
-};
 
-/**
- * 判断一个值是否为 HTTP Response。
- */
-function isResponse(value: unknown): value is Response {
-  return typeof value === "object" && value !== null && "status" in value && "headers" in value;
-}
-
-/**
- * 判断一个值是否为普通对象。
- */
-function isRecord(value: unknown): value is UsageRecord {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
-}
-
-/**
- * 判断 Provider 是否返回了带账单 Response。
- */
-function isProviderChargedResponse(value: unknown): value is AIProviderChargedResponse {
-  return isRecord(value) && value.response instanceof Response;
-}
-
-/**
- * 判断 Provider 是否返回了带账单普通输出。
- */
-function isProviderChargedOutput(value: unknown): value is AIProviderChargedOutput {
-  return isRecord(value) && "output" in value;
-}
-
-/**
- * 判断一个值是否为 Promise-like。
- */
-function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
-  return Boolean(value && typeof value === "object" && "then" in value && typeof (value as { then?: unknown }).then === "function");
-}
-
-/**
- * 读取可选字符串。
- */
-function readOptionalString(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
-
-/**
- * 读取可空字符串字段。
- */
-function readNullableString(value: unknown): string | null {
-  return typeof value === "string" ? value : null;
-}
-
-/**
- * 读取可空数字字符串字段。
- */
-function readNullableNumberString(value: unknown): string | null {
-  if (typeof value === "number" && Number.isFinite(value)) return String(value);
-  return typeof value === "string" && value.trim() ? value : null;
-}
-
-/**
- * 读取可选数字。
- */
-function readOptionalNumber(value: unknown): number | undefined {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value !== "string" || !value.trim()) return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-/**
- * 读取正数配置。
- */
-function normalizePositiveNumber(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0
-    ? value
-    : fallback;
-}
-
-/**
- * 读取任务状态。
- */
-function readJobStatus(value: unknown): AsyncJobStatus {
-  return value === "queued" || value === "running" || value === "fetching" || value === "succeeded" || value === "failed"
-    ? value
-    : "failed";
-}
-
-/**
- * 安全解析 JSON 对象。
- */
-function parseRecordJson(value: unknown): Record<string, unknown> {
-  if (typeof value !== "string" || !value.trim()) return {};
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    return isRecord(parsed) ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-/**
- * 安全解析 UIMessage。
- */
-function parseImageMessage(value: unknown): AIImageProviderResult["result"] | undefined {
-  const record = parseRecordJson(value);
-  return record.role === "assistant" && Array.isArray(record.parts)
-    ? record as unknown as AIImageProviderResult["result"]
-    : undefined;
-}
-
-/**
- * 把 TableApi 普通行转成图片任务记录。
- */
-function rowToAsyncJobRecord(row: Record<string, unknown>): AsyncJobRecord {
-  return {
-    job_id: String(row.job_id ?? ""),
-    job_type: String(row.job_type ?? ""),
-    status: readJobStatus(row.status),
-    input_json: String(row.input_json ?? "{}"),
-    state_json: readNullableString(row.state_json),
-    result_json: readNullableString(row.result_json),
-    error: readNullableString(row.error),
-    message: readNullableString(row.message),
-    poll_after_ms: readNullableNumberString(row.poll_after_ms),
-    city_id: readNullableString(row.city_id),
-    user_id: readNullableString(row.user_id),
-    service_id: readNullableString(row.service_id),
-    model_id: readNullableString(row.model_id),
-    created_at: String(row.created_at ?? ""),
-    updated_at: String(row.updated_at ?? ""),
-  };
-}
-
-/**
- * 保留已知 HTTP 错误状态，其它异常统一包装成上游错误。
- */
-function imageActionError(error: unknown, fallback_message: string): Error {
-  if (error instanceof Error && typeof (error as { statusCode?: unknown }).statusCode === "number") {
-    return error;
-  }
-  return httpError(502, error instanceof Error ? error.message : fallback_message);
-}
-
-/**
- * 从输出对象中读取 provider usage。
- */
-function extractUsage(output: unknown): unknown {
-  if (!isRecord(output)) return undefined;
-  const metadata = isRecord(output.metadata) ? output.metadata : undefined;
-  if (metadata && "usage" in metadata) return metadata.usage;
-  if (metadata && "usageMetadata" in metadata) return metadata.usageMetadata;
-  if ("usage" in output) return output.usage;
-  return undefined;
-}
-
-/**
- * 兼容常见 provider usage 字段。
- */
-function normalizeUsage(usage: unknown): {
-  input_tokens?: number;
-  output_tokens?: number;
-  cached_tokens?: number;
-} {
-  return normalizeAIUsage(usage);
-}
-
-/**
- * 统计 UIMessage file parts 里的图片数量。
- */
-function countImageOutputs(output: unknown): number | undefined {
-  if (!isRecord(output) || !Array.isArray(output.parts)) return undefined;
-  const count = output.parts.filter((part) => {
-    if (!isRecord(part)) return false;
-    const type = String(part.type ?? "");
-    const media_type = String(part.mediaType ?? part.media_type ?? "");
-    return type === "file" && media_type.startsWith("image/");
-  }).length;
-  return count > 0 ? count : undefined;
-}
-
-/**
- * 判断 file part URL 是否是可转存的远程 URL。
- */
-function isStorableRemoteFilePart(part: unknown): part is StoredImagePart {
-  if (!isRecord(part)) return false;
-  if (part.type !== "file") return false;
-  const url = readOptionalString(part.url);
-  return Boolean(url && /^https?:\/\//iu.test(url));
-}
-
-/**
- * 读取 file part 的媒体类型。
- */
-function readFilePartMediaType(part: Record<string, unknown>): string {
-  return readOptionalString(part.mediaType)
-    ?? readOptionalString(part.media_type)
-    ?? "application/octet-stream";
-}
-
-/**
- * 读取 file part 的建议文件名。
- */
-function readFilePartFilename(part: Record<string, unknown>): string | undefined {
-  return readOptionalString(part.filename);
-}
-
-/**
- * 判断 provider 是否返回了图片任务创建结果。
- */
-function isImageProviderCreateResult(value: unknown): value is AIImageProviderCreateResult {
+/** 判断 Provider runtime 是否返回了可直接调用的 LanguageModelV3。 */
+function is_language_model_v3(value: unknown): value is CityRuntimeLanguageModelV3 {
   if (!value || typeof value !== "object") return false;
-  const record = value as { job_id?: unknown; status?: unknown };
-  return typeof record.job_id === "string" &&
-    Boolean(record.job_id.trim()) &&
-    isImageJobStatus(record.status);
+  const model = value as Record<string, unknown>;
+  return model.specificationVersion === "v3" &&
+    typeof model.doStream === "function" &&
+    typeof model.doGenerate === "function";
 }
 
-/**
- * 判断 provider 是否返回了图片任务查询结果。
- */
-function isImageProviderResult(value: unknown): value is AIImageProviderResult {
-  if (!value || typeof value !== "object") return false;
-  const record = value as { job_id?: unknown; status?: unknown; result?: unknown };
-  if (typeof record.job_id !== "string" || !record.job_id.trim()) return false;
-  if (!isImageJobStatus(record.status)) return false;
-  if (record.status === "succeeded") {
-    const result = isRecord(record.result) ? record.result : undefined;
-    if (!result || result.role !== "assistant" || !Array.isArray(result.parts)) return false;
-  }
-  return true;
-}
-
-/**
- * 判断图片任务状态。
- */
-function isImageJobStatus(value: unknown): boolean {
-  return value === "queued" ||
-    value === "running" ||
-    value === "succeeded" ||
-    value === "failed";
-}
 
 export class AIService extends Service {
   /** 模型注册表 */
@@ -367,6 +155,11 @@ export class AIService extends Service {
 
     // OpenAI 兼容端点
     this.action("chat/completions", async (ctx) => this.handleChatCompletions(ctx), {
+      auth: ["user", "admin"],
+    }).before((ctx) => this.precheck(ctx));
+
+    // CityModel 原生 LanguageModelV3 endpoint。
+    this.action("language-model/stream", async (ctx) => this.handleLanguageModelStream(ctx), {
       auth: ["user", "admin"],
     }).before((ctx) => this.precheck(ctx));
 
@@ -418,6 +211,11 @@ export class AIService extends Service {
   }
 
   private getAction(model: ModelConfig, mode?: string): ActionFn | undefined {
+    if (mode === LANGUAGE_MODEL_MODE) {
+      return model.language_model
+        ? (ctx) => model.language_model?.create_language_model(ctx)
+        : undefined;
+    }
     if (mode === "image" || IMAGE_ACTION_MODES.includes(mode as (typeof IMAGE_ACTION_MODES)[number])) {
       const has_image_actions = Boolean(model.actions.image_create && model.actions.image_fetch);
       if (!has_image_actions) return undefined;
@@ -528,6 +326,56 @@ export class AIService extends Service {
       const status = (error as { statusCode?: number }).statusCode ?? 500;
       return new Response(JSON.stringify({ error: message }), { status, headers: { "content-type": "application/json" } });
     }
+  }
+
+  /**
+   * 执行 CityModel 原生 LanguageModelV3 调用。
+   *
+   * 路由、fallback、reasoning 和计费仍由 AIService 统一拥有；transport 模块只负责
+   * 调用最终模型并编码 SSE，避免把 Provider 决策泄漏到客户端。
+   */
+  private async handleLanguageModelStream(ctx: Context): Promise<Response> {
+    const request = decode_city_language_model_request(ctx.input);
+    ctx.input = {
+      ...ctx.input,
+      model: request.model_id,
+      ...(request.reasoning_effort ? { reasoning_effort: request.reasoning_effort } : {}),
+    };
+    const initial_resolved = this.resolve({ model: request.model_id, mode: LANGUAGE_MODEL_MODE }, ctx.env);
+    const routing = this.plan_text_execution(initial_resolved, ctx, LANGUAGE_MODEL_MODE);
+    const resolved = routing.resolved;
+    const reasoning = resolved.model ? resolve_model_reasoning(resolved.model, ctx.input) : undefined;
+    this.attachResolvedModel(ctx, resolved.model, LANGUAGE_MODEL_MODE, routing);
+    attach_resolved_reasoning(ctx, reasoning);
+    const started_at = Date.now();
+
+    const output = await resolved.action(ctx);
+    if (!is_language_model_v3(output)) {
+      throw httpError(500, "Model language runtime did not return LanguageModelV3");
+    }
+    const provider_options = resolved.model?.language_model?.build_provider_options?.(ctx, output);
+    const execution = await create_city_language_model_stream({
+      model: output,
+      call: request.call,
+      provider_options,
+      signal: ctx.request?.signal,
+    });
+    const completion = execution.completion.then((part) => {
+      if (part) this.attachOutputMetering(ctx, part, LANGUAGE_MODEL_MODE, started_at);
+      return part;
+    });
+    const charge = resolved.model?.bill
+      ? completion.then((part) => part ? resolved.model?.bill?.(ctx, part) : undefined)
+      : undefined;
+    const charged_response = await this.handleCharge(
+      ctx,
+      charge,
+      true,
+      undefined,
+      undefined,
+      execution.response,
+    );
+    return charged_response ?? execution.response;
   }
 
   // ========== 图片任务通路 ==========

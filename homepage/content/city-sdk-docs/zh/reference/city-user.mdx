@@ -152,6 +152,17 @@ if (!model) throw new Error("model not found");
 
 这样你的业务代码不会到处散落模型 ID 字符串。
 
+目录中的 `CityModel` 本身就是 AI SDK `LanguageModelV3`，可以直接交给 Agent 或 `streamText()`：
+
+```ts
+const result = streamText({
+  model,
+  prompt: "分析这个问题",
+});
+```
+
+调用会进入 Federation 原生模型通路；Agent 不会再把它转换成 OpenAI-compatible 模型。
+
 模型支持推理强度时，目录会同时返回可选档位：
 
 ```ts

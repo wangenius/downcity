@@ -1,6 +1,6 @@
 {
   "name": "@downcity/agent",
-  "version": "1.1.259",
+  "version": "1.1.260",
   "type": "module",
   "description": "Downcity Agent 运行时 — 单 Agent 执行壳与本机 RPC 能力",
   "main": "./bin/index.js",
@@ -21,7 +21,6 @@
     "postpack": "node ../../scripts/rewrite-workspace-dependencies.mjs restore ./package.json"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^2.0.48",
     "@downcity/shell": "workspace:^",
     "@downcity/type": "workspace:*",
     "ai": "^6.0.193",

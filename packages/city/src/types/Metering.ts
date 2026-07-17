@@ -42,6 +42,11 @@ export interface RuntimeMetering {
   cached_tokens?: number;
 
   /**
+   * 模型输出中的推理 token 数。
+   */
+  reasoning_tokens?: number;
+
+  /**
    * 图片数量。
    */
   image_count?: number;
@@ -76,4 +81,3 @@ export interface RuntimeMetering {
    */
   metadata?: Record<string, unknown>;
 }
-

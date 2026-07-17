@@ -50,7 +50,24 @@ export interface OpenAICompatibleClientConfig {
  */
 export interface OpenAICompatibleClient {
   /** 根据模型 ID 创建可传给 AI SDK 的 chat model。 */
-  chat(modelId: string): LanguageModel;
+  chat(modelId: string): CityLanguageModelV3;
+}
+
+/** 当前 City runtime 支持的 AI SDK LanguageModelV3。 */
+export type CityLanguageModelV3 = Extract<
+  LanguageModel,
+  { readonly specificationVersion: "v3" }
+>;
+
+/** Provider 为原生 City endpoint 暴露的模型运行时。 */
+export interface ModelLanguageRuntime {
+  /** 根据最终路由 Context 创建实际 Provider LanguageModelV3。 */
+  create_language_model(ctx: import("../service.js").Context): CityLanguageModelV3;
+  /** 将 Federation 已校验的配置转换成当前 Provider options。 */
+  build_provider_options?(
+    ctx: import("../service.js").Context,
+    model: CityLanguageModelV3,
+  ): import("../../types/AIReasoning.js").AIProviderOptions | undefined;
 }
 
 
@@ -146,6 +163,8 @@ export interface ModelConfig {
   fallback?: ModelFallbackRule[];
   /** 各通路 action 绑定 */
   actions: ModelActions;
+  /** 原生 City LanguageModel endpoint 使用的 Provider runtime。 */
+  language_model?: ModelLanguageRuntime;
   /** 本模型的出账方法，只生成扣费草稿，不直接扣余额。 */
   bill?: AIProviderBillFn;
 }

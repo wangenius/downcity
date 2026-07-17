@@ -152,6 +152,17 @@ if (!model) throw new Error("model not found");
 
 This keeps raw model IDs from scattering across your city code.
 
+The catalog's `CityModel` is an AI SDK `LanguageModelV3` and can be passed directly to Agent or `streamText()`:
+
+```ts
+const result = streamText({
+  model,
+  prompt: "Analyze this problem",
+});
+```
+
+The call uses Federation's native model pathway. Agent does not convert it into an OpenAI-compatible model.
+
 When a model supports configurable reasoning, the catalog also exposes its available levels:
 
 ```ts

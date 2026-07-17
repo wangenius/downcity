@@ -40,14 +40,11 @@ const client = new City({
 await client.ai.text({ prompt: "hello", model: "deepseek-v4-flash" });
 await client.ai.stream({ prompt: "hello", model: "deepseek-v4-flash" });
 
-// OpenAI-compatible AI SDK provider
-const provider = createOpenAICompatible({
-  name: "downcity",
-  baseURL: client.ai.base_url,
-  apiKey: user_token,
-});
-
-const language_model = provider.languageModel("deepseek-v4-flash");
+// Native AI SDK LanguageModelV3
+const catalog = await client.ai.listModels();
+const language_model = catalog.get("deepseek-v4-flash");
+if (!language_model) throw new Error("model not found");
+await streamText({ model: language_model, prompt: "hello" });
 
 // Custom Service
 await client.service("translate").action("zh2en").invoke({ text: "hello" });
@@ -84,13 +81,13 @@ await admin.service("cities").action("create").invoke({ name: "My App" });
 |---|---|
 | Product code calls Fed AIService directly | `client.ai.text()` / `client.ai.stream()` |
 | Downcity Agent uses a Fed model | get a `CityModel` from `client.ai.listModels()` and pass it to Agent |
-| External AI SDK ecosystem needs `LanguageModel` | `createOpenAICompatible({ baseURL: client.ai.base_url })` |
+| AI SDK ecosystem needs `LanguageModel` | use the `CityModel` returned by the catalog directly |
+| OpenAI SDK, curl, or compatible clients | `/v1/ai/chat/completions` |
 | Non-Fed model APIs | create the provider in product code |
 
-The OpenAI-compatible provider still calls Federation. Federation reads
-`body.model`, finds the provider bound to that model, and lets that provider
-call the real upstream model. The frontend only carries `user_token`; `city_id`
-is resolved from the token on the server.
+`CityModel` implements AI SDK `LanguageModelV3` itself and carries text,
+reasoning, tool calls, usage, and finish reasons through Federation's native
+model pathway. Federation still chooses the real upstream Provider protocol.
 
 ## Relationship between service, service, and AI service
 

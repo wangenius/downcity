@@ -40,11 +40,17 @@ description: Provider 是第三方 AI 提供商的基类，通过子类化声明
  ```
  POST /v1/ai/text              → SDK 通路
  POST /v1/ai/stream            → SDK 通路
+ POST /v1/ai/language-model/stream → CityModel 原生 LanguageModelV3 通路
  POST /v1/ai/chat/completions  → 自动透传到 DeepSeek
  GET  /v1/ai/models            → 模型目录
  ```
 
 `passthroughModel` 控制自动透传时发往上游的 model 值。
+
+`createClient()` 的默认模型 runtime 使用 `.chat()`。如果某个模型必须使用 Responses、
+Claude Messages 或其他原生协议，应覆盖 `create_language_model(ctx)` 并返回正确的
+`LanguageModelV3`。`text()`、`stream()` 和 CityModel 原生通路会复用同一个 factory，
+避免不同入口选择不同上游协议。
 
 ## 模型上下文窗口
 

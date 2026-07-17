@@ -24,6 +24,7 @@ Admin GET                GET  /v1/{service}/{action}
 | --- | --- | --- |
 | `/v1/ai/text` | `POST` | 文本生成（SDK 通路） |
 | `/v1/ai/stream` | `POST` | 流式生成（SDK 通路） |
+| `/v1/ai/language-model/stream` | `POST` | CityModel 原生 LanguageModelV3 通路 |
 | `/v1/ai/image/create` | `POST` | 创建图片生成任务 |
 | `/v1/ai/image/result` | `POST` | 查询图片生成任务 |
 | `/v1/ai/video` | `POST` | 视频生成 |
@@ -156,6 +157,12 @@ Content-Type: application/json
 
 AI 请求的用户和 city 上下文由 bearer `user_token` 解析。请求体里可以不传
 `city_id`；如果传了，必须与 token 绑定的 city 一致。
+
+### `POST /v1/ai/language-model/stream`
+
+这是 `CityModel` 内部使用的版本化 LanguageModelV3 transport。它传输标准模型
+prompt、function tools、reasoning、usage 和 finish reason。产品代码应通过模型目录
+返回的 `CityModel` 使用该通路，不应手写 transport 请求。
 
 ### `POST /v1/ai/chat/completions`
 

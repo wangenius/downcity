@@ -6,13 +6,11 @@
 
 import { parseAIStreamBody } from "./stream.js";
 import {
-  CITY_MODEL_INVOKER,
-  CITY_MODEL_KIND,
-  type CityModel,
-  type CityModelConnection,
   type CityModelDescriptor,
 } from "@downcity/type";
+import { CityModel } from "./CityModel.js";
 import type { UserModelRef } from "./types.js";
+import type { CityLanguageModelStreamRequestV1 } from "../../../types/CityLanguageModelTransport.js";
 import type {
   UserImageInput,
   UserImageJobCreateResult,
@@ -27,7 +25,7 @@ import type {
   UserTtsResult,
   UserVideoResult,
 } from "../../user/types.js";
-import type { RequestInitLike } from "../../http.js";
+import type { FetchResponseLike, RequestInitLike } from "../../http.js";
 
 const PREFIX = "/v1/ai";
 
@@ -42,7 +40,7 @@ const PREFIX = "/v1/ai";
  */
 export class AIInvoker {
   private readonly req: <T>(path: string, init: RequestInitLike) => Promise<T>;
-  private readonly reqRaw: (path: string, init: RequestInitLike) => Promise<{ body: import("../../http.js").RawStreamBody }>;
+  private readonly reqRaw: (path: string, init: RequestInitLike) => Promise<FetchResponseLike>;
   private readonly input: (input: UserServiceInput) => Record<string, unknown>;
   private readonly baseUrl: string;
   private readonly token: string | undefined;
@@ -51,7 +49,7 @@ export class AIInvoker {
     baseUrl: string;
     token?: string;
     requestJSON: <T>(path: string, init: RequestInitLike) => Promise<T>;
-    requestRaw: (path: string, init: RequestInitLike) => Promise<{ body: import("../../http.js").RawStreamBody }>;
+    requestRaw: (path: string, init: RequestInitLike) => Promise<FetchResponseLike>;
     buildInput: (input: UserServiceInput) => Record<string, unknown>;
   }) {
     this.baseUrl = opts.baseUrl;
@@ -89,23 +87,16 @@ export class AIInvoker {
     return parseAIStreamBody(res.body);
   }
 
-  /**
-   * 返回当前模型的 OpenAI-compatible 连接信息。
-   *
-   * 关键点（中文）
-   * - City SDK 只负责提供连接上下文，不负责创建 AI SDK LanguageModel。
-   * - Agent SDK 会读取该信息并在 agent 包内完成模型转换。
-   */
-  connection(modelId: string): CityModelConnection {
-    const resolved_model_id = String(modelId || "").trim();
-    if (!resolved_model_id) {
-      throw new TypeError("modelId is required");
-    }
-    return {
-      base_url: this.base_url,
-      api_key: this.token,
-      model_id: resolved_model_id,
-    };
+  /** 使用当前 City user 鉴权上下文调用原生 LanguageModel endpoint。 */
+  language_model_stream(
+    request: CityLanguageModelStreamRequestV1,
+    signal?: AbortSignal,
+  ): Promise<FetchResponseLike> {
+    return this.reqRaw(`${PREFIX}/language-model/stream`, {
+      method: "POST",
+      body: JSON.stringify(request),
+      signal,
+    });
   }
 
   /** 创建图片生成任务 */
@@ -273,7 +264,10 @@ export class ModelCatalog {
       return;
     }
 
-    const enriched = items.map((item) => create_city_model(ai, item));
+    const enriched = items.map((item) => new CityModel({
+      descriptor: item,
+      request_stream: (request, signal) => ai.language_model_stream(request, signal),
+    }));
 
     this.byId = new Map(enriched.map((item) => [item.id, item]));
   }
@@ -296,27 +290,6 @@ export class ModelCatalog {
 export function serializeModel(model: import("./types.js").UserModelInput | undefined): string | undefined {
   if (!model) return undefined;
   return typeof model === "string" ? model : model.id;
-}
-
-function create_city_model(
-  ai: AIInvoker,
-  item: CityModelDescriptor,
-): UserModelRef {
-  const model = {
-    ...item,
-    kind: CITY_MODEL_KIND,
-  } as UserModelRef;
-
-  Object.defineProperty(model, CITY_MODEL_INVOKER, {
-    enumerable: false,
-    configurable: false,
-    writable: false,
-    value: {
-      connection: () => ai.connection(item.id),
-    },
-  });
-
-  return Object.freeze(model);
 }
 
 // ===================================================================

@@ -89,7 +89,7 @@ new Agent({
 Key points:
 
 - the SDK does not select, persist, or restore model IDs; it only holds `AgentModel` instances
-- Agent converts a `CityModel` to a `LanguageModel` only at the LLM execution boundary
+- `CityModel` implements `LanguageModelV3` itself, so Agent calls it directly
 - a Session without its own model falls back to the Agent model
 - a local Session can override the Agent model with `session.set({ model })`
 - effective model resolution always checks the Session model before the Agent model

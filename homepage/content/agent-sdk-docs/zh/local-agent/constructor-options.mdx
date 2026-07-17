@@ -89,7 +89,7 @@ new Agent({
 关键点：
 
 - SDK 不负责选择、保存或恢复模型 ID，只持有 `AgentModel` 实例
-- `CityModel` 在真正执行 LLM 任务时由 Agent 转换为 `LanguageModel`
+- `CityModel` 自身实现 `LanguageModelV3`，Agent 直接调用
 - Session 没有自己的模型时回退使用 Agent 模型
 - 本地 Session 可通过 `session.set({ model })` 覆盖 Agent 模型
 - 有效模型解析顺序固定为 Session 模型、Agent 模型

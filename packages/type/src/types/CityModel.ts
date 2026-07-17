@@ -1,21 +1,14 @@
 /**
  * City 模型公共协议模块。
  *
- * 该模块定义跨 package 共享的模型目录、推理能力和隐藏调用器协议。
- * 模型目录只包含可序列化的公开信息，运行时连接能力通过全局 symbol 隐藏暴露。
+ * 该模块定义跨 package 共享的模型目录与可执行 LanguageModelV3 协议。
+ * 具体的 HTTP transport 由 @downcity/city 内部实现，Agent 只依赖标准模型接口。
  */
+
+import type { LanguageModel } from "ai";
 
 /** City model 的公开协议标识。 */
 export const CITY_MODEL_KIND = "downcity.city-model" as const;
-
-/**
- * City model 的隐藏调用器 symbol。
- *
- * 使用全局 symbol，保证不同 package 副本之间仍可识别同一个协议键。
- */
-export const CITY_MODEL_INVOKER: unique symbol = Symbol.for(
-  "downcity.city-model.invoker",
-) as never;
 
 /** City 模型依赖的环境变量需求。 */
 export interface CityModelEnvRequirement {
@@ -71,46 +64,31 @@ export interface CityModelDescriptor {
   env_requirements?: CityModelEnvRequirement[];
 }
 
-/** City 模型连接信息。 */
-export interface CityModelConnection {
-  /** OpenAI-compatible 服务端点根地址，例如 `https://example.com/v1/ai`。 */
-  base_url: string;
-  /** 当前 user token；Agent 会把它作为 provider apiKey 使用。 */
-  api_key?: string;
-  /** 当前模型的调用 ID，默认写入 OpenAI-compatible 请求体的 `model` 字段。 */
-  model_id: string;
-}
-
-/** City 模型隐藏调用器。 */
-export interface CityModelInvoker {
-  /** 返回当前 City 模型的运行时连接信息。 */
-  connection(): CityModelConnection;
-}
+/** 从 AI SDK 公共模型联合类型中提取 LanguageModelV3。 */
+type LanguageModelV3 = Extract<
+  LanguageModel,
+  { readonly specificationVersion: "v3" }
+>;
 
 /**
  * 可执行 City 模型。
  *
- * 公开字段来自模型目录，隐藏调用器由 City 注入并供其他 SDK 适配。
+ * 目录字段用于展示和上下文管理，LanguageModelV3 能力由 CityModel class 实现。
  */
-export interface CityModel extends CityModelDescriptor {
+export type CityModel = CityModelDescriptor & LanguageModelV3 & {
   /** City model 协议标识。 */
   readonly kind: typeof CITY_MODEL_KIND;
-  /** City model 隐藏调用器，不作为用户日常 API 使用。 */
-  readonly [CITY_MODEL_INVOKER]: CityModelInvoker;
-}
+};
 
 /** 判断输入值是否实现 CityModel 协议。 */
 export function isCityModel(value: unknown): value is CityModel {
   if (!value || typeof value !== "object") return false;
   const record = value as Record<PropertyKey, unknown>;
-  const invoker = record[CITY_MODEL_INVOKER] as
-    | { connection?: unknown }
-    | undefined;
   return (
     record.kind === CITY_MODEL_KIND &&
     typeof record.id === "string" &&
-    typeof invoker === "object" &&
-    invoker !== null &&
-    typeof invoker.connection === "function"
+    record.specificationVersion === "v3" &&
+    typeof record.doStream === "function" &&
+    typeof record.doGenerate === "function"
   );
 }

@@ -25,6 +25,7 @@ Each action declares which identities it allows. The default is `["user"]`; `[]`
 | `/v1/ai/models` | `GET` | Model catalog | — |
 | `/v1/ai/text` | `POST` | Text generation | SDK |
 | `/v1/ai/stream` | `POST` | Streaming generation | SDK |
+| `/v1/ai/language-model/stream` | `POST` | Native CityModel LanguageModelV3 transport | CityModel |
 | `/v1/ai/image/create` | `POST` | Create image generation job | SDK |
 | `/v1/ai/image/result` | `POST` | Poll image generation job | SDK |
 | `/v1/ai/video` | `POST` | Video generation | SDK |
@@ -123,6 +124,13 @@ City resolves the user and city from the bearer `user_token`. If the request bod
 ```
 
 `env` exposes the runtime env requirements declared by the service so admin or debugging surfaces can render dependencies.
+
+## `POST /v1/ai/language-model/stream`
+
+This versioned LanguageModelV3 transport is internal to `CityModel`. It carries
+standard model prompts, function tools, reasoning, usage, and finish reasons.
+Product code should use the `CityModel` returned by the model catalog instead of
+constructing transport requests manually.
 
 ## `POST /v1/ai/chat/completions`
 

@@ -273,18 +273,22 @@
    input_tokens?: number;
    output_tokens?: number;
    cached_tokens?: number;
+   reasoning_tokens?: number;
  } {
    if (!isRecord(usage)) return {};
+   const v3_input_tokens = isRecord(usage.inputTokens) ? usage.inputTokens : undefined;
+   const v3_output_tokens = isRecord(usage.outputTokens) ? usage.outputTokens : undefined;
    const input_token_details = isRecord(usage.inputTokenDetails) ? usage.inputTokenDetails : undefined;
    const cached_tokens = readNumberFieldValue(usage, [
      "cached_input_tokens",
      "cachedTokens",
      "cached_tokens",
      "prompt_cache_hit_tokens",
-   ]) ?? readNestedNumberFieldValue(usage, "inputTokenDetails", [
-     "cacheReadTokens",
-     "cachedTokens",
-   ]) ?? readNestedNumberFieldValue(usage, "prompt_tokens_details", [
+   ]) ?? (v3_input_tokens ? readNumberFieldValue(v3_input_tokens, ["cacheRead"]) : undefined)
+     ?? readNestedNumberFieldValue(usage, "inputTokenDetails", [
+       "cacheReadTokens",
+       "cachedTokens",
+     ]) ?? readNestedNumberFieldValue(usage, "prompt_tokens_details", [
      "cached_tokens",
      "cachedTokens",
    ]) ?? readNumberFieldValue(usage, [
@@ -297,8 +301,9 @@
      "input_tokens",
      "promptTokenCount",
      "prompt_token_count",
-   ]);
+   ]) ?? (v3_input_tokens ? readNumberFieldValue(v3_input_tokens, ["total"]) : undefined);
    const input_tokens = readNumberFieldValue(usage, ["prompt_cache_miss_tokens"])
+     ?? (v3_input_tokens ? readNumberFieldValue(v3_input_tokens, ["noCache"]) : undefined)
      ?? (input_token_details ? readNumberFieldValue(input_token_details, [
        "noCacheTokens",
        "inputTokens",
@@ -313,23 +318,28 @@
 
    return {
      ...(input_tokens !== undefined ? { input_tokens } : {}),
-     ...readNumberField(usage, [
-       "outputTokens",
-       "output_tokens",
-       "completionTokens",
-       "completion_tokens",
-       "candidatesTokenCount",
-       "candidates_token_count",
-     ], "output_tokens"),
+     ...(v3_output_tokens
+       ? readNumberField(v3_output_tokens, ["total"], "output_tokens")
+       : readNumberField(usage, [
+         "outputTokens",
+         "output_tokens",
+         "completionTokens",
+         "completion_tokens",
+         "candidatesTokenCount",
+         "candidates_token_count",
+       ], "output_tokens")),
      ...(cached_tokens !== undefined ? { cached_tokens } : {}),
+     ...(v3_output_tokens
+       ? readNumberField(v3_output_tokens, ["reasoning"], "reasoning_tokens")
+       : {}),
    };
  }
 
  function readNumberField(
    record: UsageRecord,
    keys: string[],
-   output_key: "input_tokens" | "output_tokens" | "cached_tokens",
- ): Partial<Record<"input_tokens" | "output_tokens" | "cached_tokens", number>> {
+   output_key: "input_tokens" | "output_tokens" | "cached_tokens" | "reasoning_tokens",
+ ): Partial<Record<"input_tokens" | "output_tokens" | "cached_tokens" | "reasoning_tokens", number>> {
    const value = readNumberFieldValue(record, keys);
    return value !== undefined ? { [output_key]: value } : {};
  }

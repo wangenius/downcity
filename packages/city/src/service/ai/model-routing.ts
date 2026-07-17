@@ -68,9 +68,37 @@ function matches_fallback_rule(rule: ModelFallbackRule, media: ModelFallbackMedi
 
 /** 从 SDK 或 OpenAI-compatible 请求中提取媒体输入。 */
 function extract_media_inputs(input: Record<string, unknown>, mode: string): ModelFallbackMedia[] {
+  if (mode === "language_model") return extract_language_model_media_inputs(input.call);
   return mode === "openai"
     ? extract_openai_media_inputs(input.messages)
     : extract_ui_media_inputs(input.messages);
+}
+
+/** 扫描 City LanguageModelV3 prompt 中的文件输入。 */
+function extract_language_model_media_inputs(call: unknown): ModelFallbackMedia[] {
+  if (!isRecord(call) || !Array.isArray(call.prompt)) return [];
+  const media_inputs: ModelFallbackMedia[] = [];
+  for (const message of call.prompt) {
+    if (!isRecord(message) || !Array.isArray(message.content)) continue;
+    for (const part of message.content) {
+      if (!isRecord(part) || part.type !== "file") continue;
+      const media_type = read_part_media_type(part);
+      if (!media_type) continue;
+      media_inputs.push(build_fallback_media(media_type, {
+        filename: read_optional_string(part.filename),
+        url: read_language_model_file_url(part.data),
+      }));
+    }
+  }
+  return media_inputs;
+}
+
+/** 从 transport 编码前后的 file data 中读取可选 URL。 */
+function read_language_model_file_url(value: unknown): string | undefined {
+  if (typeof value === "string" && /^https?:\/\//iu.test(value)) return value;
+  if (!isRecord(value)) return undefined;
+  if (value.__downcity_transport_type !== "url") return undefined;
+  return read_optional_string(value.value);
 }
 
 /** 扫描 OpenAI-compatible messages 的媒体输入。 */

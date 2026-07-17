@@ -5,17 +5,14 @@
  */
 
 export {
-  CITY_MODEL_INVOKER,
   CITY_MODEL_KIND,
   isCityModel,
 } from "./types/CityModel.js";
 
 export type {
   CityModel,
-  CityModelConnection,
   CityModelDescriptor,
   CityModelEnvRequirement,
-  CityModelInvoker,
   CityModelReasoning,
   CityModelReasoningEffort,
 } from "./types/CityModel.js";

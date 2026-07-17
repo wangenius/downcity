@@ -38,7 +38,7 @@ while (true) {
 ## CityModel 和 provider 的关系
 
 如果调用目标就是当前 Federation 里的模型，优先使用 `CityModel`。模型目录返回的
-`CityModel` 已经带有隐藏的运行时连接信息，Downcity Agent 和 City SDK 都可以直接使用它：
+`CityModel` 自身实现 AI SDK `LanguageModelV3`，Downcity Agent 和 AI SDK 都可以直接使用它：
 
 ```ts
 import { Agent } from "@downcity/agent";
@@ -57,13 +57,12 @@ const agent = new Agent({
 });
 ```
 
-这条路径不需要产品侧创建 AI SDK provider。Agent 会在实际执行 LLM 任务时把
-`CityModel` 转换为 AI SDK `LanguageModel`。Session 如有自己的 `AgentModel` 实例会优先使用。
+这条路径不需要产品侧创建 AI SDK provider。Agent 直接调用 `CityModel.doStream()`；
+CityModel 负责请求 Federation 原生模型通路。Session 如有自己的 `AgentModel` 实例会优先使用。
 
 ## OpenAI 兼容通路
 
-当调用方必须使用 AI SDK 标准 `LanguageModel`，或者需要接入 OpenAI SDK、
-`createOpenAICompatible()` 这类外部生态时，再创建 provider。provider 仍然请求
+当调用方需要接入 OpenAI SDK、curl 或 OpenAI-compatible 客户端时，再创建兼容 provider。provider 仍然请求
 Federation，而不是直接请求真实上游模型：
 
 ```ts
@@ -103,7 +102,7 @@ POST /v1/ai/chat/completions
 |---|---|
 | 产品代码直接请求 Fed 文本或流式生成 | `client.ai.text()` / `client.ai.stream()` |
 | Downcity Agent 使用 Fed 模型 | 直接传 `CityModel` |
-| 外部 AI SDK 生态需要 `LanguageModel` | `createOpenAICompatible({ baseURL: client.ai.base_url })` |
+| AI SDK 生态需要 `LanguageModel` | 直接传 `CityModel` |
 | OpenAI SDK、curl 或兼容客户端调试 | `/v1/ai/chat/completions` |
 | 图片、TTS、ASR、video | `client.ai.image_create()` / `client.ai.tts()` / `client.ai.asr()` 等 City SDK 方法 |
 | 使用非 Fed 模型 API | 产品侧自己创建对应 provider |

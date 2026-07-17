@@ -9,7 +9,6 @@
 
 import { convertToModelMessages, generateText, streamText } from "ai";
 import type {
-  LanguageModel,
   ToolSet,
   UIMessage,
 } from "ai";
@@ -30,6 +29,7 @@ import type {
 import type {
   ModelConfig,
   ModelActions,
+  CityLanguageModelV3,
   ModelFallbackRule,
   OpenAICompatibleClient,
   OpenAICompatibleClientConfig,
@@ -151,9 +151,12 @@ export abstract class Provider {
    }
 
    /**
-    * 创建当前请求的 chat model。
-    */
-   private createChatModel(ctx: Context): LanguageModel {
+   * 创建当前请求实际使用的 LanguageModelV3。
+   *
+   * 子类可以覆盖该方法，让不同模型选择 Responses、Claude Messages 或 Gemini
+   * 原生实现。现有 text、stream 和原生 City endpoint 都复用这里的结果。
+   */
+   protected create_language_model(ctx: Context): CityLanguageModelV3 {
      if (!this.envKey) {
        throw new Error(`Provider ${this.id} is missing envKey`);
      }
@@ -187,7 +190,7 @@ export abstract class Provider {
     */
    protected build_reasoning_provider_options(
      ctx: Context,
-     model: LanguageModel,
+     model: CityLanguageModelV3,
    ): AIProviderOptions | undefined {
      const reasoning = read_resolved_reasoning(ctx);
      if (!reasoning) return undefined;
@@ -213,7 +216,7 @@ export abstract class Provider {
    async text(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
      const input = ctx.input as OpenAIActionInput;
      const resolved_input = await this.resolveActionInput(input);
-     const model = this.createChatModel(ctx);
+     const model = this.create_language_model(ctx);
      const provider_options = this.build_reasoning_provider_options(ctx, model);
 
      if ("messages" in resolved_input) {
@@ -247,7 +250,7 @@ export abstract class Provider {
    async stream(ctx: Context): Promise<AIProviderChargedResponse> {
      const input = ctx.input as OpenAIActionInput;
      const resolved_input = await this.resolveActionInput(input);
-     const model = this.createChatModel(ctx);
+     const model = this.create_language_model(ctx);
      const provider_options = this.build_reasoning_provider_options(ctx, model);
 
      if ("messages" in resolved_input) {
@@ -333,6 +336,9 @@ export abstract class Provider {
      bill?: AIProviderBillFn;
    }): ModelConfig {
      const actions: ModelActions = {};
+     const has_language_model =
+       this.create_language_model !== Provider.prototype.create_language_model ||
+       this.createClient !== Provider.prototype.createClient;
      const all_modalities = [
        "text",
        "stream",
@@ -374,6 +380,13 @@ export abstract class Provider {
        passthroughModel: this.passthroughModel,
        fallback: spec.fallback,
        actions,
+       ...(has_language_model ? {
+         language_model: {
+           create_language_model: (ctx: Context) => this.create_language_model(ctx),
+           build_provider_options: (ctx: Context, model: CityLanguageModelV3) =>
+             this.build_reasoning_provider_options(ctx, model),
+         },
+       } : {}),
        bill: spec.bill ?? this.bill.bind(this),
      };
    }

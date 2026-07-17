@@ -81,6 +81,8 @@ export type {
   ModelFallbackMedia,
   ModelFallbackRule,
   ModelActions,
+  ModelLanguageRuntime,
+  CityLanguageModelV3,
   OpenAICompatibleClient,
   OpenAICompatibleClientConfig,
   ProviderOptions,
@@ -176,7 +178,6 @@ export type {
 } from "./pact/http.js";
 
 export type {
-  CityModel,
   CityModelDescriptor,
   CityModelEnvRequirement,
   CityModelReasoning,
@@ -194,6 +195,7 @@ export type {
 } from "./client/types.js";
 
 export { AIInvoker, ModelCatalog, ModelHandle } from "./pact/invoker/ai/index.js";
+export { CityModel } from "./pact/invoker/ai/CityModel.js";
 export { PaymentInvoker, PaymentMethodHandle } from "./pact/invoker/payment/index.js";
 export { ServiceClient, ActionClient } from "./pact/invoker/invoker.js";
 

@@ -2,11 +2,12 @@
  * AI 模型类型（对应 service/ai/types.ts PublicModel）。
  *
  * 关键点（中文）
- * - CityModel 是跨 package 共享协议，定义在 @downcity/type。
+ * - CityModel 是 @downcity/city 提供的原生 LanguageModelV3 class。
  * - UserModelRef 保留为 Federation 内部语义别名，避免一次性扩大改名范围。
  */
 
-import type { CityModel, CityModelEnvRequirement } from "@downcity/type";
+import type { CityModelEnvRequirement } from "@downcity/type";
+import type { CityModel } from "./CityModel.js";
 
 export type UserModelEnvRequirement = CityModelEnvRequirement;
 

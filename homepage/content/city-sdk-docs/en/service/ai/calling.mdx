@@ -44,8 +44,8 @@ With `user_token`, `client.ai.listModels()` returns only models whose required r
 ## CityModel And Providers
 
 If you are calling a model from the current Federation, prefer `CityModel`.
-The model catalog returns `CityModel` objects with hidden runtime connection
-metadata, so Downcity Agent and the City SDK can use them directly:
+The model catalog returns `CityModel` objects that implement AI SDK
+`LanguageModelV3`, so Downcity Agent and AI SDK can use them directly:
 
 ```ts
 import { Agent } from "@downcity/agent";
@@ -64,13 +64,13 @@ const agent = new Agent({
 });
 ```
 
-This path does not require product code to create an AI SDK provider. Agent converts
-the `CityModel` to an AI SDK `LanguageModel` at the LLM execution boundary. A Session with its own `AgentModel` instance takes priority.
+This path does not require product code to create an AI SDK provider. Agent calls
+`CityModel.doStream()` directly, and CityModel invokes Federation's native model pathway. A Session with its own `AgentModel` instance takes priority.
 
 ## OpenAI-Compatible Pathway
 
-Create a provider only when the caller needs an AI SDK `LanguageModel`, OpenAI
-SDK, `createOpenAICompatible()`, or another external compatible client. The
+Create a compatible provider only for the OpenAI SDK, curl, or another
+OpenAI-compatible client. The
 provider still calls Federation; it does not call the real upstream model
 directly:
 
@@ -131,7 +131,7 @@ await openai.chat.completions.create({
 |---|---|
 | Product code calls Fed text or stream generation | `client.ai.text()` / `client.ai.stream()` |
 | Downcity Agent uses a Fed model | pass `CityModel` directly |
-| External AI SDK ecosystem needs `LanguageModel` | `createOpenAICompatible({ baseURL: client.ai.base_url })` |
+| AI SDK ecosystem needs `LanguageModel` | pass `CityModel` directly |
 | OpenAI SDK, compatible clients, or curl debugging | `/v1/ai/chat/completions` |
 | Image, TTS, ASR, or video | City SDK methods such as `client.ai.image_create()` / `client.ai.tts()` / `client.ai.asr()` |
 | Non-Fed model APIs | create the provider in product code |

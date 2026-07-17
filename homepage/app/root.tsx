@@ -194,6 +194,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <Meta />
         <Links />
+        <script
+          defer
+          src="https://vibeloft.ai/telemetry/v1.js"
+          data-vl-product-id="5fe9ff34-c0c0-44b7-a3b8-e62deea5030f"
+          data-vl-auth-key="vl_web.6twI2Y29EoJ7Dq2pw6jK0XrN3wdh_-W0eyJYwcQgTyQ"
+        />
       </head>
       <body className="flex min-h-screen flex-col antialiased">
         <I18nextProvider i18n={i18next}>

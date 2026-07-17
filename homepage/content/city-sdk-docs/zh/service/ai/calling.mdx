@@ -57,8 +57,10 @@ const agent = new Agent({
 });
 ```
 
-这条路径不需要产品侧创建 AI SDK provider。Agent 直接调用 `CityModel.doStream()`；
-CityModel 负责请求 Federation 原生模型通路。Session 如有自己的 `AgentModel` 实例会优先使用。
+这条路径不需要产品侧创建 AI SDK provider。Agent 直接调用 `CityModel.doStream()`，
+CityModel 请求 Federation 的 `/v1/ai/stream`。`client.ai.stream()` 也使用同一个
+CityModel，只在客户端额外转换成 `UIMessageChunk`。Session 如有自己的
+`AgentModel` 实例会优先使用。
 
 ## OpenAI 兼容通路
 

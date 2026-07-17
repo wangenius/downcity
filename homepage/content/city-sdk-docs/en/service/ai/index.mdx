@@ -14,21 +14,21 @@ description: "AIService's two independent pathways: SDK pathway (User City) and 
                          │
        ┌─────────────────┴─────────────────┐
        │                                   │
-  SDK Pathway                   OpenAI-Compatible Pathway
-  For User City                For downcity agent / curl / OpenAI SDK
+  City SDK / CityModel Pathway  OpenAI-Compatible Pathway
+  For User City / Agent         For curl / OpenAI SDK
        │                                   │
   POST /v1/ai/text      POST /v1/ai/chat/completions
   POST /v1/ai/stream         ↑
        │                     OpenAI-format body
        ▼                    { model, messages, stream, tools }
   provider.text                            │
-  provider.stream                          ▼
-    (ai-sdk wrapper)           provider.openai
-       │                      (passthrough or format conversion)
-       ▼                                │
-    UIMessage                           ▼
-  UIMessageStream                    Response
-                                 (upstream raw response)
+  create_language_model                   ▼
+       │                       provider.openai
+       ▼                      (passthrough or format conversion)
+  UIMessage / LMV3 stream                 │
+       │                                  ▼
+  client UI conversion                 Response
+                                  (upstream raw response)
 ```
 
 ## Core Concepts

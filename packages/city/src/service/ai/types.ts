@@ -75,7 +75,8 @@ export interface ModelLanguageRuntime {
  * 模型 action 映射，key 为通路名称。
  *
  * 两条独立通路：
- * - SDK 通路：text / stream / video / tts / asr — 给 User City 用
+ * - SDK action 通路：text / video / tts / asr — 给 User City 用
+ * - 模型流通路：由 ModelLanguageRuntime 直接提供，不进入 actions
  * - 图片任务通路：image_create / image_fetch / image_result — 给图片任务创建、后台抓取和用户查询调用
  * - OpenAI 兼容通路：openai — 给 /chat/completions 端点用
  *
@@ -85,8 +86,6 @@ export interface ModelLanguageRuntime {
 export interface ModelActions {
   /** 文本生成 action */
   text?: ActionFn;
-  /** 流式生成 action */
-  stream?: ActionFn;
   /** 图片任务创建 action，负责启动 provider 图片生成任务。 */
   image_create?: ActionFn;
   /** 图片任务抓取 action，负责查询上游状态并返回 provider 图片生成结果。 */
@@ -163,7 +162,7 @@ export interface ModelConfig {
   fallback?: ModelFallbackRule[];
   /** 各通路 action 绑定 */
   actions: ModelActions;
-  /** 原生 City LanguageModel endpoint 使用的 Provider runtime。 */
+  /** CityModel `/v1/ai/stream` 使用的 Provider runtime。 */
   language_model?: ModelLanguageRuntime;
   /** 本模型的出账方法，只生成扣费草稿，不直接扣余额。 */
   bill?: AIProviderBillFn;

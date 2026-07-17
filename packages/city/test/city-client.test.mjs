@@ -212,17 +212,62 @@ test("AIInvoker.model(string) builds a correct ModelHandle", async () => {
   assert.equal(handle.token, "ub_test")
 })
 
-test("AIInvoker.stream() returns parsed chunks", async () => {
-  const chunks = [{ type: "start", messageId: "msg_1" }, { type: "text-delta", id: "t1", delta: "hi" }, { type: "finish" }]
+test("AIInvoker.stream() converts CityModel parts into UIMessage chunks", async () => {
+  const requests = []
+  const model_parts = [
+    { type: "stream-start", warnings: [] },
+    { type: "text-start", id: "t1" },
+    { type: "text-delta", id: "t1", delta: "hi" },
+    { type: "text-end", id: "t1" },
+    {
+      type: "finish",
+      finishReason: { unified: "stop", raw: "stop" },
+      usage: {
+        inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+        outputTokens: { total: 1, text: 1, reasoning: 0 },
+      },
+    },
+  ]
   const client = new City({
     role: "user",
     federation_url: "https://api.example.com/base/", city_id: "city_demo", user_token: "ub_test",
-    fetch: async () => streamResponse(chunks),
+    fetch: async (url, init) => {
+      requests.push({ url, init })
+      return streamResponse(model_parts.map((part) => ({
+        protocol: "downcity-language-model-v1",
+        part,
+      })))
+    },
   })
-  const stream = await client.ai.stream({ model: "gpt-5.4", prompt: "hi" })
+  const stream = await client.ai.stream({
+    model: "gpt-5.4",
+    prompt: "hi",
+    reasoning_effort: "high",
+    tools: {
+      ping: {
+        description: "Ping",
+        inputSchema: {
+          jsonSchema: {
+            type: "object",
+            properties: { value: { type: "string" } },
+            required: ["value"],
+          },
+        },
+      },
+    },
+  })
   const received = []; const reader = stream.getReader()
   while (true) { const { done, value } = await reader.read(); if (done) break; received.push(value) }
-  assert.deepEqual(received, chunks)
+  assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/stream")
+  const request = JSON.parse(requests[0].init.body)
+  assert.equal(request.protocol, "downcity-language-model-v1")
+  assert.equal(request.model_id, "gpt-5.4")
+  assert.equal(request.reasoning_effort, "high")
+  assert.equal(request.call.prompt[0].role, "user")
+  assert.equal(request.call.tools[0].type, "function")
+  assert.equal(request.call.tools[0].name, "ping")
+  assert.equal(received.find((part) => part.type === "text-delta")?.delta, "hi")
+  assert.ok(received.some((part) => part.type === "finish"))
 })
 
 test("User City listServices()", async () => {

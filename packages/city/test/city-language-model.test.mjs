@@ -56,7 +56,7 @@ function create_context(input, signal) {
     db: {},
     user: { user_id: "user_1", metadata: {} },
     env: () => undefined,
-    request: new Request("https://federation.test/v1/ai/language-model/stream", {
+    request: new Request("https://federation.test/v1/ai/stream", {
       method: "POST",
       signal,
     }),
@@ -96,8 +96,14 @@ test("CityModel directly streams through Federation LanguageModelV3 runtime", as
     },
     bill: () => ({ credits: 3, note: "language model test" }),
   })
-  const action = ai.get("language-model/stream")
+  const action = ai.get("stream")
   assert.ok(action)
+  assert.equal(ai.get("language-model/stream"), undefined)
+  const catalog = AIService.listModels(ai, {
+    env: () => undefined,
+    identity: "user",
+  })
+  assert.deepEqual(catalog[0].modalities, ["stream"])
 
   const model = new CityModel({
     descriptor: {

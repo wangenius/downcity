@@ -4,6 +4,7 @@ import os from "node:os"
 import path from "node:path"
 import test from "node:test"
 import { sqliteTable, text } from "drizzle-orm/sqlite-core"
+import { MockLanguageModelV3 } from "ai/test"
 
 import {
   Federation,
@@ -599,7 +600,7 @@ test("AIService charges explicit provider charge lines", async () => {
   }
 })
 
-test("AIService keeps Node response streams open until deferred charge settles", async () => {
+test("AIService /stream keeps the model stream open until deferred charge settles", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-stream-charge-"))
 
@@ -616,16 +617,38 @@ test("AIService keeps Node response streams open until deferred charge settles",
         },
       },
     })
+    const provider_model = new MockLanguageModelV3({
+      provider: "mock.provider",
+      modelId: "stream-charge",
+      doStream: async () => ({
+        stream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({ type: "stream-start", warnings: [] })
+            controller.enqueue({ type: "text-start", id: "text_1" })
+            controller.enqueue({ type: "text-delta", id: "text_1", delta: "done" })
+            controller.enqueue({ type: "text-end", id: "text_1" })
+            controller.enqueue({
+              type: "finish",
+              finishReason: { unified: "stop", raw: "stop" },
+              usage: {
+                inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+                outputTokens: { total: 1, text: 1, reasoning: 0 },
+              },
+            })
+            controller.close()
+          },
+        }),
+      }),
+    })
     ai.use({
       id: "stream-charge",
       provider_id: "stream-provider",
       name: "Stream Charge",
-      actions: {
-        stream: async () => ({
-          response: new Response("stream complete"),
-          charge: Promise.resolve({ credits: 321, note: "stream charge" }),
-        }),
+      actions: {},
+      language_model: {
+        create_language_model: () => provider_model,
       },
+      bill: () => ({ credits: 321, note: "stream charge" }),
     })
     base.use(ai)
 
@@ -645,10 +668,16 @@ test("AIService keeps Node response streams open until deferred charge settles",
     const response = await base.fetch(new Request("http://localhost/v1/ai/stream", {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${tokenBody.user_token}` },
-      body: JSON.stringify({ model: "stream-charge", prompt: "hi" }),
+      body: JSON.stringify({
+        protocol: "downcity-language-model-v1",
+        model_id: "stream-charge",
+        call: {
+          prompt: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+        },
+      }),
     }))
     assert.deepEqual(charges, [])
-    assert.equal(await response.text(), "stream complete")
+    assert.match(await response.text(), /"type":"finish"/)
     assert.deepEqual(charges, [{ user_id: "user_1", credits: 321, note: "stream charge" }])
   } finally {
     process.chdir(cwd)

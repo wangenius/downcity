@@ -34,7 +34,9 @@ const body = await client.ai.stream({
 });
 ```
 
-`ai.text()` returns an AI SDK `UIMessage`. `ai.stream()` returns `ReadableStream<UIMessageChunk>` when the City-side stream handler returns an AI SDK UIMessage stream response.
+`ai.text()` returns an AI SDK `UIMessage`. `ai.stream()` uses CityModel's
+LanguageModelV3 transport and converts it client-side into a
+`ReadableStream<UIMessageChunk>`.
 
 One Federation can serve many client surfaces:
 

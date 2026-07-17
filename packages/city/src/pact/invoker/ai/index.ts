@@ -4,11 +4,11 @@
  * 路由：/v1/ai/{modality} 和 /v1/ai/models。
  */
 
-import { parseAIStreamBody } from "./stream.js";
 import {
   type CityModelDescriptor,
 } from "@downcity/type";
 import { CityModel } from "./CityModel.js";
+import { create_client_ui_stream } from "./client-stream.js";
 import type { UserModelRef } from "./types.js";
 import type { CityLanguageModelStreamRequestV1 } from "../../../types/CityLanguageModelTransport.js";
 import type {
@@ -78,21 +78,21 @@ export class AIInvoker {
     });
   }
 
-  /** 流式生成。支持 tools 参数（ai-sdk tool 格式，自动序列化去掉 execute） */
+  /**
+   * 使用 CityModel 流式生成 UIMessageChunk。
+   *
+   * Federation `/v1/ai/stream` 只传输 LanguageModelV3 事件；UIMessage 转换在客户端完成。
+   */
   async stream(input: UserServiceInput): Promise<UserStreamResult> {
-    const res = await this.reqRaw(`${PREFIX}/stream`, {
-      method: "POST",
-      body: JSON.stringify(this.input(this.serializeTools(input))),
-    });
-    return parseAIStreamBody(res.body);
+    return create_client_ui_stream(input, this.resolve_city_model(input.model));
   }
 
-  /** 使用当前 City user 鉴权上下文调用原生 LanguageModel endpoint。 */
-  language_model_stream(
+  /** 使用当前 City user 鉴权上下文调用模型流端点。 */
+  private request_model_stream(
     request: CityLanguageModelStreamRequestV1,
     signal?: AbortSignal,
   ): Promise<FetchResponseLike> {
-    return this.reqRaw(`${PREFIX}/language-model/stream`, {
+    return this.reqRaw(`${PREFIX}/stream`, {
       method: "POST",
       body: JSON.stringify(request),
       signal,
@@ -127,7 +127,7 @@ export class AIInvoker {
   /** 获取模型目录 */
   async listModels(): Promise<ModelCatalog> {
     const body = await this.req<{ items: CityModelDescriptor[] }>(`${PREFIX}/models`, { method: "GET" });
-    return new ModelCatalog(body.items, this);
+    return new ModelCatalog(body.items, (descriptor) => this.create_city_model(descriptor));
   }
 
   /**
@@ -147,6 +147,30 @@ export class AIInvoker {
       return new ModelHandle(this, ref, ref, this.base_url, this.token);
     }
     return new ModelHandle(this, ref.id, ref.name, this.base_url, this.token, ref.meta);
+  }
+
+  /** 将模型输入解析为绑定当前鉴权请求器的 CityModel。 */
+  private resolve_city_model(model: UserModelRef | string): UserModelRef {
+    if (model && typeof model === "object") return model;
+    if (typeof model !== "string") throw new TypeError("model is required");
+    const model_id = model.trim();
+    if (!model_id) throw new TypeError("model must be a non-empty string");
+    return this.create_city_model({
+      id: model_id,
+      name: model_id,
+      description: "",
+      modalities: ["text", "stream"],
+      tags: [],
+      meta: {},
+    });
+  }
+
+  /** 使用公开目录描述创建可执行 CityModel。 */
+  private create_city_model(descriptor: CityModelDescriptor): UserModelRef {
+    return new CityModel({
+      descriptor,
+      request_stream: (request, signal) => this.request_model_stream(request, signal),
+    });
   }
 
   private post<T>(path: string, input: UserServiceInput): Promise<T> {
@@ -258,16 +282,16 @@ export class AIInvoker {
 export class ModelCatalog {
   private readonly byId: Map<string, UserModelRef>;
 
-  constructor(items: CityModelDescriptor[], ai: AIInvoker) {
+  constructor(
+    items: CityModelDescriptor[],
+    create_model: (descriptor: CityModelDescriptor) => UserModelRef,
+  ) {
     if (!items?.length) {
       this.byId = new Map();
       return;
     }
 
-    const enriched = items.map((item) => new CityModel({
-      descriptor: item,
-      request_stream: (request, signal) => ai.language_model_stream(request, signal),
-    }));
+    const enriched = items.map(create_model);
 
     this.byId = new Map(enriched.map((item) => [item.id, item]));
   }

@@ -65,7 +65,9 @@ const agent = new Agent({
 ```
 
 This path does not require product code to create an AI SDK provider. Agent calls
-`CityModel.doStream()` directly, and CityModel invokes Federation's native model pathway. A Session with its own `AgentModel` instance takes priority.
+`CityModel.doStream()` directly, and CityModel invokes Federation `/v1/ai/stream`.
+`client.ai.stream()` uses the same CityModel and only adds client-side conversion
+to `UIMessageChunk`. A Session with its own `AgentModel` instance takes priority.
 
 ## OpenAI-Compatible Pathway
 

@@ -23,8 +23,7 @@ Admin GET                GET  /v1/{service}/{action}
 | 路由 | 方法 | 用途 |
 | --- | --- | --- |
 | `/v1/ai/text` | `POST` | 文本生成（SDK 通路） |
-| `/v1/ai/stream` | `POST` | 流式生成（SDK 通路） |
-| `/v1/ai/language-model/stream` | `POST` | CityModel 原生 LanguageModelV3 通路 |
+| `/v1/ai/stream` | `POST` | CityModel LanguageModelV3 模型流 |
 | `/v1/ai/image/create` | `POST` | 创建图片生成任务 |
 | `/v1/ai/image/result` | `POST` | 查询图片生成任务 |
 | `/v1/ai/video` | `POST` | 视频生成 |
@@ -153,16 +152,28 @@ Content-Type: application/json
 
 ### `POST /v1/ai/stream`
 
-请求体和 `text` 类似。返回值是 AI SDK UIMessage 流式响应（SSE）。
+这是 `CityModel` 使用的版本化 LanguageModelV3 transport。请求包含协议版本、模型
+ID 和标准模型调用参数：
+
+```json
+{
+  "protocol": "downcity-language-model-v1",
+  "model_id": "deepseek-v4-flash",
+  "call": {
+    "prompt": [
+      { "role": "user", "content": [{ "type": "text", "text": "你好" }] }
+    ]
+  },
+  "reasoning_effort": "high"
+}
+```
+
+Federation 通过 SSE 返回版本化 `LanguageModelV3StreamPart`。产品代码不应手写该
+transport 请求：把模型目录返回的 `CityModel` 交给 Agent / AI SDK，或者调用
+`client.ai.stream()`。后者在客户端将同一模型流转换成 `UIMessageChunk`。
 
 AI 请求的用户和 city 上下文由 bearer `user_token` 解析。请求体里可以不传
 `city_id`；如果传了，必须与 token 绑定的 city 一致。
-
-### `POST /v1/ai/language-model/stream`
-
-这是 `CityModel` 内部使用的版本化 LanguageModelV3 transport。它传输标准模型
-prompt、function tools、reasoning、usage 和 finish reason。产品代码应通过模型目录
-返回的 `CityModel` 使用该通路，不应手写 transport 请求。
 
 ### `POST /v1/ai/chat/completions`
 

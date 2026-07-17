@@ -2,12 +2,12 @@
   * AI Provider 模块。
   *
   * Provider 是第三方 AI 提供商的基类。
-  * - 默认提供 OpenAI-compatible 的 text / stream 实现。
+  * - 默认提供 OpenAI-compatible 的 text 实现。
   * - 子类通过覆盖 createClient 来绑定不同的 AI SDK provider。
   * - 需要其它模态（image / video / tts / asr）或自定义 openai 透传时，覆盖对应方法。
   */
 
-import { convertToModelMessages, generateText, streamText } from "ai";
+import { convertToModelMessages, generateText } from "ai";
 import type {
   ToolSet,
   UIMessage,
@@ -96,7 +96,7 @@ type ResolvedActionInput =
   * AI Provider 基类。
   *
   * 子类通过覆盖方法声明 action，model() 会自动收集并生成 ModelConfig。
-  * 默认 text / stream 使用 OpenAI-compatible 协议，覆盖 createClient 即可接入不同上游。
+   * 默认 text 使用 OpenAI-compatible 协议，模型流统一由 create_language_model 提供。
   */
 export abstract class Provider {
    /** Provider 唯一 ID。 */
@@ -121,11 +121,11 @@ export abstract class Provider {
    /**
     * 创建 OpenAI-compatible chat client。
     *
-    * 子类需要支持 text / stream 时必须覆盖。
+    * 子类需要支持 text 或 CityModel stream 时必须覆盖。
     * 默认抛出错误。
     */
    protected createClient(config: OpenAICompatibleClientConfig): OpenAICompatibleClient {
-     throw new Error(`Provider ${this.id} does not support text/stream`);
+     throw new Error(`Provider ${this.id} does not support language models`);
    }
 
    /**
@@ -154,7 +154,7 @@ export abstract class Provider {
    * 创建当前请求实际使用的 LanguageModelV3。
    *
    * 子类可以覆盖该方法，让不同模型选择 Responses、Claude Messages 或 Gemini
-   * 原生实现。现有 text、stream 和原生 City endpoint 都复用这里的结果。
+   * 原生实现。现有 text 与 CityModel `/v1/ai/stream` 都复用这里的结果。
    */
    protected create_language_model(ctx: Context): CityLanguageModelV3 {
      if (!this.envKey) {
@@ -245,37 +245,6 @@ export abstract class Provider {
    }
 
    /**
-    * 流式生成 action（OpenAI-compatible 默认实现）。
-    */
-   async stream(ctx: Context): Promise<AIProviderChargedResponse> {
-     const input = ctx.input as OpenAIActionInput;
-     const resolved_input = await this.resolveActionInput(input);
-     const model = this.create_language_model(ctx);
-     const provider_options = this.build_reasoning_provider_options(ctx, model);
-
-     if ("messages" in resolved_input) {
-      const result = streamText({
-        model,
-        messages: resolved_input.messages,
-        ...("tools" in resolved_input ? { tools: resolved_input.tools } : {}),
-        ...(provider_options ? { providerOptions: provider_options } : {}),
-      });
-      return {
-        response: result.toUIMessageStreamResponse(),
-      };
-    }
-
-    const result = streamText({
-      model,
-      prompt: resolved_input.prompt,
-      ...(provider_options ? { providerOptions: provider_options } : {}),
-    });
-    return {
-      response: result.toUIMessageStreamResponse(),
-    };
-  }
-
-   /**
     * 图片任务创建 action。
     *
     * 子类实现图片生成时覆盖，负责创建并启动 provider 侧图片任务。
@@ -341,7 +310,6 @@ export abstract class Provider {
        this.createClient !== Provider.prototype.createClient;
      const all_modalities = [
        "text",
-       "stream",
        "image_create",
        "image_fetch",
        "image_result",
@@ -355,8 +323,8 @@ export abstract class Provider {
        const fn = (this as unknown as Record<string, unknown>)[modality];
        if (typeof fn !== "function") continue;
 
-       // text / stream 默认由基类实现，只有子类显式覆盖或提供了 createClient 才暴露
-       if (modality === "text" || modality === "stream") {
+       // text 默认由基类实现，只有子类显式覆盖或提供了 createClient 才暴露。
+       if (modality === "text") {
          const is_overridden = fn !== (Provider.prototype as unknown as Record<string, unknown>)[modality];
          const has_create_client = this.createClient !== Provider.prototype.createClient;
          if (!is_overridden && !has_create_client) continue;

@@ -8,12 +8,11 @@
  *
  * 路由（City 自动生成）：
  * - POST /v1/ai/text             — 文本生成
- * - POST /v1/ai/stream           — 流式生成
+ * - POST /v1/ai/stream           — CityModel LanguageModelV3 模型流
  * - POST /v1/ai/video            — 视频生成
  * - POST /v1/ai/image/create     — 创建图片生成任务
  * - POST /v1/ai/image/result     — 查询图片生成任务
  * - POST /v1/ai/chat/completions — OpenAI 兼容端点
- * - POST /v1/ai/language-model/stream — CityModel 原生 LanguageModelV3 端点
  * - GET  /v1/ai/models           — 模型列表
  */
 
@@ -85,8 +84,8 @@ import {
   type ResolvedProviderOutput,
 } from "./ai-service-values.js";
 
-/** AIService 直接暴露的 SDK 通路模态列表。图片只通过 image/create + image/result 暴露。 */
-const MODALITIES = ["text", "stream", "video", "tts", "asr"] as const;
+/** AIService 直接暴露的 action 模态列表。模型流与图片任务使用独立 handler。 */
+const MODALITIES = ["text", "video", "tts", "asr"] as const;
 /** 用户侧默认以 text 模态排序模型 */
 const DEFAULT_MODEL_MODE = "text";
 /** CityModel 原生 LanguageModelV3 运行模式。 */
@@ -142,6 +141,11 @@ export class AIService extends Service {
       }).before((ctx) => this.precheck(ctx));
     }
 
+    // `/stream` 是 CityModel 唯一模型流入口，不经过旧 UIMessage action。
+    this.action("stream", async (ctx) => this.handleLanguageModelStream(ctx), {
+      auth: ["user", "admin"],
+    }).before((ctx) => this.precheck(ctx));
+
     // 图片生成的任务式端点。SDK 通过 image_create / image_result 显式访问。
     this.action("image/create", async (ctx) => this.createImageJob(ctx), {
       auth: ["user", "admin"],
@@ -155,11 +159,6 @@ export class AIService extends Service {
 
     // OpenAI 兼容端点
     this.action("chat/completions", async (ctx) => this.handleChatCompletions(ctx), {
-      auth: ["user", "admin"],
-    }).before((ctx) => this.precheck(ctx));
-
-    // CityModel 原生 LanguageModelV3 endpoint。
-    this.action("language-model/stream", async (ctx) => this.handleLanguageModelStream(ctx), {
       auth: ["user", "admin"],
     }).before((ctx) => this.precheck(ctx));
 
@@ -269,6 +268,7 @@ export class AIService extends Service {
 
   private getModelModalities(model: ModelConfig): string[] {
     const modalities = Object.keys(model.actions).filter((key) => model.actions[key] !== undefined);
+    if (model.language_model && !modalities.includes("stream")) modalities.push("stream");
     if (modalities.includes("image_create") && modalities.includes("image_fetch")) {
       modalities.push("image");
     }
@@ -298,7 +298,7 @@ export class AIService extends Service {
   private async handleModality(modality: Modality, ctx: Context): Promise<unknown | Response> {
     const initial_resolved = this.resolve({ model: this.normalizeModelId(ctx.input.model), mode: modality }, ctx.env);
     const { resolved, fallback_from, fallback_reason, fallback_media_type } = this.plan_text_execution(initial_resolved, ctx, modality);
-    const reasoning = resolved.model && (modality === "text" || modality === "stream")
+    const reasoning = resolved.model && modality === "text"
       ? resolve_model_reasoning(resolved.model, ctx.input)
       : undefined;
     this.attachResolvedModel(ctx, resolved.model, modality, { fallback_from, fallback_reason, fallback_media_type });
@@ -329,7 +329,7 @@ export class AIService extends Service {
   }
 
   /**
-   * 执行 CityModel 原生 LanguageModelV3 调用。
+   * 执行 CityModel LanguageModelV3 模型流调用。
    *
    * 路由、fallback、reasoning 和计费仍由 AIService 统一拥有；transport 模块只负责
    * 调用最终模型并编码 SSE，避免把 Provider 决策泄漏到客户端。

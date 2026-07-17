@@ -12,7 +12,7 @@ Downcity's AI service has **two independent pathways** sharing a single model re
                                     │
               ┌─────────────────────┴─────────────────────┐
               │                                           │
-         SDK Pathway                            OpenAI-Compatible Pathway
+      City SDK / CityModel Pathway              OpenAI-Compatible Pathway
   For User City / Agent CityModel            For curl / OpenAI SDK / compatible clients
               │                                           │
    POST /v1/ai/text               POST /v1/ai/chat/completions
@@ -20,13 +20,15 @@ Downcity's AI service has **two independent pathways** sharing a single model re
               │                         OpenAI-format body
               ▼                        { model, messages, stream }
    provider.text                                     │
-   provider.stream                                   ▼
-      (ai-sdk wrapper)                       provider.openai
-              │                         (passthrough or format conversion)
-              ▼                                    │
-         UIMessage                                ▼
-      UIMessageStream                          Response
-                                           (upstream raw response)
+   create_language_model                            ▼
+              │                             provider.openai
+              ▼                         (passthrough or format conversion)
+ UIMessage / LanguageModelV3StreamPart              │
+              │                                    ▼
+ client.ai.stream() converts locally             Response
+              │                           (upstream raw response)
+              ▼
+       UIMessageChunk
 ```
 
 ## Provider Pattern
@@ -35,7 +37,8 @@ Downcity's AI service has **two independent pathways** sharing a single model re
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { Provider, type OpenAICompatibleClientConfig, type Context, type AIProviderChargedResponse } from "@downcity/city";
 
-// OpenAI-compatible: override createClient to get default text / stream, no openai → auto-passthrough
+// OpenAI-compatible: createClient provides text and CityModel streaming;
+// no openai method means automatic passthrough.
 class DeepSeekProvider extends Provider {
   constructor() {
     super({
@@ -137,16 +140,17 @@ class PricedProvider extends Provider {
 const provider = new PricedProvider();
 ```
 
-For streams, an action may still return `charge` as a promise when the final credits value is only available after the upstream stream finishes:
+When a CityModel stream finishes, AIService passes the final `finish` part with
+usage to the model's `bill(ctx, output)` and settles the deferred charge. No
+separate Provider stream action is required:
 
 ```ts
-return {
-  response: stream.toUIMessageStreamResponse(),
-  charge: stream.totalUsage.then((usage) => ({
-    credits: priceUpstreamUsage(usage),
+protected bill(ctx: Context, output: unknown) {
+  return {
+    credits: priceLanguageModelFinish(output),
     note: "priced-provider stream",
-  })),
-};
+  };
+}
 ```
 
 ## Routes
@@ -154,7 +158,7 @@ return {
 | Route | Pathway |
 |---|---|
 | `POST /v1/ai/text` | SDK |
-| `POST /v1/ai/stream` | SDK |
+| `POST /v1/ai/stream` | CityModel LanguageModelV3 transport |
 | `POST /v1/ai/image/create` | SDK |
 | `POST /v1/ai/image/result` | SDK |
 | `POST /v1/ai/video` | SDK |

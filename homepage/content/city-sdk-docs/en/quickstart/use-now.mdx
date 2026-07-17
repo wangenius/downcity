@@ -12,7 +12,6 @@ import {
   Provider,
   type Context,
   type AIProviderChargedOutput,
-  type AIProviderChargedResponse,
 } from "@downcity/city";
 import type { UIMessage } from "ai";
 import Database from "better-sqlite3";
@@ -39,17 +38,6 @@ class EchoProvider extends Provider {
         role: "assistant",
         parts: [{ type: "text", text: `Echo: ${ctx.input.prompt}` }],
       },
-    };
-  }
-
-  async stream(ctx: Context): Promise<AIProviderChargedResponse> {
-    const { createUIMessageStreamResponse } = await import("ai");
-    return {
-      response: createUIMessageStreamResponse({
-        execute: async ({ writer }) => {
-          writer.write({ type: "text-delta", textDelta: `Echo: ${ctx.input.prompt}` });
-        },
-      }),
     };
   }
 }

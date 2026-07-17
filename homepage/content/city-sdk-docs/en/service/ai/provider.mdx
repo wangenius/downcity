@@ -7,7 +7,7 @@ description: Provider is an abstract base class for AI upstreams. Subclass it to
 
  ## Quick Start: OpenAI-compatible Text Provider
 
- Extend `Provider` and override `createClient` to get default `text` / `stream` actions:
+ Extend `Provider` and override `createClient` to get the default `text` action and CityModel stream runtime:
 
  ```ts
  import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
@@ -39,8 +39,7 @@ description: Provider is an abstract base class for AI upstreams. Subclass it to
 
  ```
  POST /v1/ai/text              → SDK path
- POST /v1/ai/stream            → SDK path
- POST /v1/ai/language-model/stream → native CityModel LanguageModelV3 path
+ POST /v1/ai/stream            → CityModel LanguageModelV3 path
  POST /v1/ai/chat/completions  → auto-passthrough to DeepSeek
  GET  /v1/ai/models            → model catalog
  ```
@@ -50,7 +49,7 @@ description: Provider is an abstract base class for AI upstreams. Subclass it to
 The default runtime created by `createClient()` uses `.chat()`. If a model must
 use Responses, Claude Messages, or another native protocol, override
 `create_language_model(ctx)` and return the correct `LanguageModelV3`.
-`text()`, `stream()`, and the native CityModel pathway all reuse this factory.
+`text()` and the CityModel stream pathway both reuse this factory.
 
 ## Model context window
 
@@ -98,13 +97,15 @@ await client.ai.text({
 
 AIService resolves model fallback first, then validates `reasoning_effort` against the final model. When the request omits it, AIService uses `default_effort`; when the model has no default, the upstream provider keeps its own default. Unsupported levels return `422`.
 
-The default OpenAI-compatible `text` / `stream` implementation converts the validated level into AI SDK `providerOptions.reasoningEffort`. Providers with different option shapes can override `build_reasoning_provider_options(ctx, model)`: Anthropic can map to `anthropic.thinking` / `anthropic.effort`, while Gemini can map to `google.thinkingConfig`. Custom actions should read the validated result with `read_resolved_reasoning(ctx)` instead of parsing the raw request again.
+The default OpenAI-compatible `text` action and CityModel stream runtime convert the validated level into AI SDK `providerOptions.reasoningEffort`. Providers with different option shapes can override `build_reasoning_provider_options(ctx, model)`: Anthropic can map to `anthropic.thinking` / `anthropic.effort`, while Gemini can map to `google.thinkingConfig`. Custom actions should read the validated result with `read_resolved_reasoning(ctx)` instead of parsing the raw request again.
 
 `/v1/ai/chat/completions` is already OpenAI-compatible, so it does not use `providerOptions`; the validated `reasoning_effort` remains in the request body for the custom `openai` action or automatic passthrough.
 
- ## Overriding text / stream
+ ## Overriding text
 
- If the default OpenAI-compatible implementation is not enough, override `text` / `stream` directly:
+ If the default OpenAI-compatible non-streaming implementation is not enough,
+override `text`. Model streaming no longer uses a Provider `stream` action;
+override `create_language_model(ctx)` to select another upstream protocol.
 
  ```ts
  import { Provider, type Context, type AIProviderChargedOutput } from "@downcity/city";
@@ -119,9 +120,6 @@ The default OpenAI-compatible `text` / `stream` implementation converts the vali
      // custom implementation
    }
 
-   async stream(ctx: Context) {
-     // custom implementation
-   }
  }
  ```
 
@@ -516,9 +514,9 @@ ai.use(deepseek.model({
 
  | Method | Description |
  |---|---|
- | `createClient` | Override when text/stream is needed; returns an OpenAI-compatible client |
+ | `createClient` | Override for text or CityModel streaming; returns an OpenAI-compatible client |
+ | `create_language_model` | Select the LanguageModelV3 used by `/v1/ai/stream` |
  | `text` | SDK text action (default from base class) |
- | `stream` | SDK stream action (default from base class) |
  | `image_create` | Create and start an image provider job |
  | `image_fetch` | Query image provider job state in the background and return the final result |
  | `video` | SDK video action |

@@ -216,7 +216,8 @@ const stream: ReadableStream<UIMessageChunk> = await client.ai.stream({
 });
 ```
 
-它不是 HTTP 原始字节流。SDK 会把 City 返回的 AI SDK UIMessage SSE body 解析成 chunk 对象。
+它不是 HTTP 原始字节流。SDK 使用 `CityModel` 请求 Federation 的
+`LanguageModelV3` 模型流，再在客户端转换成 chunk 对象。
 
 你可以按 chunk 消费：
 
@@ -225,7 +226,8 @@ const reader = stream.getReader();
 const first = await reader.read();
 ```
 
-City 侧的 stream handler 应该返回 AI SDK 的 `createUIMessageStreamResponse()` 或 `streamText().toUIMessageStreamResponse()` 结果。
+Federation 的 `/v1/ai/stream` 只返回标准模型事件，不负责生成 UIMessage。该转换由
+`client.ai.stream()` 在客户端完成。
 
 如果你想要一次性 JSON 结果，应该用 `text()`，不是 `stream()`。
 
@@ -453,7 +455,9 @@ try {
 }
 ```
 
-`client.ai.stream()` 有两个失败阶段：HTTP 状态不是 2xx 时和其他方法一样抛带 `status/body` 的错误；如果 HTTP 已经成功但响应体为空，或不是 AI SDK UIMessage stream，解析阶段会抛普通解析错误。
+`client.ai.stream()` 有两个失败阶段：HTTP 状态不是 2xx 时和其他方法一样抛带
+`status/body` 的错误；如果 HTTP 已经成功但响应体为空，或不是有效的 CityModel
+LanguageModelV3 stream，模型流解析阶段会抛普通错误。
 
 ### 401 / 403
 

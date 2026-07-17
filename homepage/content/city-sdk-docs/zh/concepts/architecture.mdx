@@ -92,8 +92,15 @@ City 本身不关心“翻译”或“支付”是什么业务，它只负责把
 User City.ai.text({ prompt: "hello", model: "deepseek-v4-flash" })
   -> POST /v1/ai/text
   -> Provider text action(ctx)
-  -> generateText / streamText (ai-sdk)
-  -> UIMessage / UIMessageStream
+  -> generateText (ai-sdk)
+  -> UIMessage
+
+Agent / client.ai.stream()
+  -> CityModel.doStream()
+  -> POST /v1/ai/stream
+  -> Provider create_language_model(ctx)
+  -> LanguageModelV3StreamPart
+  -> Agent SessionMutation 或客户端 UIMessageChunk
 ```
 
 ### OpenAI 兼容通路

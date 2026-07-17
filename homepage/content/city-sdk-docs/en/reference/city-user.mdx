@@ -216,7 +216,9 @@ const stream: ReadableStream<UIMessageChunk> = await client.ai.stream({
 });
 ```
 
-It is not the raw HTTP byte stream. The SDK parses the AI SDK UIMessage SSE body returned by City into chunk objects.
+It is not the raw HTTP byte stream. The SDK uses `CityModel` to request the
+Federation LanguageModelV3 stream, then converts those model parts into chunk
+objects on the client.
 
 You can consume it chunk by chunk:
 
@@ -225,7 +227,8 @@ const reader = stream.getReader();
 const first = await reader.read();
 ```
 
-The City-side stream handler should return the result of AI SDK `createUIMessageStreamResponse()` or `streamText().toUIMessageStreamResponse()`.
+Federation `/v1/ai/stream` returns standard model events and does not construct
+UIMessage output. `client.ai.stream()` performs that conversion on the client.
 
 If you want a single JSON result, use `text()` instead of `stream()`.
 
@@ -453,7 +456,10 @@ try {
 }
 ```
 
-`client.ai.stream()` can fail in two stages: when HTTP returns a non-2xx status, it throws the same `status/body` error; when HTTP succeeds but the body is empty or is not an AI SDK UIMessage stream, the stream parser throws a normal parsing error.
+`client.ai.stream()` can fail in two stages: when HTTP returns a non-2xx status,
+it throws the same `status/body` error; when HTTP succeeds but the body is empty
+or is not a valid CityModel LanguageModelV3 stream, model stream parsing throws
+a normal error.
 
 ### 401 / 403
 

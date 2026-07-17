@@ -26,6 +26,20 @@ function escape_seatbelt_string(value: string): string {
   return String(value || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
+function quote_posix_shell_value(value: string): string {
+  return `'${String(value || "").replace(/'/g, `'\\''`)}'`;
+}
+
+function build_macos_shell_command(
+  request: SandboxSpawnRequest,
+  env: NodeJS.ProcessEnv,
+): string {
+  const path_value = String(env.PATH || "").trim();
+  if (!path_value) return request.cmd;
+  // 关键点（中文）：login shell 会通过 `/etc/zprofile` 的 path_helper 重排 PATH，必须在其后恢复。
+  return `export PATH=${quote_posix_shell_value(path_value)}; ${request.cmd}`;
+}
+
 function build_tls_rules(): string[] {
   return [
     `(allow file-read* (literal "/System/Library/Keychains/SystemRootCertificates.keychain"))`,
@@ -102,15 +116,21 @@ export function build_macos_sandbox_env(
     value.endsWith(`${path.sep}Contents`) &&
     fs.existsSync(path.join(value, "Developer"))
   );
-  if (!env.DEVELOPER_DIR && xcode_contents_path) {
-    const developer_path = path.join(xcode_contents_path, "Developer");
+  if (xcode_contents_path) {
+    const developer_path = String(
+      env.DEVELOPER_DIR || path.join(xcode_contents_path, "Developer"),
+    );
     const developer_bin_path = path.join(developer_path, "usr", "bin");
     // 关键点（中文）
     // - `/usr/bin/git` 是 xcrun 入口，会尝试在真实用户临时目录写 lookup cache。
     // - 优先使用 Xcode 内真实工具目录，既消除警告，也不需要开放项目外写权限。
     env.DEVELOPER_DIR = developer_path;
-    env.PATH = [developer_bin_path, env.PATH]
-      .filter(Boolean)
+    env.PATH = [
+      developer_bin_path,
+      ...String(env.PATH || "")
+        .split(path.delimiter)
+        .filter((value) => value && value !== developer_bin_path),
+    ]
       .join(path.delimiter);
   }
   return env;
@@ -134,14 +154,14 @@ export async function spawn_macos_seatbelt(
     build_macos_seatbelt_profile(request),
     "utf-8",
   );
+  const env = build_macos_sandbox_env(request);
   const args = [
     "-f",
     profile_path,
     request.shell_path,
     request.login ? "-lc" : "-c",
-    request.cmd,
+    build_macos_shell_command(request, env),
   ];
-  const env = build_macos_sandbox_env(request);
   const child = request.terminal
     ? spawnPtyProcessHandle({
         command: "/usr/bin/sandbox-exec",

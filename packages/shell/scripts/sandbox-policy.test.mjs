@@ -99,8 +99,8 @@ test("macOS safe sandbox runs system Git through selected Xcode", {
     }, {
       cmd: "git --version",
       cwd: fixture.project_root,
-      shell: "/bin/sh",
-      login: false,
+      shell: "/bin/zsh",
+      login: true,
       sandbox: "safe",
       timeoutMs: 10_000,
     });

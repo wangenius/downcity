@@ -100,7 +100,7 @@ const result = await client
     text: "你好 Downcity",
   });
 
-const list = await client.service("translate").get("list");
+const list = await city.service("translate").get("list");
 ```
 
 ## 常见场景
@@ -181,8 +181,8 @@ AIService 不是另一套协议，而是 City 里一类更偏 AI 的 service。
 - `options.method: "GET" | "POST"`
 - `options.auth: ["user"] | ["admin"] | []`
 - `base.use(service)`
-- `client.service(id).action(name).invoke(input)`
-- `client.service(id).get(path, query?)`
+- `city.service(id).action(name).invoke(input)`
+- `city.service(id).get(path, query?)`
 
 ## 常见误解
 
@@ -200,7 +200,7 @@ AIService 不是另一套协议，而是 City 里一类更偏 AI 的 service。
 对产品端来说，它们最终都统一走：
 
 ```ts
-client.service("service_id").action("action_id").invoke(...)
+city.service("service_id").action("action_id").invoke(...)
 ```
 
 ### GET / POST 的差别不是语法装饰

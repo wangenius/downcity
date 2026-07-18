@@ -19,7 +19,7 @@ You can use it inside browsers, extensions, mobile apps, desktop apps, or your o
 
 The most important point is not the method list. `User City` unifies three kinds of product-side calls:
 
-- AI service: `client.ai.*`
+- AI service: `city.ai.*`
 - custom service: services you registered in City yourself
 - service: services registered into City by services, such as `accounts`, `usage`, or `payment`
 
@@ -31,18 +31,18 @@ So from the product side, `User City` is not only "the thing that calls models."
 import { City } from "@downcity/city";
 import type { UIMessageChunk } from "ai";
 
-const client = new City({
+const city = new City({
   role: "user",
   federation_url: "https://base.example.com",
   city_id: "city_xxx",
   user_token: "ub_xxx",
 });
 
-const catalog = await client.ai.listModels();
+const catalog = await city.ai.catalog();
 const model = catalog.get("deepseek-v4-flash");
 if (!model) throw new Error("model not found");
 
-const result = await client.ai.text({
+const result = await city.ai.text({
   model,
   prompt: "Write a welcome message",
 });
@@ -130,12 +130,12 @@ const user = new City({
 });
 ```
 
-## Why `ai.listModels()` Comes First
+## Why `ai.catalog()` Comes First
 
-`client.ai.listModels()` returns a `ModelCatalog`:
+`city.ai.catalog()` returns a `ModelCatalog`:
 
 ```ts
-const catalog = await client.ai.listModels();
+const catalog = await city.ai.catalog();
 
 catalog.get("deepseek-v4-flash");
 catalog.all();
@@ -145,12 +145,15 @@ catalog.forModality("stream");
 Recommended usage:
 
 ```ts
-const catalog = await client.ai.listModels();
+const catalog = await city.ai.catalog();
 const model = catalog.get("deepseek-v4-flash");
 if (!model) throw new Error("model not found");
 ```
 
-This keeps raw model IDs from scattering across your city code.
+This keeps raw model IDs from scattering across your product code.
+
+`model.price` contains Provider-supplied pricing display strings. It is for
+display only and does not represent the final charge.
 
 The catalog's `CityModel` is an AI SDK `LanguageModelV3` and can be passed directly to Agent or `streamText()`:
 
@@ -170,7 +173,7 @@ const model = catalog.get("gpt-5.6-sol");
 if (!model) throw new Error("model not found");
 const efforts = model?.reasoning?.efforts ?? [];
 
-await client.ai.text({
+await city.ai.text({
   model,
   prompt: "Analyze this problem",
   reasoning_effort: "high",
@@ -182,7 +185,7 @@ await client.ai.text({
 ## `ai.text()`
 
 ```ts
-const result = await client.ai.text({
+const result = await city.ai.text({
   model: catalog.get("deepseek-v4-flash"),
   prompt: "Write a welcome message",
 });
@@ -197,12 +200,12 @@ The input object is still intentionally open:
 - other fields are defined by the Provider `text` action resolved by `AIService`
 - the handler result should be a `UIMessage`
 
-If you call a custom service with a non-`UIMessage` result shape, use `client.service(...).action(...).invoke<T>()`.
+If you call a custom service with a non-`UIMessage` result shape, use `city.service(...).action(...).invoke<T>()`.
 
 ## `ai.stream()`
 
 ```ts
-const body = await client.ai.stream({
+const body = await city.ai.stream({
   model: catalog.get("deepseek-v4-flash"),
   prompt: "Stream a short paragraph",
 });
@@ -211,14 +214,14 @@ const body = await client.ai.stream({
 `ai.stream()` returns an AI SDK `UIMessageChunk` stream:
 
 ```ts
-const stream: ReadableStream<UIMessageChunk> = await client.ai.stream({
+const stream: ReadableStream<UIMessageChunk> = await city.ai.stream({
   prompt: "Stream a short paragraph",
 });
 ```
 
 It is not the raw HTTP byte stream. The SDK uses `CityModel` to request the
 Federation LanguageModelV3 stream, then converts those model parts into chunk
-objects on the client.
+objects in the SDK.
 
 You can consume it chunk by chunk:
 
@@ -228,7 +231,7 @@ const first = await reader.read();
 ```
 
 Federation `/v1/ai/stream` returns standard model events and does not construct
-UIMessage output. `client.ai.stream()` performs that conversion on the client.
+UIMessage output. `city.ai.stream()` performs that conversion in the SDK.
 
 If you want a single JSON result, use `text()` instead of `stream()`.
 
@@ -237,14 +240,14 @@ If you want a single JSON result, use `text()` instead of `stream()`.
 Image generation is a job API: create a job with `image_create()`, then poll it with `image_result()`. When the job succeeds, `result` is an AI SDK `UIMessage`. Use file parts inside `parts` to represent generated image files:
 
 ```ts
-const job = await client.ai.image_create({
+const job = await city.ai.image_create({
   prompt: "A fox standing in the snow",
   model: catalog.get("image-basic"),
   ratio: "1:1",
   count: 1,
 });
 
-const current = await client.ai.image_result({ job_id: job.job_id });
+const current = await city.ai.image_result({ job_id: job.job_id });
 if (current.status === "succeeded") {
   const image = current.result?.parts.find((part) => part.type === "file");
   console.log(image?.mediaType, image?.url);
@@ -258,7 +261,7 @@ Generated image file-part `url` values are returned exactly as the concrete Prov
 You can also use `messages` for conversational or reference-image workflows:
 
 ```ts
-const job = await client.ai.image_create({
+const job = await city.ai.image_create({
   model: "openai-image-basic",
   messages: [
     {
@@ -281,7 +284,7 @@ The low-level contract is intentionally small: the client sends `prompt` / `mess
 `tts()` and `asr()` keep open return types because audio input and output transport shapes vary more across cities:
 
 ```ts
-await client.ai.tts({
+await city.ai.tts({
   text: "Hello",
   voice: "alloy",
 });
@@ -291,10 +294,10 @@ If you need a stricter result shape, wrap it in a custom service action.
 
 ## Service List
 
-`client.listServices()` returns the registered service summaries for the current City:
+`city.listServices()` returns the registered service summaries for the current City:
 
 ```ts
-const services = await client.listServices();
+const services = await city.listServices();
 
 services[0];
 // {
@@ -328,26 +331,26 @@ const rewritten = await client
 This is a service added into City by an official package:
 
 ```ts
-const me = await client.service("accounts").get("me");
-const usage = await client.service("usage").get("me");
+const me = await city.service("accounts").get("me");
+const usage = await city.service("usage").get("me");
 ```
 
 ### Payment
 
-If you want the city code to think in terms of "payment methods" instead of hand-writing `service + action`, use:
+If you want product code to think in terms of "payment methods" instead of hand-writing `service + action`, use:
 
 ```ts
-const methods = await client.payment.methods();
+const methods = await city.payment.methods();
 
-const checkout = await client.payment.method("stripe").invoke({
+const checkout = await city.payment.method("stripe").invoke({
   topup_id: "topup_demo",
 });
 ```
 
 Here:
 
-- `client.payment.methods()` maps to `GET /v1/payment/methods`
-- `client.payment.method("stripe").invoke(...)` first reads the payment-method definition, then dispatches to `payment/checkout/create` with `method_id: "stripe"`
+- `city.payment.methods()` maps to `GET /v1/payment/methods`
+- `city.payment.method("stripe").invoke(...)` first reads the payment-method definition, then dispatches to `payment/checkout/create` with `method_id: "stripe"`
 
 You do not need a second protocol for services. Just remember:
 
@@ -381,15 +384,15 @@ const session = await guest.service("accounts").get("login/result", {
 ### usage
 
 ```ts
-const usage = await client.service("usage").get("me");
+const usage = await city.service("usage").get("me");
 ```
 
 ### payment
 
 ```ts
-const methods = await client.payment.methods();
+const methods = await city.payment.methods();
 
-const checkout = await client.payment.method("stripe").invoke({
+const checkout = await city.payment.method("stripe").invoke({
   topup_id: "topup_demo",
 });
 ```
@@ -398,14 +401,14 @@ const checkout = await client.payment.method("stripe").invoke({
 
 If what you want is model capability itself, prefer:
 
-- `client.ai.text()`
-- `client.ai.stream()`
-- `client.ai.image_create()` / `client.ai.image_result()`
+- `city.ai.text()`
+- `city.ai.stream()`
+- `city.ai.image_create()` / `city.ai.image_result()`
 
 If what you want is a business action, use:
 
-- `client.service(...).action(...).invoke()`
-- `client.service(...).get(...)`
+- `city.service(...).action(...).invoke()`
+- `city.service(...).get(...)`
 
 ## Custom Services
 
@@ -430,7 +433,7 @@ This is useful when:
 For actions registered with `method: "GET"`, use `get()` and pass query fields:
 
 ```ts
-const result = await client.service("accounts").get("login/result", {
+const result = await city.service("accounts").get("login/result", {
   login_id: "login_xxx",
 });
 ```
@@ -444,7 +447,7 @@ When `User City` receives a non-2xx HTTP response, it throws an `Error` with two
 
 ```ts
 try {
-  await client.ai.text({
+  await city.ai.text({
     model: "gpt-5.4",
     prompt: "Hello",
   });
@@ -456,7 +459,7 @@ try {
 }
 ```
 
-`client.ai.stream()` can fail in two stages: when HTTP returns a non-2xx status,
+`city.ai.stream()` can fail in two stages: when HTTP returns a non-2xx status,
 it throws the same `status/body` error; when HTTP succeeds but the body is empty
 or is not a valid CityModel LanguageModelV3 stream, model stream parsing throws
 a normal error.

@@ -73,7 +73,9 @@ The same route returns different visibility by identity:
 { "items": [
   { "id": "deepseek-v4-flash", "name": "DeepSeek V4 Flash",
     "description": "...", "modalities": ["text","stream"],
-    "tags": ["deepseek"], "meta": {},
+    "tags": ["deepseek"],
+    "price": ["Input: 1 credit / 1K tokens", "Output: 3 credits / 1K tokens"],
+    "meta": {},
     "reasoning": {
       "efforts": [
         { "id": "low", "name": "Low" },
@@ -88,7 +90,9 @@ The same route returns different visibility by identity:
 { "items": [
   { "id": "deepseek-v4-flash", "name": "DeepSeek V4 Flash",
     "description": "", "modalities": ["text","stream","openai"],
-    "tags": ["deepseek"], "meta": {},
+    "tags": ["deepseek"],
+    "price": ["Input: 1 credit / 1K tokens", "Output: 3 credits / 1K tokens"],
+    "meta": {},
     "env_requirements": [
       { "key": "DEEPSEEK_API_KEY", "description": "deepseek API Key", "required": true }
     ] }
@@ -129,9 +133,9 @@ City resolves the user and city from the bearer `user_token`. If the request bod
 This versioned LanguageModelV3 transport is internal to `CityModel`. It carries
 standard model prompts, function tools, reasoning, usage, and finish reasons as
 SSE events. Product code should use the `CityModel` returned by the model catalog
-instead of constructing transport requests manually. `client.ai.stream()` uses
-the same transport and converts model parts into `UIMessageChunk` objects on the
-client.
+instead of constructing transport requests manually. `city.ai.stream()` uses
+the same transport and converts model parts into `UIMessageChunk` objects in the
+SDK.
 
 ## `POST /v1/ai/chat/completions`
 

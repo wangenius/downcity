@@ -211,14 +211,14 @@ base.use(usageService());
 
 ## City 模型目录
 
-`User City` 的 `client.ai.listModels()` 返回 `ModelCatalog`。目录中的模型是 `CityModel`，可以直接用于 City 的 AI 调用，也可以传给支持 CityModel 的 Agent SDK：
+`User City` 的 `city.ai.catalog()` 返回 `ModelCatalog`。目录中的模型是 `CityModel`，可以直接用于 City 的 AI 调用，也可以传给支持 CityModel 的 Agent SDK：
 
 ```ts
-const catalog = await client.ai.listModels();
+const catalog = await city.ai.catalog();
 const model = catalog.get("deepseek-v4-flash");
 if (!model) throw new Error("model not found");
 
-await client.ai.text({
+await city.ai.text({
   model,
   prompt: "hello",
 });
@@ -227,12 +227,12 @@ await client.ai.text({
 ## OpenAI-compatible endpoint
 
 如果宿主需要继续使用自己的 AI SDK provider（例如 `createOpenAICompatible()` 或
-`createDeepSeek()`），直接使用 `client.ai.base_url`：
+`createDeepSeek()`），直接使用 `city.ai.base_url`：
 
 ```ts
 const provider = createOpenAICompatible({
   name: "downcity",
-  baseURL: client.ai.base_url,
+  baseURL: city.ai.base_url,
   apiKey: user_token,
 });
 

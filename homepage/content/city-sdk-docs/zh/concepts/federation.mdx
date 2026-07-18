@@ -56,7 +56,7 @@ const admin = new City({
 });
 
 // 产品前端：只拿 city_id + user_token，调用 service
-const client = new City({
+const city = new City({
   role: "user",
   federation_url: "https://base.example.com",
   city_id,

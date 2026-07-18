@@ -59,10 +59,17 @@ ai.use(deepseek.model({
   id: "deepseek-v4-flash",
   name: "DeepSeek V4 Flash",
   context_window: 128_000,
+  price: [
+    "输入：1 credit / 1K tokens",
+    "输出：3 credits / 1K tokens",
+  ],
 }));
 ```
 
 该值会通过 `/v1/ai/models` 返回给客户端。`@downcity/agent` 使用 City 模型时，会默认在上下文达到窗口的 80% 时触发 session compact，为 system、工具调用和本轮输出保留余量。未配置 `context_window` 的模型继续使用 Agent 的 128k 默认 compact 预算；自定义 `maxInputTokensApprox` 仍拥有最高优先级。
+
+`price` 同样会通过模型目录返回，仅用于产品展示。它是 Provider 自定义的字符串列表，
+不会参与实际扣费；实际扣费仍由 `bill(ctx, output)` 生成。
 
 ## 模型推理强度
 
@@ -87,7 +94,7 @@ ai.use(openai.model({
 这些档位会通过 `/v1/ai/models` 返回。调用方只传一个字段，值必须是当前模型 `reasoning.efforts[].id` 中的一项：
 
 ```ts
-await client.ai.text({
+await city.ai.text({
   model: "gpt-5.6-sol",
   prompt: "分析这个问题",
   reasoning_effort: "high",
@@ -178,7 +185,7 @@ UIMessage 通路只会从 `parts` 里的 `{ type: "file" }` 提取 `media.media_
 
 ## 图片 Provider
 
-`@downcity/city` 不内置 OpenAI、DeepSeek 或其他具体图片 Provider 构造器。City 包提供 `Provider` 抽象、`AIService` 注册机制，以及 `client.ai.image_create()` / `client.ai.image_result()` 的统一任务协议。
+`@downcity/city` 不内置 OpenAI、DeepSeek 或其他具体图片 Provider 构造器。City 包提供 `Provider` 抽象、`AIService` 注册机制，以及 `city.ai.image_create()` / `city.ai.image_result()` 的统一任务协议。
 
 图片任务存储由 `AIService` 负责：它内置声明 `async_jobs` 表，Federation 初始化 Service 时会自动建表。Provider 只负责创建上游任务、查询上游状态，并把上游响应归一化成固定协议返回。
 
@@ -359,7 +366,7 @@ for (const message of batch.messages) {
 调用端仍然保持统一：
 
 ```ts
-const job = await client.ai.image_create({
+const job = await city.ai.image_create({
   model: "image-basic",
   prompt: "A clean product photo of a ceramic mug",
   ratio: "1:1",
@@ -367,14 +374,14 @@ const job = await client.ai.image_create({
   count: 1,
 });
 
-const current = await client.ai.image_result({ job_id: job.job_id });
+const current = await city.ai.image_result({ job_id: job.job_id });
 ```
 
 如果任务还在 `queued` 或 `running`，前端按 `poll_after_ms` 继续调用 `image_result()`。`image_result()` 只读取 `async_jobs` 缓存；后台 Queue 会调用 `ai.image/fetch`，由 AIService 调 Provider 的 `image_fetch()` 抓取上游状态并写回 `async_jobs`。
 
 ## Provider 任务协议
 
-调用方只使用 `client.ai.image_create()` 和 `client.ai.image_result()`。Provider 实现侧通常只需要两个方法：
+调用方只使用 `city.ai.image_create()` 和 `city.ai.image_result()`。Provider 实现侧通常只需要两个方法：
 
 ```ts
 class ImageProvider extends Provider {

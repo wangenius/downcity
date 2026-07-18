@@ -37,11 +37,11 @@ pnpm add @downcity/city
 
 把它理解成三层最清楚：
 
-1. `client.ai.*`
+1. `city.ai.*`
    这是 AIService 的高层调用入口，适合 `text()`、`stream()`、`image()`、`video()` 这类 AI 能力。
-2. `client.service(name).action(name).invoke()`
+2. `city.service(name).action(name).invoke()`
    这是通用 Action 调用入口，适合自定义 service，也适合服务暴露出来的业务 Action。
-3. `client.service(name).get(path)`
+3. `city.service(name).get(path)`
    这是 GET Action 调用入口，适合 OAuth 轮询、列表查询、当前用户信息等读取型接口。
 
 也就是说，City 实际上统一承载了：
@@ -56,7 +56,7 @@ pnpm add @downcity/city
 ### 1. AI service
 
 ```ts
-const result = await client.ai.text({
+const result = await city.ai.text({
   model: "deepseek-v4-flash",
   prompt: "你好 Downcity",
 });
@@ -114,8 +114,8 @@ service 不是一套单独的协议。
 所以产品侧不需要学习两套调用方式。统一就是：
 
 ```ts
-client.service("service_id").action("action_id").invoke(...)
-client.service("service_id").get("path", query)
+city.service("service_id").action("action_id").invoke(...)
+city.service("service_id").get("path", query)
 ```
 
 ## `User City` 最小示例
@@ -123,17 +123,19 @@ client.service("service_id").get("path", query)
 ```ts
 import { City } from "@downcity/city";
 
-const client = new City({
+const city = new City({
   role: "user",
   federation_url: "https://base.example.com",
   city_id: "city_demo",
   user_token: "ub_xxx",
 });
 
-const models = await client.ai.listModels();
+const catalog = await city.ai.catalog();
+const model = catalog.get("deepseek-v4-flash");
+if (!model) throw new Error("model not found");
 
-const result = await client.ai.text({
-  model: models.primary(),
+const result = await city.ai.text({
+  model,
   prompt: "你好 Downcity",
 });
 ```
@@ -176,7 +178,7 @@ const token = await admin.tokens.apply({
   -> 业务后端用 Admin City 向 City 申请 user_token
   -> 后端返回 city_id + user_token
   -> 前端创建 User City
-  -> 前端开始调用 client.ai.* 或 client.service(...)
+  -> 前端开始调用 city.ai.* 或 city.service(...)
 ```
 
 这种模式适合你已经有成熟账号系统。
@@ -231,10 +233,10 @@ const reply = await user.ai.text({
 
 ## 自定义 service 与服务路由
 
-除了 `client.ai.*` 之外，产品和管理端都可以用 `service(name)` 走统一 `/v1/*` 路由：
+除了 `city.ai.*` 之外，产品和管理端都可以用 `service(name)` 走统一 `/v1/*` 路由：
 
 ```ts
-const session = await client.service("accounts").action("login").invoke({
+const session = await city.service("accounts").action("login").invoke({
   email: "user@example.com",
   password: "password123",
   city_id: "city_demo",
@@ -245,24 +247,24 @@ const session = await client.service("accounts").action("login").invoke({
 
 ```ts
 // 你自己的业务 service
-const draft = await client.service("writer").action("draft").invoke({
+const draft = await city.service("writer").action("draft").invoke({
   topic: "Downcity onboarding",
 });
 
 // accounts service
-const me = await client.service("accounts").get("me");
+const me = await city.service("accounts").get("me");
 
 // usage service
-const usage = await client.service("usage").get("me");
+const usage = await city.service("usage").get("me");
 
 // 先读支付方式
-const methods = await client.payment.methods();
+const methods = await city.payment.methods();
 
 // trusted-side route
 const payments = await admin.service("payment").get("payments");
 
 // 再按具体支付方式发起支付
-const checkout = await client.payment.method("stripe").invoke({
+const checkout = await city.payment.method("stripe").invoke({
   topup_id: "topup_demo",
 });
 ```

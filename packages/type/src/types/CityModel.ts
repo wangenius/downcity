@@ -52,6 +52,8 @@ export interface CityModelDescriptor {
   modalities: string[];
   /** 用于筛选或展示的模型标签。 */
   tags: string[];
+  /** 面向用户展示的价格说明列表；每一项由 Provider 自行定义展示文案。 */
+  price?: string[];
   /** 模型元数据，供宿主记录 provider、区域、套餐等扩展信息。 */
   meta: Record<string, unknown>;
   /** 模型公开的推理能力；未声明时表示不接受 `reasoning_effort`。 */

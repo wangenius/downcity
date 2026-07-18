@@ -16,27 +16,27 @@ test("City rejects Federation rpc URLs", async () => {
 })
 
 test("AIInvoker.base_url returns OpenAI-compatible endpoint", async () => {
-  const client = new City({
+  const city = new City({
     role: "user",
     federation_url: "https://api.example.com/base/",
     city_id: "city_demo",
     user_token: "ub_test",
   })
 
-  assert.equal(client.ai.base_url, "https://api.example.com/base/v1/ai")
+  assert.equal(city.ai.base_url, "https://api.example.com/base/v1/ai")
 })
 
 test("AIInvoker.text() posts to /v1/ai/text", async () => {
   const requests = []
   const msg = { id: "msg_1", role: "assistant", parts: [{ type: "text", text: "hello", state: "done" }] }
-  const client = new City({
+  const city = new City({
     role: "user",
     federation_url: "https://api.example.com/base/",
     city_id: "city_demo",
     user_token: "ub_test",
     fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
   })
-  const result = await client.ai.text({ model: "gpt-5.4", prompt: "hi" })
+  const result = await city.ai.text({ model: "gpt-5.4", prompt: "hi" })
   assert.deepEqual(result, msg)
   assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/text")
   assert.equal(requests[0].init.headers.authorization, "Bearer ub_test")
@@ -46,7 +46,7 @@ test("AIInvoker.text() posts to /v1/ai/text", async () => {
 test("AIInvoker.text() serializes reasoning_effort", async () => {
   const requests = []
   const msg = { id: "msg_1", role: "assistant", parts: [{ type: "text", text: "hello", state: "done" }] }
-  const client = new City({
+  const city = new City({
     role: "user",
     federation_url: "https://api.example.com/base/",
     city_id: "city_demo",
@@ -54,7 +54,7 @@ test("AIInvoker.text() serializes reasoning_effort", async () => {
     fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
   })
 
-  await client.ai.text({
+  await city.ai.text({
     model: "gpt-5.4",
     prompt: "hi",
     reasoning_effort: "high",
@@ -69,7 +69,7 @@ test("AIInvoker.text() serializes reasoning_effort", async () => {
 
 test("AIInvoker.image_create() posts to /v1/ai/image/create", async () => {
   const requests = []
-  const client = new City({
+  const city = new City({
     role: "user",
     federation_url: "https://api.example.com/base/",
     city_id: "city_demo",
@@ -80,7 +80,7 @@ test("AIInvoker.image_create() posts to /v1/ai/image/create", async () => {
     },
   })
 
-  const result = await client.ai.image_create({
+  const result = await city.ai.image_create({
     prompt: "draw a mug",
     model: "openai-gpt-image-1",
     size: "1024x1024",
@@ -100,7 +100,7 @@ test("AIInvoker.image_create() posts to /v1/ai/image/create", async () => {
 
 test("AIInvoker.image_result() posts to /v1/ai/image/result", async () => {
   const requests = []
-  const client = new City({
+  const city = new City({
     role: "user",
     federation_url: "https://api.example.com/base/",
     city_id: "city_demo",
@@ -111,7 +111,7 @@ test("AIInvoker.image_result() posts to /v1/ai/image/result", async () => {
     },
   })
 
-  const result = await client.ai.image_result({ job_id: "img_1" })
+  const result = await city.ai.image_result({ job_id: "img_1" })
 
   assert.deepEqual(result, { job_id: "img_1", status: "running", poll_after_ms: 2000 })
   assert.equal(requests[0].url, "https://api.example.com/base/v1/ai/image/result")
@@ -132,7 +132,7 @@ test("AIInvoker.text() serializes AI SDK provider tools with inputSchema", async
     required: ["cmd"],
     additionalProperties: false,
   }
-  const client = new City({
+  const city = new City({
     role: "user",
     federation_url: "https://api.example.com/base/",
     city_id: "city_demo",
@@ -140,7 +140,7 @@ test("AIInvoker.text() serializes AI SDK provider tools with inputSchema", async
     fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
   })
 
-  await client.ai.text({
+  await city.ai.text({
     model: "gpt-5.4",
     messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "run pwd" }] }],
     tools: [
@@ -181,35 +181,21 @@ test("User City delegates AI calls", async () => {
   assert.deepEqual(JSON.parse(requests[0].init.body), { model: "gpt-5.4", prompt: "hi" })
 })
 
-test("AIInvoker.listModels() returns ModelCatalog", async () => {
-  const client = new City({
+test("AIInvoker.catalog() returns ModelCatalog", async () => {
+  const city = new City({
     role: "user",
     federation_url: "https://api.example.com/base/",
     city_id: "city_demo", user_token: "ub_test",
     fetch: async () => json({ items: [
-      { id: "gpt-5.4", name: "GPT-5.4", description: "P", modalities: ["text", "stream"], tags: [], meta: {}, env: {} },
+      { id: "gpt-5.4", name: "GPT-5.4", description: "P", modalities: ["text", "stream"], tags: [], price: ["输入：1 credit / 1K tokens"], meta: {}, env: {} },
       { id: "claude", name: "Claude", description: "A", modalities: ["text"], tags: [], meta: {}, env: {} },
     ]}),
   })
-  const catalog = await client.ai.listModels()
+  const catalog = await city.ai.catalog()
   assert.equal(catalog.get("gpt-5.4").id, "gpt-5.4")
+  assert.deepEqual(catalog.get("gpt-5.4").price, ["输入：1 credit / 1K tokens"])
   assert.equal(catalog.forModality("stream").length, 1)
   assert.equal(catalog.forModality("text").length, 2)
-})
-
-test("AIInvoker.model(string) builds a correct ModelHandle", async () => {
-  const client = new City({
-    role: "user",
-    federation_url: "https://api.example.com/base/",
-    city_id: "city_demo",
-    user_token: "ub_test",
-    fetch: async () => json({ ok: true }),
-  })
-  const handle = client.ai.model("gpt-5.4")
-  assert.equal(handle.id, "gpt-5.4")
-  assert.equal(handle.name, "gpt-5.4")
-  assert.equal(handle.url(), "https://api.example.com/base/v1/ai")
-  assert.equal(handle.token, "ub_test")
 })
 
 test("AIInvoker.stream() converts CityModel parts into UIMessage chunks", async () => {
@@ -228,7 +214,7 @@ test("AIInvoker.stream() converts CityModel parts into UIMessage chunks", async 
       },
     },
   ]
-  const client = new City({
+  const city = new City({
     role: "user",
     federation_url: "https://api.example.com/base/", city_id: "city_demo", user_token: "ub_test",
     fetch: async (url, init) => {
@@ -239,7 +225,7 @@ test("AIInvoker.stream() converts CityModel parts into UIMessage chunks", async 
       })))
     },
   })
-  const stream = await client.ai.stream({
+  const stream = await city.ai.stream({
     model: "gpt-5.4",
     prompt: "hi",
     reasoning_effort: "high",
@@ -271,7 +257,7 @@ test("AIInvoker.stream() converts CityModel parts into UIMessage chunks", async 
 })
 
 test("User City listServices()", async () => {
-  const client = new City({
+  const city = new City({
     role: "user",
     federation_url: "https://api.example.com/base/",
     city_id: "p",
@@ -283,7 +269,7 @@ test("User City listServices()", async () => {
       ],
     }),
   })
-  assert.deepEqual(await client.listServices(), [
+  assert.deepEqual(await city.listServices(), [
     { id: "ai", name: "AI", env: [] },
     { id: "notes", name: "Notes", env: [{ key: "NOTES_KEY", description: "Notes API key", required: true }] },
   ])
@@ -291,10 +277,10 @@ test("User City listServices()", async () => {
 
 test("User City service() → ServiceInvoker", async () => {
   const requests = []
-  const client = new City({
+  const city = new City({
     role: "user",
     federation_url: "https://api.example.com/base/", city_id: "p", user_token: "t", fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) } })
-  const result = await client.service("notes").action("create").invoke({ title: "hello" })
+  const result = await city.service("notes").action("create").invoke({ title: "hello" })
   assert.deepEqual(result, { ok: true })
   assert.equal(requests[0].url, "https://api.example.com/base/v1/notes/create")
   assert.deepEqual(JSON.parse(requests[0].init.body), { title: "hello", city_id: "p" })
@@ -302,14 +288,14 @@ test("User City service() → ServiceInvoker", async () => {
 
 test("ServiceClient.get() appends query params for GET actions", async () => {
   const requests = []
-  const client = new City({
+  const city = new City({
     role: "user",
     federation_url: "https://api.example.com/base/",
     city_id: "p",
     user_token: "t",
     fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) },
   })
-  const result = await client.service("accounts").get("login/result", { login_id: "abc_123" })
+  const result = await city.service("accounts").get("login/result", { login_id: "abc_123" })
   assert.deepEqual(result, { ok: true })
   assert.equal(requests[0].url, "https://api.example.com/base/v1/accounts/login/result?login_id=abc_123")
   assert.equal(requests[0].init.method, "GET")
@@ -317,7 +303,7 @@ test("ServiceClient.get() appends query params for GET actions", async () => {
 
 test("User City payment.methods() reads the unified payment directory", async () => {
   const requests = []
-  const client = new City({
+  const city = new City({
     role: "user",
     federation_url: "https://api.example.com/base/",
     city_id: "p",
@@ -340,7 +326,7 @@ test("User City payment.methods() reads the unified payment directory", async ()
     },
   })
 
-  assert.deepEqual(await client.payment.methods(), [
+  assert.deepEqual(await city.payment.methods(), [
     {
       id: "stripe",
       type: "checkout",
@@ -358,7 +344,7 @@ test("User City payment.methods() reads the unified payment directory", async ()
 
 test("User City payment.method(id).invoke() dispatches to the unified payment checkout endpoint", async () => {
   const requests = []
-  const client = new City({
+  const city = new City({
     role: "user",
     federation_url: "https://api.example.com/base/",
     city_id: "p",
@@ -385,7 +371,7 @@ test("User City payment.method(id).invoke() dispatches to the unified payment ch
     },
   })
 
-  const method = client.payment.method("stripe")
+  const method = city.payment.method("stripe")
   assert.equal(method.id, "stripe")
   assert.equal((await method.describe()).service, "payment")
   assert.deepEqual(
@@ -559,6 +545,7 @@ test("Admin City listServices() / listModels() / instruction()", async () => {
               description: "model",
               modalities: ["text", "stream"],
               tags: [],
+              price: ["Input: 1 credit / 1K tokens"],
               meta: {},
               env_requirements: [{ key: "OPENAI_API_KEY", description: "key", required: true }],
             },
@@ -583,6 +570,7 @@ test("Admin City listServices() / listModels() / instruction()", async () => {
       description: "model",
       modalities: ["text", "stream"],
       tags: [],
+      price: ["Input: 1 credit / 1K tokens"],
       meta: {},
       env_requirements: [{ key: "OPENAI_API_KEY", description: "key", required: true }],
     },
@@ -607,7 +595,7 @@ function streamResponse(chunks) {
 test("AIInvoker fetch retries transient 'fetch failed' errors", async () => {
   let calls = 0
   const msg = { id: "m", role: "assistant", parts: [{ type: "text", text: "ok", state: "done" }] }
-  const client = new City({
+  const city = new City({
     role: "user",
     federation_url: "https://api.example.com/base/",
     city_id: "city_demo",
@@ -624,13 +612,13 @@ test("AIInvoker fetch retries transient 'fetch failed' errors", async () => {
       return json(msg)
     },
   })
-  const result = await client.ai.text({ model: "gpt-5.4", prompt: "hi" })
+  const result = await city.ai.text({ model: "gpt-5.4", prompt: "hi" })
   assert.deepEqual(result, msg)
   assert.equal(calls, 3)
 })
 
 test("AIInvoker fetch surfaces cause chain when retries exhausted", async () => {
-  const client = new City({
+  const city = new City({
     role: "user",
     federation_url: "https://api.example.com/base/",
     city_id: "city_demo",
@@ -645,7 +633,7 @@ test("AIInvoker fetch surfaces cause chain when retries exhausted", async () => 
   })
   let captured
   try {
-    await client.ai.text({ model: "gpt-5.4", prompt: "hi" })
+    await city.ai.text({ model: "gpt-5.4", prompt: "hi" })
   } catch (error) {
     captured = error
   }

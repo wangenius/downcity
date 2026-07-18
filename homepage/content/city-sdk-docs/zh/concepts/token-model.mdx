@@ -46,13 +46,13 @@ client 只携带 `user_token` 和 `city_id`，不接触 provider key，也不接
 `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` 用于管理 Federation：创建 city、管理 env、为某个 city 下的用户签发 `user_token`。Federation 首次启动时会自动生成并写入 Federation env。
 
 ```ts
-const client = new City({
+const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
 });
 
-const city = await client.cities.create({
+const city = await admin.cities.create({
   name: "Chrome Extension",
 });
 ```
@@ -62,7 +62,7 @@ const city = await client.cities.create({
 多个 client 可以归属同一个 city。签发 token 时明确写入 `city_id`：
 
 ```ts
-const user = await client.cities.tokens.apply({
+const user = await admin.cities.tokens.apply({
   city_id: city.city_id,
   user_id: "user_123",
   metadata: {

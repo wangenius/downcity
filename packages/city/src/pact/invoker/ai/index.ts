@@ -34,8 +34,8 @@ const PREFIX = "/v1/ai";
  *
  * 通过 User City .ai 访问：
  * ```ts
- * await client.ai.text({ model: "deepseek-v4-flash", prompt: "hello" });
- * const catalog = await client.ai.listModels();
+ * await city.ai.text({ model: "deepseek-v4-flash", prompt: "hello" });
+ * const catalog = await city.ai.catalog();
  * ```
  */
 export class AIInvoker {
@@ -43,17 +43,14 @@ export class AIInvoker {
   private readonly reqRaw: (path: string, init: RequestInitLike) => Promise<FetchResponseLike>;
   private readonly input: (input: UserServiceInput) => Record<string, unknown>;
   private readonly baseUrl: string;
-  private readonly token: string | undefined;
 
   constructor(opts: {
     baseUrl: string;
-    token?: string;
     requestJSON: <T>(path: string, init: RequestInitLike) => Promise<T>;
     requestRaw: (path: string, init: RequestInitLike) => Promise<FetchResponseLike>;
     buildInput: (input: UserServiceInput) => Record<string, unknown>;
   }) {
     this.baseUrl = opts.baseUrl;
-    this.token = opts.token;
     this.req = opts.requestJSON;
     this.reqRaw = opts.requestRaw;
     this.input = opts.buildInput;
@@ -124,29 +121,10 @@ export class AIInvoker {
     return this.post<UserAsrResult>("/asr", input);
   }
 
-  /** 获取模型目录 */
-  async listModels(): Promise<ModelCatalog> {
+  /** 获取当前用户可用的 CityModel 目录。 */
+  async catalog(): Promise<ModelCatalog> {
     const body = await this.req<{ items: CityModelDescriptor[] }>(`${PREFIX}/models`, { method: "GET" });
     return new ModelCatalog(body.items, (descriptor) => this.create_city_model(descriptor));
-  }
-
-  /**
-   * 获取指定模型的操作句柄。
-   *
-   * ```ts
-   * const ref = catalog.get("kimi-k2.6");
-   * const m = client.ai.model(ref);
-   * // 便捷调用
-   * const msg = await m.text({ messages: [...] });
-   * // 或自己接第三方 SDK
-   * const openai = new OpenAI({ baseURL: m.url(), apiKey: m.token });
-   * ```
-   */
-  model(ref: UserModelRef | string): ModelHandle {
-    if (typeof ref === "string") {
-      return new ModelHandle(this, ref, ref, this.base_url, this.token);
-    }
-    return new ModelHandle(this, ref.id, ref.name, this.base_url, this.token, ref.meta);
   }
 
   /** 将模型输入解析为绑定当前鉴权请求器的 CityModel。 */
@@ -277,7 +255,7 @@ export class AIInvoker {
 // ===================================================================
 
 /**
- * 模型目录（AIInvoker.listModels() 返回值）。
+ * 模型目录（AIInvoker.catalog() 返回值）。
  */
 export class ModelCatalog {
   private readonly byId: Map<string, UserModelRef>;
@@ -314,72 +292,4 @@ export class ModelCatalog {
 export function serializeModel(model: import("./types.js").UserModelInput | undefined): string | undefined {
   if (!model) return undefined;
   return typeof model === "string" ? model : model.id;
-}
-
-// ===================================================================
-// ModelHandle — 绑定模型 ID 的操作句柄
-// ===================================================================
-
-/**
- * 模型操作句柄。
- *
- * 两种使用方式：
- * 1. 便捷调用：m.text() / m.stream() — 走 server
- * 2. 接入其他 SDK：m.url() + m.modelName() + m.token — 自己拼
- *
- * 通过 `client.ai.model(ref)` 获取，ref 来自 `listModels()`。
- */
-export class ModelHandle {
-  /** 模型元数据（来自 server 的 PublicModel.meta） */
-  readonly meta: Record<string, unknown>;
-  /** Server AI 端点 */
-  readonly endpoint: string;
-  /** User auth token */
-  readonly token: string | undefined;
-
-  constructor(
-    private readonly ai: AIInvoker,
-    /** 模型 ID */
-    readonly id: string,
-    /** 模型展示名称 */
-    readonly name: string = id,
-    /** Server AI 端点 */
-    endpoint: string = "",
-    /** User auth token */
-    token?: string,
-    meta?: Record<string, unknown>,
-  ) {
-    this.endpoint = endpoint;
-    this.token = token;
-    this.meta = meta ?? {};
-  }
-
-  // ======== 便捷调用（走 server） ========
-
-  /** 流式生成 */
-  stream(input: Omit<UserServiceInput, "model">): Promise<UserStreamResult> {
-    return this.ai.stream({ ...input, model: this.id });
-  }
-
-  /** 文本生成 */
-  text(input: Omit<UserServiceInput, "model">): Promise<UserTextResult> {
-    return this.ai.text({ ...input, model: this.id });
-  }
-
-  /** 视频生成 */
-  video(input: Omit<UserServiceInput, "model">): Promise<UserVideoResult> {
-    return this.ai.video({ ...input, model: this.id });
-  }
-
-  // ======== 接入其他 SDK 的零配件 ========
-
-  /** Server AI 端点 URL */
-  url(): string {
-    return this.endpoint;
-  }
-
-  /** 模型名称（API 调用时的 model 参数值） */
-  modelName(): string {
-    return this.id;
-  }
 }

@@ -2,7 +2,7 @@
  * 图片 Provider。
  *
  * 关键点（中文）
- * - client.ai.image_create() / image_result() 的统一结果协议是 AI SDK UIMessage。
+ * - city.ai.image_create() / image_result() 的统一结果协议是 AI SDK UIMessage。
  * - AIService 使用内置 async_jobs 表持久化任务状态，Provider 不管理任务存储。
  * - image_create() 创建或启动上游任务；image_fetch() 从 AIService 注入的任务上下文读取 state 并查询上游结果。
  * - OpenAI / 302、Gemini、Luchi 三种图片 Provider 都继承 Provider 基类。

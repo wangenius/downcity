@@ -277,6 +277,6 @@ export interface ImagePluginOptions {
   image_result?: (
     input: ImagePluginJobResultInput,
   ) => Promise<ImagePluginJobResult> | ImagePluginJobResult;
-  /** 列出可用图片模型，通常传入 `async () => city.ai.listModels().then((catalog) => catalog.forModality("image"))`。 */
+  /** 列出可用图片模型，通常传入 `async () => city.ai.catalog().then((catalog) => catalog.forModality("image"))`。 */
   list_models?: () => Promise<ImagePluginModel[]> | ImagePluginModel[];
 }

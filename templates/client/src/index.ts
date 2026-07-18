@@ -139,12 +139,12 @@ function is_readline_closed_error(error: unknown): boolean {
 /**
  * 解析本地 Agent 使用的 City 模型。
  */
-async function resolve_agent_model(client: City<"user">, model_id: string | undefined): Promise<CityModel> {
+async function resolve_agent_model(city: City<"user">, model_id: string | undefined): Promise<CityModel> {
   const resolved_model_id = String(model_id ?? "").trim();
   if (!resolved_model_id) {
     throw new Error("必须配置 DOWNCITY_CLIENT_MODEL_ID 或 MODEL_ID，AIService 不会自动选择默认模型。");
   }
-  const catalog = await client.ai.listModels();
+  const catalog = await city.ai.catalog();
   const models = catalog.all();
   const model = catalog.get(resolved_model_id);
 
@@ -180,8 +180,8 @@ async function create_agent_session(config: ClientConfig, model: CityModel) {
 /**
  * 打印可用模型列表。
  */
-async function print_models(client: City<"user">): Promise<void> {
-  const catalog = await client.ai.listModels();
+async function print_models(city: City<"user">): Promise<void> {
+  const catalog = await city.ai.catalog();
   const models = catalog.all();
 
   if (models.length === 0) {
@@ -200,14 +200,14 @@ async function print_models(client: City<"user">): Promise<void> {
  * 通过 Downcity Agent SDK 执行一次文本请求。
  */
 async function request_text(input: {
-  client: City<"user">;
+  city: City<"user">;
   config: ClientConfig;
   session?: LocalAgentSession;
   prompt: string;
 }): Promise<LocalAgentSession> {
   const session = input.session ?? await create_agent_session(
     input.config,
-    await resolve_agent_model(input.client, input.config.model_id),
+    await resolve_agent_model(input.city, input.config.model_id),
   );
   const turn = await session.prompt({ query: input.prompt });
   const result = await turn.finished;
@@ -229,7 +229,7 @@ async function request_text(input: {
 async function main(): Promise<void> {
   const config = read_config();
   const user_token = await resolve_user_token(config);
-  const client = new City<"user">({
+  const city = new City<"user">({
     role: "user",
     federation_url: config.federation_url,
     city_id: config.city_id,
@@ -256,12 +256,12 @@ async function main(): Promise<void> {
       if (!prompt) continue;
       if (prompt === "/exit" || prompt === "/quit") break;
       if (prompt === "/models") {
-        await print_models(client);
+        await print_models(city);
         continue;
       }
 
       try {
-        session = await request_text({ client, config, session, prompt });
+        session = await request_text({ city, config, session, prompt });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         console.error(message);

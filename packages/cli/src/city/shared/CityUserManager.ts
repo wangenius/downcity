@@ -91,7 +91,7 @@ export class CityUserManager {
   }
 
   /**
-   * 创建当前有效 City user client。
+   * 创建当前有效 User City。
    */
   async createUserClient(input: ResolveCityUserInput = {}): Promise<{
     /**
@@ -100,9 +100,9 @@ export class CityUserManager {
     user: ResolvedCityUser;
 
     /**
-     * City user SDK client。
+     * 绑定当前用户身份的 City SDK 实例。
      */
-    client: City<"user">;
+    city: City<"user">;
   }> {
     const user = await this.resolveCurrentUser({
       ...input,
@@ -113,7 +113,7 @@ export class CityUserManager {
     }
     return {
       user,
-      client: new City({
+      city: new City({
         role: "user",
         federation_url: user.federation_url,
         city_id: user.city_id,
@@ -135,13 +135,13 @@ export class CityUserManager {
     user: ResolvedCityUser,
     session_user_id?: string,
   ): Promise<ResolvedCityUser> {
-    const client = new City({
+    const city = new City({
       role: "user",
       federation_url: user.federation_url,
       city_id: user.city_id,
       user_token: user.user_token,
     });
-    const result = await client.service("accounts").get<CityAccountsMeResult>("me");
+    const result = await city.service("accounts").get<CityAccountsMeResult>("me");
     const token_user_id = readString(result.user?.user_id);
     if (!token_user_id) {
       throw new Error("City user token resolved without a user_id. Run `city city login` again.");

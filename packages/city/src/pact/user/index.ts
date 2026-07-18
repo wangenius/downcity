@@ -41,7 +41,6 @@ export class UserPactAccess {
 
     this.ai = new AIInvoker({
       baseUrl: this.serverUrl,
-      token: this.token,
       requestJSON: (path, init) => this.json(path, init),
       requestRaw: (path, init) => this.raw(path, init),
       buildInput: (input) => this.buildInput(input),

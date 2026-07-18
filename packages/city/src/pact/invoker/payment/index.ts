@@ -2,8 +2,8 @@
  * Payment 用户端调用器。
  *
  * 关键说明（中文）
- * - `client.payment.methods()` 统一读取支付方式目录
- * - `client.payment.method("stripe").invoke(...)` 会自动注入 method_id
+ * - `city.payment.methods()` 统一读取支付方式目录
+ * - `city.payment.method("stripe").invoke(...)` 会自动注入 method_id
  * - 前端不再手写 provider service/action
  */
 

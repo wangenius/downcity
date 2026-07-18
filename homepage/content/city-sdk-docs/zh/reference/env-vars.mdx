@@ -57,7 +57,7 @@ class DeepSeekProvider extends Provider {
       name: "deepseek",
     });
     const result = await generateText({
-      model: client.chat("deepseek-v4-flash"),
+      model: city.chat("deepseek-v4-flash"),
       prompt: ctx.input.prompt,
     });
     return buildAssistantMessage(result.text, ctx, { finishReason: "stop" });

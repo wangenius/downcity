@@ -2,7 +2,7 @@
  * Agent 默认模型配置服务。
  *
  * 关键点（中文）
- * - 模型候选项唯一来源是当前 Federation user client 的 `ai.listModels()`。
+ * - 模型候选项唯一来源是当前 Federation User City 的 `ai.catalog()`。
  * - 只维护 Agent 配置中的 `execution.modelId`，不管理 Session 运行时模型。
  * - 配置更新在 Agent 下次启动或重启时解析为运行时模型实例。
  */
@@ -68,7 +68,7 @@ async function resolve_model_id(params: {
     if (!choices.some((choice) => choice.value === requested_model_id)) {
       throw new CliError({
         title: `Model not available: ${requested_model_id}`,
-        note: "目标模型不在当前 Federation user client 返回的对话模型中。",
+        note: "目标模型不在当前 Federation User City 返回的对话模型中。",
         fix: `downcity agent model ${params.project_root} --set <model-id>`,
       });
     }

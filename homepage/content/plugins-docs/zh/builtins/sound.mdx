@@ -16,7 +16,7 @@ import { SoundPlugin } from "@downcity/plugins";
 
 const sound = new SoundPlugin({
   list_models: async () => {
-    const catalog = await city.ai.listModels();
+    const catalog = await city.ai.catalog();
     return catalog.all().filter((model) =>
       model.modalities.includes("asr") || model.modalities.includes("tts")
     );

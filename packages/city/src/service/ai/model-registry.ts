@@ -82,6 +82,7 @@ export class AIModelRegistry {
         : {}),
       modalities: options.get_modalities(model),
       tags: model.tags ?? [],
+      ...(model.price ? { price: [...model.price] } : {}),
       meta: model.meta ?? {},
       ...(model.reasoning ? { reasoning: model.reasoning } : {}),
       ...(include_admin_fields

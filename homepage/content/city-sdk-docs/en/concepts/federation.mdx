@@ -54,7 +54,7 @@ const admin = new City({
 });
 
 // Product frontend: only holds city_id + user_token, calls services
-const client = new City({
+const city = new City({
   role: "user",
   federation_url: "https://base.example.com",
   city_id,

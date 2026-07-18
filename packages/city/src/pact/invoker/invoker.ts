@@ -1,7 +1,7 @@
 /**
  * Service / Action 调用器。
  *
- * client.service("ai").action("text").invoke({ prompt: "hello" })
+ * city.service("ai").action("text").invoke({ prompt: "hello" })
  *   → POST /v1/ai/text
  *
  * 如果设置了 city_id，自动注入到 POST body。

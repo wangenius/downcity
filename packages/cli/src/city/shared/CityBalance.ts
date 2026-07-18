@@ -25,8 +25,8 @@ const cityUserManager = new CityUserManager();
  * 读取当前 City user 的余额。
  */
 export async function readCurrentCityBalance(): Promise<CityBalanceAccount> {
-  const { user, client } = await cityUserManager.createUserClient();
-  const account = await client.service("balance").get<CityBalanceAccount>("me");
+  const { user, city } = await cityUserManager.createUserClient();
+  const account = await city.service("balance").get<CityBalanceAccount>("me");
   assertBalanceUserMatchesToken(account, user.user_id);
   return account;
 }
@@ -37,10 +37,10 @@ export async function readCurrentCityBalance(): Promise<CityBalanceAccount> {
 export async function rechargeCurrentCityUser(
   input: CityRechargeInput,
 ): Promise<CityRechargeResult> {
-  const { client } = await cityUserManager.createUserClient();
+  const { city } = await cityUserManager.createUserClient();
   const credits = normalizePositiveInteger(input.credits, "credits");
   const method_id = normalizeText(input.method_id) || DEFAULT_PAYMENT_METHOD_ID;
-  const topup = await client.service("balance").action("topups/create").invoke<CityBalanceTopup>({
+  const topup = await city.service("balance").action("topups/create").invoke<CityBalanceTopup>({
     credits,
     note: normalizeText(input.note) || "City user recharge",
     ref: normalizeText(input.ref),
@@ -49,7 +49,7 @@ export async function rechargeCurrentCityUser(
       method_id,
     },
   });
-  const checkout = await client.payment.method(method_id).invoke<CityCheckoutResult>({
+  const checkout = await city.payment.method(method_id).invoke<CityCheckoutResult>({
     topup_id: topup.topup_id,
   });
   const checkout_url = normalizeText(checkout.checkout_url);

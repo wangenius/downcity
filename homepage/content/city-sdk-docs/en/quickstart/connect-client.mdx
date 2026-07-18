@@ -3,23 +3,23 @@ title: Connect Client
 description: Call the Federation from a product client with User City.
 ---
 
-Product clients use `User City`. The common paths are `client.ai.*` for AIService and `client.service(id).action(name).invoke()` for custom services.
+Product clients use `User City`. The common paths are `city.ai.*` for AIService and `city.service(id).action(name).invoke()` for custom services.
 
 ```ts
 import { City } from "@downcity/city";
 
-const client = new City({
+const city = new City({
   role: "user",
   federation_url: "https://base.example.com",
   city_id: "city_xxx",
   user_token: "ub_xxx",
 });
 
-const catalog = await client.ai.listModels();
+const catalog = await city.ai.catalog();
 const model = catalog.get("gpt-5.4");
 if (!model) throw new Error("model not found");
 
-const result = await client.ai.text({
+const result = await city.ai.text({
   model,
   prompt: "Write a welcome message for the product",
 });
@@ -28,7 +28,7 @@ const result = await client.ai.text({
 If you already know the target model, select it directly from the directory:
 
 ```ts
-const body = await client.ai.stream({
+const body = await city.ai.stream({
   model: catalog.get("gpt-5.4"),
   prompt: "Stream a short paragraph",
 });

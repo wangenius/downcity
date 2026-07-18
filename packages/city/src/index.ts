@@ -199,7 +199,7 @@ export type {
   UserCityOptions,
 } from "./client/types.js";
 
-export { AIInvoker, ModelCatalog, ModelHandle } from "./pact/invoker/ai/index.js";
+export { AIInvoker, ModelCatalog } from "./pact/invoker/ai/index.js";
 export { CityModel } from "./pact/invoker/ai/CityModel.js";
 export { PaymentInvoker, PaymentMethodHandle } from "./pact/invoker/payment/index.js";
 export { ServiceClient, ActionClient } from "./pact/invoker/invoker.js";

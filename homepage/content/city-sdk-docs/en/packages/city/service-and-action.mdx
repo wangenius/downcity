@@ -83,7 +83,7 @@ const result = await client
     text: "Hello Downcity",
   });
 
-const list = await client.service("translate").get("list");
+const list = await city.service("translate").get("list");
 ```
 
 ## Common scenarios
@@ -129,8 +129,8 @@ writer.action("webhook", async () => {
 - `options.method: "GET" | "POST"`
 - `options.auth: ["user"] | ["admin"] | []`
 - `base.use(service)`
-- `client.service(id).action(name).invoke(input)`
-- `client.service(id).get(path, query?)`
+- `city.service(id).action(name).invoke(input)`
+- `city.service(id).get(path, query?)`
 
 ## Common misunderstandings
 
@@ -140,7 +140,7 @@ It eventually becomes a route, an auth boundary, a hook target, and a usage reco
 
 ### Official services and custom services do not need separate call patterns
 
-From the product side, both still go through `client.service("service_id").action("action_id").invoke(...)`.
+From the product side, both still go through `city.service("service_id").action("action_id").invoke(...)`.
 
 ### GET and POST are not cosmetic
 

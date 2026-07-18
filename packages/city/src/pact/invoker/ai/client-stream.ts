@@ -45,7 +45,7 @@ export async function create_client_ui_stream(
     : undefined;
   const prompt = typeof input.prompt === "string" ? input.prompt : undefined;
   if (!messages?.length && prompt === undefined) {
-    throw new TypeError("client.ai.stream() requires prompt or messages");
+    throw new TypeError("city.ai.stream() requires prompt or messages");
   }
   const reasoning_effort = read_reasoning_effort(input);
 
@@ -83,7 +83,7 @@ export async function create_client_ui_stream(
 /**
  * 将公开 stream 输入中的工具定义规范化为不带 execute 的 AI SDK ToolSet。
  *
- * `client.ai.stream()` 只负责一次模型流，不在 City SDK 内执行工具循环。
+ * `city.ai.stream()` 只负责一次模型流，不在 City SDK 内执行工具循环。
  */
 function create_client_tool_set(value: unknown): ToolSet | undefined {
   const entries = Array.isArray(value)

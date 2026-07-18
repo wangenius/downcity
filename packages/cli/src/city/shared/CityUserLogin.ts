@@ -99,8 +99,8 @@ function mapProvidersToOptions(items: AccountsProviderItem[]): AuthOption[] {
 }
 
 async function loadAuthOptions(federation_url: string): Promise<AuthOption[]> {
-  const client = new City({ role: "user", federation_url });
-  const accounts = client.service("accounts");
+  const city = new City({ role: "user", federation_url });
+  const accounts = city.service("accounts");
   const result = await accounts.get<{ items?: AccountsProviderItem[] }>("providers");
   return mapProvidersToOptions(result.items ?? []);
 }
@@ -145,8 +145,8 @@ async function emailLogin(input: CityLoginInput): Promise<CityUserSession | null
   const password = String(response.password || "");
   if (!email || !email.includes("@") || !password) return null;
 
-  const client = new City({ role: "user", federation_url: input.federation_url });
-  const accounts = client.service("accounts");
+  const city = new City({ role: "user", federation_url: input.federation_url });
+  const accounts = city.service("accounts");
   const started = await accounts.action("login/start").invoke<AuthStartResult>({
     provider: "email",
     city_id: input.city_id,
@@ -163,7 +163,7 @@ async function emailLogin(input: CityLoginInput): Promise<CityUserSession | null
     throw new Error(continued.error || "login failed");
   }
 
-  const result = await readLoginResult(client, started.login_id);
+  const result = await readLoginResult(city, started.login_id);
   if (!result || result.error || !result.user_token) {
     throw new Error(result?.error || "login failed: no token");
   }
@@ -193,8 +193,8 @@ async function emailRegister(input: CityLoginInput): Promise<CityUserSession | n
   if (!email || !email.includes("@")) throw new Error("invalid email");
   if (password.length < 8) throw new Error("password must be at least 8 characters");
 
-  const client = new City({ role: "user", federation_url: input.federation_url });
-  const accounts = client.service("accounts");
+  const city = new City({ role: "user", federation_url: input.federation_url });
+  const accounts = city.service("accounts");
   const registered = await accounts.action("register").invoke<RegisterResult>({
     email,
     password,
@@ -236,8 +236,8 @@ async function oauthAuth(
   input: CityLoginInput,
   provider: string,
 ): Promise<CityUserSession | null> {
-  const client = new City({ role: "user", federation_url: input.federation_url });
-  const accounts = client.service("accounts");
+  const city = new City({ role: "user", federation_url: input.federation_url });
+  const accounts = city.service("accounts");
   const started = await accounts.action("login/start").invoke<AuthStartResult>({
     provider,
     city_id: input.city_id,
@@ -260,7 +260,7 @@ async function oauthAuth(
     note: "Waiting for browser authorization...",
   });
 
-  const result = await pollLoginResult(client, started.login_id);
+  const result = await pollLoginResult(city, started.login_id);
   if (!result || result.error || !result.user_token) {
     throw new Error(result?.error || "OAuth failed");
   }
@@ -276,15 +276,15 @@ async function inputAuth(
   input: CityLoginInput,
   provider: string,
 ): Promise<CityUserSession | null> {
-  const client = new City({ role: "user", federation_url: input.federation_url });
-  const started = await client.service("accounts").action("login/start").invoke<AuthStartResult>({
+  const city = new City({ role: "user", federation_url: input.federation_url });
+  const started = await city.service("accounts").action("login/start").invoke<AuthStartResult>({
     provider,
     city_id: input.city_id,
   });
   if (started.error || started.status !== "done" || !started.login_id) {
     throw new Error(started.error || "login failed");
   }
-  const result = await readLoginResult(client, started.login_id);
+  const result = await readLoginResult(city, started.login_id);
   if (!result || result.error || !result.user_token) {
     throw new Error(result?.error || "login failed: no token");
   }
@@ -296,10 +296,10 @@ async function inputAuth(
   });
 }
 
-async function pollLoginResult(client: City, login_id: string): Promise<LoginPollResult | null> {
+async function pollLoginResult(city: City, login_id: string): Promise<LoginPollResult | null> {
   for (let index = 0; index < 180; index += 1) {
     try {
-      const result = await readLoginResult(client, login_id);
+      const result = await readLoginResult(city, login_id);
       if (result.error) return result;
       if (result.status === "done") return result;
     } catch {
@@ -310,8 +310,8 @@ async function pollLoginResult(client: City, login_id: string): Promise<LoginPol
   return { error: "login timed out" };
 }
 
-async function readLoginResult(client: City, login_id: string): Promise<LoginPollResult> {
-  return await client.service("accounts").get<LoginPollResult>("login/result", { login_id });
+async function readLoginResult(city: City, login_id: string): Promise<LoginPollResult> {
+  return await city.service("accounts").get<LoginPollResult>("login/result", { login_id });
 }
 
 function buildUserSession(input: CityLoginInput & {
@@ -348,13 +348,13 @@ async function readUserSessionFromToken(input: CityLoginInput & {
   user_id?: string;
   user_label?: string;
 }> {
-  const client = new City({
+  const city = new City({
     role: "user",
     federation_url: input.federation_url,
     city_id: input.city_id,
     user_token: input.user_token,
   });
-  const result = await client.service("accounts").get<AccountsMeResult>("me");
+  const result = await city.service("accounts").get<AccountsMeResult>("me");
   const user_id = readString(result.user?.user_id);
   const email = readString(result.profile?.email);
   const display_name = readString(result.profile?.display_name);

@@ -317,6 +317,8 @@ export abstract class Provider {
      context_window?: number;
      tags?: string[];
      meta?: Record<string, unknown>;
+     /** 面向用户展示的价格说明列表；不参与实际扣费计算。 */
+     price?: string[];
      reasoning?: CityModelReasoning;
      fallback?: ModelFallbackRule[];
      bill?: AIProviderBillFn;
@@ -357,6 +359,7 @@ export abstract class Provider {
        description: spec.description,
        context_window: spec.context_window,
        tags: spec.tags,
+       ...(spec.price ? { price: [...spec.price] } : {}),
        meta: spec.meta,
        reasoning: spec.reasoning,
        env: this.env,

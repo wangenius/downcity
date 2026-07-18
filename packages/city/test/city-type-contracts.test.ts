@@ -10,7 +10,6 @@ import type {
   CityModelDescriptor,
   City,
   ModelCatalog,
-  ModelHandle,
   PaymentMethodHandle,
   UserImageJobCreateResult,
   UserImageJobResult,
@@ -24,12 +23,12 @@ declare const provider_stream_result: CityProviderStreamResult;
 void provider_stream_call;
 void provider_stream_result;
 
-declare const client: City<"user">;
+declare const city: City<"user">;
 declare const admin: City<"admin">;
 declare const user_city: City<"user">;
 declare const admin_city: City<"admin">;
 
-const ai: AIInvoker = client.ai;
+const ai: AIInvoker = city.ai;
 
 const textResult = ai.text({ model: "gpt-5.4", prompt: "hello" });
 const textContract: Promise<UIMessage> = textResult;
@@ -65,7 +64,7 @@ const adminModelsContract: Promise<CityModelDescriptor[]> = adminModels;
 const adminInstruction = admin.instruction();
 const adminInstructionContract: Promise<string> = adminInstruction;
 
-const paymentMethods = client.payment.methods();
+const paymentMethods = city.payment.methods();
 const paymentMethodsContract: Promise<UserPaymentMethod[]> = paymentMethods;
 
 const cityPaymentMethodsContract: Promise<UserPaymentMethod[]> = user_city.payment.methods();
@@ -75,7 +74,7 @@ void cityPaymentMethodsContract;
 void cityAdminServicesContract;
 void cityInstructionContract;
 
-const paymentMethod: PaymentMethodHandle = client.payment.method("stripe");
+const paymentMethod: PaymentMethodHandle = city.payment.method("stripe");
 const paymentMethodDescribeContract: Promise<UserPaymentMethod> = paymentMethod.describe();
 const paymentMethodInvokeContract: Promise<{ checkout_url: string }> = paymentMethod.invoke<{
   checkout_url: string;
@@ -86,21 +85,17 @@ void paymentMethodDescribeContract;
 void paymentMethodInvokeContract;
 
 async function testCatalog() {
-  const catalog: ModelCatalog = await ai.listModels();
+  const catalog: ModelCatalog = await ai.catalog();
   const m = catalog.get("gpt-5.4");
   const all = catalog.all();
   const t = catalog.forModality("text");
   const reasoning_efforts = m?.reasoning?.efforts;
   const default_reasoning_effort = m?.reasoning?.default_effort;
   const context_window = m?.context_window;
-  void m; void all; void t; void reasoning_efforts; void default_reasoning_effort; void context_window;
+  const price = m?.price;
+  void m; void all; void t; void reasoning_efforts; void default_reasoning_effort; void context_window; void price;
 }
 void testCatalog();
-
-declare const handle: ModelHandle;
-
-// @ts-expect-error create 已移除，需由用户自己创建第三方 SDK client
-handle.create();
 
 // @ts-expect-error text 返回类型固定为 UIMessage
 ai.text<{ text: string }>({ prompt: "hello" });

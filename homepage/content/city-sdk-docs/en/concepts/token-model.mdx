@@ -32,7 +32,7 @@ Downcity uses `admin_secret_key` to manage Federation, and `user_token` to let e
 
 ## user_token
 
-`user_token` is the call credential used by the end user or product client. `Admin City` requests it from Federation using `city_id + user_id`.
+`user_token` is the call credential used by the end user or product. `Admin City` requests it from Federation using `city_id + user_id`.
 
 - `city_id`
 - `user_id`
@@ -46,13 +46,13 @@ The client only carries `user_token` and `city_id`. It never touches provider ke
 `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` is used to manage Federation: create cities, manage env, and issue `user_token` for users under a given city. Federation generates it automatically and writes it into Federation env on first startup.
 
 ```ts
-const client = new City({
+const admin = new City({
   role: "admin",
   federation_url: "https://base.example.com",
   admin_secret_key: process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
 });
 
-const city = await client.cities.create({
+const city = await admin.cities.create({
   name: "Chrome Extension",
 });
 ```
@@ -62,7 +62,7 @@ const city = await client.cities.create({
 Many clients can belong to the same city. When issuing a token, write `city_id` explicitly:
 
 ```ts
-const user = await client.cities.tokens.apply({
+const user = await admin.cities.tokens.apply({
   city_id: city.city_id,
   user_id: "user_123",
   metadata: {

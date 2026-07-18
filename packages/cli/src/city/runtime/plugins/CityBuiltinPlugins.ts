@@ -121,7 +121,7 @@ export async function createCityBuiltinPlugins(input: {
   /** 当前 Agent HTTP runtime 的监听 port。 */
   port?: number;
 }): Promise<BasePlugin[]> {
-  const { client } = await city_user_manager.createUserClient({
+  const { city } = await city_user_manager.createUserClient({
     env: input.env ?? process.env,
   });
 
@@ -133,7 +133,7 @@ export async function createCityBuiltinPlugins(input: {
     }),
     new ImagePlugin({
       list_models: async () => {
-        const catalog = await client.ai.listModels();
+        const catalog = await city.ai.catalog();
         return catalog.forModality("image").map((model): ImagePluginModel => ({
           id: model.id,
           name: model.name,
@@ -144,16 +144,16 @@ export async function createCityBuiltinPlugins(input: {
         }));
       },
       image_create: async (image_input: ImagePluginResolvedInput) =>
-        await client.ai.image_create({
+        await city.ai.image_create({
           ...image_input,
           model: require_model_id(image_input, "image_create"),
         }),
       image_result: async (image_input) =>
-        await client.ai.image_result(image_input),
+        await city.ai.image_result(image_input),
     }),
     new SoundPlugin({
       list_models: async () => {
-        const catalog = await client.ai.listModels();
+        const catalog = await city.ai.catalog();
         return catalog.all()
           .filter((model) =>
             model.modalities.includes("asr") || model.modalities.includes("tts")
@@ -168,12 +168,12 @@ export async function createCityBuiltinPlugins(input: {
           }));
       },
       asr: async (asr_input: SoundPluginAsrInput) =>
-        await client.ai.asr({
+        await city.ai.asr({
           ...asr_input,
           model: require_model_id(asr_input, "asr"),
         }),
       tts: async (tts_input: SoundPluginTtsInput) =>
-        await client.ai.tts({
+        await city.ai.tts({
           ...tts_input,
           model: require_model_id(tts_input, "tts"),
         }),

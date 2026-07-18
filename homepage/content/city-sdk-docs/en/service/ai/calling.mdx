@@ -6,7 +6,7 @@ description: SDK pathway (User City) and OpenAI-compatible pathway (curl / OpenA
 ## SDK Pathway
 
 ```ts
-const client = new City({
+const city = new City({
   role: "user",
   federation_url: "http://127.0.0.1:43127",
   city_id: "city_downcity",
@@ -14,32 +14,22 @@ const client = new City({
 });
 
 // List models
-const catalog = await client.ai.listModels();
+const catalog = await city.ai.catalog();
 
 // Text generation
-const result = await client.ai.text({
+const result = await city.ai.text({
   model: catalog.get("deepseek-v4-flash"),
   prompt: "Hello",
 });
 
 // Stream
-const stream = await client.ai.stream({
+const stream = await city.ai.stream({
   model: "deepseek-v4-flash",
   prompt: "Stream a text",
 });
-
-// ModelHandle - bind model, skip model on subsequent calls
-const handle = client.ai.model(catalog.get("deepseek-v4-flash"));
-const text = await handle.text({ prompt: "Hello" });
-const stream = await handle.stream({ prompt: "Continue" });
-
-// handle also carries endpoint + token for external SDKs
-handle.url()       // "http://127.0.0.1:43127/v1/ai"
-handle.modelName() // "deepseek-v4-flash"
-handle.token       // "ub_xxx"
 ```
 
-With `user_token`, `client.ai.listModels()` returns only models whose required runtime env is already configured. The same route called with `admin_secret_key` returns the full code-registered model list plus `env_requirements`.
+With `user_token`, `city.ai.catalog()` returns only models whose required runtime env is already configured. The same route called with `admin_secret_key` returns the full code-registered model list plus `env_requirements`.
 
 ## CityModel And Providers
 
@@ -50,11 +40,11 @@ The model catalog returns `CityModel` objects that implement AI SDK
 ```ts
 import { Agent } from "@downcity/agent";
 
-const catalog = await client.ai.listModels();
+const catalog = await city.ai.catalog();
 const model = catalog.get("deepseek-v4-flash");
 if (!model) throw new Error("model not found");
 
-await client.ai.text({
+await city.ai.text({
   model,
   prompt: "hello",
 });
@@ -66,7 +56,7 @@ const agent = new Agent({
 
 This path does not require product code to create an AI SDK provider. Agent calls
 `CityModel.doStream()` directly, and CityModel invokes Federation `/v1/ai/stream`.
-`client.ai.stream()` uses the same CityModel and only adds client-side conversion
+`city.ai.stream()` uses the same CityModel and only adds client-side conversion
 to `UIMessageChunk`. A Session with its own `AgentModel` instance takes priority.
 
 ## OpenAI-Compatible Pathway
@@ -81,7 +71,7 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 const provider = createOpenAICompatible({
   name: "downcity",
-  baseURL: client.ai.base_url,
+  baseURL: city.ai.base_url,
   apiKey: user_token,
 });
 
@@ -117,7 +107,7 @@ curl http://127.0.0.1:43127/v1/ai/chat/completions \
 ```ts
 // OpenAI SDK
 const openai = new OpenAI({
-  baseURL: client.ai.base_url,
+  baseURL: city.ai.base_url,
   apiKey: user_token,
 });
 await openai.chat.completions.create({
@@ -131,9 +121,9 @@ await openai.chat.completions.create({
 
 | Scenario | Pathway |
 |---|---|
-| Product code calls Fed text or stream generation | `client.ai.text()` / `client.ai.stream()` |
+| Product code calls Fed text or stream generation | `city.ai.text()` / `city.ai.stream()` |
 | Downcity Agent uses a Fed model | pass `CityModel` directly |
 | AI SDK ecosystem needs `LanguageModel` | pass `CityModel` directly |
 | OpenAI SDK, compatible clients, or curl debugging | `/v1/ai/chat/completions` |
-| Image, TTS, ASR, or video | City SDK methods such as `client.ai.image_create()` / `client.ai.tts()` / `client.ai.asr()` |
+| Image, TTS, ASR, or video | City SDK methods such as `city.ai.image_create()` / `city.ai.tts()` / `city.ai.asr()` |
 | Non-Fed model APIs | create the provider in product code |

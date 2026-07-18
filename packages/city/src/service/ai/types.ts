@@ -148,6 +148,8 @@ export interface ModelConfig {
   context_window?: number;
   /** 模型标签 */
   tags?: string[];
+  /** 面向用户展示的价格说明列表；不参与实际扣费计算。 */
+  price?: string[];
   /** 模型元数据 */
   meta?: Record<string, unknown>;
   /** 模型支持的推理强度配置。 */

@@ -3,13 +3,13 @@ title: Service Call Model
 description: "How @downcity/city unifies AI service, custom service, and service calls."
 ---
 
-The easiest mistake with City is to notice only `client.ai.*` and assume the access layer is just "an AI SDK."
+The easiest mistake with City is to notice only `city.ai.*` and assume the access layer is just "an AI SDK."
 
 The more accurate model is:
 
-- `client.ai.*`: AI service calls
-- `client.service(...).action(...).invoke()`: generic Action calls
-- `client.service(...).get(...)`: read-oriented GET Action calls
+- `city.ai.*`: AI service calls
+- `city.service(...).action(...).invoke()`: generic Action calls
+- `city.service(...).get(...)`: read-oriented GET Action calls
 
 ## AI service
 
@@ -29,7 +29,7 @@ This is a business service you registered into City yourself.
 For example:
 
 ```ts
-const result = await client.service("rewrite").action("formal").invoke({
+const result = await city.service("rewrite").action("formal").invoke({
   prompt: "Rewrite this in a more professional tone",
 });
 ```
@@ -54,11 +54,11 @@ For example:
 So the calling pattern stays the same:
 
 ```ts
-await client.service("accounts").action("login/start").invoke(...)
-await client.service("accounts").action("login/continue").invoke(...)
-await client.service("accounts").get("login/result", ...)
-await client.service("usage").get("me")
-await client.service("payment").get("methods")
+await city.service("accounts").action("login/start").invoke(...)
+await city.service("accounts").action("login/continue").invoke(...)
+await city.service("accounts").get("login/result", ...)
+await city.service("usage").get("me")
+await city.service("payment").get("methods")
 ```
 
 ## Why this unified model matters

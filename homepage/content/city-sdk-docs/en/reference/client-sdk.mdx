@@ -29,7 +29,7 @@ When you expose Federation from your own local HTTP server, products still use n
 
 ```ts
 // City side
-const client = new City({
+const city = new City({
   role: "user",
   federation_url,
   city_id,
@@ -37,32 +37,32 @@ const client = new City({
 });
 
 // AI Service
-await client.ai.text({ prompt: "hello", model: "deepseek-v4-flash" });
-await client.ai.stream({ prompt: "hello", model: "deepseek-v4-flash" });
+await city.ai.text({ prompt: "hello", model: "deepseek-v4-flash" });
+await city.ai.stream({ prompt: "hello", model: "deepseek-v4-flash" });
 
 // Native AI SDK LanguageModelV3
-const catalog = await client.ai.listModels();
+const catalog = await city.ai.catalog();
 const language_model = catalog.get("deepseek-v4-flash");
 if (!language_model) throw new Error("model not found");
 await streamText({ model: language_model, prompt: "hello" });
 
 // Custom Service
-await client.service("translate").action("zh2en").invoke({ text: "hello" });
-const login = await client.service("accounts").action("login/start").invoke({
+await city.service("translate").action("zh2en").invoke({ text: "hello" });
+const login = await city.service("accounts").action("login/start").invoke({
   provider: "email",
 });
-await client.service("accounts").action("login/continue").invoke({
+await city.service("accounts").action("login/continue").invoke({
   login_id: login.login_id,
   input: { email: "a@b.com", password: "..." },
 });
-const session = await client.service("accounts").get("login/result", { login_id: login.login_id });
+const session = await city.service("accounts").get("login/result", { login_id: login.login_id });
 
 // GET action
-const items = await client.service("cities").get("list");
+const items = await city.service("cities").get("list");
 
 // Payment methods
-const methods = await client.payment.methods();
-const checkout = await client.payment.method("stripe").invoke({
+const methods = await city.payment.methods();
+const checkout = await city.payment.method("stripe").invoke({
   topup_id: "topup_demo",
 });
 
@@ -79,8 +79,8 @@ await admin.service("cities").action("create").invoke({ name: "My App" });
 
 | Scenario | Recommended path |
 |---|---|
-| Product code calls Fed AIService directly | `client.ai.text()` / `client.ai.stream()` |
-| Downcity Agent uses a Fed model | get a `CityModel` from `client.ai.listModels()` and pass it to Agent |
+| Product code calls Fed AIService directly | `city.ai.text()` / `city.ai.stream()` |
+| Downcity Agent uses a Fed model | get a `CityModel` from `city.ai.catalog()` and pass it to Agent |
 | AI SDK ecosystem needs `LanguageModel` | use the `CityModel` returned by the catalog directly |
 | OpenAI SDK, curl, or compatible clients | `/v1/ai/chat/completions` |
 | Non-Fed model APIs | create the provider in product code |
@@ -91,9 +91,9 @@ model pathway. Federation still chooses the real upstream Provider protocol.
 
 ## Relationship between service, service, and AI service
 
-- AI service: called through `client.ai.*`
-- custom service: called through `client.service(name)...`
-- service: still called through `client.service(name)...`, but the service comes from a service
+- AI service: called through `city.ai.*`
+- custom service: called through `city.service(name)...`
+- service: still called through `city.service(name)...`, but the service comes from a service
 
 Examples:
 
@@ -114,7 +114,7 @@ Both paths end in the same user context:
 ```txt
 federation_url + city_id + user_token
   -> new City({ role: "user", ... })
-  -> client.ai.* or client.service(...)
+  -> city.ai.* or city.service(...)
 ```
 
 ## Which page to read next

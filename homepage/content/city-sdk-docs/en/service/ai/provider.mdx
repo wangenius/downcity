@@ -60,10 +60,18 @@ ai.use(deepseek.model({
   id: "deepseek-v4-flash",
   name: "DeepSeek V4 Flash",
   context_window: 128_000,
+  price: [
+    "Input: 1 credit / 1K tokens",
+    "Output: 3 credits / 1K tokens",
+  ],
 }));
 ```
 
 AIService returns this value through `/v1/ai/models`. When `@downcity/agent` runs a City model, its default session compaction starts at 80% of the configured window, leaving room for system messages, tools, and the current output. Models without `context_window` keep the Agent's existing 128k compaction budget, while an explicit `maxInputTokensApprox` still takes precedence.
+
+`price` is also returned in the model catalog for product display. It is a
+Provider-defined string list and does not participate in charging; actual
+charges still come from `bill(ctx, output)`.
 
 ## Model reasoning effort
 
@@ -88,7 +96,7 @@ ai.use(openai.model({
 These levels are returned by `/v1/ai/models`. A caller sends one field whose value must match an entry in `reasoning.efforts[].id`:
 
 ```ts
-await client.ai.text({
+await city.ai.text({
   model: "gpt-5.6-sol",
   prompt: "Analyze this problem",
   reasoning_effort: "high",
@@ -180,7 +188,7 @@ If no fallback is configured, or no rule matches, AIService keeps the original m
 
 ## Image Providers
 
-`@downcity/city` does not ship concrete image provider factories. City provides the `Provider` abstraction, `AIService` registration, and the unified `client.ai.image_create()` / `client.ai.image_result()` job contract.
+`@downcity/city` does not ship concrete image provider factories. City provides the `Provider` abstraction, `AIService` registration, and the unified `city.ai.image_create()` / `city.ai.image_result()` job contract.
 
 Image job storage is owned by `AIService`: it declares the built-in `async_jobs` table, and Federation creates that table automatically during service initialization. A Provider only creates upstream work, queries upstream status, and normalizes upstream responses into the fixed protocol.
 
@@ -361,7 +369,7 @@ for (const message of batch.messages) {
 The client stays provider-neutral:
 
 ```ts
-const job = await client.ai.image_create({
+const job = await city.ai.image_create({
   model: "image-basic",
   prompt: "A clean product photo of a ceramic mug",
   ratio: "1:1",
@@ -369,14 +377,14 @@ const job = await client.ai.image_create({
   count: 1,
 });
 
-const current = await client.ai.image_result({ job_id: job.job_id });
+const current = await city.ai.image_result({ job_id: job.job_id });
 ```
 
 If the task is still `queued` or `running`, the frontend should call `image_result()` again after `poll_after_ms`. `image_result()` only reads the `async_jobs` cache. The background Queue calls `ai.image/fetch`; AIService then calls the Provider's `image_fetch()` to fetch upstream state and store it back into `async_jobs`.
 
 ## Provider Job Contract
 
-Callers only use `client.ai.image_create()` and `client.ai.image_result()`. Provider implementations normally use two methods:
+Callers only use `city.ai.image_create()` and `city.ai.image_result()`. Provider implementations normally use two methods:
 
 ```ts
 class ImageProvider extends Provider {

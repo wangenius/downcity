@@ -87,6 +87,7 @@ Content-Type: application/json
       "description": "DeepSeek text model",
       "modalities": ["text", "stream"],
       "tags": ["deepseek", "text"],
+      "price": ["输入：1 credit / 1K tokens", "输出：3 credits / 1K tokens"],
       "meta": {},
       "reasoning": {
         "efforts": [
@@ -111,6 +112,7 @@ Content-Type: application/json
       "description": "",
       "modalities": ["text", "stream", "openai"],
       "tags": ["deepseek", "text"],
+      "price": ["输入：1 credit / 1K tokens", "输出：3 credits / 1K tokens"],
       "meta": {},
       "env_requirements": [
         {
@@ -170,7 +172,7 @@ ID 和标准模型调用参数：
 
 Federation 通过 SSE 返回版本化 `LanguageModelV3StreamPart`。产品代码不应手写该
 transport 请求：把模型目录返回的 `CityModel` 交给 Agent / AI SDK，或者调用
-`client.ai.stream()`。后者在客户端将同一模型流转换成 `UIMessageChunk`。
+`city.ai.stream()`。后者在客户端将同一模型流转换成 `UIMessageChunk`。
 
 AI 请求的用户和 city 上下文由 bearer `user_token` 解析。请求体里可以不传
 `city_id`；如果传了，必须与 token 绑定的 city 一致。

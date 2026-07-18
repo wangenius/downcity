@@ -226,7 +226,7 @@ const agent = new Agent({
     new ImagePlugin({
       default_model: "image-model-id",
       list_models: async () => {
-        const catalog = await city.ai.listModels();
+        const catalog = await city.ai.catalog();
         return catalog.forModality("image");
       },
       image_create: (input) => city.ai.image_create(input),

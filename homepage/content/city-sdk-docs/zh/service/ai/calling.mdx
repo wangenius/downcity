@@ -8,7 +8,7 @@ description: 通过 User City 和第三方工具调用 AIService。
 ```ts
 import { City } from "@downcity/city";
 
-const client = new City({
+const city = new City({
   role: "user",
   federation_url,
   city_id,
@@ -16,15 +16,15 @@ const client = new City({
 });
 
 // 获取模型目录
-const catalog = await client.ai.listModels();
+const catalog = await city.ai.catalog();
 const model = catalog.get("deepseek-v4-flash");
 
 // 文本生成
-const msg = await client.ai.text({ prompt: "hello", model });
+const msg = await city.ai.text({ prompt: "hello", model });
 console.log(msg.parts[0].text);
 
 // 流式生成
-const stream = await client.ai.stream({ prompt: "hello", model });
+const stream = await city.ai.stream({ prompt: "hello", model });
 const reader = stream.getReader();
 while (true) {
   const { done, value } = await reader.read();
@@ -33,7 +33,7 @@ while (true) {
 }
 ```
 
-`client.ai.listModels()` 在 `user_token` 身份下只返回当前已经满足运行时 `env` 的模型；同一条路由在 `admin_secret_key` 身份下会返回全部代码注册模型和它们的 `env_requirements`。
+`city.ai.catalog()` 在 `user_token` 身份下只返回当前已经满足运行时 `env` 的模型；同一条路由在 `admin_secret_key` 身份下会返回全部代码注册模型和它们的 `env_requirements`。
 
 ## CityModel 和 provider 的关系
 
@@ -43,11 +43,11 @@ while (true) {
 ```ts
 import { Agent } from "@downcity/agent";
 
-const catalog = await client.ai.listModels();
+const catalog = await city.ai.catalog();
 const model = catalog.get("deepseek-v4-flash");
 if (!model) throw new Error("model not found");
 
-await client.ai.text({
+await city.ai.text({
   model,
   prompt: "hello",
 });
@@ -58,7 +58,7 @@ const agent = new Agent({
 ```
 
 这条路径不需要产品侧创建 AI SDK provider。Agent 直接调用 `CityModel.doStream()`，
-CityModel 请求 Federation 的 `/v1/ai/stream`。`client.ai.stream()` 也使用同一个
+CityModel 请求 Federation 的 `/v1/ai/stream`。`city.ai.stream()` 也使用同一个
 CityModel，只在客户端额外转换成 `UIMessageChunk`。Session 如有自己的
 `AgentModel` 实例会优先使用。
 
@@ -72,7 +72,7 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 const provider = createOpenAICompatible({
   name: "downcity",
-  baseURL: client.ai.base_url,
+  baseURL: city.ai.base_url,
   apiKey: user_token,
 });
 
@@ -102,11 +102,11 @@ POST /v1/ai/chat/completions
 
 | 场景 | 推荐方式 |
 |---|---|
-| 产品代码直接请求 Fed 文本或流式生成 | `client.ai.text()` / `client.ai.stream()` |
+| 产品代码直接请求 Fed 文本或流式生成 | `city.ai.text()` / `city.ai.stream()` |
 | Downcity Agent 使用 Fed 模型 | 直接传 `CityModel` |
 | AI SDK 生态需要 `LanguageModel` | 直接传 `CityModel` |
 | OpenAI SDK、curl 或兼容客户端调试 | `/v1/ai/chat/completions` |
-| 图片、TTS、ASR、video | `client.ai.image_create()` / `client.ai.tts()` / `client.ai.asr()` 等 City SDK 方法 |
+| 图片、TTS、ASR、video | `city.ai.image_create()` / `city.ai.tts()` / `city.ai.asr()` 等 City SDK 方法 |
 | 使用非 Fed 模型 API | 产品侧自己创建对应 provider |
 
 ### curl
@@ -123,7 +123,7 @@ curl http://127.0.0.1:43127/v1/ai/chat/completions \
 import OpenAI from "openai";
 
 const openai = new OpenAI({
-  baseURL: client.ai.base_url,
+  baseURL: city.ai.base_url,
   apiKey: user_token,
 });
 

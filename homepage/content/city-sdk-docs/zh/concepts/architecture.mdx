@@ -95,7 +95,7 @@ User City.ai.text({ prompt: "hello", model: "deepseek-v4-flash" })
   -> generateText (ai-sdk)
   -> UIMessage
 
-Agent / client.ai.stream()
+Agent / city.ai.stream()
   -> CityModel.doStream()
   -> POST /v1/ai/stream
   -> Provider stream(ctx, call)
@@ -106,7 +106,7 @@ Agent / client.ai.stream()
 ### OpenAI 兼容通路
 
 给 OpenAI SDK、curl 和其他兼容客户端调用。Downcity Agent 使用 Fed 模型时，
-可以直接接收 `client.ai.listModels()` 返回的 `CityModel`：
+可以直接接收 `city.ai.catalog()` 返回的 `CityModel`：
 
 ```txt
 POST /v1/ai/chat/completions

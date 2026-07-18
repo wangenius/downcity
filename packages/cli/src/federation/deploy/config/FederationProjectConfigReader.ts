@@ -1,37 +1,35 @@
 /**
- * City 项目配置读取器。
+ * Federation 项目配置读取器。
  *
- * 关键点（中文）
- * - `federation.json` 保存可提交的部署意图：type、name、target、entry、resources。
- * - Cloudflare account、D1 id、Worker URL 等部署状态不进入项目配置。
- * - 部署状态不写回 `federation.json`，避免用户手写协议被机器污染。
+ * 关键说明（中文）
+ * - 配置采用严格的新结构，不读取旧的 City / runtime 字段。
+ * - 目标默认值集中在这里，模板和部署器消费同一份规范化配置。
+ * - 运行状态不写回项目配置，统一进入系统级 Federation registry。
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { CliError } from "@/shared/CliError.js";
 import type {
+  FederationDeploymentConfig,
+  FederationDeploymentScriptsConfig,
+  FederationDeploymentTarget,
   FederationProjectConfig,
   FederationProjectConfigFile,
-  FederationProjectD1ResourceConfig,
-  FederationProjectQueueResourceConfig,
   FederationProjectResourcesConfig,
-  FederationProjectStorageResourceConfig,
 } from "@/federation/types/FederationProjectConfig.js";
 
 const FEDERATION_CONFIG_FILE_NAME = "federation.json";
 
-/**
- * 读取指定目录下的 City 项目配置。
- */
-export function readFederationProjectConfig(dir: string): FederationProjectConfigFile {
+/** 读取并校验指定目录中的 `federation.json`。 */
+export function read_federation_project_config(dir: string): FederationProjectConfigFile {
   const project_dir = resolve(String(dir || "."));
   const config_path = join(project_dir, FEDERATION_CONFIG_FILE_NAME);
   if (!existsSync(config_path)) {
     throw new CliError({
-      title: "City project config not found",
+      title: "Federation project config not found",
       note: `Expected ${config_path}`,
-      fix: "Create federation.json in the City project, then run city deploy.",
+      fix: "Run `fed create` or add a valid federation.json to the project.",
     });
   }
 
@@ -49,221 +47,159 @@ export function readFederationProjectConfig(dir: string): FederationProjectConfi
   return {
     project_dir,
     config_path,
-    config: normalizeFederationProjectConfig(raw_config, config_path, project_dir),
+    config: normalize_federation_project_config(raw_config, config_path),
   };
 }
 
-/**
- * 补齐并校验 City 项目配置。
- */
-function normalizeFederationProjectConfig(
+/** 将未知 JSON 严格规范化为 Federation 配置。 */
+function normalize_federation_project_config(
   input: unknown,
   config_path: string,
-  project_dir: string,
 ): FederationProjectConfig {
-  if (!isRecord(input)) {
-    throw invalidConfig(config_path, "Root value must be an object.");
+  if (!is_record(input)) throw invalid_config(config_path, "Root value must be an object.");
+
+  const schema = read_number(input, "schema", 1);
+  if (schema !== 1) throw invalid_config(config_path, `Unsupported schema: ${schema}`);
+
+  const type = read_string(input, "type", "");
+  if (type !== "federation") {
+    throw invalid_config(config_path, "type must be federation.");
   }
 
-  const type = readOptionalString(input, "type") ?? "city";
-  if (type !== "city") {
-    throw invalidConfig(config_path, `Unsupported type: ${type}`);
+  const id = read_string(input, "id", "");
+  if (!/^fed_[a-zA-Z0-9_-]+$/u.test(id)) {
+    throw invalid_config(config_path, "id must start with fed_ and contain only letters, numbers, _ or -.");
   }
 
-  const schema = readOptionalNumber(input, "schema") ?? 1;
-  if (schema !== 1) {
-    throw invalidConfig(config_path, `Unsupported schema: ${schema}`);
-  }
+  const name = read_string(input, "name", "");
+  if (!name) throw invalid_config(config_path, "name is required.");
 
-  const name = readOptionalString(input, "name") ?? inferProjectName(project_dir);
-  const target = readOptionalString(input, "target")
-    ?? readOptionalString(input, "runtime")
-    ?? "cloudflare-workers";
-  if (target !== "cloudflare-workers") {
-    throw invalidConfig(config_path, `Unsupported target: ${target}`);
-  }
-  const entry = readOptionalString(input, "entry") ?? resolveTargetEntry(target);
+  const entry = read_string(input, "entry", "src/index.ts");
+  const deployment_input = read_record(input, "deployment");
+  if (!deployment_input) throw invalid_config(config_path, "deployment is required.");
 
   return {
-    schema,
-    type,
+    schema: 1,
+    type: "federation",
+    id,
     name,
     entry,
-    target,
-    resources: resolveProjectResources(input, target, name),
+    deployment: normalize_deployment(deployment_input, name, config_path),
   };
 }
 
-/**
- * 解析 target 的默认入口。
- */
-function resolveTargetEntry(target: string): string {
-  if (target === "cloudflare-workers") return "src/index.ts";
-  return "src/index.ts";
-}
-
-/**
- * 解析 target 的默认数据库。
- */
-function resolveTargetD1Resource(
-  target: string,
-  project_name: string,
-): FederationProjectD1ResourceConfig | undefined {
-  if (target !== "cloudflare-workers") return undefined;
-  return {
-    type: "d1",
-    binding: "DB",
-    name: `${project_name}-db`,
-  };
-}
-
-/**
- * 解析 target 的默认 Queue。
- */
-function resolveTargetQueueResource(
-  target: string,
-  project_name: string,
-): FederationProjectQueueResourceConfig | undefined {
-  if (target !== "cloudflare-workers") return undefined;
-  return {
-    type: "queue",
-    binding: "DOWNCITY_QUEUE",
-    name: `${project_name}-queue`,
-  };
-}
-
-/**
- * 解析 target 的默认存储资源。
- */
-function resolveTargetStorageResource(
-  target: string,
-  project_name: string,
-): FederationProjectStorageResourceConfig | undefined {
-  if (target !== "cloudflare-workers") return undefined;
-  return {
-    type: "r2",
-    binding: "DOWNCITY_STORAGE",
-    name: `${project_name}-storage`,
-    public_url_prefix: "",
-  };
-}
-
-/**
- * 解析项目资源配置。
- */
-function resolveProjectResources(
+/** 校验部署目标并补齐各目标默认资源。 */
+function normalize_deployment(
   input: Record<string, unknown>,
-  target: string,
+  project_name: string,
+  config_path: string,
+): FederationDeploymentConfig {
+  const target_input = read_string(input, "target", "");
+  if (target_input !== "local" && target_input !== "cloudflare-workers") {
+    throw invalid_config(config_path, `Unsupported deployment target: ${target_input || "(empty)"}`);
+  }
+  const target: FederationDeploymentTarget = target_input;
+  const port = read_optional_number(input, "port");
+  if (port !== undefined && (!Number.isInteger(port) || port < 1 || port > 65535)) {
+    throw invalid_config(config_path, "deployment.port must be an integer between 1 and 65535.");
+  }
+
+  return {
+    target,
+    host: read_optional_string(input, "host"),
+    port,
+    url: read_optional_string(input, "url"),
+    scripts: normalize_scripts(read_record(input, "scripts")),
+    resources: normalize_resources(read_record(input, "resources"), target, project_name),
+  };
+}
+
+/** 读取用户提供的阶段脚本。 */
+function normalize_scripts(
+  input: Record<string, unknown> | undefined,
+): FederationDeploymentScriptsConfig | undefined {
+  if (!input) return undefined;
+  const scripts = {
+    build: read_optional_string(input, "build"),
+    deploy: read_optional_string(input, "deploy"),
+  };
+  return scripts.build || scripts.deploy ? scripts : undefined;
+}
+
+/** 根据目标解析资源；Local 项目始终没有云资源。 */
+function normalize_resources(
+  input: Record<string, unknown> | undefined,
+  target: FederationDeploymentTarget,
   project_name: string,
 ): FederationProjectResourcesConfig {
-  const default_d1 = resolveTargetD1Resource(target, project_name);
-  const default_queue = resolveTargetQueueResource(target, project_name);
-  const default_storage = resolveTargetStorageResource(target, project_name);
-  const resources = readOptionalRecord(input, "resources");
-  const d1 = readOptionalRecord(resources ?? {}, "d1");
-  const queue = readOptionalRecord(resources ?? {}, "queue");
-  const storage = readOptionalRecord(resources ?? {}, "storage");
-  const legacy_database = readOptionalRecord(input, "database");
-  const d1_source = d1 ?? legacy_database;
+  if (target === "local") return {};
 
-  if (!default_d1) return {};
-
+  const d1 = read_record(input ?? {}, "d1");
+  const queue = read_record(input ?? {}, "queue");
+  const storage = read_record(input ?? {}, "storage");
   return {
-    d1: d1_source
-      ? {
-          type: "d1",
-          binding: readOptionalString(d1_source, "binding") ?? default_d1.binding,
-          name: readOptionalString(d1_source, "name") ?? default_d1.name,
-        }
-      : default_d1,
-    ...(default_queue
-      ? {
-          queue: queue
-            ? {
-                type: "queue" as const,
-                binding: readOptionalString(queue, "binding") ?? default_queue.binding,
-                name: readOptionalString(queue, "name") ?? default_queue.name,
-          }
-            : default_queue,
-        }
-      : {}),
-    ...(default_storage && storage
+    d1: {
+      type: "d1",
+      binding: read_string(d1 ?? {}, "binding", "DB"),
+      name: read_string(d1 ?? {}, "name", `${project_name}-db`),
+    },
+    queue: {
+      type: "queue",
+      binding: read_string(queue ?? {}, "binding", "DOWNCITY_QUEUE"),
+      name: read_string(queue ?? {}, "name", `${project_name}-queue`),
+    },
+    ...(storage
       ? {
           storage: {
             type: "r2" as const,
-            binding: readOptionalString(storage, "binding") ?? default_storage.binding,
-            name: readOptionalString(storage, "name") ?? default_storage.name,
-            public_url_prefix: readOptionalString(storage, "public_url_prefix") ?? default_storage.public_url_prefix,
+            binding: read_string(storage, "binding", "DOWNCITY_STORAGE"),
+            name: read_string(storage, "name", `${project_name}-storage`),
+            public_url_prefix: read_string(storage, "public_url_prefix", ""),
           },
         }
       : {}),
   };
 }
 
-/**
- * 根据目录名推断项目名。
- */
-function inferProjectName(project_dir: string): string {
-  return basename(project_dir)
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/-{2,}/g, "-")
-    || "city";
-}
-
-/**
- * 创建配置错误。
- */
-function invalidConfig(config_path: string, note: string): CliError {
+/** 创建带统一修复提示的配置错误。 */
+function invalid_config(config_path: string, note: string): CliError {
   return new CliError({
     title: "Invalid federation.json",
     note: `${config_path}: ${note}`,
-    fix: "Use a minimal shape like { \"type\": \"city\", \"name\": \"my-city\", \"target\": \"cloudflare-workers\" }.",
+    fix: "Run `fed create` to generate the current Federation project format.",
   });
 }
 
-/**
- * 判断值是否为普通对象。
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
+/** 判断未知值是否为普通对象。 */
+function is_record(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
-/**
- * 读取可选字符串。
- */
-function readOptionalString(
-  input: Record<string, unknown>,
-  key: string,
-): string | undefined {
+/** 读取可选对象字段。 */
+function read_record(input: Record<string, unknown>, key: string): Record<string, unknown> | undefined {
+  const value = input[key];
+  return is_record(value) ? value : undefined;
+}
+
+/** 读取字符串字段并应用默认值。 */
+function read_string(input: Record<string, unknown>, key: string, fallback: string): string {
+  return read_optional_string(input, key) ?? fallback;
+}
+
+/** 读取可选字符串字段。 */
+function read_optional_string(input: Record<string, unknown>, key: string): string | undefined {
   const value = input[key];
   if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed || undefined;
+  return value.trim() || undefined;
 }
 
-/**
- * 读取可选数字。
- */
-function readOptionalNumber(
-  input: Record<string, unknown>,
-  key: string,
-): number | undefined {
-  const value = input[key];
-  if (typeof value !== "number" || !Number.isInteger(value)) return undefined;
-  return value;
+/** 读取整数型字段并应用默认值。 */
+function read_number(input: Record<string, unknown>, key: string, fallback: number): number {
+  return read_optional_number(input, key) ?? fallback;
 }
 
-/**
- * 读取可选对象。
- */
-function readOptionalRecord(
-  input: Record<string, unknown>,
-  key: string,
-): Record<string, unknown> | undefined {
+/** 读取可选数字字段。 */
+function read_optional_number(input: Record<string, unknown>, key: string): number | undefined {
   const value = input[key];
-  if (!isRecord(value)) return undefined;
-  return value;
+  return typeof value === "number" ? value : undefined;
 }

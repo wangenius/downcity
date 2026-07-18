@@ -3,7 +3,7 @@
  *
  * 关键说明（中文）
  * - 该命令直接请求当前 active Federation，便于排查 auth、env、模型解析与上游错误。
- * - 默认带 admin Authorization 与 JSON content-type。
+ * - 当前实例已配置 admin key 时自动带 Authorization，否则按公开请求发送。
  * - 非 2xx 响应仍完整打印 status、headers、body，避免吞掉服务端真实错误。
  */
 
@@ -87,16 +87,6 @@ function resolve_active_query_server(): ServerProfile {
         en: "No active Federation is configured.",
       }),
       fix: "fed server add",
-    });
-  }
-
-  if (!String(server.admin_secret_key ?? "").trim()) {
-    throw new CliError({
-      title: t({
-        zh: "当前 Federation 缺少 admin_secret_key。",
-        en: "Current Federation is missing admin_secret_key.",
-      }),
-      fix: "fed server manage",
     });
   }
 
@@ -259,11 +249,14 @@ function normalize_json_body(body_input: string, source: string): string {
 }
 
 function resolve_query_headers(params: {
-  admin_secret_key: string;
+  admin_secret_key?: string;
   header_inputs: string[];
 }): Headers {
   const headers = new Headers();
-  headers.set("authorization", `Bearer ${params.admin_secret_key.trim()}`);
+  const admin_secret_key = params.admin_secret_key?.trim();
+  if (admin_secret_key) {
+    headers.set("authorization", `Bearer ${admin_secret_key}`);
+  }
   headers.set("content-type", "application/json");
 
   for (const header_input of params.header_inputs) {

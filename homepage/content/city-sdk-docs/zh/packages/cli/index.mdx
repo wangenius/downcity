@@ -5,7 +5,7 @@ description: "区分 fed/downfed 与 city/downcity：一个管理 Federation 基
 
 `downcity` 包会安装两组命令：
 
-- `fed` / `downfed`：管理 Federation 基础设施，例如创建项目、部署 Worker、保存 admin 连接、直接请求 Federation HTTP API。
+- `fed` / `downfed`：创建和部署 Federation，并在系统级 registry 中统一管理本地与远程实例。
 - `city` / `downcity`：管理本机 Agent、本地插件、chat/gateway，以及本机加入和登录某个 Federation 的用户态连接。
 
 如果你要部署一套共享后端，用 `fed`。如果你要让本机 Agent 连接、登录、运行和对话，用 `city`。
@@ -25,15 +25,16 @@ description: "区分 fed/downfed 与 city/downcity：一个管理 Federation 基
 ```bash
 fed
 fed create .
+fed create ./edge-fed --template cloudflare-workers
 fed deploy
 fed deploy --dry-run
 fed deploy --verify
 fed server add
-fed server manage
+fed server
 fed query GET /health
 ```
 
-它负责的是共享后端本身：Federation 项目、Cloudflare Workers 部署、D1 / Queue / R2 资源、admin 工作区和 HTTP 调试。
+它负责 Federation 项目、Local Node.js 进程、Cloudflare Workers 部署、系统级实例状态、admin 工作区和 HTTP 调试。本地启动同样通过 `fed deploy` 完成。
 
 ## city / downcity
 

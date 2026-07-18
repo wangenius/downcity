@@ -2,14 +2,17 @@
  * Cloudflare Workers 部署器。
  *
  * 关键点（中文）
- * - `city deploy` 的用户心智是“部署一个 City 项目”，不是配置 Cloudflare 工程。
+ * - `fed deploy` 部署 Federation，不要求用户直接维护 Wrangler 工程。
  * - 构建和类型检查从 package.json 自动推断，稳定资源由 `federation.json` 声明。
  * - D1 database id 与 Worker URL 都是部署状态，不写入项目配置。
  */
 
 import { rmSync } from "node:fs";
 import { dirname } from "node:path";
-import { addServer, readActiveServer, readServer } from "@/federation/core/session.js";
+import {
+  read_server_by_fed_id,
+  register_deployed_server,
+} from "@/federation/core/session.js";
 import { emitCliBlock } from "@/shared/CliReporter.js";
 import { CliError } from "@/shared/CliError.js";
 import type {
@@ -31,7 +34,7 @@ import { runPackageDeployScripts } from "@/federation/deploy/runtime/PackageScri
 /**
  * 部署 Cloudflare Workers City 项目。
  */
-export async function deployCloudflareWorkers(
+export async function deploy_cloudflare_workers(
   config_file: FederationProjectConfigFile,
   options: FederationDeployOptions,
 ): Promise<void> {
@@ -40,21 +43,16 @@ export async function deployCloudflareWorkers(
     title: "Project",
     facts: [
       { label: "name", value: config_file.config.name },
-      { label: "target", value: config_file.config.target },
+      { label: "target", value: config_file.config.deployment.target },
       { label: "source", value: config_file.project_dir },
     ],
   });
 
   if (options.verify_only) {
-    await verifyWorker(readVerifyBaseUrl());
+    const registered = read_server_by_fed_id(config_file.config.id, "cloudflare-workers");
+    await verifyWorker(registered?.base_url);
     return;
   }
-
-  const account_result = await resolveCloudflareAccount({
-    project_dir: config_file.project_dir,
-    account_id: options.account_id,
-  });
-  const account_id = account_result.account_id;
 
   const version_bump =
     options.dry_run === true ? undefined : bumpProjectPatchVersion(config_file.project_dir);
@@ -69,13 +67,19 @@ export async function deployCloudflareWorkers(
     });
   }
 
-  const scripts_result = await runPackageDeployScripts({
+  await run_cloudflare_build(config_file, options);
+
+  const custom_deploy = config_file.config.deployment.scripts?.deploy?.trim();
+  if (custom_deploy) {
+    await run_custom_cloudflare_deploy(config_file, options, custom_deploy);
+    return;
+  }
+
+  const account_result = await resolveCloudflareAccount({
     project_dir: config_file.project_dir,
-    skip_build: options.skip_build,
-    skip_typecheck: options.skip_typecheck,
+    account_id: options.account_id,
   });
-  emitPackageScriptSummary("Build", scripts_result.build);
-  emitPackageScriptSummary("Typecheck", scripts_result.typecheck);
+  const account_id = account_result.account_id;
 
   const d1_result = await resolveD1Database({
     config_file,
@@ -135,7 +139,7 @@ export async function deployCloudflareWorkers(
     rmSync(dirname(wrangler_result.config_path), { recursive: true, force: true });
   }
 
-  const worker_url = extractWorkerUrl(output);
+  const worker_url = config_file.config.deployment.url ?? extractWorkerUrl(output);
 
   emitCliBlock({
     tone: "success",
@@ -157,13 +161,18 @@ export async function deployCloudflareWorkers(
   });
 
   if (worker_url && !options.dry_run) {
-    const active_server = registerDeployedServer(config_file.config.name, worker_url);
+    const active_server = register_deployed_server({
+      config: config_file.config,
+      project_dir: config_file.project_dir,
+      base_url: worker_url,
+      status: "deployed",
+    });
     emitCliBlock({
       tone: "success",
       title: "Active Server",
       facts: [
         { label: "name", value: active_server.name },
-        { label: "url", value: active_server.url },
+        { label: "url", value: active_server.base_url },
         { label: "status", value: "connected" },
       ],
     });
@@ -180,8 +189,80 @@ export async function deployCloudflareWorkers(
   }
 
   if (options.verify && !options.dry_run) {
-    await verifyWorker(worker_url ?? readVerifyBaseUrl());
+    await verifyWorker(worker_url);
   }
+}
+
+/** 执行自定义 build 或 Cloudflare 内置 package build/typecheck。 */
+async function run_cloudflare_build(
+  config_file: FederationProjectConfigFile,
+  options: FederationDeployOptions,
+): Promise<void> {
+  const custom_build = config_file.config.deployment.scripts?.build?.trim();
+  if (custom_build && !options.skip_build) {
+    await runCommand({
+      label: "Federation build",
+      command: custom_build,
+      cwd: config_file.project_dir,
+      capture: true,
+    });
+    emitCliBlock({
+      tone: "success",
+      title: "Build",
+      facts: [{ label: "command", value: custom_build }, { label: "status", value: "passed" }],
+    });
+    return;
+  }
+  const scripts_result = await runPackageDeployScripts({
+    project_dir: config_file.project_dir,
+    skip_build: options.skip_build,
+    skip_typecheck: options.skip_typecheck,
+  });
+  emitPackageScriptSummary("Build", scripts_result.build);
+  emitPackageScriptSummary("Typecheck", scripts_result.typecheck);
+}
+
+/** 使用用户脚本替换完整 Cloudflare 发布阶段。 */
+async function run_custom_cloudflare_deploy(
+  config_file: FederationProjectConfigFile,
+  options: FederationDeployOptions,
+  command: string,
+): Promise<void> {
+  if (options.dry_run) {
+    emitCliBlock({
+      tone: "success",
+      title: "Custom deployment dry-run",
+      facts: [{ label: "command", value: command }, { label: "status", value: "skipped" }],
+      note: "Custom deploy scripts are not executed during dry-run.",
+    });
+    return;
+  }
+  const output = await runCommand({
+    label: "Custom Federation deploy",
+    command,
+    cwd: config_file.project_dir,
+    capture: true,
+  });
+  const deployed_url = config_file.config.deployment.url ?? extractHttpUrl(output);
+  if (deployed_url) {
+    register_deployed_server({
+      config: config_file.config,
+      project_dir: config_file.project_dir,
+      base_url: deployed_url,
+      status: "deployed",
+    });
+  }
+  emitCliBlock({
+    tone: "success",
+    title: "Custom Federation deployed",
+    facts: [
+      { label: "command", value: command },
+      ...(deployed_url ? [{ label: "url", value: deployed_url }] : []),
+      { label: "status", value: "success" },
+    ],
+    note: deployed_url ? undefined : "Set deployment.url to register this deployment in fed.",
+  });
+  if (options.verify && deployed_url) await verifyWorker(deployed_url);
 }
 
 /**
@@ -231,7 +312,7 @@ async function verifyWorker(base_url: string | undefined): Promise<void> {
     emitCliBlock({
       tone: "warning",
       title: "Verification skipped",
-      note: "No connected City server found. Run `city deploy` first, or connect a City in the interactive CLI.",
+      note: "No deployment is registered for this Fed. Run `fed deploy` first.",
     });
     return;
   }
@@ -265,32 +346,9 @@ function extractWorkerUrl(output: string): string | undefined {
   return output.match(/https:\/\/[^\s]+\.workers\.dev/i)?.[0];
 }
 
-/**
- * 把部署出的 Worker 自动注册为当前 City server。
- */
-function registerDeployedServer(name: string, worker_url: string): { name: string; url: string } {
-  const existing_server = readServer(worker_url);
-  const active_server = readActiveServer();
-  const preserved_admin_secret_key = existing_server?.admin_secret_key
-    ?? (active_server?.base_url === worker_url ? active_server.admin_secret_key : "")
-    ?? "";
-
-  addServer({
-    name,
-    base_url: worker_url,
-    admin_secret_key: preserved_admin_secret_key,
-  });
-  return {
-    name,
-    url: worker_url,
-  };
-}
-
-/**
- * 读取当前用于校验的 City server URL。
- */
-function readVerifyBaseUrl(): string | undefined {
-  return readActiveServer()?.base_url;
+/** 从自定义脚本输出中读取第一个 HTTP URL。 */
+function extractHttpUrl(output: string): string | undefined {
+  return output.match(/https?:\/\/[^\s]+/iu)?.[0];
 }
 
 /**

@@ -49,12 +49,14 @@ function build_federation_dashboard_state(): federation_dashboard_state {
   const federation_items = config.servers.map((server) => ({
     id: `open_federation:${server.base_url}`,
     title: server.base_url === config.active_server_url ? `★ ${server.name}` : server.name,
-    subtitle: server.admin_secret_key
-      ? t({ zh: "admin 已配置", en: "admin configured" })
-      : t({ zh: "admin 未配置", en: "admin missing" }),
+    subtitle: [
+      server.target ?? t({ zh: "手动连接", en: "manual" }),
+      server.status ?? "unknown",
+      server.port ? `:${server.port}` : "",
+    ].filter(Boolean).join(" · "),
     detail: t({
-      zh: `打开 ${server.name} 的 admin 管理工作区。\n\nURL: ${server.base_url}\nadmin: ${server.admin_secret_key ? "已配置" : "未配置"}`,
-      en: `Open the admin workspace for ${server.name}.\n\nURL: ${server.base_url}\nadmin: ${server.admin_secret_key ? "configured" : "missing"}`,
+      zh: `打开 ${server.name} 的管理工作区。\n\nURL: ${server.base_url}\n状态: ${server.status ?? "unknown"}\n目标: ${server.target ?? "manual"}\n源码: ${server.project_dir ?? "未登记"}\n日志: ${server.log_path ?? "无"}\nadmin: ${server.admin_secret_key ? "已配置" : "未配置"}`,
+      en: `Open management for ${server.name}.\n\nURL: ${server.base_url}\nStatus: ${server.status ?? "unknown"}\nTarget: ${server.target ?? "manual"}\nSource: ${server.project_dir ?? "not registered"}\nLog: ${server.log_path ?? "none"}\nAdmin: ${server.admin_secret_key ? "configured" : "missing"}`,
     }),
   }));
 
@@ -81,8 +83,8 @@ function build_federation_dashboard_state(): federation_dashboard_state {
       title: t({ zh: "创建 Federation", en: "Create Federation" }),
       subtitle: t({ zh: "交互式创建 Federation 项目骨架", en: "Interactively scaffold a Federation project" }),
       detail: t({
-        zh: "在当前目录创建 Federation 项目骨架，包含 Wrangler 配置和示例代码。",
-        en: "Create a Federation project scaffold in the current directory, including Wrangler config and sample code.",
+        zh: "在当前目录创建默认 Local Node.js Federation 项目。",
+        en: "Create the default Local Node.js Federation project in the current directory.",
       }),
     },
     {
@@ -90,8 +92,8 @@ function build_federation_dashboard_state(): federation_dashboard_state {
       title: t({ zh: "部署 Federation", en: "Deploy Federation" }),
       subtitle: t({ zh: "部署当前目录的 Federation 项目", en: "Deploy the Federation project in the current directory" }),
       detail: t({
-        zh: "构建并部署当前目录中的 Federation 项目到 Cloudflare Workers。",
-        en: "Build and deploy the Federation project in the current directory to Cloudflare Workers.",
+        zh: "读取 federation.json，在本地或云端部署当前 Federation。",
+        en: "Read federation.json and deploy the current Federation locally or remotely.",
       }),
     },
     {

@@ -25,10 +25,10 @@ fed deploy
 ```bash
 mkdir my-city
 cd my-city
-fed create .
+fed create . --template cloudflare-workers
 ```
 
-`fed create .` 会交互式询问 Federation 名称和部署目标，并生成项目骨架：
+`fed create . --template cloudflare-workers` 会询问 Federation 名称并生成 Worker 项目骨架：
 
 - `federation.json`
 - `src/index.ts`
@@ -40,35 +40,40 @@ fed create .
 ```json
 {
   "schema": 1,
-  "type": "city",
+  "type": "federation",
+  "id": "fed_example",
   "name": "my-city",
-  "target": "cloudflare-workers",
   "entry": "src/index.ts",
-  "resources": {
-    "d1": {
-      "binding": "DB",
-      "name": "my-city-db"
-    },
-    "queue": {
-      "binding": "DOWNCITY_QUEUE",
-      "name": "my-city-queue"
-    },
-    "storage": {
-      "type": "r2",
-      "binding": "DOWNCITY_STORAGE",
-      "name": "my-city-storage",
-      "public_url_prefix": "https://images.example.com"
+  "deployment": {
+    "target": "cloudflare-workers",
+    "resources": {
+      "d1": {
+        "type": "d1",
+        "binding": "DB",
+        "name": "my-city-db"
+      },
+      "queue": {
+        "type": "queue",
+        "binding": "DOWNCITY_QUEUE",
+        "name": "my-city-queue"
+      },
+      "storage": {
+        "type": "r2",
+        "binding": "DOWNCITY_STORAGE",
+        "name": "my-city-storage",
+        "public_url_prefix": "https://images.example.com"
+      }
     }
   }
 }
 ```
 
-`type` 表示这是一个 Federation 项目，`target` 表示部署目标。当前支持 `cloudflare-workers`，也就是部署到 Cloudflare Edge Worker。`entry` 和 `resources` 是可提交的部署意图；D1 database id、Cloudflare account、Worker URL 和 wrangler 配置都由 `fed deploy` 在部署时处理，不写进 `federation.json`。
+`id` 是不依赖路径的 Fed 身份，`deployment.target` 表示部署目标。`entry` 和 `deployment.resources` 是可提交的部署意图；D1 database id、Cloudflare account、Worker URL 和 Wrangler 配置由 `fed deploy` 处理。
 
 如果项目模板已经在 Git 仓库里，先用 `fed create` 拉到本地：
 
 ```bash
-fed create https://github.com/example/my-city.git
+fed create my-city --template https://github.com/example/my-city.git
 cd my-city
 ```
 
@@ -82,7 +87,7 @@ cd my-city
 fed deploy
 ```
 
-如果 `federation.json` 的 `target` 是 `cloudflare-workers`，`fed deploy` 会自动检查 Cloudflare 登录态。没有登录时会唤起 Wrangler 登录；已经登录但 Cloudflare 无法自动返回 account 时，会提示你刷新登录，或输入一次 Cloudflare account id。输入的 account id 会保存到项目 `.env`，后续部署会自动复用。
+如果 `federation.json` 的 `deployment.target` 是 `cloudflare-workers`，`fed deploy` 会自动检查 Cloudflare 登录态。没有登录时会唤起 Wrangler 登录；account id 保存在系统级 Federation registry，后续部署自动复用。
 
 也可以显式传目录：
 
@@ -96,26 +101,31 @@ Cloudflare Workers 目标当前支持三类资源：
 
 ```json
 {
-  "resources": {
-    "d1": {
-      "binding": "DB",
-      "name": "my-city-db"
-    },
-    "queue": {
-      "binding": "DOWNCITY_QUEUE",
-      "name": "my-city-queue"
-    },
-    "storage": {
-      "type": "r2",
-      "binding": "DOWNCITY_STORAGE",
-      "name": "my-city-storage",
-      "public_url_prefix": "https://images.example.com"
+  "deployment": {
+    "target": "cloudflare-workers",
+    "resources": {
+      "d1": {
+        "type": "d1",
+        "binding": "DB",
+        "name": "my-city-db"
+      },
+      "queue": {
+        "type": "queue",
+        "binding": "DOWNCITY_QUEUE",
+        "name": "my-city-queue"
+      },
+      "storage": {
+        "type": "r2",
+        "binding": "DOWNCITY_STORAGE",
+        "name": "my-city-storage",
+        "public_url_prefix": "https://images.example.com"
+      }
     }
   }
 }
 ```
 
-如果没有显式配置 D1 / Queue，`fed deploy` 会根据 `federation.json.name` 使用默认名称 `${name}-db` 和 `${name}-queue`。Storage 只有在 `resources.storage` 存在时启用。
+如果没有显式配置 D1 / Queue，`fed deploy` 会根据 `federation.json.name` 使用默认名称 `${name}-db` 和 `${name}-queue`。Storage 只有在 `deployment.resources.storage` 存在时启用。
 
 部署时会复用同名 D1、Queue 和 R2 bucket；没有同名资源且不是 `--dry-run` 时会自动创建。D1 database id 是 Cloudflare 部署状态，不会写回项目配置。
 
@@ -146,13 +156,13 @@ fed deploy ./my-city --dry-run
 `fed deploy` 会执行这些步骤：
 
 - 读取目标目录的 `federation.json`
-- 根据 `federation.json.target` 检查目标平台登录态；Cloudflare Workers 会自动唤起 Wrangler 登录或引导选择 account
+- 根据 `federation.json.deployment.target` 检查目标平台登录态；Cloudflare Workers 会自动唤起 Wrangler 登录或引导选择 account
 - 如果不是 `--dry-run`，先把项目 `package.json.version` 自动做一次 patch 自增
 - 如果 package.json 有 `build`，执行 `pnpm build`
 - 如果 package.json 有 `typecheck`，执行 `pnpm typecheck`
-- 对 `cloudflare-workers` target 按 `resources.d1.name` 查找 D1；不存在时自动创建
-- 按 `resources.queue.name` 查找 Queue；不存在时自动创建
-- 如果声明了 `resources.storage`，按 `resources.storage.name` 查找 R2 bucket；不存在时自动创建
+- 对 `cloudflare-workers` target 按 `deployment.resources.d1.name` 查找 D1；不存在时自动创建
+- 按 `deployment.resources.queue.name` 查找 Queue；不存在时自动创建
+- 如果声明了 `deployment.resources.storage`，按对应名称查找 R2 bucket；不存在时自动创建
 - 临时生成 Wrangler 配置，不写入项目目录
 - 执行 `wrangler deploy --config <generated-wrangler.toml>`
 - 自动把部署出来的 Worker URL 注册成当前 Federation

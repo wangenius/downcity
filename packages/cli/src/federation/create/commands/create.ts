@@ -1,349 +1,212 @@
 /**
- * `city create` 命令实现。
+ * `fed create` 命令实现。
  *
- * 关键点（中文）
- * - 从零搭建一个可部署的 City 项目，而不是让用户手写底层部署文件。
- * - Git URL 只在 create 阶段 clone 到本地；deploy 阶段只处理本地项目。
- * - `federation.json` 写入可提交的部署意图和稳定资源声明。
- * - 当前先生成 Cloudflare Workers 项目骨架，后续可扩展更多 target。
+ * 关键说明（中文）
+ * - 默认在目标目录生成 Local Node.js Federation。
+ * - `--template` 可以选择内置模板，也可以传 Git URL 创建独立项目。
+ * - 所有新项目都会获得新的 fed_id，模板仓库自身不成为系统级身份。
  */
 
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve, basename } from "node:path";
-import { confirm, isCancel, select, text } from "@/federation/tui/Prompts.js";
+import { randomUUID } from "node:crypto";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
+import { confirm, isCancel, text } from "@/federation/tui/Prompts.js";
 import { emitCliBlock } from "@/shared/CliReporter.js";
 import { CliError } from "@/shared/CliError.js";
 import { runCommand } from "@/federation/deploy/runtime/CommandRunner.js";
+import {
+  DEFAULT_FEDERATION_TEMPLATE_ID,
+  read_federation_template,
+} from "@/federation/create/templates/TemplateCatalog.js";
+import { read_federation_project_config } from "@/federation/deploy/config/FederationProjectConfigReader.js";
+import type { FederationTemplateFile } from "@/federation/types/FederationTemplate.js";
 
 /** Commander 传入的 create 选项。 */
 export interface FederationCreateCommandOptions {
-  /** 是否强制覆盖已有文件。 */
+  /** 是否允许覆盖内置模板将要写入的已有文件。 */
   force?: boolean;
+  /** 内置模板 ID 或 Git URL。 */
+  template?: string;
 }
 
-/**
- * 创建 Federation 项目。
- */
-export async function createFederationProject(
+/** 创建 Federation 项目。 */
+export async function create_federation_project(
   dir: string = ".",
   options: FederationCreateCommandOptions = {},
 ): Promise<void> {
-  const input = String(dir || ".").trim() || ".";
-  if (isGitUrl(input)) {
-    await cloneFederationProject(input, options);
-    return;
-  }
-
-  const project_dir = resolve(input);
-  mkdirSync(project_dir, { recursive: true });
-
-  const default_name = inferProjectName(project_dir);
+  const project_dir = resolve(String(dir || ".").trim() || ".");
+  const default_name = infer_project_name(project_dir);
   const name_input = await text({
     message: "Federation name",
     initialValue: default_name,
   });
   if (isCancel(name_input)) return;
-  const name = String(name_input || default_name).trim() || default_name;
 
-  const target_input = await select({
-    message: "Deploy target",
-    options: [
-      {
-        label: "Cloudflare Workers",
-        value: "cloudflare-workers",
-        hint: "Edge Worker with D1",
-      },
-    ],
-  });
-  if (isCancel(target_input)) return;
-  const target = String(target_input || "cloudflare-workers");
+  const name = normalize_project_name(String(name_input || default_name)) || default_name;
+  const fed_id = create_fed_id();
+  const template_input = String(options.template || DEFAULT_FEDERATION_TEMPLATE_ID).trim();
 
-  const files = createCloudflareWorkersFiles(name, target);
-  const existing_files = files
-    .map((item) => join(project_dir, item.path))
-    .filter((path) => existsSync(path));
-
-  if (existing_files.length > 0 && options.force !== true) {
-    const should_overwrite = await confirm({
-      message: `${existing_files.length} files already exist. Overwrite them?`,
-      initialValue: false,
+  if (is_git_url(template_input)) {
+    await create_from_git_template({ project_dir, template_url: template_input, fed_id, name });
+  } else {
+    await create_from_builtin_template({
+      project_dir,
+      template_id: template_input,
+      fed_id,
+      name,
+      force: options.force === true,
     });
-    if (isCancel(should_overwrite) || should_overwrite !== true) {
-      throw new CliError({
-        title: "Federation project creation cancelled",
-        note: "Existing files were left unchanged.",
-      });
-    }
   }
 
+  const config_file = read_federation_project_config(project_dir);
+  emitCliBlock({
+    tone: "success",
+    title: "Federation project created",
+    facts: [
+      { label: "id", value: config_file.config.id },
+      { label: "name", value: config_file.config.name },
+      { label: "target", value: config_file.config.deployment.target },
+      { label: "dir", value: project_dir },
+    ],
+    note: "Run `fed deploy` from the project directory.",
+  });
+}
+
+/** 从内置模板生成文件。 */
+async function create_from_builtin_template(input: {
+  project_dir: string;
+  template_id: string;
+  fed_id: string;
+  name: string;
+  force: boolean;
+}): Promise<void> {
+  const template = read_federation_template(input.template_id);
+  if (!template) {
+    throw new CliError({
+      title: `Unknown Federation template: ${input.template_id}`,
+      note: "Built-in templates: local-node, cloudflare-workers.",
+      fix: "Use a built-in template ID or a Git URL.",
+    });
+  }
+
+  mkdirSync(input.project_dir, { recursive: true });
+  const files = template.create_files({ fed_id: input.fed_id, name: input.name });
+  await confirm_file_overwrite(input.project_dir, files, input.force);
+  write_template_files(input.project_dir, files);
+}
+
+/** 从 Git 模板创建全新项目。 */
+async function create_from_git_template(input: {
+  project_dir: string;
+  template_url: string;
+  fed_id: string;
+  name: string;
+}): Promise<void> {
+  if (existsSync(input.project_dir) && readdirSync(input.project_dir).length > 0) {
+    throw new CliError({
+      title: "Git template target is not empty",
+      note: input.project_dir,
+      fix: "Choose an empty directory for a Git template.",
+    });
+  }
+
+  mkdirSync(dirname(input.project_dir), { recursive: true });
+  await runCommand({
+    label: "Clone Federation template",
+    command: `git clone --depth 1 ${shell_quote(input.template_url)} ${shell_quote(input.project_dir)}`,
+    cwd: process.cwd(),
+  });
+  rmSync(join(input.project_dir, ".git"), { recursive: true, force: true });
+
+  const config_path = join(input.project_dir, "federation.json");
+  if (!existsSync(config_path)) {
+    throw new CliError({
+      title: "Git template is missing federation.json",
+      note: input.template_url,
+      fix: "Add a current federation.json to the template repository.",
+    });
+  }
+
+  let config: Record<string, unknown>;
+  try {
+    config = JSON.parse(readFileSync(config_path, "utf-8")) as Record<string, unknown>;
+  } catch (error) {
+    throw new CliError({
+      title: "Git template federation.json is invalid",
+      note: error instanceof Error ? error.message : String(error),
+    });
+  }
+  config.schema = 1;
+  config.type = "federation";
+  config.id = input.fed_id;
+  config.name = input.name;
+  writeFileSync(config_path, `${JSON.stringify(config, null, 2)}\n`);
+}
+
+/** 确认是否覆盖内置模板涉及的已有文件。 */
+async function confirm_file_overwrite(
+  project_dir: string,
+  files: FederationTemplateFile[],
+  force: boolean,
+): Promise<void> {
+  const existing_files = files
+    .map((file) => join(project_dir, file.path))
+    .filter((file_path) => existsSync(file_path));
+  if (existing_files.length === 0 || force) return;
+
+  const should_overwrite = await confirm({
+    message: `${existing_files.length} files already exist. Overwrite them?`,
+    initialValue: false,
+  });
+  if (isCancel(should_overwrite) || should_overwrite !== true) {
+    throw new CliError({
+      title: "Federation project creation cancelled",
+      note: "Existing files were left unchanged.",
+    });
+  }
+}
+
+/** 将模板文件集合写入项目目录。 */
+function write_template_files(project_dir: string, files: FederationTemplateFile[]): void {
   for (const file of files) {
     const file_path = join(project_dir, file.path);
     mkdirSync(dirname(file_path), { recursive: true });
     writeFileSync(file_path, file.content);
   }
-
-  emitCliBlock({
-    tone: "success",
-    title: "Federation project created",
-    facts: [
-      { label: "name", value: name },
-      { label: "target", value: target },
-      { label: "dir", value: project_dir },
-    ],
-    note: "Run city deploy from the project directory when ready.",
-  });
 }
 
-/**
- * 从 Git URL 创建本地 Federation 项目。
- */
-async function cloneFederationProject(
-  git_url: string,
-  _options: FederationCreateCommandOptions,
-): Promise<void> {
-  const default_dir = inferGitProjectName(git_url);
-  const dir_input = await text({
-    message: "Local directory",
-    initialValue: default_dir,
-  });
-  if (isCancel(dir_input)) return;
-
-  const project_dir = resolve(String(dir_input || default_dir).trim() || default_dir);
-  if (existsSync(project_dir) && readdirSync(project_dir).length > 0) {
-    throw new CliError({
-      title: "Local directory is not empty",
-      note: project_dir,
-      fix: "Choose an empty directory for `city create <git-url>`, then run `city deploy` inside it.",
-    });
-  }
-
-  await runCommand({
-    label: "Clone Federation project",
-    command: `git clone --depth 1 ${shellQuote(git_url)} ${shellQuote(project_dir)}`,
-    cwd: process.cwd(),
-  });
-
-  emitCliBlock({
-    tone: "success",
-    title: "Federation project cloned",
-    facts: [
-      { label: "source", value: git_url },
-      { label: "dir", value: project_dir },
-    ],
-    note: "Run city deploy from the cloned project directory when ready.",
-  });
+/** 创建不依赖路径的稳定 Fed ID。 */
+function create_fed_id(): string {
+  return `fed_${randomUUID().replace(/-/gu, "")}`;
 }
 
-/**
- * 创建 Cloudflare Workers 项目文件。
- */
-function createCloudflareWorkersFiles(
-  name: string,
-  target: string,
-): Array<{ path: string; content: string }> {
-  const package_name = normalizePackageName(name);
-  const d1_name = `${name}-db`;
-  const queue_name = `${name}-queue`;
-  const storage_name = `${name}-storage`;
-  return [
-    {
-      path: "federation.json",
-      content: `${JSON.stringify({
-        schema: 1,
-        type: "city",
-        name,
-        target,
-        entry: "src/index.ts",
-        resources: {
-          d1: {
-            binding: "DB",
-            name: d1_name,
-          },
-          queue: {
-            binding: "DOWNCITY_QUEUE",
-            name: queue_name,
-          },
-          storage: {
-            type: "r2",
-            binding: "DOWNCITY_STORAGE",
-            name: storage_name,
-            public_url_prefix: "",
-          },
-        },
-      }, null, 2)}\n`,
-    },
-    {
-      path: "package.json",
-      content: `${JSON.stringify({
-        name: package_name,
-        version: "0.0.1",
-        private: true,
-        type: "module",
-        scripts: {
-          deploy: "city deploy",
-          "deploy:dry": "city deploy --dry-run",
-          "deploy:verify": "city deploy --verify-only",
-          typecheck: "tsc -p tsconfig.json --noEmit",
-        },
-        dependencies: {
-          "@downcity/city": "latest",
-          "@downcity/services": "latest",
-          "drizzle-orm": "latest",
-        },
-        devDependencies: {
-          "@cloudflare/workers-types": "latest",
-          typescript: "latest",
-          wrangler: "latest",
-        },
-      }, null, 2)}\n`,
-    },
-    {
-      path: "tsconfig.json",
-      content: `${JSON.stringify({
-        compilerOptions: {
-          target: "ES2022",
-          module: "NodeNext",
-          moduleResolution: "NodeNext",
-          lib: ["ES2022"],
-          strict: true,
-          noEmit: true,
-          skipLibCheck: true,
-          types: ["@cloudflare/workers-types"],
-        },
-        include: ["src/**/*.ts"],
-      }, null, 2)}\n`,
-    },
-    {
-      path: "src/index.ts",
-      content: createWorkerEntrypoint(),
-    },
-  ];
+/** 根据目录名推断项目名。 */
+function infer_project_name(project_dir: string): string {
+  return normalize_project_name(basename(project_dir)) || "federation";
 }
 
-/**
- * 创建默认 Worker 入口。
- */
-function createWorkerEntrypoint(): string {
-  return `/**
- * Federation Cloudflare Worker entry.
- *
- * 关键点（中文）
- * - 这是 city create 生成的最小 Federation 入口。
- * - Federation runtime 默认使用 D1，部署资源由 city deploy 管理。
- */
-
-import { drizzle } from "drizzle-orm/d1";
-import { Federation, R2Storage } from "@downcity/city";
-import {
-  AccountsService,
-  BalanceService,
-  UsageService,
-  githubAccountsProvider,
-  googleAccountsProvider,
-  wechatAccountsProvider,
-} from "@downcity/services";
-
-export interface Env {
-  DB: D1Database;
-  DOWNCITY_STORAGE: R2Bucket;
-  DOWNCITY_STORAGE_PUBLIC_URL_PREFIX?: string;
+/** 将项目名规范化为可用于资源和 package 的名称。 */
+function normalize_project_name(value: string): string {
+  return value.trim().toLowerCase()
+    .replace(/[^a-z0-9-]+/gu, "-")
+    .replace(/^-+|-+$/gu, "")
+    .replace(/-{2,}/gu, "-");
 }
 
-let federation_promise: Promise<Federation> | undefined;
-
-function get_federation(env: Env): Promise<Federation> {
-  if (!federation_promise) {
-    federation_promise = init_federation(env);
-  }
-  return federation_promise;
+/** 判断模板参数是否为 Git URL。 */
+function is_git_url(value: string): boolean {
+  return /^(https?:\/\/|git:\/\/|git@|ssh:\/\/)/u.test(value)
+    || /^[^@\s]+@[^:\s]+:[^\s]+$/u.test(value);
 }
 
-async function init_federation(env: Env): Promise<Federation> {
-  const db = drizzle(env.DB);
-  const federation = new Federation({
-    db,
-  });
-  const storage_public_url_prefix = env.DOWNCITY_STORAGE_PUBLIC_URL_PREFIX?.trim();
-  if (storage_public_url_prefix) {
-    federation.storage(R2Storage({
-      bucket: env.DOWNCITY_STORAGE,
-      public_url_prefix: storage_public_url_prefix,
-    }));
-  }
-
-  federation.use(new AccountsService({
-    providers: [
-      githubAccountsProvider(),
-      googleAccountsProvider(),
-      wechatAccountsProvider(),
-    ],
-  }));
-  federation.use(new BalanceService());
-  federation.use(new UsageService());
-
-  await federation.health();
-  return federation;
-}
-
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const url = new URL(request.url);
-    const federation = await get_federation(env);
-    if (request.method === "GET" && url.pathname === "/health") {
-      return Response.json(await federation.health());
-    }
-    return federation.fetch(request);
-  },
-};
-`;
-}
-
-/**
- * 根据目录名推断项目名。
- */
-function inferProjectName(project_dir: string): string {
-  return basename(project_dir)
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/-{2,}/g, "-")
-    || "city";
-}
-
-/**
- * 规范化 package name。
- */
-function normalizePackageName(name: string): string {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/-{2,}/g, "-")
-    || "city";
-}
-
-/**
- * 判断输入是否像 Git URL。
- */
-function isGitUrl(value: string): boolean {
-  return /^(https?:\/\/|git@|ssh:\/\/)/.test(value)
-    || /^[^@\s]+@[^:\s]+:[^\s]+$/.test(value);
-}
-
-/**
- * 从 Git URL 推断本地目录名。
- */
-function inferGitProjectName(git_url: string): string {
-  const without_query = git_url.split(/[?#]/)[0] ?? git_url;
-  const last_part = without_query.split(/[/\\:]/).filter(Boolean).pop() ?? "city";
-  return normalizePackageName(last_part.replace(/\.git$/i, "")) || "city";
-}
-
-/**
- * shell 参数转义。
- */
-function shellQuote(value: string): string {
-  return `'${value.replace(/'/g, "'\\''")}'`;
+/** 对 shell 参数执行单引号转义。 */
+function shell_quote(value: string): string {
+  return `'${value.replace(/'/gu, "'\\''")}'`;
 }

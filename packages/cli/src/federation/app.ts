@@ -16,8 +16,8 @@ import { updateCli } from "@/federation/core/update.js";
 import { getCliLocale, setCliLocale, t } from "@/shared/CliLocale.js";
 import { type CliLocale } from "@/shared/types/CliLocale.js";
 import { setActiveServer, writePersistedCliLocale } from "@/federation/core/session.js";
-import { createFederationProject } from "@/federation/create/commands/create.js";
-import { deployFederationProject } from "@/federation/deploy/commands/deploy.js";
+import { create_federation_project } from "@/federation/create/commands/create.js";
+import { deploy_federation_project } from "@/federation/deploy/commands/deploy.js";
 import { prompt_add_federation_server } from "@/federation/server/FederationServerManager.js";
 import { open_federation_server_workspace } from "@/federation/server/FederationServerWorkspace.js";
 import { open_federation_dashboard } from "@/federation/tui/FederationDashboard.js";
@@ -44,7 +44,7 @@ async function run_federation_dashboard_action(
   }
 
   if (action === "create_federation") {
-    await createFederationProject(".", { force: false });
+    await create_federation_project(".", { force: false });
     return "refresh";
   }
 
@@ -61,7 +61,7 @@ async function run_federation_dashboard_action(
   }
 
   if (action === "deploy_federation") {
-    await deployFederationProject(".", {});
+    await deploy_federation_project(".", {});
     return "refresh";
   }
 

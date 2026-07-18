@@ -1,5 +1,5 @@
 /**
- * `city deploy` 命令实现 —— 部署 Federation 项目。
+ * `fed deploy` 命令实现 —— 统一部署本地或远程 Federation。
  *
  * 关键点（中文）
  * - 命令层只负责读取目录、解析选项和选择 runtime deployer。
@@ -9,9 +9,10 @@
 
 import { CliError } from "@/shared/CliError.js";
 import type { FederationDeployOptions } from "@/federation/types/FederationProjectConfig.js";
-import { readFederationProjectConfig } from "@/federation/deploy/config/FederationProjectConfigReader.js";
-import { deployCloudflareWorkers } from "@/federation/deploy/runtime/CloudflareWorkersDeployer.js";
-import { resolveFederationDeployTarget } from "@/federation/deploy/config/FederationDeployTargetResolver.js";
+import { read_federation_project_config } from "@/federation/deploy/config/FederationProjectConfigReader.js";
+import { deploy_cloudflare_workers } from "@/federation/deploy/runtime/CloudflareWorkersDeployer.js";
+import { deploy_local_federation } from "@/federation/deploy/runtime/LocalFederationDeployer.js";
+import { resolve_federation_deploy_source } from "@/federation/deploy/config/FederationDeployTargetResolver.js";
 
 /** Commander 传入的原始 deploy 选项。 */
 export interface FederationDeployCommandOptions {
@@ -32,7 +33,7 @@ export interface FederationDeployCommandOptions {
 /**
  * 执行 Federation 项目部署。
  */
-export async function deployFederationProject(
+export async function deploy_federation_project(
   source: string = ".",
   raw_options: FederationDeployCommandOptions = {},
 ): Promise<void> {
@@ -45,17 +46,20 @@ export async function deployFederationProject(
     skip_typecheck: raw_options.skipTypecheck === true,
     account_id: raw_options.accountId,
   };
-  const target = await resolveFederationDeployTarget(options.source);
-  const config_file = readFederationProjectConfig(target.project_dir);
+  const target = await resolve_federation_deploy_source(options.source);
+  const config_file = read_federation_project_config(target.project_dir);
 
-  switch (config_file.config.target) {
+  switch (config_file.config.deployment.target) {
+    case "local":
+      await deploy_local_federation(config_file, options);
+      return;
     case "cloudflare-workers":
-      await deployCloudflareWorkers(config_file, options);
+      await deploy_cloudflare_workers(config_file, options);
       return;
     default:
       throw new CliError({
         title: "Unsupported Federation target",
-        note: `city deploy does not support ${config_file.config.target}.`,
+        note: `fed deploy does not support ${config_file.config.deployment.target}.`,
       });
   }
 }

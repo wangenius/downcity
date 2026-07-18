@@ -5,6 +5,17 @@ description: 初始化 Downcity 服务端 Federation，准备默认数据库和 
 
 服务端运行时的类是 `Federation`（文档里也叫 Federation），产品侧用 `City` 客户端去访问它。两者的区别见 [Federation 与 City](/zh/city-sdk-docs/concepts/federation)。
 
+最快的本地创建和启动方式是：
+
+```bash
+fed create ./my-fed
+cd my-fed
+pnpm install
+fed deploy
+```
+
+默认模板使用 Node.js + SQLite。`fed deploy` 从 `12314` 开始分配端口，把进程登记到系统级 Fed 管理状态，并自动注入和保存 admin key；之后可以在任意路径运行 `fed` 查看并直接进入管理。下文是需要手动嵌入 Federation runtime 时的 SDK 写法。
+
 安装包：
 
 ```bash

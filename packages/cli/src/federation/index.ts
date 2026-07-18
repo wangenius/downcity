@@ -17,8 +17,8 @@ import { runFederationApp } from "@/federation/app.js";
 import { readPersistedCliLocale } from "@/federation/core/session.js";
 import { createVersionBanner } from "@/shared/IndexSupport.js";
 import { setCliVerbosity } from "@/shared/CliReporter.js";
-import { deployFederationProject } from "@/federation/deploy/commands/deploy.js";
-import { createFederationProject } from "@/federation/create/commands/create.js";
+import { deploy_federation_project } from "@/federation/deploy/commands/deploy.js";
+import { create_federation_project } from "@/federation/create/commands/create.js";
 import { run_federation_query_command } from "@/federation/query/commands/query.js";
 import { readActiveServer } from "@/federation/core/session.js";
 import {
@@ -84,7 +84,10 @@ export async function runDownfedCli(): Promise<void> {
       zh: "配置并管理已部署 Federation",
       en: "configure and manage deployed Federations",
     }))
-    .helpOption("--help", helpText());
+    .helpOption("--help", helpText())
+    .action(createVersionBanner(packageJson.version, async () => {
+      await manage_federation_server();
+    }));
 
   server_program
     .command("manage")
@@ -94,11 +97,7 @@ export async function runDownfedCli(): Promise<void> {
     }))
     .helpOption("--help", helpText())
     .action(createVersionBanner(packageJson.version, async () => {
-      const server = readActiveServer()
-        ?? await prompt_select_active_federation_server()
-        ?? await prompt_add_federation_server();
-      if (!server) return;
-      await open_federation_server_workspace(server.base_url);
+      await manage_federation_server();
     }));
 
   server_program
@@ -124,12 +123,16 @@ export async function runDownfedCli(): Promise<void> {
       zh: "允许覆盖已有项目文件",
       en: "allow overwriting existing project files",
     }))
+    .option("--template <template>", t({
+      zh: "内置模板 ID 或 Git 模板 URL",
+      en: "built-in template ID or Git template URL",
+    }))
     .helpOption("--help", helpText())
     .action(createVersionBanner(packageJson.version, async (
       dir: string | undefined,
-      options: { force?: boolean },
+      options: { force?: boolean; template?: string },
     ) => {
-      await createFederationProject(dir ?? ".", options);
+      await create_federation_project(dir ?? ".", options);
     }));
 
   program
@@ -139,16 +142,16 @@ export async function runDownfedCli(): Promise<void> {
       en: "deploy a Federation project from the current directory or a local path",
     }))
     .option("--dry-run", t({
-      zh: "只执行 Wrangler dry-run，不发布 Worker",
-      en: "run Wrangler dry-run only without publishing the Worker",
+      zh: "只验证构建和部署配置，不启动或发布",
+      en: "validate build and deployment config without starting or publishing",
     }))
     .option("--verify", t({
-      zh: "部署完成后请求 Worker /health",
-      en: "request Worker /health after deployment completes",
+      zh: "部署完成后请求 Federation /health",
+      en: "request Federation /health after deployment completes",
     }))
     .option("--verify-only", t({
-      zh: "只请求 Worker /health，不构建或部署",
-      en: "request Worker /health only without building or deploying",
+      zh: "只验证当前 Fed 已登记实例的 /health",
+      en: "verify the registered instance for the current Fed",
     }))
     .option("--skip-build", t({
       zh: "跳过 package.json 中的 build",
@@ -174,7 +177,7 @@ export async function runDownfedCli(): Promise<void> {
         accountId?: string;
       },
     ) => {
-      await deployFederationProject(source ?? ".", options);
+      await deploy_federation_project(source ?? ".", options);
     }, "Downcity CLI"));
 
   program.hook("preAction", (thisCommand) => {
@@ -192,6 +195,15 @@ export async function runDownfedCli(): Promise<void> {
   }
 
   await program.parseAsync(process.argv);
+}
+
+/** 打开当前或交互选择后的 Federation 管理工作区。 */
+async function manage_federation_server(): Promise<void> {
+  const server = readActiveServer()
+    ?? await prompt_select_active_federation_server()
+    ?? await prompt_add_federation_server();
+  if (!server) return;
+  await open_federation_server_workspace(server.base_url);
 }
 
 function register_root_federation_query_command(program: Command): void {

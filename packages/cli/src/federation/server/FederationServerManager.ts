@@ -21,6 +21,7 @@ import {
 } from "@/federation/core/session.js";
 import { showError, showSuccess } from "@/federation/core/ui.js";
 import { t } from "@/shared/CliLocale.js";
+import { stop_managed_local_server } from "@/federation/deploy/runtime/LocalFederationDeployer.js";
 
 const FEDERATION_URL_EXAMPLE = "https://your-federation.example.com";
 
@@ -290,6 +291,10 @@ export async function prompt_remove_federation_server(base_url?: string): Promis
     return false;
   }
 
+  const target_server = readServer(String(selected));
+  if (target_server?.target === "local") {
+    await stop_managed_local_server(target_server);
+  }
   removeServer(String(selected));
   const next_active = readActiveServer();
   showSuccess(

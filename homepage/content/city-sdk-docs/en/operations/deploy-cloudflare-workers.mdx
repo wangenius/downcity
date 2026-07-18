@@ -25,10 +25,10 @@ Developers normally start from an empty directory:
 ```bash
 mkdir my-city
 cd my-city
-fed create .
+fed create . --template cloudflare-workers
 ```
 
-`fed create .` interactively asks for the Federation name and deploy target, then generates the project skeleton:
+`fed create . --template cloudflare-workers` asks for the Federation name and generates the Worker project skeleton:
 
 - `federation.json`
 - `src/index.ts`
@@ -40,35 +40,40 @@ The generated `federation.json` only stores basic project information:
 ```json
 {
   "schema": 1,
-  "type": "city",
+  "type": "federation",
+  "id": "fed_example",
   "name": "my-city",
-  "target": "cloudflare-workers",
   "entry": "src/index.ts",
-  "resources": {
-    "d1": {
-      "binding": "DB",
-      "name": "my-city-db"
-    },
-    "queue": {
-      "binding": "DOWNCITY_QUEUE",
-      "name": "my-city-queue"
-    },
-    "storage": {
-      "type": "r2",
-      "binding": "DOWNCITY_STORAGE",
-      "name": "my-city-storage",
-      "public_url_prefix": "https://images.example.com"
+  "deployment": {
+    "target": "cloudflare-workers",
+    "resources": {
+      "d1": {
+        "type": "d1",
+        "binding": "DB",
+        "name": "my-city-db"
+      },
+      "queue": {
+        "type": "queue",
+        "binding": "DOWNCITY_QUEUE",
+        "name": "my-city-queue"
+      },
+      "storage": {
+        "type": "r2",
+        "binding": "DOWNCITY_STORAGE",
+        "name": "my-city-storage",
+        "public_url_prefix": "https://images.example.com"
+      }
     }
   }
 }
 ```
 
-`type` says this is a Federation project, and `target` declares where it deploys. The current target is `cloudflare-workers`, which means Cloudflare Edge Workers. `entry` and `resources` are commit-safe deployment intent; the D1 database id, Cloudflare account, Worker URL, and Wrangler config are handled by `fed deploy` at deploy time instead of being written into `federation.json`.
+`id` is the path-independent Fed identity, and `deployment.target` declares where it deploys. `entry` and `deployment.resources` are commit-safe deployment intent; D1 ids, account state, Worker URLs, and Wrangler config are handled by `fed deploy`.
 
 If the City template already lives in a Git repository, use `fed create` to bring it local first:
 
 ```bash
-fed create https://github.com/example/my-city.git
+fed create my-city --template https://github.com/example/my-city.git
 cd my-city
 ```
 
@@ -82,7 +87,7 @@ Inside the Federation project directory:
 fed deploy
 ```
 
-When `federation.json` uses the `cloudflare-workers` target, `fed deploy` checks Cloudflare auth automatically. If Wrangler is not logged in, it opens Wrangler login. If Wrangler is logged in but Cloudflare cannot return an account automatically, the CLI prompts you to refresh login or enter the Cloudflare account id once. The account id is saved to local CLI state and reused by later deploys.
+When `federation.json` uses `deployment.target: "cloudflare-workers"`, `fed deploy` checks Cloudflare auth automatically. Account state is stored in the system-level Federation registry and reused by later deploys.
 
 You can also pass a local directory:
 
@@ -96,26 +101,31 @@ Cloudflare Workers currently supports three resource declarations:
 
 ```json
 {
-  "resources": {
-    "d1": {
-      "binding": "DB",
-      "name": "my-city-db"
-    },
-    "queue": {
-      "binding": "DOWNCITY_QUEUE",
-      "name": "my-city-queue"
-    },
-    "storage": {
-      "type": "r2",
-      "binding": "DOWNCITY_STORAGE",
-      "name": "my-city-storage",
-      "public_url_prefix": "https://images.example.com"
+  "deployment": {
+    "target": "cloudflare-workers",
+    "resources": {
+      "d1": {
+        "type": "d1",
+        "binding": "DB",
+        "name": "my-city-db"
+      },
+      "queue": {
+        "type": "queue",
+        "binding": "DOWNCITY_QUEUE",
+        "name": "my-city-queue"
+      },
+      "storage": {
+        "type": "r2",
+        "binding": "DOWNCITY_STORAGE",
+        "name": "my-city-storage",
+        "public_url_prefix": "https://images.example.com"
+      }
     }
   }
 }
 ```
 
-If D1 / Queue are omitted, `fed deploy` uses the default names `${name}-db` and `${name}-queue` from `federation.json.name`. Storage is enabled only when `resources.storage` exists.
+If D1 / Queue are omitted, `fed deploy` uses `${name}-db` and `${name}-queue`. Storage is enabled only when `deployment.resources.storage` exists.
 
 During deployment, `fed deploy` reuses same-name D1 databases, Queues, and R2 buckets. If a declared resource is missing and this is not `--dry-run`, it creates the resource automatically. The D1 database id is Cloudflare deploy state and is not written back to project config.
 
@@ -146,13 +156,13 @@ fed deploy ./my-city --dry-run
 `fed deploy` runs these steps:
 
 - reads `federation.json` from the target directory
-- checks the target platform identity from `federation.json.target`; Cloudflare Workers opens Wrangler login or guides account selection when needed
+- checks the target platform identity from `federation.json.deployment.target`; Cloudflare Workers opens Wrangler login or guides account selection when needed
 - if this is not `--dry-run`, automatically bumps `package.json.version` by one patch version before deployment
 - runs `pnpm build` if package.json has a `build` script
 - runs `pnpm typecheck` if package.json has a `typecheck` script
-- prepares D1 for the `cloudflare-workers` target by looking up `resources.d1.name`, and creates it automatically when missing
-- prepares Queue by looking up `resources.queue.name`, and creates it automatically when missing
-- if `resources.storage` is declared, prepares an R2 bucket by looking up `resources.storage.name`, and creates it automatically when missing
+- prepares D1 by looking up `deployment.resources.d1.name`, and creates it automatically when missing
+- prepares Queue by looking up `deployment.resources.queue.name`, and creates it automatically when missing
+- if `deployment.resources.storage` is declared, prepares the corresponding R2 bucket and creates it automatically when missing
 - generates Wrangler config temporarily instead of writing it into the project directory
 - runs `wrangler deploy --config <generated-wrangler.toml>`
 - automatically registers the deployed Worker URL as the current Federation

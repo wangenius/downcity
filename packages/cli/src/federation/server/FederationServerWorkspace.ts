@@ -21,6 +21,7 @@ import {
 import { create_admin_tui_runtime } from "@/federation/tui/AdminTuiRuntime.js";
 import type { admin_tui_runtime } from "@/federation/types/AdminTui.js";
 import { t } from "@/shared/CliLocale.js";
+import { stop_managed_local_server } from "@/federation/deploy/runtime/LocalFederationDeployer.js";
 
 /**
  * 打开某个 Federation 的 admin 工作区。
@@ -310,6 +311,9 @@ async function open_federation_admin_more_actions(
     );
     if (confirmed !== "remove") {
       return { kind: "continue" };
+    }
+    if (server.target === "local") {
+      await stop_managed_local_server(server);
     }
     removeServer(base_url);
     const next_active = readActiveServer();

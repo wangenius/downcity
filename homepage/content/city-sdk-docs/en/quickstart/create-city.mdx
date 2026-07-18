@@ -5,6 +5,17 @@ description: Initialize the Downcity server-side Federation with the default dat
 
 The server-side runtime class is `Federation` (also called the Federation in these docs); product clients use the `City` client to reach it. See [Federation and City](/en/city-sdk-docs/concepts/federation) for the distinction.
 
+The fastest local creation and startup path is:
+
+```bash
+fed create ./my-fed
+cd my-fed
+pnpm install
+fed deploy
+```
+
+The default template uses Node.js and SQLite. `fed deploy` allocates a port starting at `12314`, registers the process in system-level Fed state, and automatically injects and stores the admin key. `fed` can then inspect and manage it from any directory. The rest of this page shows the SDK path for manually embedding the Federation runtime.
+
 Install the packages:
 
 ```bash

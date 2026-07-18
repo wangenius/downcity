@@ -38,42 +38,42 @@ export function writeWranglerConfig(
     "workers_dev = true",
   ];
 
-  if (config.resources.d1) {
+  if (config.deployment.resources.d1) {
     lines.push(
       "",
       "[[d1_databases]]",
-      `binding = ${tomlString(config.resources.d1.binding)}`,
-      `database_name = ${tomlString(config.resources.d1.name)}`,
+      `binding = ${tomlString(config.deployment.resources.d1.binding)}`,
+      `database_name = ${tomlString(config.deployment.resources.d1.name)}`,
       `database_id = ${tomlString(resolved_database_id)}`,
     );
   }
 
-  if (config.resources.queue) {
+  if (config.deployment.resources.queue) {
     lines.push(
       "",
       "[[queues.producers]]",
-      `binding = ${tomlString(config.resources.queue.binding)}`,
-      `queue = ${tomlString(config.resources.queue.name)}`,
+      `binding = ${tomlString(config.deployment.resources.queue.binding)}`,
+      `queue = ${tomlString(config.deployment.resources.queue.name)}`,
       "",
       "[[queues.consumers]]",
-      `queue = ${tomlString(config.resources.queue.name)}`,
+      `queue = ${tomlString(config.deployment.resources.queue.name)}`,
     );
   }
 
-  if (config.resources.storage) {
+  if (config.deployment.resources.storage) {
     lines.push(
       "",
       "[[r2_buckets]]",
-      `binding = ${tomlString(config.resources.storage.binding)}`,
-      `bucket_name = ${tomlString(config.resources.storage.name)}`,
+      `binding = ${tomlString(config.deployment.resources.storage.binding)}`,
+      `bucket_name = ${tomlString(config.deployment.resources.storage.name)}`,
     );
   }
 
-  if (config.resources.storage?.public_url_prefix) {
+  if (config.deployment.resources.storage?.public_url_prefix) {
     lines.push(
       "",
       "[vars]",
-      `DOWNCITY_STORAGE_PUBLIC_URL_PREFIX = ${tomlString(config.resources.storage.public_url_prefix)}`,
+      `DOWNCITY_STORAGE_PUBLIC_URL_PREFIX = ${tomlString(config.deployment.resources.storage.public_url_prefix)}`,
     );
   }
 

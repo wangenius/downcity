@@ -2,7 +2,7 @@
  * Cloudflare R2 bucket 解析器。
  *
  * 关键点（中文）
- * - Storage 是 Workers 目标的默认文件存储资源，由 `city deploy` 自动准备。
+ * - Storage 是 Workers 目标的默认文件存储资源，由 `fed deploy` 自动准备。
  * - 用户只需要在 `federation.json.resources.storage` 声明稳定资源名和公开 URL。
  * - R2 bucket 没有需要写入项目配置的 id，Wrangler 配置只绑定 bucket name。
  */
@@ -38,7 +38,7 @@ export interface ResolveR2BucketResult {
 export async function resolveR2Bucket(
   params: ResolveR2BucketParams,
 ): Promise<ResolveR2BucketResult> {
-  const storage = params.config_file.config.resources.storage;
+  const storage = params.config_file.config.deployment.resources.storage;
   if (!storage) {
     return {
       summary: { status: "skipped" },

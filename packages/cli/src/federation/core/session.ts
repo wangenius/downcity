@@ -10,6 +10,17 @@
 import { createFederationPlatformStore } from "@/city/runtime/store/index.js";
 import { normalizeBaseUrl } from "@/federation/core/env.js";
 import type { CliLocale } from "@/shared/types/CliLocale.js";
+import type {
+  FederationClientConfig,
+  FederationServerStatus,
+  ServerProfile,
+} from "@/federation/types/FederationRegistry.js";
+import type {
+  FederationDeploymentTarget,
+  FederationProjectConfig,
+} from "@/federation/types/FederationProjectConfig.js";
+
+export type { ServerProfile } from "@/federation/types/FederationRegistry.js";
 
 const FEDERATION_CONFIG_KEY = "federation.config";
 
@@ -26,27 +37,7 @@ export interface AdminSession {
   admin_secret_key: string;
 }
 
-export interface ServerProfile {
-  /** 展示名称 */
-  name: string;
-  /** City 服务地址 */
-  base_url: string;
-  /** 该 server 对应的 admin secret key */
-  admin_secret_key: string;
-}
-
-export interface ClientConfig {
-  /** 当前激活的 server URL */
-  active_server_url?: string;
-  /** 已保存的 server 列表 */
-  servers: ServerProfile[];
-  /** 当前 Cloudflare account id，属于 CLI 本地 provider 状态。 */
-  cloudflare_account_id?: string;
-  /** 当前选择的模型 ID */
-  model: string;
-  /** 当前持久化的 CLI 语言。 */
-  cli_locale?: CliLocale;
-}
+export type ClientConfig = FederationClientConfig;
 
 // ============================================================
 // Config 读写
@@ -163,6 +154,16 @@ export function addServer(input: {
   base_url: string;
   admin_secret_key?: string;
   name?: string;
+  fed_id?: string;
+  target?: FederationDeploymentTarget;
+  project_dir?: string;
+  pid?: number;
+  instance_id?: string;
+  port?: number;
+  log_path?: string;
+  deployed_at?: string;
+  status?: FederationServerStatus;
+  config_snapshot?: FederationProjectConfig;
 }): ServerProfile {
   const config = readConfig();
   const normalized = normalizeServer(input);
@@ -195,6 +196,16 @@ export function updateServer(
     base_url: string;
     admin_secret_key?: string;
     name?: string;
+    fed_id?: string;
+    target?: FederationDeploymentTarget;
+    project_dir?: string;
+    pid?: number;
+    instance_id?: string;
+    port?: number;
+    log_path?: string;
+    deployed_at?: string;
+    status?: FederationServerStatus;
+    config_snapshot?: FederationProjectConfig;
   },
 ): ServerProfile {
   const config = readConfig();
@@ -250,6 +261,65 @@ export function readServer(baseUrl: string): ServerProfile | undefined {
   return readConfig().servers.find((server) => server.base_url === normalizedBaseUrl);
 }
 
+/** 根据 Fed ID 和部署目标读取已登记实例。 */
+export function read_server_by_fed_id(
+  fed_id: string,
+  target?: FederationDeploymentTarget,
+): ServerProfile | undefined {
+  const normalized_id = String(fed_id).trim();
+  return readConfig().servers.find((server) => (
+    server.fed_id === normalized_id
+    && (target === undefined || server.target === target)
+  ));
+}
+
+/** 登记一次由 `fed deploy` 创建的实例，并将它设为 active。 */
+export function register_deployed_server(input: {
+  /** 部署项目配置。 */
+  config: FederationProjectConfig;
+  /** 部署项目目录。 */
+  project_dir: string;
+  /** 部署完成后的 HTTP URL。 */
+  base_url: string;
+  /** 本地进程 PID。 */
+  pid?: number;
+  /** 本地进程 instance ID。 */
+  instance_id?: string;
+  /** 本地实际端口。 */
+  port?: number;
+  /** 本地日志路径。 */
+  log_path?: string;
+  /** 部署结果状态。 */
+  status: FederationServerStatus;
+  /** 部署器明确注入的 admin key。 */
+  admin_secret_key?: string;
+}): ServerProfile {
+  const existing = read_server_by_fed_id(input.config.id, input.config.deployment.target);
+  const existing_by_url = readServer(input.base_url);
+  const preserved_key = input.admin_secret_key?.trim()
+    || existing?.admin_secret_key
+    || existing_by_url?.admin_secret_key
+    || "";
+  if (existing && existing.base_url !== normalizeBaseUrl(input.base_url)) {
+    removeServer(existing.base_url);
+  }
+  return addServer({
+    name: input.config.name,
+    base_url: input.base_url,
+    admin_secret_key: preserved_key,
+    fed_id: input.config.id,
+    target: input.config.deployment.target,
+    project_dir: input.project_dir,
+    pid: input.pid,
+    instance_id: input.instance_id,
+    port: input.port,
+    log_path: input.log_path,
+    deployed_at: new Date().toISOString(),
+    status: input.status,
+    config_snapshot: input.config,
+  });
+}
+
 // ============================================================
 // 内部工具
 // ============================================================
@@ -278,9 +348,11 @@ function readServersFromConfig(raw: Record<string, unknown>): ServerProfile[] {
       : deriveServerName(normalizedBaseUrl);
 
     const existing = servers.find((server) => server.base_url === normalizedBaseUrl);
+    const metadata = read_server_metadata(record);
     if (existing) {
       existing.name = name;
       existing.admin_secret_key = adminSecretKey;
+      Object.assign(existing, metadata);
       continue;
     }
 
@@ -288,6 +360,7 @@ function readServersFromConfig(raw: Record<string, unknown>): ServerProfile[] {
       name,
       base_url: normalizedBaseUrl,
       admin_secret_key: adminSecretKey,
+      ...metadata,
     });
   }
 
@@ -345,6 +418,16 @@ function normalizeServer(input: {
   base_url: string;
   admin_secret_key?: string;
   name?: string;
+  fed_id?: string;
+  target?: FederationDeploymentTarget;
+  project_dir?: string;
+  pid?: number;
+  instance_id?: string;
+  port?: number;
+  log_path?: string;
+  deployed_at?: string;
+  status?: FederationServerStatus;
+  config_snapshot?: FederationProjectConfig;
 }): ServerProfile {
   const normalizedBaseUrl = normalizeBaseUrl(input.base_url);
   const normalizedAdminSecretKey = String(input.admin_secret_key ?? "").trim();
@@ -354,7 +437,82 @@ function normalizeServer(input: {
     name: normalizedName,
     base_url: normalizedBaseUrl,
     admin_secret_key: normalizedAdminSecretKey,
+    fed_id: normalize_optional_text(input.fed_id),
+    target: normalize_target(input.target),
+    project_dir: normalize_optional_text(input.project_dir),
+    pid: normalize_positive_integer(input.pid),
+    instance_id: normalize_optional_text(input.instance_id),
+    port: normalize_positive_integer(input.port),
+    log_path: normalize_optional_text(input.log_path),
+    deployed_at: normalize_optional_text(input.deployed_at),
+    status: resolve_server_status(input.status, input.target, input.pid),
+    config_snapshot: input.config_snapshot,
   };
+}
+
+/** 读取并刷新旧状态记录中的扩展字段。 */
+function read_server_metadata(record: Record<string, unknown>): Partial<ServerProfile> {
+  return {
+    fed_id: typeof record.fed_id === "string" ? record.fed_id : undefined,
+    target: normalize_target(record.target),
+    project_dir: typeof record.project_dir === "string" ? record.project_dir : undefined,
+    pid: normalize_positive_integer(record.pid),
+    instance_id: typeof record.instance_id === "string" ? record.instance_id : undefined,
+    port: normalize_positive_integer(record.port),
+    log_path: typeof record.log_path === "string" ? record.log_path : undefined,
+    deployed_at: typeof record.deployed_at === "string" ? record.deployed_at : undefined,
+    status: normalize_status(record.status),
+    config_snapshot: is_project_config(record.config_snapshot) ? record.config_snapshot : undefined,
+  };
+}
+
+/** 规范化可选文本。 */
+function normalize_optional_text(value: unknown): string | undefined {
+  return typeof value === "string" ? value.trim() || undefined : undefined;
+}
+
+/** 规范化正整数。 */
+function normalize_positive_integer(value: unknown): number | undefined {
+  const number = typeof value === "number" ? value : Number.NaN;
+  return Number.isInteger(number) && number > 0 ? number : undefined;
+}
+
+/** 规范化部署目标。 */
+function normalize_target(value: unknown): FederationDeploymentTarget | undefined {
+  return value === "local" || value === "cloudflare-workers" ? value : undefined;
+}
+
+/** 规范化实例状态。 */
+function normalize_status(value: unknown): FederationServerStatus | undefined {
+  return value === "starting" || value === "running" || value === "deployed"
+    || value === "stopped" || value === "failed" || value === "unknown"
+    ? value
+    : undefined;
+}
+
+/** 本地记录根据 PID 实时推导状态，避免 TUI 长期展示失效进程。 */
+function resolve_server_status(
+  status: FederationServerStatus | undefined,
+  target: FederationDeploymentTarget | undefined,
+  pid: number | undefined,
+): FederationServerStatus | undefined {
+  if (target !== "local" || !pid) return status;
+  try {
+    process.kill(pid, 0);
+    return "running";
+  } catch {
+    return "stopped";
+  }
+}
+
+/** 判断 registry 快照是否仍像 Federation 配置。 */
+function is_project_config(value: unknown): value is FederationProjectConfig {
+  return Boolean(
+    value
+    && typeof value === "object"
+    && (value as { type?: unknown }).type === "federation"
+    && typeof (value as { id?: unknown }).id === "string",
+  );
 }
 
 function deriveServerName(baseUrl: string): string {

@@ -28,24 +28,49 @@ city -v
 ```bash
 fed
 fed create .
+fed create ./edge-fed --template cloudflare-workers
+fed create ./custom-fed --template git://example.com/custom-fed.git
 fed deploy
 fed deploy --dry-run
 fed deploy --verify
 ```
 
-`fed create` 生成 Federation 项目骨架，配置文件是 `federation.json`。`fed deploy` 读取本地 Federation 项目并部署到目标平台；Cloudflare Workers 目标会自动准备 D1、Queue 和 R2 storage。
+`fed create` 默认生成 Local Node.js + SQLite 项目。`--template` 可以选择 `cloudflare-workers` 或 Git 模板。项目身份和部署方式统一写在 `federation.json` 中。
+
+`fed deploy` 表示部署当前项目，不区分本地与云端。本地目标会从 `12314` 开始分配端口并启动受管进程；CLI 会自动生成或复用 admin key，同时注入 Federation runtime 和系统 registry。重复部署同一 `fed_id` 时会用最新代码替换旧实例并保持原 admin key。Cloudflare Workers 目标会准备 D1、Queue 和 R2，再发布 Worker。
 
 管理已部署 Federation：
 
 ```bash
 fed server add
-fed server manage
+fed server
 fed query GET /health
 fed query GET /v1/ai/models
 fed query POST /v1/ai/image/result --data '{"job_id":"..."}'
 ```
 
-`fed query` 会使用当前 active Federation，并带上保存的 `admin_secret_key`。
+所有 Federation URL、active 状态、admin key、本地 PID、端口、日志和部署状态都保存在系统级 Federation registry，不依赖当前路径。`fed query` 请求当前 active Federation；已配置 `admin_secret_key` 时自动携带，未配置时发送公开请求。
+
+## federation.json
+
+```json
+{
+  "schema": 1,
+  "type": "federation",
+  "id": "fed_example",
+  "name": "example",
+  "entry": "src/index.ts",
+  "deployment": {
+    "target": "local",
+    "scripts": {
+      "build": "pnpm typecheck",
+      "deploy": "pnpm start"
+    }
+  }
+}
+```
+
+`deployment.scripts` 是可选覆盖。没有配置时使用目标内置部署器；配置 `build` 或 `deploy` 时只替换对应阶段。
 
 ## 管理本机 Agent 和登录态：用 city
 
@@ -74,12 +99,15 @@ Cloudflare Workers Federation 项目可以在 `federation.json` 里声明默认 
 
 ```json
 {
-  "resources": {
-    "storage": {
-      "type": "r2",
-      "binding": "DOWNCITY_STORAGE",
-      "name": "downcity-storage",
-      "public_url_prefix": "https://images.example.com"
+  "deployment": {
+    "target": "cloudflare-workers",
+    "resources": {
+      "storage": {
+        "type": "r2",
+        "binding": "DOWNCITY_STORAGE",
+        "name": "downcity-storage",
+        "public_url_prefix": "https://images.example.com"
+      }
     }
   }
 }

@@ -2,7 +2,7 @@
  * Cloudflare account 解析器。
  *
  * 关键点（中文）
- * - `city deploy` 面向 City 项目，不要求用户理解 Wrangler 的登录细节。
+ * - `fed deploy` 面向 Federation 项目，不要求用户理解 Wrangler 的登录细节。
  * - 有明确 account id 时直接复用；没有时先尝试 Wrangler 自动识别。
  * - Wrangler 已登录但无法枚举 account 时，进入最小交互：重新登录或手动输入 account id。
  */
@@ -69,7 +69,7 @@ async function resolveAccountAfterLookupDenied(
     throw new CliError({
       title: "Cloudflare account required",
       note: "Wrangler credential exists, but Cloudflare rejected user/account lookup, so city cannot choose an account automatically.",
-      fix: "Run city deploy --account-id <account_id> or rerun in an interactive terminal.",
+      fix: "Run `fed deploy --account-id <account_id>` or rerun in an interactive terminal.",
     });
   }
 

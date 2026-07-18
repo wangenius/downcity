@@ -2,7 +2,7 @@
  * Cloudflare D1 数据库解析器。
  *
  * 关键点（中文）
- * - D1 是 Workers 目标的运行时资源，由 `city deploy` 自动准备。
+ * - D1 是 Workers 目标的运行时资源，由 `fed deploy` 自动准备。
  * - 用户只需要在 `federation.json.resources.d1` 声明稳定资源名。
  * - database id 由 CLI 在部署时自动解析，不写入项目配置。
  * - dry-run 不创建远程资源，只使用已有 database name 解析临时 Wrangler 配置。
@@ -39,7 +39,7 @@ export interface ResolveD1DatabaseResult {
 export async function resolveD1Database(
   params: ResolveD1DatabaseParams,
 ): Promise<ResolveD1DatabaseResult> {
-  const d1 = params.config_file.config.resources.d1;
+  const d1 = params.config_file.config.deployment.resources.d1;
   if (!d1) {
     return {
       summary: { status: "skipped" },
@@ -68,7 +68,7 @@ export async function resolveD1Database(
     throw new CliError({
       title: "D1 database not found",
       note: `Cloudflare account does not have a D1 database named ${database_name}.`,
-      fix: "Run `city deploy` once without `--dry-run` to let Downcity create it, or update resources.d1.name in federation.json.",
+      fix: "Run `fed deploy` once without `--dry-run`, or update deployment.resources.d1.name.",
     });
   }
 
@@ -84,7 +84,7 @@ export async function resolveD1Database(
     throw new CliError({
       title: "Unable to read D1 database id",
       note: output,
-      fix: "Create D1 manually in Cloudflare or update resources.d1.name in federation.json, then rerun city deploy.",
+      fix: "Create D1 manually or update deployment.resources.d1.name, then rerun `fed deploy`.",
     });
   }
 

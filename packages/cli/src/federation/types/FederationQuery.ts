@@ -28,7 +28,7 @@ export interface FederationQueryResolvedRequest {
   method: string;
   /** 只允许指向当前 active Federation origin 的完整请求 URL。 */
   url: URL;
-  /** 最终请求头集合，包含 admin Authorization 与临时 header。 */
+  /** 最终请求头集合；已配置 admin key 时包含 Authorization。 */
   headers: Headers;
   /** 已校验为 JSON 的请求 body；没有 body 时为 undefined。 */
   body?: string;

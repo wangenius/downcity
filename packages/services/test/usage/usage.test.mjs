@@ -4,6 +4,7 @@ import os from "node:os"
 import path from "node:path"
 import test from "node:test"
 import { Federation, AIService } from "@downcity/city"
+import { create_test_text_model } from "../fixtures/ai-channel.mjs"
 import { createSqliteDb } from "./sqlite-db.mjs"
 import { UsageService } from "../../bin/index.js"
 
@@ -18,17 +19,10 @@ test("usageService records successful service calls", async () => {
     base.use(new UsageService())
 
     const ai = new AIService()
-    ai.use({
+    ai.use(create_test_text_model({
       id: "gpt-5.4",
       name: "GPT-5.4",
-      actions: {
-        text: async () => ({
-          id: "msg_1",
-          role: "assistant",
-          parts: [{ type: "text", text: "ok", state: "done" }],
-        }),
-      },
-    })
+    }))
     base.use(ai)
 
     await base.health()

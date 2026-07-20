@@ -4,6 +4,7 @@ import os from "node:os"
 import path from "node:path"
 import test from "node:test"
 import { Federation, AIService } from "@downcity/city"
+import { create_test_text_model } from "../fixtures/ai-channel.mjs"
 import { createSqliteDb } from "./sqlite-db.mjs"
 import { BalanceService } from "../../bin/index.js"
 
@@ -118,7 +119,7 @@ test("balanceService charges users with generic metadata", async () => {
   }
 })
 
-test("AIService submits provider charges through BalanceService", async () => {
+test("AIService submits model charges through BalanceService", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-balance-charge-"))
 
@@ -131,25 +132,15 @@ test("AIService submits provider charges through BalanceService", async () => {
     base.use(balance)
 
     const ai = new AIService({ balance })
-    ai.use({
+    ai.use(create_test_text_model({
       id: "priced-text",
-      provider_id: "priced-provider",
       name: "Priced Text",
-      actions: {
-        text: async () => ({
-          output: {
-            id: "msg_1",
-            role: "assistant",
-            parts: [{ type: "text", text: "ok" }],
-          },
-          charge: {
-            credits: 321,
-            note: "provider charge",
-            metadata: { provider_id: "priced-provider" },
-          },
-        }),
-      },
-    })
+      bill: () => ({
+        credits: 321,
+        note: "model charge",
+        metadata: { channel_id: "test-priced-text" },
+      }),
+    }))
     base.use(ai)
 
     await base.health()
@@ -177,9 +168,9 @@ test("AIService submits provider charges through BalanceService", async () => {
     const charges = await balance.listCharges({ user_id: "user_1" })
     assert.equal(charges.length, 1)
     assert.equal(charges[0].credits, 321)
-    assert.equal(charges[0].note, "provider charge")
+    assert.equal(charges[0].note, "model charge")
     assert.deepEqual(JSON.parse(charges[0].metadata_json), {
-      provider_id: "priced-provider",
+      channel_id: "test-priced-text",
     })
   } finally {
     process.chdir(cwd)
@@ -201,27 +192,17 @@ test("AIService allows one positive-balance overdraft and blocks the next AI req
     base.use(balance)
 
     const ai = new AIService({ balance })
-    ai.use({
+    ai.use(create_test_text_model({
       id: "overdraft-text",
-      provider_id: "priced-provider",
       name: "Overdraft Text",
-      actions: {
-        text: async () => {
-          providerCalls += 1
-          return {
-            output: {
-              id: "msg_1",
-              role: "assistant",
-              parts: [{ type: "text", text: "ok" }],
-            },
-            charge: {
-              credits: 321,
-              note: "provider charge",
-            },
-          }
-        },
+      bill: () => ({
+        credits: 321,
+        note: "model charge",
+      }),
+      on_stream: () => {
+        providerCalls += 1
       },
-    })
+    }))
     base.use(ai)
 
     await base.health()

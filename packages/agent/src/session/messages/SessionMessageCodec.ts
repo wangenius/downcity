@@ -9,6 +9,7 @@
 
 import type { UIMessage } from "ai";
 import {
+  to_session_json_object,
   to_session_json_value,
   to_session_provider_metadata,
 } from "@/session/messages/SessionJsonValue.js";
@@ -106,28 +107,36 @@ export function from_ui_user_parts(
     if (!part || typeof part !== "object") return [];
     const candidate = part as Record<string, unknown>;
     if (candidate.type === "text") {
+      const provider_metadata = to_session_provider_metadata(candidate.providerMetadata);
       return [{
         part_id: `user-text:${index + 1}`,
         type: "text" as const,
         text: String(candidate.text || ""),
         state: "done" as const,
+        ...(provider_metadata !== undefined ? { provider_metadata } : {}),
       }];
     }
     if (candidate.type === "file") {
+      const provider_metadata = to_session_provider_metadata(candidate.providerMetadata);
       return [{
         part_id: `user-file:${index + 1}`,
         type: "file" as const,
         url: String(candidate.url || ""),
         media_type: String(candidate.mediaType || "application/octet-stream"),
-        ...(candidate.filename ? { filename: String(candidate.filename) } : {}),
+        ...(typeof candidate.filename === "string"
+          ? { filename: candidate.filename }
+          : {}),
+        ...(provider_metadata !== undefined ? { provider_metadata } : {}),
       }];
     }
     if (String(candidate.type || "").startsWith("data-")) {
+      const data_id = typeof candidate.id === "string" ? candidate.id : undefined;
       return [{
         part_id: `user-data:${index + 1}`,
         type: "data" as const,
         data_type: String(candidate.type),
         data: to_session_json_value(candidate.data),
+        ...(data_id !== undefined ? { data_id } : {}),
       }];
     }
     return [];
@@ -144,22 +153,66 @@ export function from_ui_assistant_parts(
     const candidate = part as Record<string, unknown>;
     const type = String(candidate.type || "");
     if (type === "text" || type === "reasoning") {
+      const provider_metadata = to_session_provider_metadata(candidate.providerMetadata);
       return [{
         part_id: `${type}:${index + 1}`,
         sequence: index + 1,
         type: type as "text" | "reasoning",
         text: String(candidate.text || ""),
-        state: "done" as const,
+        state: candidate.state === "streaming" ? "streaming" as const : "done" as const,
+        ...(provider_metadata !== undefined ? { provider_metadata } : {}),
       }];
     }
     if (type === "file") {
+      const provider_metadata = to_session_provider_metadata(candidate.providerMetadata);
       return [{
         part_id: `file:${index + 1}`,
         sequence: index + 1,
         type: "file" as const,
         url: String(candidate.url || ""),
         media_type: String(candidate.mediaType || "application/octet-stream"),
-        ...(candidate.filename ? { filename: String(candidate.filename) } : {}),
+        ...(typeof candidate.filename === "string"
+          ? { filename: candidate.filename }
+          : {}),
+        ...(provider_metadata !== undefined ? { provider_metadata } : {}),
+      }];
+    }
+    if (type === "source-url") {
+      const provider_metadata = to_session_provider_metadata(candidate.providerMetadata);
+      return [{
+        part_id: `source:${String(candidate.sourceId || index + 1)}`,
+        sequence: index + 1,
+        type: "source" as const,
+        source_type: "url" as const,
+        source_id: String(candidate.sourceId || `source-${index + 1}`),
+        url: String(candidate.url || ""),
+        ...(typeof candidate.title === "string" ? { title: candidate.title } : {}),
+        ...(provider_metadata !== undefined ? { provider_metadata } : {}),
+      }];
+    }
+    if (type === "source-document") {
+      const provider_metadata = to_session_provider_metadata(candidate.providerMetadata);
+      return [{
+        part_id: `source:${String(candidate.sourceId || index + 1)}`,
+        sequence: index + 1,
+        type: "source" as const,
+        source_type: "document" as const,
+        source_id: String(candidate.sourceId || `source-${index + 1}`),
+        media_type: String(candidate.mediaType || "application/octet-stream"),
+        title: candidate.title === undefined || candidate.title === null
+          ? "Document"
+          : String(candidate.title),
+        ...(typeof candidate.filename === "string"
+          ? { filename: candidate.filename }
+          : {}),
+        ...(provider_metadata !== undefined ? { provider_metadata } : {}),
+      }];
+    }
+    if (type === "step-start") {
+      return [{
+        part_id: `step:${index + 1}`,
+        sequence: index + 1,
+        type: "step-start" as const,
       }];
     }
     if (type === "dynamic-tool" || type.startsWith("tool-")) {
@@ -170,6 +223,8 @@ export function from_ui_assistant_parts(
       const result_provider_metadata = to_session_provider_metadata(
         candidate.resultProviderMetadata,
       );
+      const tool_metadata = to_session_json_object(candidate.toolMetadata);
+      const approval = to_session_json_object(candidate.approval);
       return [{
         part_id: String(candidate.toolCallId || `tool:${index + 1}`),
         sequence: index + 1,
@@ -197,7 +252,20 @@ export function from_ui_assistant_parts(
         ...(candidate.output !== undefined
           ? { output: to_session_json_value(candidate.output) }
           : {}),
-        ...(candidate.errorText ? { error: String(candidate.errorText) } : {}),
+        ...(typeof candidate.errorText === "string"
+          ? { error: candidate.errorText }
+          : {}),
+        ...(candidate.rawInput !== undefined
+          ? { raw_input: to_session_json_value(candidate.rawInput) }
+          : {}),
+        ...(typeof candidate.title === "string" ? { title: candidate.title } : {}),
+        ...(tool_metadata !== undefined ? { tool_metadata } : {}),
+        ...(typeof candidate.dynamic === "boolean"
+          ? { dynamic: candidate.dynamic }
+          : { dynamic: type === "dynamic-tool" }),
+        ...(typeof candidate.preliminary === "boolean"
+          ? { preliminary: candidate.preliminary }
+          : {}),
         ...(call_provider_metadata !== undefined
           ? { call_provider_metadata }
           : {}),
@@ -207,6 +275,30 @@ export function from_ui_assistant_parts(
         ...(typeof candidate.providerExecuted === "boolean"
           ? { provider_executed: candidate.providerExecuted }
           : {}),
+        ...(approval?.id
+          ? {
+              approval: {
+                approval_id: String(approval.id),
+                ...(typeof approval.approved === "boolean"
+                  ? { approved: approval.approved }
+                  : {}),
+                ...(typeof approval.reason === "string"
+                  ? { reason: approval.reason }
+                  : {}),
+              },
+            }
+          : {}),
+      }];
+    }
+    if (type.startsWith("data-")) {
+      const data_id = typeof candidate.id === "string" ? candidate.id : undefined;
+      return [{
+        part_id: `data:${data_id ?? String(index + 1)}`,
+        sequence: index + 1,
+        type: "data" as const,
+        data_type: type,
+        data: to_session_json_value(candidate.data),
+        ...(data_id !== undefined ? { data_id } : {}),
       }];
     }
     return [];
@@ -227,19 +319,30 @@ export function extract_session_assistant_text(
 function to_ui_user_parts(parts: SessionUserMessagePart[]): UIMessage["parts"] {
   return parts.map((part) => {
     if (part.type === "text") {
-      return { type: "text", text: part.text, state: part.state };
+      return {
+        type: "text",
+        text: part.text,
+        state: part.state,
+        ...(part.provider_metadata !== undefined
+          ? { providerMetadata: part.provider_metadata }
+          : {}),
+      };
     }
     if (part.type === "file") {
       return {
         type: "file",
         url: part.url,
         mediaType: part.media_type,
-        ...(part.filename ? { filename: part.filename } : {}),
+        ...(part.filename !== undefined ? { filename: part.filename } : {}),
+        ...(part.provider_metadata !== undefined
+          ? { providerMetadata: part.provider_metadata }
+          : {}),
       };
     }
     return {
       type: part.data_type,
       data: part.data,
+      ...(part.data_id !== undefined ? { id: part.data_id } : {}),
     } as UIMessage["parts"][number];
   });
 }
@@ -249,26 +352,73 @@ function to_ui_assistant_parts(
 ): UIMessage["parts"] {
   return parts.map((part) => {
     if (part.type === "text" || part.type === "reasoning") {
-      return { type: part.type, text: part.text, state: part.state };
+      return {
+        type: part.type,
+        text: part.text,
+        state: part.state,
+        ...(part.provider_metadata !== undefined
+          ? { providerMetadata: part.provider_metadata }
+          : {}),
+      };
     }
     if (part.type === "file") {
       return {
         type: "file",
         url: part.url,
         mediaType: part.media_type,
-        ...(part.filename ? { filename: part.filename } : {}),
+        ...(part.filename !== undefined ? { filename: part.filename } : {}),
+        ...(part.provider_metadata !== undefined
+          ? { providerMetadata: part.provider_metadata }
+          : {}),
       };
     }
     if (part.type === "data") {
       return {
         type: part.data_type,
         data: part.data,
+        ...(part.data_id !== undefined ? { id: part.data_id } : {}),
       } as UIMessage["parts"][number];
+    }
+    if (part.type === "source") {
+      if (part.source_type === "url") {
+        return {
+          type: "source-url",
+          sourceId: part.source_id,
+          url: part.url,
+          ...(part.title !== undefined ? { title: part.title } : {}),
+          ...(part.provider_metadata !== undefined
+            ? { providerMetadata: part.provider_metadata }
+            : {}),
+        };
+      }
+      return {
+        type: "source-document",
+        sourceId: part.source_id,
+        mediaType: part.media_type,
+        title: part.title,
+        ...(part.filename !== undefined ? { filename: part.filename } : {}),
+        ...(part.provider_metadata !== undefined
+          ? { providerMetadata: part.provider_metadata }
+          : {}),
+      };
+    }
+    if (part.type === "step-start") {
+      return { type: "step-start" };
     }
     if (!("tool_call_id" in part)) {
       throw new Error(`Unsupported Assistant part: ${part.type}`);
     }
-    const input = part.input ?? parse_json(part.input_text);
+    const has_input = part.input !== undefined || part.input_text !== undefined;
+    const input = part.input !== undefined
+      ? part.input
+      : part.input_text !== undefined
+        ? parse_json(part.input_text)
+        : part.raw_input !== undefined
+          ? undefined
+          : {};
+    const tool_identity_fields = part.dynamic === false
+      ? { type: `tool-${part.tool_name}` }
+      : { type: "dynamic-tool", toolName: part.tool_name };
     const call_provider_fields = {
       ...(part.call_provider_metadata !== undefined
         ? { callProviderMetadata: part.call_provider_metadata }
@@ -276,30 +426,74 @@ function to_ui_assistant_parts(
       ...(part.provider_executed !== undefined
         ? { providerExecuted: part.provider_executed }
         : {}),
+      ...(part.title !== undefined ? { title: part.title } : {}),
+      ...(part.tool_metadata !== undefined
+        ? { toolMetadata: part.tool_metadata }
+        : {}),
     };
     if (part.state === "completed") {
       return {
-        type: "dynamic-tool",
-        toolName: part.tool_name,
+        ...tool_identity_fields,
         toolCallId: part.tool_call_id,
         state: "output-available",
         input,
         output: part.output,
         ...call_provider_fields,
+        ...(part.preliminary !== undefined
+          ? { preliminary: part.preliminary }
+          : {}),
+        ...(part.approval?.approved === true
+          ? {
+              approval: {
+                id: part.approval.approval_id,
+                approved: true as const,
+                ...(part.approval.reason !== undefined
+                  ? { reason: part.approval.reason }
+                  : {}),
+              },
+            }
+          : {}),
         ...(part.result_provider_metadata !== undefined
           ? { resultProviderMetadata: part.result_provider_metadata }
           : {}),
       };
     }
     if (part.state === "failed") {
+      if (part.approval?.approved === false) {
+        return {
+          ...tool_identity_fields,
+          toolCallId: part.tool_call_id,
+          state: "output-denied",
+          input,
+          ...call_provider_fields,
+          approval: {
+            id: part.approval.approval_id,
+            approved: false,
+            ...(part.approval.reason !== undefined
+              ? { reason: part.approval.reason }
+              : {}),
+          },
+        };
+      }
       return {
-        type: "dynamic-tool",
-        toolName: part.tool_name,
+        ...tool_identity_fields,
         toolCallId: part.tool_call_id,
         state: "output-error",
         input,
+        ...(part.raw_input !== undefined ? { rawInput: part.raw_input } : {}),
         errorText: part.error || "Tool failed",
         ...call_provider_fields,
+        ...(part.approval?.approved === true
+          ? {
+              approval: {
+                id: part.approval.approval_id,
+                approved: true as const,
+                ...(part.approval.reason !== undefined
+                  ? { reason: part.approval.reason }
+                  : {}),
+              },
+            }
+          : {}),
         ...(part.result_provider_metadata !== undefined
           ? { resultProviderMetadata: part.result_provider_metadata }
           : {}),
@@ -307,8 +501,7 @@ function to_ui_assistant_parts(
     }
     if (part.state === "approval-required") {
       return {
-        type: "dynamic-tool",
-        toolName: part.tool_name,
+        ...tool_identity_fields,
         toolCallId: part.tool_call_id,
         state: "approval-requested",
         input,
@@ -316,12 +509,27 @@ function to_ui_assistant_parts(
         ...call_provider_fields,
       };
     }
+    if (part.state === "running" && part.approval?.approved !== undefined) {
+      return {
+        ...tool_identity_fields,
+        toolCallId: part.tool_call_id,
+        state: "approval-responded",
+        input,
+        ...call_provider_fields,
+        approval: {
+          id: part.approval.approval_id,
+          approved: part.approval.approved,
+          ...(part.approval.reason !== undefined
+            ? { reason: part.approval.reason }
+            : {}),
+        },
+      };
+    }
     return {
-      type: "dynamic-tool",
-      toolName: part.tool_name,
+      ...tool_identity_fields,
       toolCallId: part.tool_call_id,
       state: part.state === "input-streaming" ? "input-streaming" : "input-available",
-      input,
+      ...(has_input ? { input } : {}),
       ...call_provider_fields,
     };
   }) as UIMessage["parts"];

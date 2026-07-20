@@ -7,6 +7,7 @@ import { bill_ai_request } from "../bill.js";
 
 export const deepseekV4Flash = deepseek.model({
   id: "deepseek-v4-flash",
+  upstream_model: "deepseek-v4-flash",
   name: "DeepSeek V4 Flash",
   description: "DeepSeek OpenAI-compatible text model",
   tags: ["deepseek", "text"],

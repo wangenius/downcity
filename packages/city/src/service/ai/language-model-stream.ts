@@ -2,7 +2,7 @@
  * Federation City LanguageModel Transport 流模块。
  *
  * 负责请求协议校验、调用参数清理和 SSE 编码。模型执行、路由、reasoning、
- * 计费与鉴权仍由 Provider / AIService 负责。
+ * 计费与鉴权仍由 AIChannel / AIService 负责。
  */
 
 import {
@@ -10,15 +10,17 @@ import {
   type CityLanguageModelStreamEventV1,
   type CityTransportJsonObject,
   type CityTransportJsonValue,
-} from "../../types/CityLanguageModelTransport.js";
+} from "../../types/AITransport.js";
 import type {
   CityLanguageModelStreamExecution,
-  CityRuntimeCallOptions,
-  CityRuntimeStreamPart,
   CreateCityLanguageModelStreamInput,
   DecodedCityLanguageModelRequest,
   RawCityLanguageModelRequest,
-} from "../../types/CityLanguageModelRuntime.js";
+} from "../../types/AITransport.js";
+import type {
+  LanguageModelV3CallOptions,
+  LanguageModelV3StreamPart,
+} from "../../types/AI.js";
 import {
   decode_city_transport_value,
   encode_city_transport_object,
@@ -43,10 +45,10 @@ export function decode_city_language_model_request(
   if (!decoded || typeof decoded !== "object" || Array.isArray(decoded)) {
     throw create_protocol_error("decoded call must be an object");
   }
-  const call = decoded as CityRuntimeCallOptions;
+  const call = decoded as LanguageModelV3CallOptions;
   if (!Array.isArray(call.prompt)) throw create_protocol_error("call.prompt must be an array");
   if (call.tools?.some((tool) => tool.type === "provider")) {
-    throw create_protocol_error("Provider-defined tools are not supported by City transport v1");
+    throw create_protocol_error("AI SDK Provider-defined tools are not supported by City transport v1");
   }
   return {
     model_id,
@@ -59,11 +61,15 @@ export function decode_city_language_model_request(
 
 /**
  * 清理客户端不能控制的调用字段，并绑定当前 HTTP 请求取消信号。
+ *
+ * 关键点（中文）
+ * - 客户端 providerOptions 永远不会透传到上游。
+ * - 上游私有运行策略只能来自 Federation 服务端的 AIChannel / Model 配置。
  */
 export function prepare_city_language_model_call(
-  call: CityRuntimeCallOptions,
+  call: LanguageModelV3CallOptions,
   signal?: AbortSignal,
-): CityRuntimeCallOptions {
+): LanguageModelV3CallOptions {
   const {
     abortSignal: _abort_signal,
     headers: _headers,
@@ -77,14 +83,14 @@ export function prepare_city_language_model_call(
   };
 }
 
-/** 将 Provider 标准模型流编码为 City transport SSE。 */
+/** 将 AIChannel 标准模型流编码为 City transport SSE。 */
 export function create_city_language_model_stream(
   input: CreateCityLanguageModelStreamInput,
 ): CityLanguageModelStreamExecution {
   const reader = input.result.stream.getReader();
   const encoder = new TextEncoder();
-  let resolve_completion: (part: CityRuntimeStreamPart | undefined) => void = () => undefined;
-  const completion = new Promise<CityRuntimeStreamPart | undefined>((resolve) => {
+  let resolve_completion: (part: LanguageModelV3StreamPart | undefined) => void = () => undefined;
+  const completion = new Promise<LanguageModelV3StreamPart | undefined>((resolve) => {
     resolve_completion = resolve;
   });
   let completed = false;
@@ -101,7 +107,7 @@ export function create_city_language_model_stream(
         if (is_finish_part(chunk.value)) complete(chunk.value);
         controller.enqueue(encoder.encode(serialize_stream_part(chunk.value)));
       } catch (error) {
-        controller.enqueue(encoder.encode(serialize_stream_part({ type: "error", error } as CityRuntimeStreamPart)));
+        controller.enqueue(encoder.encode(serialize_stream_part({ type: "error", error } as LanguageModelV3StreamPart)));
         complete(undefined);
         controller.close();
       }
@@ -121,7 +127,7 @@ export function create_city_language_model_stream(
   };
 
   /** 只完成一次 completion promise。 */
-  function complete(part: CityRuntimeStreamPart | undefined): void {
+  function complete(part: LanguageModelV3StreamPart | undefined): void {
     if (completed) return;
     completed = true;
     resolve_completion(part);
@@ -129,7 +135,7 @@ export function create_city_language_model_stream(
 }
 
 /** 把标准 LanguageModelV3 事件编码成一个 SSE event。 */
-function serialize_stream_part(part: CityRuntimeStreamPart): string {
+function serialize_stream_part(part: LanguageModelV3StreamPart): string {
   const event: CityLanguageModelStreamEventV1 = {
     protocol: CITY_LANGUAGE_MODEL_PROTOCOL_V1,
     part: encode_city_transport_object(part),
@@ -138,7 +144,7 @@ function serialize_stream_part(part: CityRuntimeStreamPart): string {
 }
 
 /** 判断流事件是否为包含可信 usage 的 finish。 */
-function is_finish_part(part: CityRuntimeStreamPart): boolean {
+function is_finish_part(part: LanguageModelV3StreamPart): boolean {
   return (part as { type?: unknown }).type === "finish";
 }
 

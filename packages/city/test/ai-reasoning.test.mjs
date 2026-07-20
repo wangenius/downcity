@@ -10,7 +10,7 @@ import { MockLanguageModelV3 } from "ai/test"
 
 import {
   AIService,
-  Provider,
+  AIChannel,
   read_resolved_reasoning,
 } from "../bin/index.js"
 
@@ -34,6 +34,29 @@ function create_message(metadata = {}) {
   }
 }
 
+/** 创建可被 LanguageModelV3 消费的固定文本流。 */
+function create_text_stream(text = "ok") {
+  return {
+    stream: new ReadableStream({
+      start(controller) {
+        controller.enqueue({ type: "stream-start", warnings: [] })
+        controller.enqueue({ type: "text-start", id: "text_1" })
+        controller.enqueue({ type: "text-delta", id: "text_1", delta: text })
+        controller.enqueue({ type: "text-end", id: "text_1" })
+        controller.enqueue({
+          type: "finish",
+          finishReason: { unified: "stop", raw: "stop" },
+          usage: {
+            inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 1, text: 1, reasoning: 0 },
+          },
+        })
+        controller.close()
+      },
+    }),
+  }
+}
+
 test("AIService validates reasoning configuration during model registration", () => {
   const ai = new AIService()
 
@@ -47,7 +70,9 @@ test("AIService validates reasoning configuration during model registration", ()
       ],
       default_effort: "medium",
     },
-    actions: { text: async () => create_message() },
+    runtime: {
+      actions: { text: async () => create_message() },
+    },
   }), /duplicate reasoning effort: high/)
 
   assert.throws(() => new AIService().use({
@@ -57,7 +82,9 @@ test("AIService validates reasoning configuration during model registration", ()
       efforts: [{ id: "high", name: "High" }],
       default_effort: "medium",
     },
-    actions: { text: async () => create_message() },
+    runtime: {
+      actions: { text: async () => create_message() },
+    },
   }), /unknown default reasoning effort: medium/)
 
   assert.throws(() => new AIService().use({
@@ -67,7 +94,9 @@ test("AIService validates reasoning configuration during model registration", ()
       efforts: [{ id: "high", name: "High" }],
       default_effort: "",
     },
-    actions: { text: async () => create_message() },
+    runtime: {
+      actions: { text: async () => create_message() },
+    },
   }), /default reasoning effort must not be empty/)
 })
 
@@ -83,12 +112,14 @@ test("AIService exposes reasoning capability and resolves request or default eff
       ],
       default_effort: "low",
     },
-    actions: {
-      text: async (ctx) => create_message({
-        reasoning: read_resolved_reasoning(ctx),
-        input_effort: ctx.input.reasoning_effort,
-        metering: ctx.metering?.metadata,
-      }),
+    runtime: {
+      actions: {
+        text: async (ctx) => create_message({
+          reasoning: read_resolved_reasoning(ctx),
+          input_effort: ctx.input.reasoning_effort,
+          metering: ctx.metering?.metadata,
+        }),
+      },
     },
   })
 
@@ -130,7 +161,9 @@ test("AIService rejects unsupported reasoning input against the final fallback m
     id: "media-model",
     name: "Media Model",
     reasoning: { efforts: [{ id: "low", name: "Low" }] },
-    actions: { text: async () => create_message() },
+    runtime: {
+      actions: { text: async () => create_message() },
+    },
   })
   ai.use({
     id: "source-model",
@@ -138,9 +171,11 @@ test("AIService rejects unsupported reasoning input against the final fallback m
     reasoning: { efforts: [{ id: "high", name: "High" }] },
     fallback: [{
       match: (media) => media.media_type.startsWith("image/"),
-      model: "media-model",
+      model_id: "media-model",
     }],
-    actions: { text: async () => create_message() },
+    runtime: {
+      actions: { text: async () => create_message() },
+    },
   })
 
   const action = ai.get("text")
@@ -161,7 +196,9 @@ test("AIService rejects reasoning for unsupported models and rejects effort_id a
   ai.use({
     id: "plain-model",
     name: "Plain Model",
-    actions: { text: async () => create_message() },
+    runtime: {
+      actions: { text: async () => create_message() },
+    },
   })
 
   const action = ai.get("text")
@@ -176,73 +213,114 @@ test("AIService rejects reasoning for unsupported models and rejects effort_id a
   })), /effort_id is not supported; use reasoning_effort/)
 })
 
-test("Provider converts resolved effort to AI SDK providerOptions", async () => {
-  class OpenAIReasoningProvider extends Provider {
-    async text(ctx) {
-      const provider_options = this.build_reasoning_provider_options(ctx, {
-        provider: "openai.chat",
-      })
-      return create_message({ provider_options })
-    }
-  }
-
-  const provider = new OpenAIReasoningProvider({ id: "openai" })
-  const ai = new AIService()
-  ai.use(provider.model({
-    id: "gpt-reasoning",
-    name: "GPT Reasoning",
-    reasoning: { efforts: [{ id: "high", name: "High" }] },
-  }))
-
-  const action = ai.get("text")
-  assert.ok(action)
-  const output = await action.run(create_context({
-    model: "gpt-reasoning",
-    prompt: "hello",
-    reasoning_effort: "high",
-  }))
-  assert.deepEqual(output.metadata.provider_options, {
-    openai: { reasoningEffort: "high" },
-  })
-})
-
-test("Provider default text action passes reasoning providerOptions into AI SDK", async () => {
+test("AIChannel merges defaults, model overrides, and validated reasoning in order", async () => {
   let received_provider_options
   const language_model = new MockLanguageModelV3({
     provider: "openai.chat",
     modelId: "gpt-reasoning",
-    doGenerate: async (options) => {
+    doStream: async (options) => {
       received_provider_options = options.providerOptions
-      return {
-        content: [{ type: "text", text: "ok" }],
-        finishReason: "stop",
-        usage: {
-          inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
-          outputTokens: { total: 1, text: 1, reasoning: 0 },
-        },
-        warnings: [],
-      }
+      return create_text_stream()
     },
   })
 
-  class DefaultTextProvider extends Provider {
+  class OpenAIReasoningChannel extends AIChannel {
+    async stream(ctx, call) {
+      return this.stream_ai_sdk_model(ctx, call, language_model)
+    }
+  }
+
+  const provider_options = {
+    openai: {
+      store: true,
+      reasoningEffort: "provider-default",
+      serviceTier: "default",
+    },
+    custom: {
+      source: "provider",
+      nested: { value: "provider-snapshot" },
+    },
+  }
+  const model_provider_options = {
+    openai: {
+      store: false,
+      reasoningEffort: "model-override",
+      serviceTier: "priority",
+    },
+    custom: { source: "model", enabled: true },
+  }
+  const provider = new OpenAIReasoningChannel({
+    id: "openai",
+    ai_sdk_provider_options: provider_options,
+  })
+  const ai = new AIService()
+  ai.use(provider.model({
+    id: "gpt-reasoning",
+    upstream_model: "gpt-reasoning",
+    name: "GPT Reasoning",
+    reasoning: { efforts: [{ id: "high", name: "High" }] },
+    ai_sdk_provider_options: model_provider_options,
+  }))
+
+  provider_options.openai.store = false
+  provider_options.custom.nested.value = "mutated"
+  model_provider_options.openai.store = true
+
+  const action = ai.get("text")
+  assert.ok(action)
+  await action.run(create_context({
+    model: "gpt-reasoning",
+    prompt: "hello",
+    reasoning_effort: "high",
+  }))
+  assert.deepEqual(received_provider_options, {
+    openai: {
+      store: false,
+      reasoningEffort: "high",
+      serviceTier: "priority",
+    },
+    custom: {
+      source: "model",
+      enabled: true,
+      nested: { value: "provider-snapshot" },
+    },
+  })
+  const catalog = AIService.listModels(ai, {
+    env: () => undefined,
+    identity: "user",
+  })
+  assert.equal("provider_options" in catalog[0], false)
+})
+
+test("AIChannel default text action passes reasoning providerOptions into AI SDK", async () => {
+  let received_provider_options
+  const language_model = new MockLanguageModelV3({
+    provider: "openai.chat",
+    modelId: "gpt-reasoning",
+    doStream: async (options) => {
+      received_provider_options = options.providerOptions
+      return create_text_stream()
+    },
+  })
+
+  class DefaultTextChannel extends AIChannel {
     constructor() {
       super({
         id: "openai",
-        envKey: "OPENAI_API_KEY",
-        passthroughModel: "gpt-reasoning",
+        env_key: "OPENAI_API_KEY",
       })
     }
 
-    createClient() {
-      return { chat: () => language_model }
+    async stream(ctx, call) {
+      return this.stream_ai_sdk_model(ctx, call, language_model)
     }
   }
 
   const ai = new AIService()
-  const provider = new DefaultTextProvider()
+  const provider = new DefaultTextChannel()
   ai.use(provider.model({
     id: "gpt-reasoning",
+    upstream_model: "gpt-reasoning",
     name: "GPT Reasoning",
     reasoning: { efforts: [{ id: "high", name: "High" }] },
   }))
@@ -261,21 +339,151 @@ test("Provider default text action passes reasoning providerOptions into AI SDK"
   })
 })
 
-test("OpenAI-compatible action receives the validated default reasoning_effort", async () => {
+test("AIChannel text action adapts tools through the same LanguageModelV3 stream", async () => {
+  let received_tools
+  const input_schema = {
+    type: "object",
+    properties: { value: { type: "string" } },
+    required: ["value"],
+    additionalProperties: false,
+  }
+  const language_model = new MockLanguageModelV3({
+    provider: "openai.responses",
+    modelId: "gpt-tools",
+    doStream: async (options) => {
+      received_tools = options.tools
+      return {
+        stream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({ type: "stream-start", warnings: [] })
+            controller.enqueue({
+              type: "tool-call",
+              toolCallId: "call_1",
+              toolName: "ping",
+              input: "{\"value\":\"hello\"}",
+            })
+            controller.enqueue({
+              type: "finish",
+              finishReason: { unified: "tool-calls", raw: "tool_calls" },
+              usage: {
+                inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+                outputTokens: { total: 1, text: 0, reasoning: 0 },
+              },
+            })
+            controller.close()
+          },
+        }),
+      }
+    },
+  })
+
+  class ToolsChannel extends AIChannel {
+    async stream(ctx, call) {
+      return this.stream_ai_sdk_model(ctx, call, language_model)
+    }
+  }
+
   const ai = new AIService()
-  ai.use({
+  const provider = new ToolsChannel({ id: "openai" })
+  ai.use(provider.model({ id: "gpt-tools", upstream_model: "gpt-tools", name: "GPT Tools" }))
+
+  const output = await ai.get("text").run(create_context({
+    model: "gpt-tools",
+    prompt: "run ping",
+    tools: [{
+      type: "function",
+      function: {
+        name: "ping",
+        description: "Ping",
+        parameters: input_schema,
+      },
+    }],
+  }))
+
+  assert.deepEqual(received_tools, [{
+    type: "function",
+    name: "ping",
+    description: "Ping",
+    inputSchema: input_schema,
+    providerOptions: undefined,
+  }])
+  assert.deepEqual(output.parts.find((part) => part.type === "dynamic-tool"), {
+    type: "dynamic-tool",
+    toolCallId: "call_1",
+    toolName: "ping",
+    state: "input-available",
+    input: { value: "hello" },
+  })
+})
+
+test("AIChannel does not infer store policy from OpenAI Responses model identity", async () => {
+  let received_provider_options
+  const language_model = new MockLanguageModelV3({
+    provider: "openai.responses",
+    modelId: "gpt-responses",
+    doStream: async (options) => {
+      received_provider_options = options.providerOptions
+      return create_text_stream()
+    },
+  })
+
+  class ResponsesChannel extends AIChannel {
+    constructor() {
+      super({
+        id: "openai",
+        env_key: "OPENAI_API_KEY",
+      })
+    }
+
+    async stream(ctx, call) {
+      return this.stream_ai_sdk_model(ctx, call, language_model)
+    }
+  }
+
+  const ai = new AIService()
+  const provider = new ResponsesChannel()
+  ai.use(provider.model({
+    id: "gpt-responses",
+    upstream_model: "gpt-responses",
+    name: "GPT Responses",
+    reasoning: { efforts: [{ id: "high", name: "High" }] },
+  }))
+
+  const action = ai.get("text")
+  assert.ok(action)
+  await action.run(create_context({
+    model: "gpt-responses",
+    prompt: "hello",
+    reasoning_effort: "high",
+  }, (key) => key === "OPENAI_API_KEY" ? "test-key" : undefined))
+
+  assert.deepEqual(received_provider_options, {
+    openai: { reasoningEffort: "high" },
+  })
+})
+
+test("OpenAI-compatible action receives the validated default reasoning_effort", async () => {
+  let received_reasoning
+  let received_call
+  class OpenAICompatibleChannel extends AIChannel {
+    async stream(ctx, call) {
+      received_reasoning = read_resolved_reasoning(ctx)
+      received_call = call
+      return create_text_stream("hello")
+    }
+  }
+
+  const ai = new AIService()
+  const channel = new OpenAICompatibleChannel({ id: "openai" })
+  ai.use(channel.model({
     id: "openai-route-model",
+    upstream_model: "upstream-openai-route-model",
     name: "OpenAI Route Model",
     reasoning: {
       efforts: [{ id: "high", name: "High" }],
       default_effort: "high",
     },
-    actions: {
-      openai: async (ctx) => new Response(JSON.stringify(ctx.input), {
-        headers: { "content-type": "application/json" },
-      }),
-    },
-  })
+  }))
 
   const action = ai.get("chat/completions")
   assert.ok(action)
@@ -284,9 +492,12 @@ test("OpenAI-compatible action receives the validated default reasoning_effort",
     messages: [{ role: "user", content: "hello" }],
   }))
   assert.equal(response.status, 200)
-  assert.deepEqual(await response.json(), {
-    model: "openai-route-model",
-    messages: [{ role: "user", content: "hello" }],
-    reasoning_effort: "high",
-  })
+  const output = await response.json()
+  assert.equal(output.model, "openai-route-model")
+  assert.equal(output.choices[0].message.content, "hello")
+  assert.deepEqual(received_reasoning, { effort: "high", source: "default" })
+  assert.deepEqual(received_call.prompt, [{
+    role: "user",
+    content: [{ type: "text", text: "hello" }],
+  }])
 })

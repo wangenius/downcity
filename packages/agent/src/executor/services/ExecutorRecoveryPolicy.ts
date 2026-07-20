@@ -107,16 +107,15 @@ interface ExecutorRecoveryRunInput {
  * 执行恢复与重试策略服务。
  */
 export class ExecutorRecoveryPolicy {
-  private readonly session_id: string;
   private readonly should_compact: ExecutorRecoveryPolicyOptions["should_compact"];
   private readonly logger: Logger;
   private retry_count = 0;
 
   constructor(options: ExecutorRecoveryPolicyOptions) {
-    this.session_id = String(options.session_id || "").trim();
+    const session_id = String(options.session_id || "").trim();
     this.should_compact = options.should_compact;
     this.logger = options.logger;
-    if (!this.session_id) {
+    if (!session_id) {
       throw new Error("ExecutorRecoveryPolicy requires a non-empty session_id");
     }
   }
@@ -161,8 +160,6 @@ export class ExecutorRecoveryPolicy {
         return this.build_failure_result({
           error_text:
             "Context length exceeded and retries failed. Please resend your question.",
-          fallback_text:
-            "Context length exceeded and retries failed. Please resend your question.",
           run_context: input.run_context,
         });
       }
@@ -173,7 +170,6 @@ export class ExecutorRecoveryPolicy {
       });
       return this.build_failure_result({
         error_text,
-        fallback_text: `Execution failed: ${error_text}`,
         run_context: input.run_context,
       });
     }
@@ -186,11 +182,6 @@ export class ExecutorRecoveryPolicy {
     error_text: string;
 
     /**
-     * fallback assistant 消息文本。
-     */
-    fallback_text: string;
-
-    /**
      * 当前显式运行上下文。
      */
     run_context: SessionRunContext;
@@ -198,18 +189,6 @@ export class ExecutorRecoveryPolicy {
     return {
       success: false,
       error: input.error_text,
-      assistantMessage: {
-        id: `a:${this.session_id}:${Date.now()}`,
-        role: "assistant",
-        metadata: {
-          v: 1,
-          ts: Date.now(),
-          sessionId: this.session_id,
-          source: "egress",
-          kind: "normal",
-        },
-        parts: [{ type: "text", text: input.fallback_text }],
-      },
       deferredPersistedUserMessages: [
         ...input.run_context.deferredPersistedUserMessages,
       ],

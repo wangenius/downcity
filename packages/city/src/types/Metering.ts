@@ -12,9 +12,9 @@
  */
 export interface RuntimeMetering {
   /**
-   * 计量所属 provider ID，例如 `deepseek`、`openai-image`。
+   * 计量所属 AIChannel ID，例如 `deepseek`、`openai-image`。
    */
-  provider_id?: string;
+  channel_id?: string;
 
   /**
    * Downcity 模型 ID。

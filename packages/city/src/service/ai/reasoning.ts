@@ -6,9 +6,9 @@
  */
 
 import type { Context } from "../service.js";
-import type { AIResolvedReasoning } from "../../types/AIReasoning.js";
+import type { AIResolvedReasoning } from "../../types/AI.js";
 import { httpError } from "../../utils/helpers.js";
-import type { ModelConfig } from "./types.js";
+import type { AIModelDefinition } from "../../types/AI.js";
 
 /** Context.locals 中保存已解析推理强度的固定字段名。 */
 const AI_REASONING_LOCAL_KEY = "ai_reasoning";
@@ -16,7 +16,7 @@ const AI_REASONING_LOCAL_KEY = "ai_reasoning";
 /**
  * 在模型注册阶段校验推理能力配置。
  */
-export function validate_model_reasoning(model: ModelConfig): void {
+export function validate_model_reasoning(model: AIModelDefinition): void {
   const reasoning = model.reasoning;
   if (!reasoning) return;
   if (!Array.isArray(reasoning.efforts) || reasoning.efforts.length === 0) {
@@ -57,7 +57,7 @@ export function validate_model_reasoning(model: ModelConfig): void {
  * 按最终执行模型解析一次请求的推理强度。
  */
 export function resolve_model_reasoning(
-  model: ModelConfig,
+  model: AIModelDefinition,
   input: Record<string, unknown>,
 ): AIResolvedReasoning | undefined {
   if (input.effort_id !== undefined) {

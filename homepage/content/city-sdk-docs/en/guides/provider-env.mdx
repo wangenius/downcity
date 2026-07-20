@@ -1,70 +1,27 @@
 ---
-title: Provider Environment Variables
-description: How to configure provider API keys in the Federation environment.
+title: AIChannel Environment Variables
+description: Configure upstream API keys in the Federation environment.
 ---
 
-All provider API keys are managed through Federation's own env table.
-
-## Declare environment variables
-
-Declare them in the `Provider` constructor:
+Declare the key on the Channel:
 
 ```ts
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { Provider, type OpenAICompatibleClientConfig } from "@downcity/city";
-
-class DeepSeekProvider extends Provider {
+class DeepSeekChannel extends AIChannel {
   constructor() {
     super({
       id: "deepseek",
-      env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
-      baseURL: "https://api.deepseek.com",
-      envKey: "DEEPSEEK_API_KEY",
+      env_key: "DEEPSEEK_API_KEY",
+      base_url: "https://api.deepseek.com/v1",
     });
   }
 
-  protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
-    return createOpenAICompatible({ apiKey, baseURL, name: "deepseek" });
+  protected async stream(ctx: Context, call: LanguageModelV3CallOptions) {
+    const api_key = read_required_env(ctx, this.env_key ?? "");
+    // create the upstream model and return its V3 stream
   }
 }
-
-const deepseek = new DeepSeekProvider();
 ```
 
-The `env` field declares required environment variables (`key -> description`), and `envKey` tells automatic passthrough which key to read.
+`env_key` automatically creates a required env declaration for the model catalog's admin view. Use `env` instead when a Channel needs multiple values.
 
-## Set environment variables
-
-Write them through the Admin API:
-
-```bash
-curl -X POST http://127.0.0.1:43127/v1/env/upsert \
-  -H "Authorization: Bearer <admin_secret_key>" \
-  -H "Content-Type: application/json" \
-  -d '{"key": "DEEPSEEK_API_KEY", "value": "sk-xxx"}'
-```
-
-Or import a `.env` file in bulk:
-
-```bash
-curl -X POST http://127.0.0.1:43127/v1/env/import \
-  -H "Authorization: Bearer <admin_secret_key>" \
-  -H "Content-Type: application/json" \
-  -d '{"raw": "DEEPSEEK_API_KEY=sk-xxx\nOPENAI_API_KEY=sk-yyy"}'
-```
-
-## Read them inside a handler
-
-```ts
-import { readRequiredEnv, type Context } from "@downcity/city";
-
-async text(ctx: Context) {
-  const apiKey = ctx.env("DEEPSEEK_API_KEY");
-  // Or use the helper that throws when missing
-  const apiKey2 = readRequiredEnv(ctx, "DEEPSEEK_API_KEY");
-}
-```
-
-`ctx.env(key)` reads from Federation's active env table. AIService automatic passthrough also reads the API key through `ctx.env(envKey)`.
-
-See also [HTTP API - admin env management](/en/city-sdk-docs/reference/http-api#admin-request-format).
+Values are stored in Federation's env table and read at execution time with `ctx.env(key)` or `read_required_env(ctx, key)`. They never enter `CityModelDescriptor` or the client runtime.

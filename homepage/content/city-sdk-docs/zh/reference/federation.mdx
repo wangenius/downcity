@@ -46,27 +46,43 @@ POST /v1/translate/en2zh  →  translate.action("en2zh")
 AIService 是内置的 Service，用于管理 AI 模型：
 
 ```ts
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { AIService, Provider, type OpenAICompatibleClientConfig } from "@downcity/city";
+import { createDeepSeek } from "@ai-sdk/deepseek";
+import {
+  AIService,
+  AIChannel,
+  read_required_env,
+  resolve_upstream_model,
+  type LanguageModelV3CallOptions,
+  type LanguageModelV3StreamResult,
+  type Context,
+} from "@downcity/city";
 
-class DeepSeekProvider extends Provider {
+class DeepSeekChannel extends AIChannel {
   constructor() {
     super({
       id: "deepseek",
-      baseURL: "https://api.deepseek.com/v1",
-      envKey: "DEEPSEEK_API_KEY",
+      base_url: "https://api.deepseek.com/v1",
+      env_key: "DEEPSEEK_API_KEY",
     });
   }
 
-  protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
-    return createOpenAICompatible({ apiKey, baseURL, name: "deepseek" });
+  protected async stream(
+    ctx: Context,
+    call: LanguageModelV3CallOptions,
+  ): Promise<LanguageModelV3StreamResult> {
+    const deepseek = createDeepSeek({
+      apiKey: read_required_env(ctx, this.env_key ?? ""),
+      baseURL: this.base_url,
+    });
+    const model = deepseek(resolve_upstream_model(ctx));
+    return this.stream_ai_sdk_model(ctx, call, model);
   }
 }
 
-const deepseek = new DeepSeekProvider();
+const deepseek = new DeepSeekChannel();
 
 const ai = new AIService();
-ai.use(deepseek.model({ id: "deepseek-v4-flash", name: "DeepSeek V4 Flash" }));
+ai.use(deepseek.model({ id: "deepseek-v4-flash", upstream_model: "deepseek-chat", name: "DeepSeek V4 Flash" }));
 base.use(ai);
 ```
 

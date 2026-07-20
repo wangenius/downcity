@@ -48,10 +48,7 @@ async function submit(query: string): Promise<void> {
 
   const result = await turn.finished;
   clear_active_turn(turn.id);
-
-  if (!result.success) {
-    show_turn_error(result.error || "执行失败");
-  }
+  set_turn_status(turn.id, result.success ? "completed" : "failed");
 }
 
 async function stop(): Promise<void> {
@@ -71,9 +68,10 @@ async function stop(): Promise<void> {
 - `delta` 只追加到当前 text/reasoning Part。
 - `part` 用稳定 `part_id` 覆盖完整状态。
 - `message` 用 `message_id + revision` 覆盖完整 Message。
+- 顶层 `error` Message 是一次失败唯一的用户可见错误提示。
 - Tool Part 为 `approval-required` 时显示审批控件；为 `running` 时显示执行中；为 `failed` 时展示错误。
 
-不要把工具调用平铺到第二份可持久化列表，也不要用最终 `turn.text` 覆盖已经按 Part 渲染的 Assistant Message。
+不要把工具调用平铺到第二份可持久化列表，也不要用最终 `turn.text` 覆盖已经按 Part 渲染的 Assistant Message。`turn.finished.error` 只用于控制流和日志；若已经渲染 `error` Message，不要再追加一条错误提示。
 
 ## 审批卡片
 

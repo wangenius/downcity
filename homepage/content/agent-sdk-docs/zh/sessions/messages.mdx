@@ -42,15 +42,21 @@ interface SessionMessagePage {
 
 Session 内只有一条按 `sequence` 排序的顶层 Message 序列。工具调用不是另一条 Timeline，也不是顶层 Message；它属于 Assistant Message 的 `parts`，因此 `text -> tool -> text` 会以真实生成顺序保存。
 
+`SessionMessage` 是持久化数据结构，AI SDK `UIMessage` 是 Executor 与 UI 边界格式。User / Assistant 的可序列化 UI parts 可以转换成 Session parts，再恢复为等价的 `UIMessage`；`action` 和 `error` 是 Downcity Session 自己的顶层类型，不会送入模型。
+
+Turn 在产生任何 Assistant 内容前失败时，只写入一条 `error` Message，不会用错误文本伪造 Assistant 回复。若失败前已经产生部分内容，该 Assistant 会以 `status: "failed"` 保留，随后再写入结构化 `error` Message。
+
 ## Assistant Part
 
 | `type` | 关键字段 | 说明 |
 | --- | --- | --- |
 | `text` | `text`, `state` | 用户可见输出，`streaming -> done` |
 | `reasoning` | `text`, `state` | 推理输出，是否展示由产品决定 |
-| `tool` | `tool_call_id`, `tool_name`, `state`, `call_provider_metadata`, `result_provider_metadata` | 工具输入、审批、运行和结果 |
-| `file` | `url`, `media_type` | Assistant 生成或引用的文件 |
-| `data` | `data_type`, `data` | 结构化 UI 数据 |
+| `tool` | `tool_call_id`, `tool_name`, `state`, `approval`, metadata | 工具输入、审批、运行和结果 |
+| `file` | `url`, `media_type`, `provider_metadata` | Assistant 生成或引用的文件 |
+| `source` | `source_type`, `source_id`, URL 或文档字段 | AI SDK URL / document source |
+| `data` | `data_type`, `data`, `data_id` | 可持久化的结构化 UI 数据 |
+| `step-start` | 无业务字段 | 多 step 回复的边界 |
 
 每个 Assistant Part 有稳定的 `part_id` 和不可变的内部 `sequence`。工具状态变化更新同一个 Part，不应在 UI 中创建“请求”和“结果”两个重复行。
 
@@ -60,13 +66,32 @@ Tool Part 会保留 AI SDK Provider 附着在工具调用和工具结果上的 m
 
 ```ts
 interface SessionAssistantToolPart {
+  title?: string;
+  tool_metadata?: JsonObject;
+  dynamic?: boolean;
   call_provider_metadata?: ProviderMetadata;
   result_provider_metadata?: ProviderMetadata;
   provider_executed?: boolean;
+  preliminary?: boolean;
 }
 ```
 
 这些字段是 Provider continuation 等能力所需的透明数据。应用可以读取并原样转存，但不应修改其中的 Provider 专属字段。旧 Session 没有这些可选字段时仍可正常读取。
+
+文本、推理、文件和 source 同样保留各自的 `provider_metadata`。相同 `data_id` 或 `source_id` 的流式更新会替换原 Part 并保留 `sequence`；带 `transient: true` 的 AI SDK data chunk 只用于实时 UI，不写入 Session。
+
+Tool 审批使用统一快照：
+
+```ts
+interface SessionToolApprovalSnapshot {
+  approval_id: string;
+  approved?: boolean;
+  reason?: string;
+  request?: SessionApproval;
+}
+```
+
+AI SDK 原生审批保存 `approval_id / approved / reason`。Downcity 本地 Shell 审批还会把命令、工作目录和过期时间放在 `approval.request` 中。`approval-required -> running/completed` 与拒绝后的 `failed` 都更新同一个 Tool Part。
 
 ## 顺序、版本与可见性
 

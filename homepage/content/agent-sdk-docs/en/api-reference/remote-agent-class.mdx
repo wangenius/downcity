@@ -56,9 +56,9 @@ session.subscribe((mutation) => {
     mutation.variant === "part" &&
     mutation.type === "tool" &&
     mutation.part.state === "approval-required" &&
-    mutation.part.approval
+    mutation.part.approval?.request
   ) {
-    show_approval_request(mutation.part.approval);
+    show_approval_request(mutation.part.approval.request);
   }
 });
 ```

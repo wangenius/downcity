@@ -1,5 +1,5 @@
 /**
- * AI 模型类型（对应 service/ai/types.ts PublicModel）。
+ * AI 模型类型（公开目录统一使用 CityModelDescriptor）。
  *
  * 关键点（中文）
  * - CityModel 是 @downcity/city 提供的原生 LanguageModelV3 class。

@@ -9,7 +9,7 @@ If you are using Agent inside a normal Downcity project, the model usually shoul
 
 Split responsibilities across four layers:
 
-- `Federation AIService`: owns the model catalog, providers, API keys, and model routing
+- `Federation AIService`: owns the model catalog, AIChannels, API keys, and model routing
 - `Downcity`: connects to City, reads the catalog, validates and resolves `modelId`
 - `Agent project`: stores only `execution.modelId`
 - `@downcity/agent` session: actually executes prompts
@@ -19,7 +19,7 @@ Split responsibilities across four layers:
 In Downcity integration mode:
 
 - the CLI global database stores a `modelId`
-- not provider config
+- not AIChannel config
 - not API keys
 - not a local model instance
 
@@ -30,5 +30,5 @@ global downcity.db: agent.execution.modelId
   -> Downcity reads and validates it
   -> City SDK creates an executable CityModel
   -> Agent calls CityModel.doStream() directly
-  -> Federation AIService resolves the Provider and upstream protocol
+  -> Federation AIService routes to the AIChannel and upstream protocol
 ```

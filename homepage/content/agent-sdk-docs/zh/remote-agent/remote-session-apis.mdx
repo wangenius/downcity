@@ -49,7 +49,7 @@ const unsubscribe = session.subscribe((event) => {
 unsubscribe();
 ```
 
-订阅会收到 `message | part | delta | turn | session` 五类 Mutation。审批请求表现为状态为 `approval-required` 的 Tool Part；从 `mutation.part.approval` 读取完整请求，再通过 `session.resolve_approval(...)` 提交决定。
+订阅会收到 `message | part | delta | turn | session` 五类 Mutation。审批请求表现为状态为 `approval-required` 的 Tool Part；本地工具从 `mutation.part.approval.request` 读取完整请求，再通过 `session.resolve_approval(...)` 提交决定。
 
 ## 历史消息
 

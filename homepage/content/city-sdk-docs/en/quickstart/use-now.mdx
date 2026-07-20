@@ -9,11 +9,11 @@ description: Run a complete call chain with the default database, Admin City, an
 import {
   Federation,
   AIService,
-  Provider,
+  AIChannel,
+  type LanguageModelV3CallOptions,
+  type LanguageModelV3StreamResult,
   type Context,
-  type AIProviderChargedOutput,
 } from "@downcity/city";
-import type { UIMessage } from "ai";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 
@@ -26,26 +26,46 @@ const db = Object.assign(drizzle(sqlite), {
 
 const base = new Federation({ db });
 
-class EchoProvider extends Provider {
+class EchoChannel extends AIChannel {
   constructor() {
     super({ id: "echo" });
   }
 
-  async text(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
+  protected async stream(
+    _ctx: Context,
+    call: LanguageModelV3CallOptions,
+  ): Promise<LanguageModelV3StreamResult> {
+    const input_text = call.prompt
+      .flatMap((message) => Array.isArray(message.content) ? message.content : [])
+      .filter((part) => part.type === "text")
+      .map((part) => part.text)
+      .join("\n");
     return {
-      output: {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        parts: [{ type: "text", text: `Echo: ${ctx.input.prompt}` }],
-      },
+      stream: new ReadableStream({
+        start(controller) {
+          controller.enqueue({ type: "stream-start", warnings: [] });
+          controller.enqueue({ type: "text-start", id: "echo_text" });
+          controller.enqueue({ type: "text-delta", id: "echo_text", delta: `Echo: ${input_text}` });
+          controller.enqueue({ type: "text-end", id: "echo_text" });
+          controller.enqueue({
+            type: "finish",
+            finishReason: { unified: "stop", raw: "stop" },
+            usage: {
+              inputTokens: { total: 0, noCache: 0, cacheRead: 0, cacheWrite: 0 },
+              outputTokens: { total: 0, text: 0, reasoning: 0 },
+            },
+          });
+          controller.close();
+        },
+      }),
     };
   }
 }
 
-const echo = new EchoProvider();
+const echo = new EchoChannel();
 
 const ai = new AIService();
-ai.use(echo.model({ id: "local-echo", name: "Local Echo" }));
+ai.use(echo.model({ id: "local-echo", upstream_model: "local-echo", name: "Local Echo" }));
 base.use(ai);
 
 await base.health();
@@ -80,12 +100,10 @@ const city = new City({
 // SDK pathway
 const result = await city.ai.text({ model: "local-echo", prompt: "Hello" });
 
-// OpenAI-compatible pathway
-// POST /v1/ai/chat/completions
 ```
 
 ## Next Steps
 
-- [Provider & Model Registration](/en/city-sdk-docs/service/ai/provider)
+- [AIChannel & Model Registration](/en/city-sdk-docs/service/ai/provider)
 - [Calling AI Service](/en/city-sdk-docs/service/ai/calling)
 - [Create City](/en/city-sdk-docs/quickstart/create-city)

@@ -33,7 +33,7 @@ description: 调试 City、client、token 和 env 的常见路径。
 
 检查：
 
-- client 传入的 `model` 是否已通过 `Provider.model()` + `AIService.use()` 注册
+- client 传入的 `model` 是否已通过 `AIChannel.model()` + `AIService.use()` 注册
 - 目标 model 是否包含当前通路的 action，例如 `text`、`stream` 或 `image`。
 - 请求里是否传入了预期的 model id。
 - `city.ai.catalog()` 是否能看到这个 model。

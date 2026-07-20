@@ -15,7 +15,7 @@ City Client
     ↓ Admin City 创建 city / 签发 user_token
 Downcity City
     ↓ User City 携带 user_token + city_id 调用 service
-Provider → AIService → handler
+AIChannel → AIService → handler
 ```
 
 ## 1. 启动 City
@@ -24,11 +24,11 @@ Provider → AIService → handler
 import {
   Federation,
   AIService,
-  Provider,
+  AIChannel,
+  type LanguageModelV3CallOptions,
+  type LanguageModelV3StreamResult,
   type Context,
-  type AIProviderChargedOutput,
 } from "@downcity/city";
-import type { UIMessage } from "ai";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 
@@ -42,26 +42,46 @@ const db = Object.assign(drizzle(sqlite), {
 const base = new Federation({ db });
 
 // 注册一个 echo 模型
-class EchoProvider extends Provider {
+class EchoChannel extends AIChannel {
   constructor() {
     super({ id: "echo" });
   }
 
-  async text(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
+  protected async stream(
+    _ctx: Context,
+    call: LanguageModelV3CallOptions,
+  ): Promise<LanguageModelV3StreamResult> {
+    const input_text = call.prompt
+      .flatMap((message) => Array.isArray(message.content) ? message.content : [])
+      .filter((part) => part.type === "text")
+      .map((part) => part.text)
+      .join("\n");
     return {
-      output: {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        parts: [{ type: "text", text: `Echo: ${ctx.input.prompt}` }],
-      },
+      stream: new ReadableStream({
+        start(controller) {
+          controller.enqueue({ type: "stream-start", warnings: [] });
+          controller.enqueue({ type: "text-start", id: "echo_text" });
+          controller.enqueue({ type: "text-delta", id: "echo_text", delta: `Echo: ${input_text}` });
+          controller.enqueue({ type: "text-end", id: "echo_text" });
+          controller.enqueue({
+            type: "finish",
+            finishReason: { unified: "stop", raw: "stop" },
+            usage: {
+              inputTokens: { total: 0, noCache: 0, cacheRead: 0, cacheWrite: 0 },
+              outputTokens: { total: 0, text: 0, reasoning: 0 },
+            },
+          });
+          controller.close();
+        },
+      }),
     };
   }
 }
 
-const echo = new EchoProvider();
+const echo = new EchoChannel();
 
 const ai = new AIService();
-ai.use(echo.model({ id: "local-echo", name: "Local Echo" }));
+ai.use(echo.model({ id: "local-echo", upstream_model: "local-echo", name: "Local Echo" }));
 base.use(ai);
 
 import { serve } from "@hono/node-server";
@@ -111,9 +131,6 @@ const result = await city.ai.text({
   prompt: "你好 Downcity",
 });
 
-// OpenAI 兼容通路（curl）
-// POST /v1/ai/chat/completions
-// { model: "local-echo", messages: [{ role: "user", content: "hello" }] }
 ```
 
 ## 4. 你真正复用的是什么
@@ -127,7 +144,7 @@ const result = await city.ai.text({
 
 下一步：
 
-- [Provider 与模型注册](/zh/city-sdk-docs/service/ai/provider)
+- [AIChannel 与模型注册](/zh/city-sdk-docs/service/ai/provider)
 - [调用 AI 服务](/zh/city-sdk-docs/service/ai/calling)
 - [创建 City](/zh/city-sdk-docs/quickstart/create-city)
 - [签发 user_token](/zh/city-sdk-docs/quickstart/issue-token)

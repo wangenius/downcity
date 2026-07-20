@@ -6,12 +6,12 @@
  */
 
 import { isRecord } from "./helpers.js";
-import type { ModelFallbackMedia, ModelFallbackRule } from "./types.js";
+import type { AIModelFallbackMedia, AIModelFallbackRule } from "../../types/AI.js";
 import type {
   AIModelRoutingAdapter,
   AIResolvedAction,
   AIResolvedRoutingPlan,
-} from "../../types/AIRouting.js";
+} from "../../types/AI.js";
 
 /** 按请求媒体输入和模型级 fallback 规则决定最终模型。 */
 export function resolve_text_routing_plan(
@@ -38,13 +38,13 @@ export function resolve_text_routing_plan(
 /** 根据单条规则和媒体输入生成 fallback 计划。 */
 function resolve_media_fallback_plan(
   source_model_id: string,
-  rule: ModelFallbackRule,
-  media: ModelFallbackMedia,
+  rule: AIModelFallbackRule,
+  media: AIModelFallbackMedia,
   mode: string,
   adapter: AIModelRoutingAdapter,
 ): AIResolvedRoutingPlan | undefined {
   if (!matches_fallback_rule(rule, media)) return undefined;
-  const fallback_model = adapter.resolve_model(rule.model);
+  const fallback_model = adapter.resolve_model(rule.model_id);
   if (!fallback_model || fallback_model.id === source_model_id) return undefined;
   const action = adapter.resolve_action(fallback_model, mode);
   if (!action || !adapter.is_available(fallback_model)) return undefined;
@@ -58,7 +58,7 @@ function resolve_media_fallback_plan(
 }
 
 /** 安全执行用户提供的 fallback 匹配函数。 */
-function matches_fallback_rule(rule: ModelFallbackRule, media: ModelFallbackMedia): boolean {
+function matches_fallback_rule(rule: AIModelFallbackRule, media: AIModelFallbackMedia): boolean {
   try {
     return rule.match(media);
   } catch {
@@ -67,7 +67,7 @@ function matches_fallback_rule(rule: ModelFallbackRule, media: ModelFallbackMedi
 }
 
 /** 从 SDK 或 OpenAI-compatible 请求中提取媒体输入。 */
-function extract_media_inputs(input: Record<string, unknown>, mode: string): ModelFallbackMedia[] {
+function extract_media_inputs(input: Record<string, unknown>, mode: string): AIModelFallbackMedia[] {
   if (mode === "language_model") return extract_language_model_media_inputs(input.call);
   return mode === "openai"
     ? extract_openai_media_inputs(input.messages)
@@ -75,9 +75,9 @@ function extract_media_inputs(input: Record<string, unknown>, mode: string): Mod
 }
 
 /** 扫描 City LanguageModelV3 prompt 中的文件输入。 */
-function extract_language_model_media_inputs(call: unknown): ModelFallbackMedia[] {
+function extract_language_model_media_inputs(call: unknown): AIModelFallbackMedia[] {
   if (!isRecord(call) || !Array.isArray(call.prompt)) return [];
-  const media_inputs: ModelFallbackMedia[] = [];
+  const media_inputs: AIModelFallbackMedia[] = [];
   for (const message of call.prompt) {
     if (!isRecord(message) || !Array.isArray(message.content)) continue;
     for (const part of message.content) {
@@ -102,9 +102,9 @@ function read_language_model_file_url(value: unknown): string | undefined {
 }
 
 /** 扫描 OpenAI-compatible messages 的媒体输入。 */
-function extract_openai_media_inputs(messages: unknown): ModelFallbackMedia[] {
+function extract_openai_media_inputs(messages: unknown): AIModelFallbackMedia[] {
   if (!Array.isArray(messages)) return [];
-  const media_inputs: ModelFallbackMedia[] = [];
+  const media_inputs: AIModelFallbackMedia[] = [];
   for (const message of messages) {
     if (!isRecord(message) || !Array.isArray(message.content)) continue;
     for (const part of message.content) {
@@ -116,7 +116,7 @@ function extract_openai_media_inputs(messages: unknown): ModelFallbackMedia[] {
 }
 
 /** 读取 OpenAI-compatible content part 的媒体信息。 */
-function read_openai_media_part(part: unknown): ModelFallbackMedia | undefined {
+function read_openai_media_part(part: unknown): AIModelFallbackMedia | undefined {
   if (!isRecord(part)) return undefined;
   const type = read_optional_string(part.type);
   if (type === "image_url" || type === "input_image") {
@@ -141,9 +141,9 @@ function read_openai_image_url(part: Record<string, unknown>): string | undefine
 }
 
 /** 扫描 UIMessage messages 的 file 媒体输入。 */
-function extract_ui_media_inputs(messages: unknown): ModelFallbackMedia[] {
+function extract_ui_media_inputs(messages: unknown): AIModelFallbackMedia[] {
   if (!Array.isArray(messages)) return [];
-  const media_inputs: ModelFallbackMedia[] = [];
+  const media_inputs: AIModelFallbackMedia[] = [];
   for (const message of messages) {
     if (!isRecord(message) || !Array.isArray(message.parts)) continue;
     for (const part of message.parts) {
@@ -163,7 +163,7 @@ function extract_ui_media_inputs(messages: unknown): ModelFallbackMedia[] {
 function build_fallback_media(
   media_type: string,
   optional: { filename?: string; url?: string },
-): ModelFallbackMedia {
+): AIModelFallbackMedia {
   return {
     media_type,
     ...(optional.filename ? { filename: optional.filename } : {}),

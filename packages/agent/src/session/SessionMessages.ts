@@ -695,7 +695,10 @@ export class SessionMessages {
       await this.update_assistant_part_serialized(message_id, {
         ...tool.part,
         state: "approval-required",
-        approval,
+        approval: {
+          approval_id: approval.approval_id,
+          request: approval,
+        },
       });
     });
   }
@@ -721,6 +724,16 @@ export class SessionMessages {
       await this.update_assistant_part_serialized(message_id, {
         ...tool.part,
         state: input.decision === "approved" ? "running" : "failed",
+        approval: {
+          ...tool.part.approval,
+          approval_id: input.approval_id,
+          approved: input.decision === "approved",
+          ...(input.decision === "expired"
+            ? { reason: "Approval expired" }
+            : input.decision === "denied"
+              ? { reason: "Approval denied" }
+              : {}),
+        },
         ...(input.decision === "approved"
           ? {}
           : {

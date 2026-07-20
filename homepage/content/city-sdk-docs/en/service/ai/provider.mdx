@@ -1,556 +1,164 @@
 ---
-title: Provider & Model Registration
-description: Provider is an abstract base class for AI upstreams. Subclass it to declare actions.
+title: AIChannel and Model Registration
+description: Connect upstream AI capabilities with AIChannel and register Federation models with AIModelSpec.
 ---
 
- `Provider` is an abstract base class that encapsulates an upstream AI provider's actions and connection info. Use `.model()` to produce a `ModelConfig`, then pass it to `AIService.use()`.
+`AIChannel` is the server-side execution channel for an upstream AI capability. It owns credentials, upstream model selection, server-side AI SDK `providerOptions`, and execution of the standard `LanguageModelV3` stream.
 
- ## Quick Start: OpenAI-compatible Text Provider
+An `AIChannel` is not an AI SDK Provider. AI SDK Providers are vendor factories returned by functions such as `createOpenAI()` and `createDeepSeek()`. An `AIChannel` is Downcity's Federation boundary around those capabilities.
 
- Extend `Provider` and override `createClient` to get the default `text` action and CityModel stream runtime:
-
- ```ts
- import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
- import { Provider, type OpenAICompatibleClientConfig } from "@downcity/city";
-
- class DeepSeekProvider extends Provider {
-   constructor() {
-     super({
-       id: "deepseek",
-       envKey: "DEEPSEEK_API_KEY",
-       baseURL: "https://api.deepseek.com/v1",
-       passthroughModel: "deepseek-chat",
-     });
-   }
-
-   protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
-     return createOpenAICompatible({ apiKey, baseURL, name: "deepseek" });
-   }
- }
-
- const deepseek = new DeepSeekProvider();
-
- const ai = new AIService();
- ai.use(deepseek.model({ id: "deepseek-v4-flash", name: "DeepSeek V4 Flash" }));
- base.use(ai);
- ```
-
- This registers the routes automatically:
-
- ```
- POST /v1/ai/text              → SDK path
- POST /v1/ai/stream            → CityModel LanguageModelV3 path
- POST /v1/ai/chat/completions  → auto-passthrough to DeepSeek
- GET  /v1/ai/models            → model catalog
- ```
-
-`passthroughModel` is the upstream model id used during auto-passthrough.
-
-The default `stream(ctx, call)` implementation uses `createClient().chat()`. If
-a model must use Responses, Claude Messages, Gemini, or another native protocol,
-override `stream()`, call that upstream, and return a standard
-`LanguageModelV3StreamPart` stream.
-
-## Model context window
-
-Use `context_window` to declare the model's total context capacity in tokens:
+## Minimal example
 
 ```ts
-ai.use(deepseek.model({
-  id: "deepseek-v4-flash",
-  name: "DeepSeek V4 Flash",
-  context_window: 128_000,
-  price: [
-    "Input: 1 credit / 1K tokens",
-    "Output: 3 credits / 1K tokens",
-  ],
-}));
-```
-
-AIService returns this value through `/v1/ai/models`. When `@downcity/agent` runs a City model, its default session compaction starts at 80% of the configured window, leaving room for system messages, tools, and the current output. Models without `context_window` keep the Agent's existing 128k compaction budget, while an explicit `maxInputTokensApprox` still takes precedence.
-
-`price` is also returned in the model catalog for product display. It is a
-Provider-defined string list and does not participate in charging; actual
-charges still come from `bill(ctx, output)`.
-
-## Model reasoning effort
-
-A reasoning-capable model declares its available levels and optional default through `reasoning`:
-
-```ts
-ai.use(openai.model({
-  id: "gpt-5.6-sol",
-  name: "GPT-5.6 Sol",
-  reasoning: {
-    efforts: [
-      { id: "low", name: "Low" },
-      { id: "medium", name: "Standard" },
-      { id: "high", name: "High" },
-      { id: "xhigh", name: "Extra high" },
-    ],
-    default_effort: "medium",
-  },
-}));
-```
-
-These levels are returned by `/v1/ai/models`. A caller sends one field whose value must match an entry in `reasoning.efforts[].id`:
-
-```ts
-await city.ai.text({
-  model: "gpt-5.6-sol",
-  prompt: "Analyze this problem",
-  reasoning_effort: "high",
-});
-```
-
-AIService resolves model fallback first, then validates `reasoning_effort` against the final model. When the request omits it, AIService uses `default_effort`; when the model has no default, the upstream provider keeps its own default. Unsupported levels return `422`.
-
-The default OpenAI-compatible `text` action and CityModel stream runtime convert the validated level into AI SDK `providerOptions.reasoningEffort`. Providers with different option shapes can override `build_reasoning_provider_options(ctx, model)`: Anthropic can map to `anthropic.thinking` / `anthropic.effort`, while Gemini can map to `google.thinkingConfig`. Custom actions should read the validated result with `read_resolved_reasoning(ctx)` instead of parsing the raw request again.
-
-`/v1/ai/chat/completions` is already OpenAI-compatible, so it does not use `providerOptions`; the validated `reasoning_effort` remains in the request body for the custom `openai` action or automatic passthrough.
-
- ## Overriding text / stream
-
-`text()` is the non-streaming SDK action. `stream(ctx, call)` is the standard
-CityModel stream protocol. Providers can override them independently, and a
-custom stream does not need to construct a complete CityModel:
-
- ```ts
- import {
-   Provider,
-   type CityProviderStreamCall,
-   type CityProviderStreamResult,
-   type Context,
- } from "@downcity/city";
-
- class CustomProvider extends Provider {
-   constructor() {
-     super({ id: "custom", envKey: "CUSTOM_API_KEY" });
-   }
-
-   protected async stream(
-     ctx: Context,
-     call: CityProviderStreamCall,
-   ): Promise<CityProviderStreamResult> {
-     const response = await requestCustomUpstream(ctx, call);
-     return {
-       stream: convertToLanguageModelStream(response.body),
-     };
-   }
- }
- ```
-
-## Multimodal prompt extraction
-
-Override `extractPrompt` to flatten multimodal messages into plain text:
-
- ```ts
- class DeepSeekProvider extends Provider {
-   // ...
-   protected extractPrompt(input: { prompt?: string; messages?: Array<{ role: string; parts?: Array<{ type: string; text?: string }> }> }): string {
-     if (typeof input.prompt === "string") return input.prompt;
-     return input.messages
-       ?.find((m) => m.role === "user")
-       ?.parts?.map((part) => (part.type === "text" ? part.text : ""))
-       .filter(Boolean)
-       .join("\n") ?? "";
-   }
-}
-```
-
-## Model fallback
-
-You can attach a fallback model directly on a model config:
-
-```ts
-const kimi = kimiProvider.model({
-  id: "kimi-k2.6",
-  name: "Kimi K2.6",
-});
-
-const deepseek = deepseekProvider.model({
-  id: "deepseek-v4-flash",
-  name: "DeepSeek V4 Flash",
-  fallback: [
-    {
-      match: (media) => media.media_type.startsWith("image/"),
-      model: kimi,
-    },
-  ],
-});
-```
-
-When a request contains file media input that the current model cannot handle, AIService evaluates `fallback` rules in array order for `text`, `stream`, and `chat/completions`. The first matching rule whose target model is available becomes the execution model.
-
-For UIMessage requests, AIService only extracts media from `{ type: "file" }` parts and passes `media.media_type`, `media.filename`, and `media.url` into `match`. Image, audio, video, PDF, and custom routing should all live in your `match` functions. For OpenAI-compatible requests, `image_url` / `input_image` parts are normalized as `media.media_type === "image/*"` and use the same rule list.
-
-If no fallback is configured, or no rule matches, AIService keeps the original model and the provider decides how to handle the request.
-
-## Image Providers
-
-`@downcity/city` does not ship concrete image provider factories. City provides the `Provider` abstraction, `AIService` registration, and the unified `city.ai.image_create()` / `city.ai.image_result()` job contract.
-
-Image job storage is owned by `AIService`: it declares the built-in `async_jobs` table, and Federation creates that table automatically during service initialization. A Provider only creates upstream work, queries upstream status, and normalizes upstream responses into the fixed protocol.
-
-Normalization means the Provider must not pass an upstream raw response to AIService and expect AIService to guess fields. Different upstreams may put status in `status`, `data.status`, or `result.status`; others may represent pending or success with `status_code + err + data`. The Provider must translate those shapes inside `image_fetch()` into the only result shape Downcity understands:
-
-```ts
-type AIImageProviderFetchResult = {
-  job_id: string;
-  status: "queued" | "running" | "succeeded" | "failed";
-  result?: UIMessage;
-  error?: string;
-  message?: string;
-  poll_after_ms?: number;
-  metadata?: Record<string, unknown>;
-};
-```
-
-For example, when an upstream returns `result pending`, the Provider should return `status: "running"`, a clear `message`, the next `poll_after_ms`, and a raw response summary in `metadata.raw` or an equivalent field. When the upstream succeeds, the Provider must return `status: "succeeded"` and an AI SDK `UIMessage` with file parts that can be materialized. When the upstream fails, the Provider must return `status: "failed"` and a user-visible `error`.
-
-In short: AIService owns job storage, Queue scheduling, state caching, and billing; the Provider owns upstream protocol parsing, pending/succeeded/failed mapping, usage extraction, and image result conversion.
-
-AIService also provides a platform-level pending fallback for image jobs: when a job stays `queued` or `running` longer than `image_max_pending_duration_ms`, it is marked `failed`, and both `error` and `message` are set to `upstream timeout`. The default is 2 hours. Providers do not need to decide whether the Downcity job has timed out; while the upstream is still pending, keep returning `queued` or `running`.
-
-### Complete Example
-
-```ts
+import { createDeepSeek } from "@ai-sdk/deepseek";
 import {
+  AIChannel,
   AIService,
-  Provider,
-  type AIImageProviderCreateResult,
-  type AIImageProviderFetchResult,
+  read_required_env,
+  resolve_upstream_model,
   type Context,
+  type LanguageModelV3CallOptions,
+  type LanguageModelV3StreamResult,
 } from "@downcity/city";
 
-class MyImageProvider extends Provider {
+class DeepSeekChannel extends AIChannel {
   constructor() {
-    super({ id: "my-image", envKey: "MY_IMAGE_API_KEY" });
+    super({
+      id: "deepseek",
+      env_key: "DEEPSEEK_API_KEY",
+      base_url: "https://api.deepseek.com/v1",
+    });
   }
 
-  async image_create(ctx: Context): Promise<AIImageProviderCreateResult> {
-    const input = ctx.input as { prompt?: string; size?: string };
-    const api_key = ctx.env("MY_IMAGE_API_KEY");
-    const response = await fetch("https://image.example.com/jobs", {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${api_key}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        prompt: input.prompt,
-        size: input.size,
-      }),
+  protected async stream(
+    ctx: Context,
+    call: LanguageModelV3CallOptions,
+  ): Promise<LanguageModelV3StreamResult> {
+    const deepseek = createDeepSeek({
+      apiKey: read_required_env(ctx, this.env_key ?? ""),
+      baseURL: this.base_url,
     });
-    const data = await response.json() as { id?: string; error?: string };
-    if (!response.ok || !data.id) {
-      return {
-        job_id: `img_${crypto.randomUUID()}`,
-        status: "failed",
-        error: data.error ?? response.statusText,
-      };
-    }
-    return {
-      job_id: `img_${crypto.randomUUID()}`,
-      status: "running",
-      message: "submitted",
-      poll_after_ms: 3000,
-      metadata: {
-        upstream_job_id: data.id,
-        upstream_model: "image-basic",
-      },
-    };
-  }
-
-  async image_fetch(ctx: Context): Promise<AIImageProviderFetchResult> {
-    const image_job = ctx.locals.ai_image_job as {
-      record: { job_id: string; user_id?: string | null; city_id?: string | null };
-      state?: { upstream_job_id?: string; upstream_model?: string };
-    };
-    const upstream_job_id = image_job.state?.upstream_job_id;
-    if (!upstream_job_id) {
-      return {
-        job_id: image_job.record.job_id,
-        status: "failed",
-        error: "Missing upstream image job id",
-      };
-    }
-
-    const api_key = ctx.env("MY_IMAGE_API_KEY");
-    const response = await fetch(`https://image.example.com/jobs/${upstream_job_id}`, {
-      headers: {
-        authorization: `Bearer ${api_key}`,
-      },
-    });
-    const data = await response.json() as {
-      status?: "queued" | "running" | "succeeded" | "failed";
-      image_url?: string;
-      error?: string;
-      usage?: unknown;
-    };
-
-    if (!response.ok || data.status === "failed") {
-      return {
-        job_id: image_job.record.job_id,
-        status: "failed",
-        error: data.error ?? response.statusText,
-        metadata: image_job.state,
-      };
-    }
-
-    if (data.status === "queued" || data.status === "running" || !data.image_url) {
-      return {
-        job_id: image_job.record.job_id,
-        status: data.status ?? "running",
-        message: "generating",
-        poll_after_ms: 3000,
-        metadata: image_job.state,
-      };
-    }
-
-    return {
-      job_id: image_job.record.job_id,
-      status: "succeeded",
-      result: {
-        id: `msg_${crypto.randomUUID()}`,
-        role: "assistant",
-        parts: [{
-          type: "file",
-          mediaType: "image/png",
-          url: data.image_url,
-        }],
-      },
-      metadata: {
-        ...image_job.state,
-        user_id: image_job.record.user_id,
-        city_id: image_job.record.city_id,
-        usage: data.usage,
-      },
-    };
+    return this.stream_ai_sdk_model(
+      ctx,
+      call,
+      deepseek(resolve_upstream_model(ctx)),
+    );
   }
 }
 
-const ai = new AIService({ balance });
-const image_provider = new MyImageProvider();
+const deepseek_channel = new DeepSeekChannel();
+const ai = new AIService();
 
-ai.use(image_provider.model({
-  id: "image-basic",
-  name: "Image Basic",
-  bill(ctx, output) {
-    return {
-      user_id: output.metadata?.user_id,
-      credits: 50_000,
-      ref: `image:${output.job_id}`,
-      note: "image generation",
-      metadata: { usage: output.metadata?.usage },
-    };
-  },
+ai.use(deepseek_channel.model({
+  id: "deepseek-v4-flash",
+  upstream_model: "deepseek-chat",
+  name: "DeepSeek V4 Flash",
+  context_window: 128_000,
+  tags: ["text"],
 }));
+
+federation.use(ai);
 ```
 
-Passing `balance` into AIService also enables the default balance precheck for model-consuming actions. AIService blocks users whose wallet is already negative before calling the Provider, then charges the actual usage after the Provider succeeds.
+`upstream_model` belongs to each model. One Channel can register multiple Federation models that target different upstream model IDs.
 
-Queue is a Federation-level capability and does not need to be passed into `AIService`:
+## Data lifecycle
 
-```ts
-fed.queue.use(cloudflareQueue(env.DOWNCITY_QUEUE));
-fed.use(ai);
+```text
+AIChannelOptions
+  -> AIChannel
+  -> AIModelSpec
+  -> AIModelDefinition
+  -> CityModelDescriptor
+  -> CityModel + LanguageModelV3
 ```
 
-When the Cloudflare Queue consumer receives a message, hand it back to Federation:
+- `AIChannelOptions`: Channel connection configuration, including `id`, `env_key`, `base_url`, and default `ai_sdk_provider_options`.
+- `AIModelSpec`: input to `channel.model()`, including the Federation ID, `upstream_model`, catalog fields, reasoning, fallback, and model options.
+- `AIModelDefinition`: complete AIService runtime model with `channel_id`, the unified `runtime` field, and private connection data.
+- `CityModelDescriptor`: public `/v1/ai/models` catalog data without secrets, upstream IDs, or providerOptions.
+- `CityModel`: an executable client object that combines descriptor fields with AI SDK `LanguageModelV3`.
 
-```ts
-for (const message of batch.messages) {
-  await fed.queue.call(message.body);
-  message.ack();
-}
+## One language execution path
+
+Every language entry point eventually calls the same `AIChannel.stream(ctx, call)`:
+
+```text
+city.ai.text()            -> AI SDK generateText -> AIChannel.stream
+city.ai.stream()          -> CityModel.doStream  -> AIChannel.stream
+CityModel.doGenerate()    -> CityModel.doStream  -> AIChannel.stream
+/v1/ai/chat/completions   -> OpenAI adapter      -> AIChannel.stream
 ```
 
-The client stays provider-neutral:
+`/chat/completions` is no longer a raw passthrough, and there is no `AIChannel.openai()`. AIService converts OpenAI messages, tools, tool choice, and generation settings into `LanguageModelV3CallOptions`, then converts the standard stream back to OpenAI JSON or SSE.
+
+## AI SDK providerOptions
+
+Both the Channel and a model can declare private server-side options:
 
 ```ts
-const job = await city.ai.image_create({
-  model: "image-basic",
-  prompt: "A clean product photo of a ceramic mug",
-  ratio: "1:1",
-  quality: "standard",
-  count: 1,
+const openai_channel = new OpenAIResponsesChannel({
+  id: "openai",
+  env_key: "OPENAI_API_KEY",
+  ai_sdk_provider_options: {
+    openai: { store: true, serviceTier: "default" },
+  },
 });
 
-const current = await city.ai.image_result({ job_id: job.job_id });
-```
-
-If the task is still `queued` or `running`, the frontend should call `image_result()` again after `poll_after_ms`. `image_result()` only reads the `async_jobs` cache. The background Queue calls `ai.image/fetch`; AIService then calls the Provider's `image_fetch()` to fetch upstream state and store it back into `async_jobs`.
-
-## Provider Job Contract
-
-Callers only use `city.ai.image_create()` and `city.ai.image_result()`. Provider implementations normally use two methods:
-
-```ts
-class ImageProvider extends Provider {
-  async image_create(ctx: Context): Promise<AIImageProviderCreateResult> {
-    // Create/start upstream work. AIService stores ctx.input and this metadata in async_jobs.
-    return { job_id: "upstream_or_local_job_id", status: "running" };
-  }
-
-  async image_fetch(ctx: Context): Promise<AIImageProviderFetchResult> {
-    // Read ctx.locals.ai_image_job, query upstream, and return the latest state or final result.
-    return { job_id: String(ctx.input.job_id), status: "running", poll_after_ms: 2000 };
-  }
-}
-```
-
-`image_fetch` is required for image models. A model exposes the `image` capability only when it provides both `image_create` and `image_fetch`.
-
-AIService owns job storage, Queue scheduling, state caching, final result persistence, and idempotent billing. Provider-specific code owns only upstream calls, upstream polling, usage parsing, and result conversion to AI SDK `UIMessage` file parts.
-
- ## Auto Passthrough
-
- When `baseURL` + `envKey` are present but no `openai` method is defined, AIService generates a passthrough action automatically:
-
- - The OpenAI-compatible body is forwarded as-is.
- - The upstream Response is returned as-is.
- - `passthroughModel` replaces `body.model` when set.
-
- ```ts
- // No need to write this — AIService handles it
- // async openai(ctx) { return fetch(`${baseURL}/chat/completions`, ...) }
- ```
-
- ## Custom OpenAI-compatible Handler
-
- Provide an `openai` method when the upstream needs request or response customization:
-
- ```ts
- import {
-   Provider,
-   type AIProviderChargedResponse,
-   type Context,
-   normalizeOpenAICompatibleBody,
-   readRequiredEnv,
-   trimTrailingSlash,
- } from "@downcity/city";
-
- class OpenAICustomProvider extends Provider {
-   constructor() {
-     super({ id: "openai-custom", envKey: "OPENAI_API_KEY", baseURL: "https://api.openai.com/v1" });
-   }
-
-   async openai(ctx: Context): Promise<AIProviderChargedResponse> {
-     const apiKey = readRequiredEnv(ctx, this.envKey ?? "");
-     const body = normalizeOpenAICompatibleBody(
-       ctx.input as Record<string, unknown>,
-       this.passthroughModel ?? "",
-     );
-     const response = await fetch(`${trimTrailingSlash(this.baseURL ?? "")}/chat/completions`, {
-       method: "POST",
-       headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
-       body: JSON.stringify(body),
-     });
-     return { response };
-   }
- }
- ```
-
- ## Provider Billing
-
-Use `bill(ctx, output)` when a provider or a specific model needs to turn a finished AI call into a charge draft. `bill` does not deduct balance by itself. AIService reads the returned charge line and calls `balance.charge()` through the configured `BalanceService` bridge. The wallet can go negative after this post-success charge; the next model-consuming AI request is blocked by AIService's balance precheck.
-
-Background `image/fetch` atomically claims an image job so only one worker calls the Provider at a time. After the Provider succeeds, AIService completes billing with a stable job idempotency key before writing `status: "succeeded"` and `result_json`. A billing failure leaves the job retryable, and a repeated attempt does not debit twice. `image_create()` never bills, and user `image_result()` only reads the `async_jobs` cache. When Queue consumption has no current user context, AIService automatically uses the owner stored when the job was created; a charge line can still override it with an explicit `user_id`.
-
-For an asynchronous stream `charge`, Workers use `waitUntil` for settlement. Node and other runtimes without an ExecutionContext bind settlement to the Response stream finalization and close the stream only after billing completes. A non-stream asynchronous charge completes before the request ends.
-
-The usual priority is:
-
-1. an action explicitly returns `charge`
-2. the model provides `bill(ctx, output)`
-3. the provider provides `bill(ctx, output)`
-4. no charge is created
-
- ```ts
- import { normalizeAIUsage } from "@downcity/city";
-
- class DeepSeekProvider extends Provider {
-   // ...
-   protected bill(ctx: Context, output: unknown) {
-     const usage = output?.metadata?.usage;
-     const normalized = normalizeAIUsage(usage);
-     // compute credits from usage
-     return {
-       credits: 10_000,
-       note: `DeepSeek ${ctx.variant?.id}`,
-       metadata: { raw_usage: usage },
-     };
-   }
- }
- ```
-
-Model registration can override provider billing:
-
-```ts
-ai.use(deepseek.model({
-  id: "deepseek-v4-pro",
-  name: "DeepSeek V4 Pro",
-  bill(ctx, output) {
-    return {
-      credits: 20_000,
-      note: "DeepSeek V4 Pro request",
-      metadata: {
-        model_id: ctx.variant?.id,
-        usage: output?.metadata?.usage,
-      },
-    };
+ai.use(openai_channel.model({
+  id: "gpt-5.6-luna",
+  upstream_model: "gpt-5.6-luna",
+  name: "GPT-5.6 Luna",
+  ai_sdk_provider_options: {
+    openai: { store: false, serviceTier: "priority" },
   },
 }));
 ```
 
- You can also return charge directly from an action method:
+The merge order is:
 
- ```ts
- async text(ctx: Context) {
-   const result = await callUpstream(ctx.input);
-   return {
-     output: toUIMessage(result),
-     charge: {
-       credits: priceUpstreamUsage(result.usage),
-       note: "custom text",
-     },
-   };
- }
- ```
+```text
+Channel defaults < model overrides < AIService-validated reasoning options
+```
 
- ## Provider Fields & Methods
+These options are not published in the model catalog, and client-supplied CityModel `providerOptions` are not accepted as upstream options. OpenAI Responses `store` controls server-side application-state retention; it is not a prompt-cache switch.
 
- | Field | Required | Description |
- |---|---|---|
- | `id` | Yes | Provider unique id |
- | `env` | No | Env var declarations |
- | `baseURL` | Required for passthrough | Upstream API URL |
- | `envKey` | Required for passthrough | Env var name for API key |
- | `passthroughModel` | No | Replaces `body.model` during passthrough |
+## Reasoning and fallback
 
- | Method | Description |
- |---|---|
- | `createClient` | Override for text or CityModel streaming; returns an OpenAI-compatible client |
- | `stream` | Execute a CityModel call and return a LanguageModelV3 stream result |
- | `text` | SDK text action (default from base class) |
- | `image_create` | Create and start an image provider job |
- | `image_fetch` | Query image provider job state in the background and return the final result |
- | `video` | SDK video action |
- | `openai` | /chat/completions action (auto-passthrough if omitted) |
- | `bill` | Return a charge draft for the finished call |
- | `extractPrompt` | Extract prompt from input (overrideable) |
+`reasoning` and `fallback` belong to a model:
 
- ## Helper Functions
+```ts
+ai.use(channel.model({
+  id: "text-model",
+  upstream_model: "vendor-text-model",
+  name: "Text Model",
+  reasoning: {
+    efforts: [{ id: "high", name: "High" }],
+    default_effort: "high",
+  },
+  fallback: [{
+    match: (media) => media.media_type.startsWith("image/"),
+    model_id: "vision-model",
+  }],
+}));
+```
 
- `@downcity/city` exports common helpers for Provider subclasses:
+AIService resolves fallback first, then validates reasoning against the final model. A Channel can read the trusted result with `read_resolved_reasoning(ctx)`. `stream_ai_sdk_model()` maps it to the AI SDK Provider's `reasoningEffort` by default.
 
- - `readRequiredEnv(ctx, key)`
- - `resolveUpstreamModel(ctx, fallback)`
- - `trimTrailingSlash(url)`
- - `buildAssistantMessage(text, ctx, result, charge?)`
- - `buildImageMessage(ctx, images, metadata)`
- - `normalizeOpenAICompatibleBody(input, model)`
- - `readOpenAICompatibleSseUsage(body)`
- - `normalizeAIUsage(usage)`
- - `buildToolSet(items)`
+## Images and other modalities
+
+Language models use `stream()`. Images, video, TTS, and ASR remain explicit Channel methods: `image_create()`, `image_fetch()`, `video()`, `tts()`, and `asr()`.
+
+Image Channels return `AIImageCreateResult` and `AIImageResult`. AIService owns `async_jobs` storage, Queue scheduling, state persistence, and idempotent billing; the Channel only adapts the upstream protocol to the standard result.
+
+## Fields and methods
+
+| Member | Purpose |
+|---|---|
+| `id` | Unique Channel ID within the Federation |
+| `env` / `env_key` | Declare and read Federation env values |
+| `base_url` | Upstream API root used by the Channel subclass |
+| `stream(ctx, call)` | The single language-model execution entry point |
+| `stream_ai_sdk_model(ctx, call, model)` | Execute an AI SDK V3 model with server-side options |
+| `model(spec)` | Convert `AIModelSpec` into a registerable `AIModelDefinition` |
+| `bill(ctx, output)` | Produce an optional charge draft |

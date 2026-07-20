@@ -1,87 +1,34 @@
 ---
-title: /chat/completions Endpoint
-description: Auto-passthrough mechanism, format conversion, SSE event mapping, and calling methods.
+title: OpenAI-Compatible Chat Completions
+description: Call Downcity's unified LanguageModelV3 path with the OpenAI SDK or curl.
 ---
 
-`POST /v1/ai/chat/completions` is the OpenAI-compatible endpoint.
-
-## How It Works
-
-```
-POST /v1/ai/chat/completions
-  { model, messages, stream }
-              │
-              ▼
-       resolve(mode: "openai")
-              │
-    ┌─────────┴──────────┐
-    │                    │
-  Has openai handler  No openai handler
-  (non-OpenAI format) (OpenAI-compatible)
-    │                    │
-    ▼                    ▼
-  Custom conversion    Auto passthrough
-    │                    │
-    ▼                    ▼
-  Response            Response
-```
-
-## Auto Passthrough
-
-When a provider has `baseURL` + `envKey` but no `openai` handler, AIService auto-generates a passthrough:
+Endpoint: `POST /v1/ai/chat/completions`.
 
 ```ts
-async (ctx) => {
-  const apiKey = ctx.env(envKey);
-  return fetch(`${baseURL}/chat/completions`, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify(ctx.input),  // forward as-is
-  });
-};
-```
-
-No ai-sdk. No type conversion. Fully transparent.
-
-## Format Conversion
-
-For OpenAI-compatible providers with custom upstream requirements, the `openai` handler can do bidirectional conversion.
-
-### SSE Event Mapping (Custom Upstream → OpenAI)
-
-| Upstream SSE Event | OpenAI SSE Chunk |
-|---|---|
-| `message_start` | `delta: { role: "assistant" }` |
-| `content_block_delta` (text_delta) | `delta: { content: "..." }` |
-| `content_block_delta` (input_json_delta) | `delta: { tool_calls: [...] }` |
-| `message_delta` | `finish_reason: "stop"` + `usage` |
-| `message_stop` | `data: [DONE]` |
-
-### stop_reason Mapping
-
-| Upstream | OpenAI |
-|---|---|
-| `end_turn` | `stop` |
-| `max_tokens` | `length` |
-| `tool_use` | `tool_calls` |
-
-## Calling
-
-```bash
-# curl streaming
-curl http://127.0.0.1:43127/v1/ai/chat/completions \
-  -H "Authorization: Bearer ub_xxx" \
-  -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"hello"}],"stream":true}'
-```
-
-```ts
-// OpenAI SDK
 const openai = new OpenAI({
-  baseURL: "http://127.0.0.1:43127/v1/ai",
-  apiKey: "ub_xxx",
+  baseURL: "https://federation.example/v1/ai",
+  apiKey: "user-token",
 });
-await openai.chat.completions.create({
-  model: "deepseek-v4-flash",
+
+const result = await openai.chat.completions.create({
+  model: "gpt-5.6-luna",
   messages: [{ role: "user", content: "hello" }],
   stream: true,
 });
 ```
+
+The request follows one path:
+
+```text
+OpenAI request
+  -> OpenAIChatCompletionsAdapter
+  -> LanguageModelV3CallOptions
+  -> AIService fallback/reasoning
+  -> AIChannel.stream()
+  -> OpenAI JSON or SSE
+```
+
+The adapter supports system, user, assistant, and tool messages; text and image URLs; function tools, tool choice, `reasoning_effort`, common sampling parameters, and `stream: true`.
+
+Client `providerOptions` never reach the upstream. Private upstream options must be configured by `ai_sdk_provider_options` on the AIChannel or AIModelSpec.

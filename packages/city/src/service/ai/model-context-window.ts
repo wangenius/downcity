@@ -6,12 +6,12 @@
  * - 模型目录会把该值公开给 Agent 等调用方，因此注册阶段必须拒绝无效配置。
  */
 
-import type { ModelConfig } from "./types.js";
+import type { AIModelDefinition } from "../../types/AI.js";
 
 /**
  * 校验模型上下文窗口配置。
  */
-export function validate_model_context_window(model: ModelConfig): void {
+export function validate_model_context_window(model: AIModelDefinition): void {
   const context_window = model.context_window;
   if (context_window === undefined) return;
   if (!Number.isSafeInteger(context_window) || context_window <= 0) {

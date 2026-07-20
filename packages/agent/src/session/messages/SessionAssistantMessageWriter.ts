@@ -8,6 +8,7 @@
 import type { UIMessageChunk } from "ai";
 import type { SessionMessages } from "@/session/SessionMessages.js";
 import {
+  to_session_json_object,
   to_session_json_value,
   to_session_provider_metadata,
 } from "@/session/messages/SessionJsonValue.js";
@@ -15,6 +16,7 @@ import type {
   SessionAssistantFilePart,
   SessionAssistantMessage,
   SessionAssistantMessagePart,
+  SessionAssistantTextPart,
   SessionAssistantToolPart,
 } from "@/types/session/SessionMessage.js";
 import type { SessionToolInputReady } from "@/types/session/SessionTool.js";
@@ -24,7 +26,10 @@ import { generateId } from "@/utils/Id.js";
 export class SessionAssistantMessageWriter {
   readonly message_id: string;
   private readonly recorder: SessionMessages;
-  private readonly pending_text_parts = new Map<string, "text" | "reasoning">();
+  private readonly pending_text_parts = new Map<
+    string,
+    Pick<SessionAssistantTextPart, "type" | "provider_metadata">
+  >();
   private readonly active_text_part_ids = new Map<string, string>();
   private write_chain: Promise<void> = Promise.resolve();
   private closed = false;
@@ -51,7 +56,10 @@ export class SessionAssistantMessageWriter {
         const type = chunk.type === "text-start" ? "text" : "reasoning";
         const part_id = this.resolve_text_part_id(type, chunk.id);
         if (!current.parts.some((part) => part.part_id === part_id)) {
-          this.pending_text_parts.set(part_id, type);
+          this.pending_text_parts.set(part_id, {
+            type,
+            provider_metadata: to_session_provider_metadata(chunk.providerMetadata),
+          });
         }
         return;
       }
@@ -59,7 +67,11 @@ export class SessionAssistantMessageWriter {
       case "reasoning-delta": {
         const type = chunk.type === "text-delta" ? "text" : "reasoning";
         const part_id = this.resolve_text_part_id(type, chunk.id);
-        await this.ensure_text_part(part_id, type);
+        await this.ensure_text_part(
+          part_id,
+          type,
+          to_session_provider_metadata(chunk.providerMetadata),
+        );
         await this.recorder.append_assistant_delta(
           this.message_id,
           part_id,
@@ -76,7 +88,12 @@ export class SessionAssistantMessageWriter {
         if (!part_id) return;
         const part = current.parts.find((item) => item.part_id === part_id);
         if (part?.type === "text" || part?.type === "reasoning") {
-          await this.upsert_part({ ...part, state: "done" });
+          const provider_metadata = to_session_provider_metadata(chunk.providerMetadata);
+          await this.upsert_part({
+            ...part,
+            state: "done",
+            ...(provider_metadata !== undefined ? { provider_metadata } : {}),
+          });
         } else {
           this.pending_text_parts.delete(part_id);
         }
@@ -88,10 +105,14 @@ export class SessionAssistantMessageWriter {
         const call_provider_metadata = to_session_provider_metadata(
           chunk.providerMetadata,
         );
+        const tool_metadata = to_session_json_object(chunk.toolMetadata);
         if (tool) {
           if (
             call_provider_metadata === undefined &&
-            chunk.providerExecuted === undefined
+            chunk.providerExecuted === undefined &&
+            chunk.title === undefined &&
+            tool_metadata === undefined &&
+            chunk.dynamic === undefined
           ) return;
           await this.upsert_tool(chunk.toolCallId, {
             tool_name: tool.tool_name,
@@ -102,6 +123,9 @@ export class SessionAssistantMessageWriter {
             ...(chunk.providerExecuted !== undefined
               ? { provider_executed: chunk.providerExecuted }
               : {}),
+            ...(chunk.title !== undefined ? { title: chunk.title } : {}),
+            ...(tool_metadata !== undefined ? { tool_metadata } : {}),
+            ...(chunk.dynamic !== undefined ? { dynamic: chunk.dynamic } : {}),
           });
           return;
         }
@@ -115,6 +139,9 @@ export class SessionAssistantMessageWriter {
           ...(chunk.providerExecuted !== undefined
             ? { provider_executed: chunk.providerExecuted }
             : {}),
+          ...(chunk.title !== undefined ? { title: chunk.title } : {}),
+          ...(tool_metadata !== undefined ? { tool_metadata } : {}),
+          ...(chunk.dynamic !== undefined ? { dynamic: chunk.dynamic } : {}),
         });
         return;
       }
@@ -133,10 +160,14 @@ export class SessionAssistantMessageWriter {
         const call_provider_metadata = to_session_provider_metadata(
           chunk.providerMetadata,
         );
+        const tool_metadata = to_session_json_object(chunk.toolMetadata);
         if (tool && tool.state !== "input-streaming") {
           if (
             call_provider_metadata === undefined &&
-            chunk.providerExecuted === undefined
+            chunk.providerExecuted === undefined &&
+            chunk.title === undefined &&
+            tool_metadata === undefined &&
+            chunk.dynamic === undefined
           ) return;
           await this.upsert_tool(chunk.toolCallId, {
             tool_name: tool.tool_name,
@@ -147,6 +178,9 @@ export class SessionAssistantMessageWriter {
             ...(chunk.providerExecuted !== undefined
               ? { provider_executed: chunk.providerExecuted }
               : {}),
+            ...(chunk.title !== undefined ? { title: chunk.title } : {}),
+            ...(tool_metadata !== undefined ? { tool_metadata } : {}),
+            ...(chunk.dynamic !== undefined ? { dynamic: chunk.dynamic } : {}),
           });
           return;
         }
@@ -160,6 +194,9 @@ export class SessionAssistantMessageWriter {
           ...(chunk.providerExecuted !== undefined
             ? { provider_executed: chunk.providerExecuted }
             : {}),
+          ...(chunk.title !== undefined ? { title: chunk.title } : {}),
+          ...(tool_metadata !== undefined ? { tool_metadata } : {}),
+          ...(chunk.dynamic !== undefined ? { dynamic: chunk.dynamic } : {}),
         });
         return;
       }
@@ -167,17 +204,33 @@ export class SessionAssistantMessageWriter {
         const call_provider_metadata = to_session_provider_metadata(
           chunk.providerMetadata,
         );
+        const tool_metadata = to_session_json_object(chunk.toolMetadata);
         await this.upsert_tool(chunk.toolCallId, {
           tool_name: chunk.toolName,
           state: "failed",
           input: to_session_json_value(chunk.input),
           error: chunk.errorText,
+          ...(chunk.input === undefined && "rawInput" in chunk && chunk.rawInput !== undefined
+            ? { raw_input: to_session_json_value(chunk.rawInput) }
+            : {}),
           ...(call_provider_metadata !== undefined
             ? { call_provider_metadata }
             : {}),
           ...(chunk.providerExecuted !== undefined
             ? { provider_executed: chunk.providerExecuted }
             : {}),
+          ...(chunk.title !== undefined ? { title: chunk.title } : {}),
+          ...(tool_metadata !== undefined ? { tool_metadata } : {}),
+          ...(chunk.dynamic !== undefined ? { dynamic: chunk.dynamic } : {}),
+        });
+        return;
+      }
+      case "tool-approval-request": {
+        const tool = this.find_tool(chunk.toolCallId);
+        await this.upsert_tool(chunk.toolCallId, {
+          tool_name: tool?.tool_name || "unknown",
+          state: "approval-required",
+          approval: { approval_id: chunk.approvalId },
         });
         return;
       }
@@ -190,6 +243,7 @@ export class SessionAssistantMessageWriter {
         const result_provider_metadata = to_session_provider_metadata(
           chunk.providerMetadata,
         );
+        const tool_metadata = to_session_json_object(chunk.toolMetadata);
         await this.upsert_tool(chunk.toolCallId, {
           tool_name: tool?.tool_name || "unknown",
           state: "completed",
@@ -200,6 +254,11 @@ export class SessionAssistantMessageWriter {
           ...(chunk.providerExecuted !== undefined
             ? { provider_executed: chunk.providerExecuted }
             : {}),
+          ...(tool_metadata !== undefined ? { tool_metadata } : {}),
+          ...(chunk.dynamic !== undefined ? { dynamic: chunk.dynamic } : {}),
+          ...(chunk.preliminary !== undefined
+            ? { preliminary: chunk.preliminary }
+            : {}),
         });
         return;
       }
@@ -208,6 +267,7 @@ export class SessionAssistantMessageWriter {
         const result_provider_metadata = to_session_provider_metadata(
           chunk.providerMetadata,
         );
+        const tool_metadata = to_session_json_object(chunk.toolMetadata);
         await this.upsert_tool(chunk.toolCallId, {
           tool_name: tool?.tool_name || "unknown",
           state: "failed",
@@ -218,6 +278,8 @@ export class SessionAssistantMessageWriter {
           ...(chunk.providerExecuted !== undefined
             ? { provider_executed: chunk.providerExecuted }
             : {}),
+          ...(tool_metadata !== undefined ? { tool_metadata } : {}),
+          ...(chunk.dynamic !== undefined ? { dynamic: chunk.dynamic } : {}),
         });
         return;
       }
@@ -227,6 +289,12 @@ export class SessionAssistantMessageWriter {
           tool_name: tool?.tool_name || "unknown",
           state: "failed",
           error: "Tool output denied",
+          approval: {
+            ...(tool?.approval || {}),
+            approval_id:
+              tool?.approval?.approval_id || `approval:${chunk.toolCallId}`,
+            approved: false,
+          },
         });
         return;
       }
@@ -234,10 +302,73 @@ export class SessionAssistantMessageWriter {
         await this.append_file_part({
           media_type: chunk.mediaType,
           url: chunk.url,
+          provider_metadata: to_session_provider_metadata(chunk.providerMetadata),
         });
         return;
-      default:
+      case "source-url": {
+        const part_id = `source:${chunk.sourceId}`;
+        const current_part = current.parts.find((part) => part.part_id === part_id);
+        const provider_metadata = to_session_provider_metadata(chunk.providerMetadata);
+        await this.upsert_part({
+          part_id,
+          sequence: current_part?.sequence || this.next_part_sequence(),
+          type: "source",
+          source_type: "url",
+          source_id: chunk.sourceId,
+          url: chunk.url,
+          ...(chunk.title !== undefined ? { title: chunk.title } : {}),
+          ...(provider_metadata !== undefined
+            ? { provider_metadata }
+            : {}),
+        });
         return;
+      }
+      case "source-document": {
+        const part_id = `source:${chunk.sourceId}`;
+        const current_part = current.parts.find((part) => part.part_id === part_id);
+        const provider_metadata = to_session_provider_metadata(chunk.providerMetadata);
+        await this.upsert_part({
+          part_id,
+          sequence: current_part?.sequence || this.next_part_sequence(),
+          type: "source",
+          source_type: "document",
+          source_id: chunk.sourceId,
+          media_type: chunk.mediaType,
+          title: chunk.title,
+          ...(chunk.filename !== undefined ? { filename: chunk.filename } : {}),
+          ...(provider_metadata !== undefined
+            ? { provider_metadata }
+            : {}),
+        });
+        return;
+      }
+      case "start-step":
+        await this.upsert_part({
+          part_id: `step:${generateId()}`,
+          sequence: this.next_part_sequence(),
+          type: "step-start",
+        });
+        return;
+      default: {
+        if (chunk.type.startsWith("data-")) {
+          const data_chunk = chunk as unknown as Record<string, unknown>;
+          if (data_chunk.transient === true) return;
+          const data_id = typeof data_chunk.id === "string"
+            ? data_chunk.id
+            : undefined;
+          const part_id = `data:${data_id ?? generateId()}`;
+          const current_part = current.parts.find((part) => part.part_id === part_id);
+          await this.upsert_part({
+            part_id,
+            sequence: current_part?.sequence || this.next_part_sequence(),
+            type: "data",
+            data_type: chunk.type,
+            data: to_session_json_value(data_chunk.data),
+            ...(data_id !== undefined ? { data_id } : {}),
+          });
+        }
+        return;
+      }
     }
   }
 
@@ -285,7 +416,10 @@ export class SessionAssistantMessageWriter {
 
   /** 把最终结果中的文件补入当前 Assistant，并对流式已写入文件去重。 */
   async append_file_part(
-    input: Pick<SessionAssistantFilePart, "filename" | "media_type" | "url">,
+    input: Pick<
+      SessionAssistantFilePart,
+      "filename" | "media_type" | "provider_metadata" | "url"
+    >,
   ): Promise<void> {
     const filename = String(input.filename || "").trim();
     const current = this.current_message();
@@ -296,8 +430,17 @@ export class SessionAssistantMessageWriter {
         part.media_type === input.media_type,
     );
     if (existing?.type === "file") {
-      if (filename && String(existing.filename || "").trim() !== filename) {
-        await this.upsert_part({ ...existing, filename });
+      if (
+        (filename && String(existing.filename || "").trim() !== filename) ||
+        input.provider_metadata !== undefined
+      ) {
+        await this.upsert_part({
+          ...existing,
+          ...(filename ? { filename } : {}),
+          ...(input.provider_metadata !== undefined
+            ? { provider_metadata: input.provider_metadata }
+            : {}),
+        });
       }
       return;
     }
@@ -308,6 +451,9 @@ export class SessionAssistantMessageWriter {
       media_type: input.media_type,
       url: input.url,
       ...(filename ? { filename } : {}),
+      ...(input.provider_metadata !== undefined
+        ? { provider_metadata: input.provider_metadata }
+        : {}),
     });
   }
 
@@ -392,6 +538,7 @@ export class SessionAssistantMessageWriter {
   private async ensure_text_part(
     part_id: string,
     type: "text" | "reasoning",
+    provider_metadata?: SessionAssistantTextPart["provider_metadata"],
   ): Promise<void> {
     const existing = this.current_message().parts.find(
       (part) => part.part_id === part_id,
@@ -400,10 +547,16 @@ export class SessionAssistantMessageWriter {
       if (existing.type !== type) {
         throw new Error(`Assistant Part type changed: ${part_id}`);
       }
+      if (
+        (existing.type === "text" || existing.type === "reasoning") &&
+        provider_metadata !== undefined
+      ) {
+        await this.upsert_part({ ...existing, provider_metadata });
+      }
       return;
     }
-    const pending_type = this.pending_text_parts.get(part_id);
-    if (pending_type && pending_type !== type) {
+    const pending = this.pending_text_parts.get(part_id);
+    if (pending && pending.type !== type) {
       throw new Error(`Assistant pending Part type changed: ${part_id}`);
     }
     await this.upsert_part({
@@ -412,6 +565,11 @@ export class SessionAssistantMessageWriter {
       type,
       text: "",
       state: "streaming",
+      ...(provider_metadata !== undefined
+        ? { provider_metadata }
+        : pending?.provider_metadata !== undefined
+          ? { provider_metadata: pending.provider_metadata }
+          : {}),
     });
     this.pending_text_parts.delete(part_id);
   }

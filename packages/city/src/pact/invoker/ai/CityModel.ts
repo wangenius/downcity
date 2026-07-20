@@ -11,12 +11,13 @@ import {
   type CityLanguageModelStreamEventV1,
   type CityLanguageModelStreamRequestV1,
   type CityTransportJsonValue,
-} from "../../../types/CityLanguageModelTransport.js";
-import type { CityModelOptions } from "../../../types/CityModelRuntime.js";
+} from "../../../types/AITransport.js";
+import type { CityModelOptions } from "../../../types/AITransport.js";
 import {
   decode_city_transport_value,
   encode_city_transport_object,
 } from "../../../utils/CityLanguageModelCodec.js";
+import { collect_city_language_model_stream } from "../../../utils/CityLanguageModelResult.js";
 
 type CityCallOptions = Parameters<CityModelContract["doStream"]>[0];
 type CityStreamResult = Awaited<ReturnType<CityModelContract["doStream"]>>;
@@ -77,7 +78,7 @@ export class CityModel implements CityModelContract {
   /** 通过聚合原生流实现非流式模型调用。 */
   async doGenerate(options: CityCallOptions): Promise<CityGenerateResult> {
     const result = await this.doStream(options);
-    return collect_city_model_stream(result.stream, result.request?.body);
+    return collect_city_language_model_stream(result.stream, result.request?.body);
   }
 
   /** 将 AI SDK 调用参数转换为 City transport 请求。 */
@@ -173,66 +174,6 @@ function parse_stream_event(data: string): CityStreamPart {
     throw new Error("Federation returned an invalid City language model stream event");
   }
   return decode_city_transport_value(parsed.part as CityTransportJsonValue) as CityStreamPart;
-}
-
-/** 将流事件聚合为 LanguageModelV3GenerateResult。 */
-async function collect_city_model_stream(
-  stream: ReadableStream<CityStreamPart>,
-  request_body: unknown,
-): Promise<CityGenerateResult> {
-  const reader = stream.getReader();
-  const content: Array<Record<string, unknown>> = [];
-  const text_blocks = new Map<string, Record<string, unknown>>();
-  const reasoning_blocks = new Map<string, Record<string, unknown>>();
-  let warnings: unknown[] = [];
-  let response: Record<string, unknown> | undefined;
-  let finish_reason: unknown;
-  let usage: unknown;
-  let provider_metadata: unknown;
-
-  while (true) {
-    const chunk = await reader.read();
-    if (chunk.done) break;
-    const part = chunk.value as unknown as Record<string, unknown>;
-    const type = String(part.type ?? "");
-    if (type === "error") throw part.error;
-    if (type === "stream-start") {
-      warnings = Array.isArray(part.warnings) ? part.warnings : [];
-    } else if (type === "response-metadata") {
-      const { type: _type, ...metadata } = part;
-      response = metadata;
-    } else if (type === "text-start" || type === "reasoning-start") {
-      const block = {
-        type: type === "text-start" ? "text" : "reasoning",
-        text: "",
-        ...(part.providerMetadata ? { providerMetadata: part.providerMetadata } : {}),
-      };
-      content.push(block);
-      const blocks = type === "text-start" ? text_blocks : reasoning_blocks;
-      blocks.set(String(part.id), block);
-    } else if (type === "text-delta" || type === "reasoning-delta") {
-      const blocks = type === "text-delta" ? text_blocks : reasoning_blocks;
-      const block = blocks.get(String(part.id));
-      if (block) block.text = `${String(block.text ?? "")}${String(part.delta ?? "")}`;
-    } else if (["file", "source", "tool-call", "tool-result", "tool-approval-request"].includes(type)) {
-      content.push(part);
-    } else if (type === "finish") {
-      finish_reason = part.finishReason;
-      usage = part.usage;
-      provider_metadata = part.providerMetadata;
-    }
-  }
-
-  if (!finish_reason || !usage) throw new Error("Federation language model stream ended without finish usage");
-  return {
-    content,
-    finishReason: finish_reason,
-    usage,
-    warnings,
-    ...(provider_metadata ? { providerMetadata: provider_metadata } : {}),
-    ...(request_body ? { request: { body: request_body } } : {}),
-    ...(response ? { response } : {}),
-  } as CityGenerateResult;
 }
 
 /** 读取非空可选字符串。 */

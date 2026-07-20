@@ -1,164 +1,31 @@
 ---
-title: 模型与通路
-description: Provider + AIService 两条独立通路的架构与工作原理。
+title: 模型适配器
+description: 通过 AIChannel.stream() 一次适配上游协议。
 ---
 
-Downcity 的 AI 服务有 **两条独立通路**，共用同一个模型注册：
+Downcity 有两种公开协议，但内部只有一条执行路径：
 
-```
-                    Provider.model({ id: "deepseek-v4-flash", ... })
-                                    │
-                              ai.use(model)
-                                    │
-              ┌─────────────────────┴─────────────────────┐
-             │                                           │
-       City SDK / CityModel 通路                  OpenAI 兼容通路
- 给 User City / Agent CityModel 用            给 curl / OpenAI SDK / 兼容客户端用
-             │                                           │
-  POST /v1/ai/text                      POST /v1/ai/chat/completions
-  POST /v1/ai/stream                         ↑
-             │                            OpenAI 格式 body
-             ▼                           { model, messages, stream }
-  Provider text action                              │
-  Provider stream(ctx, call)                        ▼
-             │                           Provider openai action
-             ▼                            (透传 或 格式转换)
- UIMessage / LanguageModelV3StreamPart              │
-             │                                     ▼
- city.ai.stream() 客户端转换                  Response
-             │                              (上游原始响应)
-             ▼
-       UIMessageChunk
-                                          (上游原始响应)
+```text
+City SDK / CityModel ------\
+                            -> LanguageModelV3CallOptions -> AIChannel.stream()
+OpenAI Chat Completions ---/                              -> V3 stream
 ```
 
-## 自动透传
+使用 AI SDK 模型时调用 `stream_ai_sdk_model()`。使用私有 HTTP 协议时直接实现 `stream()` 并返回 `LanguageModelV3StreamResult`，AIService 不理解厂商请求格式。
 
-当 Provider 不提供 `openai` action 但提供了 `baseURL` + `envKey` 时：
+OpenAI Chat Completions 只是同一 V3 路径外层的 HTTP adapter。没有 raw passthrough，也没有第二个 `openai` action，因此 tools、fallback、reasoning、计量和计费在不同客户端之间保持一致。
 
-```
-POST /v1/ai/chat/completions
-  body: { model: "deepseek-v4-flash", messages: [...], stream: true }
-              │
-              ▼
-       resolve → model.actions.openai 不存在 → baseURL+envKey 存在
-       → 自动透传
-              │
-              ▼
-       fetch("https://api.deepseek.com/v1/chat/completions", {
-         body: JSON.stringify(originalBody),   // 原样转发
-       })
-              │
-              ▼
-       上游 Response 原样返回（SSE 或 JSON）
-```
+Channel 负责：
 
-## 格式转换
+- 密钥和 base URL；
+- 上游模型工厂与协议选择；
+- 模型级 AI SDK providerOptions；
+- usage 解释和计费；
+- 私有流到 V3 parts 的转换。
 
-当 OpenAI 兼容上游需要自定义请求或响应处理时，可以写 `openai` action：
+AIService 负责：
 
-```ts
-import { Provider, type Context, type AIProviderChargedResponse } from "@downcity/city";
-
-class OpenAICustomProvider extends Provider {
-  constructor() {
-    super({
-      id: "openai-custom",
-      baseURL: "https://api.openai.com/v1",
-      envKey: "OPENAI_API_KEY",
-    });
-  }
-
-  async openai(ctx: Context): Promise<AIProviderChargedResponse> {
-    const body = customizeOpenAIBody(ctx.input);
-    const apiKey = ctx.env("OPENAI_API_KEY");
-    const response = await fetch(`${this.baseURL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${apiKey}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-    return ctx.input.stream ? { response: convertStream(response) } : { response: convertJSON(await response.json()) };
-  }
-}
-
-const openaiCustom = new OpenAICustomProvider();
-```
-
-## Provider 出账
-
-Provider action 可以在正常输出旁边返回一条 charge，但更推荐把共享计费逻辑放到 provider 或 model 的 `bill(ctx, output)` 中。这样 provider 自己解析上游 usage 和价格，AIService / BalanceService 不需要理解 token、cache、reasoning 等 provider 私有字段。
-
-当 `AIService` 传入 balance bridge 后，它会在真实消费模型的请求调用 Provider 前做默认余额检查。默认检查只拦截已经负余额的用户；实际扣费仍然在 Provider 成功后由返回的 charge line 完成。
-
-```ts
-import { Provider, buildAssistantMessage, type Context, type AIProviderChargedOutput } from "@downcity/city";
-import type { UIMessage } from "ai";
-
-const ai = new AIService({
-  balance,
-});
-
-class PricedProvider extends Provider {
-  constructor() {
-    super({ id: "priced-provider" });
-  }
-
-  protected bill(ctx: Context, output: unknown) {
-    return {
-      credits: priceUpstreamUsage(output?.metadata?.usage),
-      note: "priced-provider text",
-      metadata: {
-        provider_id: "priced-provider",
-        raw_usage: output?.metadata?.usage,
-      },
-    };
-  }
-
-  async text(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
-    const result = await callUpstream(ctx.input);
-
-    return buildAssistantMessage(result.text, ctx, {
-      finishReason: "stop",
-      usage: result.usage,
-    });
-  }
-}
-
-const provider = new PricedProvider();
-```
-
-CityModel 模型流结束后，AIService 会把包含最终 usage 的 `finish` part 交给模型
-`bill(ctx, output)`，再执行延迟扣费。`stream()` 只负责协议执行，不需要同时返回
-charge Promise：
-
-```ts
-protected bill(ctx: Context, output: unknown) {
-  return {
-    credits: priceLanguageModelFinish(output),
-    note: "priced-provider stream",
-  };
-}
-```
-
-## SDK 调用
-
-```ts
-const city = new City({
-  role: "user",
-  federation_url,
-  city_id,
-  user_token,
-});
-const result = await city.ai.text({ prompt: "hello", model: "deepseek-v4-flash" });
-```
-
-## OpenAI 兼容调用
-
-```bash
-curl http://127.0.0.1:43127/v1/ai/chat/completions \
-  -H "Authorization: Bearer ub_xxx" \
-  -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"hello"}],"stream":true}'
-```
+- 模型注册表和公开目录；
+- 鉴权和可用性；
+- 媒体 fallback 与 reasoning 校验；
+- 计量、余额检查和扣费结算。

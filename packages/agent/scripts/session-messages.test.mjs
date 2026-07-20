@@ -14,6 +14,7 @@ import { SessionApprovalBroker } from "../bin/session/approval/SessionApprovalBr
 import { compose_session_compaction } from "../bin/session/messages/SessionMessageCompaction.js";
 import {
   from_ui_assistant_parts,
+  from_ui_user_parts,
   to_executor_history,
   to_executor_ui_message,
 } from "../bin/session/messages/SessionMessageCodec.js";
@@ -281,6 +282,126 @@ test("Streaming Tool Provider metadata 在输入和输出状态间完整保留",
   assert.equal(tool_part.state, "completed");
 });
 
+test("AI SDK 流式 metadata、source、data、step 和审批状态完整持久化", async () => {
+  const { recorder, file_path } = await create_recorder("ui-chunk-semantics-test");
+  const writer = await recorder.open_assistant_message({
+    turn_id: "turn-ui-chunks",
+    segment_index: 1,
+  });
+  await writer.apply_chunk({
+    type: "text-start",
+    id: "text_1",
+    providerMetadata: { openai: { itemId: "text_start" } },
+  });
+  await writer.apply_chunk({ type: "text-delta", id: "text_1", delta: "hello" });
+  await writer.apply_chunk({
+    type: "text-end",
+    id: "text_1",
+    providerMetadata: { openai: { itemId: "text_end" } },
+  });
+  await writer.apply_chunk({ type: "reasoning-start", id: "reasoning_1" });
+  await writer.apply_chunk({
+    type: "reasoning-delta",
+    id: "reasoning_1",
+    delta: "think",
+    providerMetadata: { openai: { itemId: "reasoning_delta" } },
+  });
+  await writer.apply_chunk({ type: "reasoning-end", id: "reasoning_1" });
+  await writer.apply_chunk({
+    type: "source-url",
+    sourceId: "source_1",
+    url: "https://example.com/old",
+  });
+  await writer.apply_chunk({
+    type: "source-url",
+    sourceId: "source_1",
+    url: "https://example.com/new",
+    title: "Updated source",
+    providerMetadata: { openai: { itemId: "source_item" } },
+  });
+  await writer.apply_chunk({
+    type: "data-progress",
+    id: "progress_1",
+    data: { percent: 10 },
+  });
+  await writer.apply_chunk({
+    type: "data-progress",
+    id: "progress_1",
+    data: { percent: 90 },
+  });
+  await writer.apply_chunk({
+    type: "data-progress",
+    id: "transient_1",
+    data: { percent: 100 },
+    transient: true,
+  });
+  await writer.apply_chunk({
+    type: "tool-input-start",
+    toolCallId: "call_approval",
+    toolName: "lookup",
+    title: "Lookup",
+    dynamic: true,
+    providerMetadata: { openai: { itemId: "fc_approval" } },
+  });
+  await writer.apply_chunk({
+    type: "tool-input-available",
+    toolCallId: "call_approval",
+    toolName: "lookup",
+    input: { q: "downcity" },
+    toolMetadata: { category: "search" },
+  });
+  await writer.apply_chunk({
+    type: "tool-approval-request",
+    approvalId: "approval_stream_1",
+    toolCallId: "call_approval",
+  });
+  await writer.apply_chunk({
+    type: "tool-output-denied",
+    toolCallId: "call_approval",
+  });
+  await writer.apply_chunk({
+    type: "file",
+    mediaType: "image/png",
+    url: "https://example.com/output.png",
+    providerMetadata: { openai: { fileId: "output_file" } },
+  });
+  await writer.apply_chunk({ type: "start-step" });
+  await writer.complete();
+
+  const assistant = (await read_jsonl(file_path))[0];
+  assert.deepEqual(assistant.parts.map((part) => part.type), [
+    "text",
+    "reasoning",
+    "source",
+    "data",
+    "tool",
+    "file",
+    "step-start",
+  ]);
+  assert.deepEqual(assistant.parts[0].provider_metadata, {
+    openai: { itemId: "text_end" },
+  });
+  assert.deepEqual(assistant.parts[1].provider_metadata, {
+    openai: { itemId: "reasoning_delta" },
+  });
+  assert.equal(assistant.parts[2].url, "https://example.com/new");
+  assert.equal(assistant.parts[2].title, "Updated source");
+  assert.deepEqual(assistant.parts[3].data, { percent: 90 });
+  const tool_part = assistant.parts[4];
+  assert.equal(tool_part.state, "failed");
+  assert.equal(tool_part.title, "Lookup");
+  assert.equal(tool_part.dynamic, true);
+  assert.deepEqual(tool_part.tool_metadata, { category: "search" });
+  assert.deepEqual(tool_part.approval, {
+    approval_id: "approval_stream_1",
+    approved: false,
+  });
+  assert.equal(
+    assistant.parts.some((part) => part.type === "data" && part.data_id === "transient_1"),
+    false,
+  );
+});
+
 test("UI Tool Provider metadata 经 Session roundtrip 后恢复为 ModelMessage providerOptions", async () => {
   const parts = from_ui_assistant_parts([{
     type: "dynamic-tool",
@@ -388,6 +509,171 @@ test("UI Tool Provider metadata 经 Session roundtrip 后恢复为 ModelMessage 
   });
 });
 
+test("SessionMessage 无损恢复 AI SDK UIMessage 的完整 Part 语义", () => {
+  const user_parts = [
+    {
+      type: "text",
+      text: "分析附件",
+      state: "done",
+      providerMetadata: { openai: { itemId: "user_text_1" } },
+    },
+    {
+      type: "file",
+      mediaType: "image/png",
+      url: "https://example.com/input.png",
+      filename: "input.png",
+      providerMetadata: { openai: { fileId: "file_1" } },
+    },
+    {
+      type: "data-preferences",
+      id: "preferences_1",
+      data: { locale: "zh-CN" },
+    },
+  ];
+  const restored_user = to_executor_ui_message({
+    message_id: "user_roundtrip",
+    session_id: "session_roundtrip",
+    turn_id: "turn_roundtrip",
+    sequence: 1,
+    revision: 1,
+    visibility: "visible",
+    created_at: 1,
+    updated_at: 1,
+    type: "user",
+    input_type: "prompt",
+    parts: from_ui_user_parts(user_parts),
+  });
+  assert.deepEqual(restored_user.parts, user_parts);
+
+  const assistant_parts = [
+    {
+      type: "text",
+      text: "正在处理",
+      state: "streaming",
+      providerMetadata: { openai: { itemId: "msg_1" } },
+    },
+    {
+      type: "reasoning",
+      text: "先读取来源",
+      state: "done",
+      providerMetadata: { openai: { itemId: "reasoning_1" } },
+    },
+    {
+      type: "file",
+      mediaType: "application/pdf",
+      url: "https://example.com/report.pdf",
+      filename: "report.pdf",
+      providerMetadata: { openai: { fileId: "file_2" } },
+    },
+    {
+      type: "source-url",
+      sourceId: "source_url_1",
+      url: "https://example.com/source",
+      title: "Example source",
+      providerMetadata: { openai: { itemId: "source_1" } },
+    },
+    {
+      type: "source-document",
+      sourceId: "source_document_1",
+      mediaType: "application/pdf",
+      title: "Source document",
+      filename: "source.pdf",
+      providerMetadata: { openai: { itemId: "source_2" } },
+    },
+    { type: "step-start" },
+    {
+      type: "data-progress",
+      id: "progress_1",
+      data: { percent: 80 },
+    },
+    {
+      type: "dynamic-tool",
+      toolName: "lookup",
+      toolCallId: "call_streaming",
+      state: "input-streaming",
+      title: "Lookup",
+      toolMetadata: { category: "search" },
+      providerExecuted: false,
+      callProviderMetadata: { openai: { itemId: "fc_streaming" } },
+    },
+    {
+      type: "tool-fetch",
+      toolCallId: "call_ready",
+      state: "input-available",
+      input: { url: "https://example.com" },
+      title: "Fetch",
+      toolMetadata: { category: "network" },
+      providerExecuted: true,
+      callProviderMetadata: { openai: { itemId: "fc_ready" } },
+    },
+    {
+      type: "dynamic-tool",
+      toolName: "shell_exec",
+      toolCallId: "call_approval",
+      state: "approval-requested",
+      input: { cmd: "pwd" },
+      approval: { id: "approval_1" },
+    },
+    {
+      type: "tool-shell_exec",
+      toolCallId: "call_responded",
+      state: "approval-responded",
+      input: { cmd: "ls" },
+      approval: { id: "approval_2", approved: true, reason: "Allowed" },
+    },
+    {
+      type: "dynamic-tool",
+      toolName: "lookup",
+      toolCallId: "call_completed",
+      state: "output-available",
+      input: { q: "downcity" },
+      output: { count: 1 },
+      preliminary: true,
+      approval: { id: "approval_3", approved: true, reason: "Allowed" },
+      callProviderMetadata: { openai: { itemId: "fc_completed" } },
+      resultProviderMetadata: { openai: { itemId: "result_completed" } },
+    },
+    {
+      type: "dynamic-tool",
+      toolName: "parse",
+      toolCallId: "call_error",
+      state: "output-error",
+      input: undefined,
+      rawInput: "{invalid",
+      errorText: "Invalid input",
+      approval: { id: "approval_4", approved: true },
+      resultProviderMetadata: { openai: { itemId: "result_error" } },
+    },
+    {
+      type: "dynamic-tool",
+      toolName: "delete",
+      toolCallId: "call_denied",
+      state: "output-denied",
+      input: { path: "/tmp/a" },
+      approval: { id: "approval_5", approved: false, reason: "Denied" },
+    },
+  ];
+  const canonical_parts = from_ui_assistant_parts(assistant_parts);
+  const restored_assistant = to_executor_ui_message({
+    message_id: "assistant_roundtrip",
+    session_id: "session_roundtrip",
+    turn_id: "turn_roundtrip",
+    sequence: 2,
+    revision: 1,
+    visibility: "visible",
+    created_at: 2,
+    updated_at: 2,
+    type: "assistant",
+    kind: "normal",
+    segment_index: 1,
+    status: "streaming",
+    parts: canonical_parts,
+  });
+  assert.deepEqual(restored_assistant.parts, assistant_parts);
+  assert.equal(canonical_parts.find((part) => part.tool_call_id === "call_ready").dynamic, false);
+  assert.equal(canonical_parts.find((part) => part.tool_call_id === "call_completed").dynamic, true);
+});
+
 test("Approval Broker 只接受已经准备完整输入的 Tool", async () => {
   const { recorder, events } = await create_recorder("tool-ready-barrier-test");
   const approval_broker = new SessionApprovalBroker({
@@ -430,7 +716,7 @@ test("Approval Broker 只接受已经准备完整输入的 Tool", async () => {
   const tool = recorder.get_message(writer.message_id).parts[0];
   assert.equal(tool.state, "approval-required");
   assert.equal(tool.approval.approval_id, approval_handle.approval_id);
-  assert.equal(tool.approval.command, approval_input.command);
+  assert.equal(tool.approval.request.command, approval_input.command);
   assert.equal(tool.input.cmd, "ls -la /Users/example/Desktop");
   await approval_broker.resolve({
     approval_id: approval_handle.approval_id,

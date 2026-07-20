@@ -1,160 +1,33 @@
 ---
-title: Architecture
-description: How Downcity is organized into Kernel, Capabilities, Interfaces, and Composition.
+title: AI Architecture
+description: The CityModel, AIService, AIChannel, and LanguageModelV3 execution path.
 ---
 
-The most stable way to understand Downcity is not to start from a single API, but from its four layers:
-
-```txt
-Interfaces
-  -> products enter the Federation through client or operator tools
-Composition
-  -> server / worker assemble @downcity/city, official services, and models
-Kernel
-  -> City handles routing, auth, context, and hook scheduling
-Capabilities
-  -> AIService and official services provide the actual behavior
+```text
+City client / Agent
+        |
+        v
+CityModel (LanguageModelV3)
+        |
+        v
+Federation AIService
+  auth -> model lookup -> fallback -> reasoning -> metering
+        |
+        v
+AIChannel.stream(ctx, LanguageModelV3CallOptions)
+        |
+        v
+AI SDK model or private upstream adapter
 ```
 
-Together they create the runtime flow:
+`CityModel` is the client-side executable model. It knows the public `CityModelDescriptor` and the Federation transport, but never knows upstream keys or vendor protocol details.
 
-```txt
-product UI / app / internal tool
-  -> User City / Admin City / City terminal
-  -> Federation
-  -> Service / AIService
-  -> Provider / Database
-```
+`AIService` is the server-side orchestrator. It owns route selection, fallback, reasoning validation, usage normalization, and billing.
 
-Many clients can share one self-deployed runtime. Product clients stay lightweight and focus on UX; the Federation centralizes auth, model routing, runtime env, hooks, and reusable capabilities.
+`AIChannel` is the server-side upstream boundary. It owns connection configuration, upstream model selection, AI SDK `providerOptions`, and conversion into `LanguageModelV3StreamResult`.
 
-## 1. Interfaces: who calls City
+The OpenAI-compatible endpoint is an adapter, not another execution path:
 
-Downcity has two main external entry points:
-
-- Product-side entry: `User City` and `Admin City` from `@downcity/city`
-- Operator entry: `downcity`
-
-Neither one implements the server runtime itself. They both send requests into the same Federation.
-
-## 2. Composition: who assembles City
-
-Running Downcity is not just `new City(...)`. There is also an assembly layer:
-
-- `templates/node` is the Node.js + SQLite developer starter
-- `templates/edge` is the Cloudflare Workers + D1 developer starter
-- each city block owns its own City assembly logic for its runtime
-
-This layer is responsible for assembling `City + AIService + official services + models` into a runnable instance.
-
-## 3. Kernel: what City itself owns
-
-When an HTTP request reaches City, City does the following:
-
-1. Refresh the runtime env view
-2. Validate the `user_token` or admin key
-3. Resolve identity, `city_id`, and `user_id`
-4. Find the target Service and Action
-5. Build one shared `ctx`
-6. Run hooks and the Action
-
-If the token is invalid, expired, or the `city_id` does not match, City returns 401 or 403 directly.
-
-## 4. Capabilities: Service and Action
-
-Each Service is a group of Actions. An Action is the first-class capability unit inside a Service.
-
-```ts
-const translate = new Service({ id: "translate" });
-
-translate.action("zh2en", async (ctx) => {
-  // ctx.input = { text: "你好" }
-  // ctx.user  = { user_id: "user_1" }
-  return { translated: await api.translate(ctx.input.text) };
-});
-```
-
-City automatically creates a route for every Action:
-
-```txt
-POST /v1/translate/zh2en  ->  translate.action("zh2en")
-```
-
-City itself does not care what “translation” or “payment” means as business concepts. It only routes the request to the right Action.
-
-## 5. Two AIService pathways
-
-### SDK pathway
-
-Used by `User City`:
-
-```txt
-User City.ai.text({ prompt: "hello", model: "deepseek-v4-flash" })
-  -> POST /v1/ai/text
-  -> Provider text action(ctx)
-  -> generateText (ai-sdk)
-  -> UIMessage
-
-Agent / city.ai.stream()
-  -> CityModel.doStream()
-  -> POST /v1/ai/stream
-  -> Provider stream(ctx, call)
-  -> LanguageModelV3StreamPart
-  -> Agent SessionMutation or client-side UIMessageChunk
-```
-
-### OpenAI-compatible pathway
-
-Used by the OpenAI SDK, curl, and other compatible clients. Downcity Agent can
-use Fed models directly by receiving `CityModel` from `city.ai.catalog()`:
-
-```txt
-POST /v1/ai/chat/completions
-  { model: "deepseek-v4-flash", messages: [...], stream: true }
-  -> Provider openai action(ctx) or automatic passthrough
-  -> upstream API raw Response (SSE or JSON)
-```
-
-The two pathways are **fully decoupled** and operate independently.
-
-## 6. Automatic passthrough
-
-When a Provider has `baseURL` + `envKey` but no `openai` action, AIService generates a passthrough action automatically. The OpenAI request body from the third-party tool is forwarded upstream as-is, and the upstream Response is returned as-is.
-
-No adapter code is required.
-
-## 7. Three hook layers
-
-Every Action has its own hooks. Hook execution runs from outer to inner layers:
-
-```txt
-global.before
-  -> service.before    <- shared by all actions in the service
-    -> action.before   <- only this action
-      -> action.run()  <- core logic
-    -> action.after    <- billing, usage records
-  -> service.after     <- aggregated metrics
--> global.after        <- global monitoring
-```
-
-```ts
-// Action-level hook
-const zh2en = svc.action("zh2en", fn);
-zh2en.before(checkBalance).after(deductFee);
-
-// Service-level hook shared by all actions
-svc.hook.after(async (ctx) => {
-  console.log(`${ctx.user.id} used ${ctx.service.id}.${ctx.action.id}`);
-});
-```
-
-## 8. The one-line model
-
-You can remember Downcity like this:
-
-```txt
-Interfaces handle entry
-Composition handles assembly
-Kernel handles runtime rules
-Capabilities handle actual behavior
+```text
+OpenAI JSON/SSE -> V3 call -> AIService -> AIChannel.stream -> V3 stream -> OpenAI JSON/SSE
 ```

@@ -7,9 +7,9 @@
 
 import type {
   AIModelEnvRequirement,
-  ModelConfig,
-  PublicModel,
-} from "./types.js";
+  AIModelDefinition,
+} from "../../types/AI.js";
+import type { CityModelDescriptor } from "@downcity/type";
 import { validate_model_context_window } from "./model-context-window.js";
 import { validate_model_reasoning } from "./reasoning.js";
 
@@ -23,16 +23,16 @@ interface ModelCatalogOptions {
   /** 当前请求身份，决定是否返回管理字段。 */
   identity: "guest" | "user" | "admin";
   /** 根据运行时 action 计算模型公开模态。 */
-  get_modalities: (model: ModelConfig) => string[];
+  get_modalities: (model: AIModelDefinition) => string[];
 }
 
 /** AIService 使用的模型注册表。 */
 export class AIModelRegistry {
   /** 按模型 ID 保存运行时配置。 */
-  private readonly model_map = new Map<string, ModelConfig>();
+  private readonly model_map = new Map<string, AIModelDefinition>();
 
   /** 注册一个或多个模型配置。 */
-  register(...inputs: (ModelConfig | ModelConfig[])[]): void {
+  register(...inputs: (AIModelDefinition | AIModelDefinition[])[]): void {
     const configs = inputs.flatMap((input) => Array.isArray(input) ? input : [input]);
     for (const config of configs) {
       if (this.model_map.has(config.id)) {
@@ -50,24 +50,24 @@ export class AIModelRegistry {
   }
 
   /** 按 ID 读取运行时模型配置。 */
-  get(model_id: string): ModelConfig | undefined {
+  get(model_id: string): AIModelDefinition | undefined {
     return this.model_map.get(model_id);
   }
 
   /** 返回全部运行时模型配置。 */
-  list(): ModelConfig[] {
+  list(): AIModelDefinition[] {
     return [...this.model_map.values()];
   }
 
   /** 返回模型缺失的必填环境变量 key。 */
-  get_missing_env(model: ModelConfig, env: EnvReader): string[] {
+  get_missing_env(model: AIModelDefinition, env: EnvReader): string[] {
     return this.get_env_requirements(model)
       .filter((item) => item.required && !env(item.key))
       .map((item) => item.key);
   }
 
   /** 按身份和环境可用性生成公开模型目录。 */
-  list_public(options: ModelCatalogOptions): PublicModel[] {
+  list_public(options: ModelCatalogOptions): CityModelDescriptor[] {
     const include_admin_fields = options.identity === "admin";
     const configs = include_admin_fields
       ? this.list()
@@ -92,12 +92,8 @@ export class AIModelRegistry {
   }
 
   /** 将模型环境配置转换为公开需求列表。 */
-  private get_env_requirements(model: ModelConfig): AIModelEnvRequirement[] {
-    const requirements = model.env
-      ? Object.entries(model.env)
-      : model.envKey
-        ? [[model.envKey, `${model.id} API Key`]]
-        : [];
+  private get_env_requirements(model: AIModelDefinition): AIModelEnvRequirement[] {
+    const requirements = model.env ? Object.entries(model.env) : [];
 
     return requirements.map(([key, description]) => ({
       key,

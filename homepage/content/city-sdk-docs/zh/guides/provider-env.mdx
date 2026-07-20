@@ -1,70 +1,27 @@
 ---
-title: Provider 环境变量
-description: 如何在 Federation 运行环境中配置 Provider API Key。
+title: AIChannel 环境变量
+description: 在 Federation 环境中配置上游 API Key。
 ---
 
-所有 Provider 需要的 API Key 都通过 Federation 自己的 env 表统一管理。
-
-## 声明环境变量
-
-在 `Provider` 构造时声明：
+在 Channel 上声明密钥：
 
 ```ts
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { Provider, type OpenAICompatibleClientConfig } from "@downcity/city";
-
-class DeepSeekProvider extends Provider {
+class DeepSeekChannel extends AIChannel {
   constructor() {
     super({
       id: "deepseek",
-      env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
-      baseURL: "https://api.deepseek.com",
-      envKey: "DEEPSEEK_API_KEY",
+      env_key: "DEEPSEEK_API_KEY",
+      base_url: "https://api.deepseek.com/v1",
     });
   }
 
-  protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
-    return createOpenAICompatible({ apiKey, baseURL, name: "deepseek" });
+  protected async stream(ctx: Context, call: LanguageModelV3CallOptions) {
+    const api_key = read_required_env(ctx, this.env_key ?? "");
+    // 创建真实上游模型并返回 V3 stream
   }
 }
-
-const deepseek = new DeepSeekProvider();
 ```
 
-`env` 字段声明环境变量需求（key → 描述），`envKey` 指定自动透传时读取的 key。
+`env_key` 会自动为模型目录的管理端视图生成必填 env 声明。一个 Channel 需要多个环境变量时使用 `env`。
 
-## 设置环境变量
-
-通过 Admin API 写入：
-
-```bash
-curl -X POST http://127.0.0.1:43127/v1/env/upsert \
-  -H "Authorization: Bearer <admin_secret_key>" \
-  -H "Content-Type: application/json" \
-  -d '{"key": "DEEPSEEK_API_KEY", "value": "sk-xxx"}'
-```
-
-或批量导入 `.env` 文件：
-
-```bash
-curl -X POST http://127.0.0.1:43127/v1/env/import \
-  -H "Authorization: Bearer <admin_secret_key>" \
-  -H "Content-Type: application/json" \
-  -d '{"raw": "DEEPSEEK_API_KEY=sk-xxx\nOPENAI_API_KEY=sk-yyy"}'
-```
-
-## 在 handler 中读取
-
-```ts
-import { readRequiredEnv, type Context } from "@downcity/city";
-
-async text(ctx: Context) {
-  const apiKey = ctx.env("DEEPSEEK_API_KEY");
-  // 或使用 readRequiredEnv 辅助函数（找不到时抛错）
-  const apiKey2 = readRequiredEnv(ctx, "DEEPSEEK_API_KEY");
-}
-```
-
-`ctx.env(key)` 从 Federation 当前运行时绑定的 env 表读取。AIService 的自动透传 handler 也通过 `ctx.env(envKey)` 读取 API Key。
-
-详见 [HTTP API - env 管理](/zh/city-sdk-docs/reference/http-api#管理端请求格式)。
+值存储在 Federation env 表中，执行时通过 `ctx.env(key)` 或 `read_required_env(ctx, key)` 读取。它们不会进入 `CityModelDescriptor` 或客户端运行时。

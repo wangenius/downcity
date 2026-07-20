@@ -6,9 +6,8 @@
  */
 
 import type { CityTableApi } from "../../store/table-api.js";
-import type { AIImageJobClaim } from "../../types/AIImageJobClaim.js";
+import type { AIImageJobClaim, AIImageResult } from "../../types/AI.js";
 import type { AsyncJobRecord } from "../../types/AsyncJob.js";
-import type { AIImageProviderFetchResult } from "./job-types.js";
 
 /** 单次图片抓取租约时长。 */
 const IMAGE_FETCH_LEASE_MS = 5 * 60 * 1000;
@@ -74,7 +73,7 @@ export async function release_image_job_claim(
 export async function finish_image_job_fetch(
   table: CityTableApi,
   claim: AIImageJobClaim,
-  output: AIImageProviderFetchResult,
+  output: AIImageResult,
 ): Promise<void> {
   const job = claim.record;
   const changed = await table.update({

@@ -15,7 +15,7 @@ Before launch, confirm at least the following:
 ## Stability
 
 - Every service that should be exposed has been registered through `base.use(service)`.
-- AI models have been registered through `Provider.model()` + `AIService.use()` and include the required actions.
+- AI models have been registered through `AIChannel.model()` + `AIService.use()` and include the required capabilities.
 - Critical provider env values have been configured.
 - The city table uses an explicit database URL.
 - before hooks block over-quota users.

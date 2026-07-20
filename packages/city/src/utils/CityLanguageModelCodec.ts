@@ -8,7 +8,7 @@
 import type {
   CityTransportJsonObject,
   CityTransportJsonValue,
-} from "../types/CityLanguageModelTransport.js";
+} from "../types/AITransport.js";
 
 const TYPE_FIELD = "__downcity_transport_type";
 

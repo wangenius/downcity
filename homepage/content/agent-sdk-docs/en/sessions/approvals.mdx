@@ -16,7 +16,7 @@ ready -> approval-required -> running -> completed
 
 ## Display a live request and resolve it
 
-An approval-required Tool Part carries the complete approval snapshot. The subscription only reports state; it does not expose a command channel:
+An approval-required Tool Part carries the unified approval snapshot. A local Shell request is available under `approval.request`. The subscription only reports state; it does not expose a command channel:
 
 ```ts
 const unsubscribe = session.subscribe((mutation) => {
@@ -24,12 +24,12 @@ const unsubscribe = session.subscribe((mutation) => {
     mutation.variant !== "part" ||
     mutation.type !== "tool" ||
     mutation.part.state !== "approval-required" ||
-    !mutation.part.approval
+    !mutation.part.approval?.request
   ) {
     return;
   }
 
-  show_approval_request(mutation.part.approval);
+  show_approval_request(mutation.part.approval.request);
 });
 
 // After user confirmation:

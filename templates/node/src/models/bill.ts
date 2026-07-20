@@ -23,7 +23,7 @@ export function bill_ai_request(ctx: Context, output: unknown, credits = CHAT_RE
       service_id: "ai",
       action_id: mode,
       model_id: ctx.metering?.model_id ?? ctx.variant?.id,
-      provider_id: ctx.metering?.provider_id,
+      channel_id: ctx.metering?.channel_id,
     },
   };
 }

@@ -1,47 +1,42 @@
 ---
 title: 添加模型
-description: 用 Provider 注册模型，AIService 自动生成路由。
+description: 使用 AIChannel 和 AIService 注册模型。
 ---
 
-```ts
-import { AIService, Provider, type OpenAICompatibleClientConfig } from "@downcity/city";
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+创建 `AIChannel`，实现标准 V3 stream，再注册 `AIModelSpec`：
 
-class DeepSeekProvider extends Provider {
+```ts
+class DeepSeekChannel extends AIChannel {
   constructor() {
     super({
       id: "deepseek",
-      baseURL: "https://api.deepseek.com/v1",
-      envKey: "DEEPSEEK_API_KEY",
-      passthroughModel: "deepseek-chat",
+      env_key: "DEEPSEEK_API_KEY",
+      base_url: "https://api.deepseek.com/v1",
     });
   }
 
-  protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
-    return createOpenAICompatible({ apiKey, baseURL, name: "deepseek" });
+  protected async stream(ctx: Context, call: LanguageModelV3CallOptions) {
+    const deepseek = createDeepSeek({
+      apiKey: read_required_env(ctx, this.env_key ?? ""),
+      baseURL: this.base_url,
+    });
+    return this.stream_ai_sdk_model(ctx, call, deepseek(resolve_upstream_model(ctx)));
   }
 }
 
-const deepseek = new DeepSeekProvider();
-
+const channel = new DeepSeekChannel();
 const ai = new AIService();
-ai.use(deepseek.model({
+
+ai.use(channel.model({
   id: "deepseek-v4-flash",
+  upstream_model: "deepseek-chat",
   name: "DeepSeek V4 Flash",
   context_window: 128_000,
 }));
-base.use(ai);
+
+federation.use(ai);
 ```
 
-注册后自动生成路由：
+这一个 `stream()` 同时支持 `city.ai.text()`、`city.ai.stream()`、`CityModel` 和 `/v1/ai/chat/completions`。
 
-```
-POST /v1/ai/text              → SDK 通路
-POST /v1/ai/stream            → CityModel LanguageModelV3 通路
-POST /v1/ai/chat/completions  → 自动透传到 DeepSeek
-GET  /v1/ai/models            → 模型目录
-```
-
-`passthroughModel` 控制自动透传时发往上游的 model 值。
-
-`context_window` 会进入模型目录，并供 Agent 的 session compact 策略计算输入预算。
+reasoning、fallback、计费和 providerOptions 详见 [AIChannel 与模型注册](/zh/city-sdk-docs/service/ai/provider)。

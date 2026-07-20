@@ -75,15 +75,17 @@ export class PiTuiChatRenderer implements AgentChatInteractiveRendererPort {
       event.variant === "part" &&
       event.type === "tool" &&
       event.part.state === "approval-required" &&
-      event.part.approval
+      event.part.approval?.request
     ) {
       const approval = event.part.approval;
+      const request = approval.request;
+      if (!request) return;
       this.on_approval_request?.({
         approval_id: approval.approval_id,
-        tool_name: approval.tool_name,
-        cmd: approval.command,
-        cwd: approval.cwd,
-        reason: approval.reason,
+        tool_name: request.tool_name,
+        cmd: request.command,
+        cwd: request.cwd,
+        reason: request.reason,
       });
     }
   }

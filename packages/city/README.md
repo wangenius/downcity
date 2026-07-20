@@ -149,19 +149,38 @@ City 会自动映射为：
 `AIService` 负责模型目录和模态路由：
 
 ```ts
-import { AIService, Provider } from "@downcity/city";
+import {
+  AIChannel,
+  AIService,
+  type Context,
+  type LanguageModelV3CallOptions,
+  type LanguageModelV3StreamResult,
+} from "@downcity/city";
 
-const deepseek = new Provider("deepseek", {
-  baseURL: "https://api.deepseek.com/v1",
-  envKey: "DEEPSEEK_API_KEY",
-  text: myTextAction,
-  stream: myStreamAction,
-});
+class DeepSeekChannel extends AIChannel {
+  constructor() {
+    super({
+      id: "deepseek",
+      base_url: "https://api.deepseek.com/v1",
+      env_key: "DEEPSEEK_API_KEY",
+    });
+  }
+
+  protected stream(
+    _ctx: Context,
+    _call: LanguageModelV3CallOptions,
+  ): Promise<LanguageModelV3StreamResult> {
+    return myStreamAction();
+  }
+}
+
+const deepseek = new DeepSeekChannel();
 
 const ai = new AIService();
 ai.use(
   deepseek.model({
     id: "deepseek-v4-flash",
+    upstream_model: "deepseek-chat",
     name: "DeepSeek V4 Flash",
     context_window: 128_000,
   }),
@@ -202,7 +221,7 @@ base.use(usageService());
 - `Service`
 - `ServiceDefinition`
 - `AIService`
-- `Provider`
+- `AIChannel`
 - `CityModel`
 - `CityModelDescriptor`
 - `TokenSigner`

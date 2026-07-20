@@ -16,7 +16,7 @@ ready -> approval-required -> running -> completed
 
 ## 展示实时请求并提交决定
 
-`approval-required` Tool Part 会携带完整审批快照。订阅只报告状态，不提供命令通道：
+`approval-required` Tool Part 会携带统一审批快照；本地 Shell 的完整请求位于 `approval.request`。订阅只报告状态，不提供命令通道：
 
 ```ts
 const unsubscribe = session.subscribe((mutation) => {
@@ -24,12 +24,12 @@ const unsubscribe = session.subscribe((mutation) => {
     mutation.variant !== "part" ||
     mutation.type !== "tool" ||
     mutation.part.state !== "approval-required" ||
-    !mutation.part.approval
+    !mutation.part.approval?.request
   ) {
     return;
   }
 
-  show_approval_request(mutation.part.approval);
+  show_approval_request(mutation.part.approval.request);
 });
 
 // 用户确认后：

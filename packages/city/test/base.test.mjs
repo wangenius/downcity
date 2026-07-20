@@ -9,7 +9,7 @@ import { MockLanguageModelV3 } from "ai/test"
 import {
   Federation,
   AIService,
-  Provider,
+  AIChannel,
 } from "../bin/index.js"
 import { TableApi } from "../bin/store/table-api.js"
 import { createSqliteDb } from "./sqlite-db.mjs"
@@ -22,6 +22,29 @@ function useMemoryQueue(base) {
     },
   })
   return messages
+}
+
+/** 创建 AIChannel 语言模型测试使用的固定文本流。 */
+function create_text_stream(text = "ok") {
+  return {
+    stream: new ReadableStream({
+      start(controller) {
+        controller.enqueue({ type: "stream-start", warnings: [] })
+        controller.enqueue({ type: "text-start", id: "text_1" })
+        controller.enqueue({ type: "text-delta", id: "text_1", delta: text })
+        controller.enqueue({ type: "text-end", id: "text_1" })
+        controller.enqueue({
+          type: "finish",
+          finishReason: { unified: "stop", raw: "stop" },
+          usage: {
+            inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 1, text: 1, reasoning: 0 },
+          },
+        })
+        controller.close()
+      },
+    }),
+  }
 }
 
 test("TableApi reads postgres-js RowList count for compare-and-set updates", async () => {
@@ -395,12 +418,14 @@ test("Federation rejects mismatched city_id for authenticated user requests", as
     ai.use({
       id: "echo-text",
       name: "Echo Text",
-      actions: {
-        text: async () => ({
-          id: "msg_1",
-          role: "assistant",
-          parts: [{ type: "text", text: "ok", state: "done" }],
-        }),
+      runtime: {
+        actions: {
+          text: async () => ({
+            id: "msg_1",
+            role: "assistant",
+            parts: [{ type: "text", text: "ok", state: "done" }],
+          }),
+        },
       },
     })
     base.use(ai)
@@ -463,22 +488,22 @@ test("AIService requires explicit model id for executable AI calls", async () =>
     ai.use({
       id: "required-model",
       name: "Required Model",
-      baseURL: "https://provider.example.com/v1",
-      envKey: "PROVIDER_API_KEY",
-      actions: {
-        text: async () => ({
-          id: "msg_required",
-          role: "assistant",
-          parts: [{ type: "text", text: "ok", state: "done" }],
-        }),
-        image_create: async () => ({
-          job_id: "img_required",
-          status: "running",
-        }),
-        image_fetch: async (ctx) => ({
-          job_id: String(ctx.input.job_id),
-          status: "running",
-        }),
+      runtime: {
+        actions: {
+          text: async () => ({
+            id: "msg_required",
+            role: "assistant",
+            parts: [{ type: "text", text: "ok", state: "done" }],
+          }),
+          image_create: async () => ({
+            job_id: "img_required",
+            status: "running",
+          }),
+          image_fetch: async (ctx) => ({
+            job_id: String(ctx.input.job_id),
+            status: "running",
+          }),
+        },
       },
     })
     base.use(ai)
@@ -538,21 +563,23 @@ test("AIService charges explicit provider charge lines", async () => {
     })
     ai.use({
       id: "priced-text",
-      provider_id: "priced-provider",
+      channel_id: "priced-provider",
       name: "Priced Text",
-      actions: {
-        text: async () => ({
-          output: {
-            id: "msg_1",
-            role: "assistant",
-            parts: [{ type: "text", text: "ok", state: "done" }],
-          },
-          charge: {
-            credits: 123,
-            note: "provider charge",
-            metadata: { provider_id: "priced-provider" },
-          },
-        }),
+      runtime: {
+        actions: {
+          text: async () => ({
+            output: {
+              id: "msg_1",
+              role: "assistant",
+              parts: [{ type: "text", text: "ok", state: "done" }],
+            },
+            charge: {
+              credits: 123,
+              note: "provider charge",
+              metadata: { channel_id: "priced-provider" },
+            },
+          }),
+        },
       },
     })
     base.use(ai)
@@ -592,7 +619,7 @@ test("AIService charges explicit provider charge lines", async () => {
       user_id: "user_1",
       credits: 123,
       note: "provider charge",
-      metadata: { provider_id: "priced-provider" },
+      metadata: { channel_id: "priced-provider" },
     }])
   } finally {
     process.chdir(cwd)
@@ -642,10 +669,10 @@ test("AIService /stream keeps the model stream open until deferred charge settle
     })
     ai.use({
       id: "stream-charge",
-      provider_id: "stream-provider",
+      channel_id: "stream-provider",
       name: "Stream Charge",
-      actions: {},
-      language_model: {
+      runtime: {
+        actions: {},
         stream: (_ctx, call) => provider_model.doStream(call),
       },
       bill: () => ({ credits: 321, note: "stream charge" }),
@@ -709,16 +736,18 @@ test("AIService runs balance precheck before provider actions", async () => {
     })
     ai.use({
       id: "priced-text",
-      provider_id: "priced-provider",
+      channel_id: "priced-provider",
       name: "Priced Text",
-      actions: {
-        text: async () => {
-          providerCalls += 1
-          return {
-            id: "msg_1",
-            role: "assistant",
-            parts: [{ type: "text", text: "ok", state: "done" }],
-          }
+      runtime: {
+        actions: {
+          text: async () => {
+            providerCalls += 1
+            return {
+              id: "msg_1",
+              role: "assistant",
+              parts: [{ type: "text", text: "ok", state: "done" }],
+            }
+          },
         },
       },
     })
@@ -766,15 +795,9 @@ test("AIService uses provider bill when model bill is not set", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-provider-bill-"))
 
-  class TestProvider extends Provider {
-    async text() {
-      return {
-        output: {
-          id: "msg_provider_bill",
-          role: "assistant",
-          parts: [{ type: "text", text: "ok" }],
-        },
-      }
+  class TestChannel extends AIChannel {
+    async stream() {
+      return create_text_stream()
     }
 
     bill(ctx, output) {
@@ -784,7 +807,7 @@ test("AIService uses provider bill when model bill is not set", async () => {
         ref: output.id,
         metadata: {
           model_id: ctx.metering?.model_id,
-          provider_id: ctx.metering?.provider_id,
+          channel_id: ctx.metering?.channel_id,
         },
       }
     }
@@ -808,9 +831,10 @@ test("AIService uses provider bill when model bill is not set", async () => {
         },
       },
     })
-    const provider = new TestProvider({ id: "test-provider" })
+    const provider = new TestChannel({ id: "test-provider" })
     ai.use(provider.model({
       id: "provider-billed-text",
+      upstream_model: "provider-billed-text",
       name: "Provider Billed Text",
     }))
     base.use(ai)
@@ -846,12 +870,13 @@ test("AIService uses provider bill when model bill is not set", async () => {
     assert.deepEqual(charges, [{
       credits: 222,
       note: "provider bill",
-      ref: "msg_provider_bill",
+      ref: charges[0].ref,
       metadata: {
         model_id: "provider-billed-text",
-        provider_id: "test-provider",
+        channel_id: "test-provider",
       },
     }])
+    assert.match(charges[0].ref, /^msg_/)
   } finally {
     process.chdir(cwd)
     await fs.rm(tempDir, { recursive: true, force: true })
@@ -872,39 +897,43 @@ test("AIService falls back to image-capable model for UIMessage image parts", as
     ai.use([
       {
         id: "kimi",
-        provider_id: "kimi-provider",
+        channel_id: "kimi-provider",
         name: "Kimi",
-        actions: {
-          text: async () => {
-            calls.push("kimi")
-            return {
-              id: "msg_kimi",
-              role: "assistant",
-              parts: [{ type: "text", text: "kimi" }],
-            }
+        runtime: {
+          actions: {
+            text: async () => {
+              calls.push("kimi")
+              return {
+                id: "msg_kimi",
+                role: "assistant",
+                parts: [{ type: "text", text: "kimi" }],
+              }
+            },
           },
         },
       },
       {
         id: "deepseek",
-        provider_id: "deepseek-provider",
+        channel_id: "deepseek-provider",
         name: "DeepSeek",
         fallback: [{
           match: (media) => media.media_type.startsWith("image/") && media.url === "https://example.com/a.png",
-          model: "kimi",
+          model_id: "kimi",
         }],
-        actions: {
-          text: async (ctx) => {
-            calls.push({
-              model_id: ctx.metering?.model_id,
-              fallback_from: ctx.metering?.metadata?.fallback_from,
-              fallback_reason: ctx.metering?.metadata?.fallback_reason,
-            })
-            return {
-              id: "msg_deepseek",
-              role: "assistant",
-              parts: [{ type: "text", text: "deepseek" }],
-            }
+        runtime: {
+          actions: {
+            text: async (ctx) => {
+              calls.push({
+                model_id: ctx.metering?.model_id,
+                fallback_from: ctx.metering?.metadata?.fallback_from,
+                fallback_reason: ctx.metering?.metadata?.fallback_reason,
+              })
+              return {
+                id: "msg_deepseek",
+                role: "assistant",
+                parts: [{ type: "text", text: "deepseek" }],
+              }
+            },
           },
         },
       },
@@ -973,61 +1002,67 @@ test("AIService selects fallback rule by UIMessage file media type", async () =>
     ai.use([
       {
         id: "vision",
-        provider_id: "vision-provider",
+        channel_id: "vision-provider",
         name: "Vision",
-        actions: {
-          text: async () => {
-            calls.push("vision")
-            return {
-              id: "msg_vision",
-              role: "assistant",
-              parts: [{ type: "text", text: "vision" }],
-            }
+        runtime: {
+          actions: {
+            text: async () => {
+              calls.push("vision")
+              return {
+                id: "msg_vision",
+                role: "assistant",
+                parts: [{ type: "text", text: "vision" }],
+              }
+            },
           },
         },
       },
       {
         id: "pdf-reader",
-        provider_id: "pdf-provider",
+        channel_id: "pdf-provider",
         name: "PDF Reader",
-        actions: {
-          text: async (ctx) => {
-            calls.push({
-              model_id: ctx.metering?.model_id,
-              fallback_from: ctx.metering?.metadata?.fallback_from,
-              fallback_reason: ctx.metering?.metadata?.fallback_reason,
-              fallback_media_type: ctx.metering?.metadata?.fallback_media_type,
-            })
-            return {
-              id: "msg_pdf",
-              role: "assistant",
-              parts: [{ type: "text", text: "pdf" }],
-            }
+        runtime: {
+          actions: {
+            text: async (ctx) => {
+              calls.push({
+                model_id: ctx.metering?.model_id,
+                fallback_from: ctx.metering?.metadata?.fallback_from,
+                fallback_reason: ctx.metering?.metadata?.fallback_reason,
+                fallback_media_type: ctx.metering?.metadata?.fallback_media_type,
+              })
+              return {
+                id: "msg_pdf",
+                role: "assistant",
+                parts: [{ type: "text", text: "pdf" }],
+              }
+            },
           },
         },
       },
       {
         id: "deepseek",
-        provider_id: "deepseek-provider",
+        channel_id: "deepseek-provider",
         name: "DeepSeek",
         fallback: [
           {
             match: (media) => media.media_type === "application/pdf" && media.filename === "paper.pdf",
-            model: "pdf-reader",
+            model_id: "pdf-reader",
           },
           {
             match: (media) => media.media_type.startsWith("image/"),
-            model: "vision",
+            model_id: "vision",
           },
         ],
-        actions: {
-          text: async () => {
-            calls.push("deepseek")
-            return {
-              id: "msg_deepseek",
-              role: "assistant",
-              parts: [{ type: "text", text: "deepseek" }],
-            }
+        runtime: {
+          actions: {
+            text: async () => {
+              calls.push("deepseek")
+              return {
+                id: "msg_deepseek",
+                role: "assistant",
+                parts: [{ type: "text", text: "deepseek" }],
+              }
+            },
           },
         },
       },
@@ -1100,42 +1135,34 @@ test("AIService falls back for OpenAI chat completions with image_url parts", as
     ai.use([
       {
         id: "kimi",
-        provider_id: "kimi-provider",
+        channel_id: "kimi-provider",
         name: "Kimi",
-        actions: {
-          openai: async () => {
+        runtime: {
+          actions: {},
+          stream: async () => {
             calls.push("kimi")
-            return {
-              response: Response.json({
-                id: "chat_kimi",
-                object: "chat.completion",
-              }),
-            }
+            return create_text_stream("kimi")
           },
         },
       },
       {
         id: "deepseek",
-        provider_id: "deepseek-provider",
+        channel_id: "deepseek-provider",
         name: "DeepSeek",
         fallback: [{
           match: (media) => media.media_type.startsWith("image/"),
-          model: "kimi",
+          model_id: "kimi",
         }],
-        actions: {
-          openai: async (ctx) => {
+        runtime: {
+          actions: {},
+          stream: async (ctx) => {
             calls.push({
               model_id: ctx.metering?.model_id,
               fallback_from: ctx.metering?.metadata?.fallback_from,
               fallback_reason: ctx.metering?.metadata?.fallback_reason,
               fallback_media_type: ctx.metering?.metadata?.fallback_media_type,
             })
-            return {
-              response: Response.json({
-                id: "chat_deepseek",
-                object: "chat.completion",
-              }),
-            }
+            return create_text_stream("deepseek")
           },
         },
       },
@@ -1180,10 +1207,9 @@ test("AIService falls back for OpenAI chat completions with image_url parts", as
     }))
 
     assert.equal(response.status, 200)
-    assert.deepEqual(await response.json(), {
-      id: "chat_kimi",
-      object: "chat.completion",
-    })
+    const body = await response.json()
+    assert.equal(body.object, "chat.completion")
+    assert.equal(body.choices[0].message.content, "kimi")
     assert.deepEqual(calls, [
       "kimi",
     ])
@@ -1197,15 +1223,9 @@ test("AIService lets model bill override provider bill", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-ai-model-bill-override-"))
 
-  class TestProvider extends Provider {
-    async text() {
-      return {
-        output: {
-          id: "msg_model_bill",
-          role: "assistant",
-          parts: [{ type: "text", text: "ok" }],
-        },
-      }
+  class TestChannel extends AIChannel {
+    async stream() {
+      return create_text_stream()
     }
 
     bill() {
@@ -1232,9 +1252,10 @@ test("AIService lets model bill override provider bill", async () => {
         },
       },
     })
-    const provider = new TestProvider({ id: "test-provider" })
+  const provider = new TestChannel({ id: "test-provider" })
     ai.use(provider.model({
       id: "model-billed-text",
+      upstream_model: "model-billed-text",
       name: "Model Billed Text",
       bill() {
         return {
@@ -1304,32 +1325,34 @@ test("Federation AI image jobs advance and finish through provider result", asyn
     ai.use({
       id: "echo-image",
       name: "Echo Image",
-      actions: {
-        image_create: async () => {
-          const job_id = "img_echo_1"
-          jobs.set(job_id, {
-            upstream_job_id: "up_echo_1",
-          })
-          return {
-            job_id,
-            status: "running",
-            message: "running",
-            poll_after_ms: 2000,
-            metadata: jobs.get(job_id),
-          }
-        },
-        image_fetch: async (ctx) => {
-          resultCalls += 1
-          const image_job = ctx.locals.ai_image_job
-          const job_id = String(image_job.record.job_id)
-          assert.deepEqual(image_job.state, { upstream_job_id: "up_echo_1" })
-          return {
-            job_id,
-            status: "succeeded",
-            result: message,
-            message: "succeeded",
-            metadata: jobs.get(job_id),
-          }
+      runtime: {
+        actions: {
+          image_create: async () => {
+            const job_id = "img_echo_1"
+            jobs.set(job_id, {
+              upstream_job_id: "up_echo_1",
+            })
+            return {
+              job_id,
+              status: "running",
+              message: "running",
+              poll_after_ms: 2000,
+              metadata: jobs.get(job_id),
+            }
+          },
+          image_fetch: async (ctx) => {
+            resultCalls += 1
+            const image_job = ctx.locals.ai_image_job
+            const job_id = String(image_job.record.job_id)
+            assert.deepEqual(image_job.state, { upstream_job_id: "up_echo_1" })
+            return {
+              job_id,
+              status: "succeeded",
+              result: message,
+              message: "succeeded",
+              metadata: jobs.get(job_id),
+            }
+          },
         },
       },
     })
@@ -1403,23 +1426,25 @@ test("Federation AI image jobs require provider create and result actions", asyn
     ai.use({
       id: "wrapped-image",
       name: "Wrapped Image",
-      actions: {
-        image_create: async () => {
-          const job_id = "img_wrapped_1"
-          jobs.set(job_id, message)
-          return {
-            job_id,
-            status: "running",
+      runtime: {
+        actions: {
+          image_create: async () => {
+            const job_id = "img_wrapped_1"
+            jobs.set(job_id, message)
+            return {
+              job_id,
+              status: "running",
+              poll_after_ms: 2000,
+            }
+          },
+          image_fetch: async (ctx) => ({
+            job_id: String(ctx.input.job_id),
+            status: "succeeded",
+            result: jobs.get(String(ctx.input.job_id)),
+            message: "succeeded",
             poll_after_ms: 2000,
-          }
+          }),
         },
-        image_fetch: async (ctx) => ({
-          job_id: String(ctx.input.job_id),
-          status: "succeeded",
-          result: jobs.get(String(ctx.input.job_id)),
-          message: "succeeded",
-          poll_after_ms: 2000,
-        }),
       },
     })
     base.use(ai)
@@ -1484,23 +1509,25 @@ test("Federation AI image jobs return provider result as-is", async () => {
     ai.use({
       id: "remote-image",
       name: "Remote Image",
-      actions: {
-        image_create: async () => {
-          const job_id = "img_remote_1"
-          jobs.set(job_id, message)
-          return {
-            job_id,
-            status: "running",
+      runtime: {
+        actions: {
+          image_create: async () => {
+            const job_id = "img_remote_1"
+            jobs.set(job_id, message)
+            return {
+              job_id,
+              status: "running",
+              poll_after_ms: 2000,
+            }
+          },
+          image_fetch: async (ctx) => ({
+            job_id: String(ctx.input.job_id),
+            status: "succeeded",
+            result: jobs.get(String(ctx.input.job_id)),
+            message: "succeeded",
             poll_after_ms: 2000,
-          }
+          }),
         },
-        image_fetch: async (ctx) => ({
-          job_id: String(ctx.input.job_id),
-          status: "succeeded",
-          result: jobs.get(String(ctx.input.job_id)),
-          message: "succeeded",
-          poll_after_ms: 2000,
-        }),
       },
     })
     base.use(ai)
@@ -1573,18 +1600,20 @@ test("Federation AI image jobs store remote file parts through federation storag
     ai.use({
       id: "stored-image",
       name: "Stored Image",
-      actions: {
-        image_create: async () => ({
-          job_id: "img_storage_1",
-          status: "running",
-          poll_after_ms: 2000,
-        }),
-        image_fetch: async (ctx) => ({
-          job_id: String(ctx.input.job_id),
-          status: "succeeded",
-          result: message,
-          message: "succeeded",
-        }),
+      runtime: {
+        actions: {
+          image_create: async () => ({
+            job_id: "img_storage_1",
+            status: "running",
+            poll_after_ms: 2000,
+          }),
+          image_fetch: async (ctx) => ({
+            job_id: String(ctx.input.job_id),
+            status: "succeeded",
+            result: message,
+            message: "succeeded",
+          }),
+        },
       },
     })
     base.use(ai)
@@ -1657,17 +1686,19 @@ test("Federation AI image jobs keep source URL when storage fails", async () => 
     ai.use({
       id: "storage-fail-image",
       name: "Storage Fail Image",
-      actions: {
-        image_create: async () => ({
-          job_id: "img_storage_fail_1",
-          status: "running",
-        }),
-        image_fetch: async (ctx) => ({
-          job_id: String(ctx.input.job_id),
-          status: "succeeded",
-          result: message,
-          message: "succeeded",
-        }),
+      runtime: {
+        actions: {
+          image_create: async () => ({
+            job_id: "img_storage_fail_1",
+            status: "running",
+          }),
+          image_fetch: async (ctx) => ({
+            job_id: String(ctx.input.job_id),
+            status: "succeeded",
+            result: message,
+            message: "succeeded",
+          }),
+        },
       },
     })
     base.use(ai)
@@ -1718,15 +1749,17 @@ test("Federation AI image direct endpoint is not exposed", async () => {
     ai.use({
       id: "image-only",
       name: "Image Only",
-      actions: {
-        image_create: async () => ({
-          job_id: "img_direct_1",
-          status: "running",
-        }),
-        image_fetch: async (ctx) => ({
-          job_id: String(ctx.input.job_id),
-          status: "running",
-        }),
+      runtime: {
+        actions: {
+          image_create: async () => ({
+            job_id: "img_direct_1",
+            status: "running",
+          }),
+          image_fetch: async (ctx) => ({
+            job_id: String(ctx.input.job_id),
+            status: "running",
+          }),
+        },
       },
     })
     base.use(ai)
@@ -1761,11 +1794,13 @@ test("Federation AI image jobs reject incomplete provider actions", async () => 
     ai.use({
       id: "incomplete-image",
       name: "Incomplete Image",
-      actions: {
-        image_create: async () => ({
-          job_id: "img_incomplete_1",
-          status: "running",
-        }),
+      runtime: {
+        actions: {
+          image_create: async () => ({
+            job_id: "img_incomplete_1",
+            status: "running",
+          }),
+        },
       },
     })
     base.use(ai)
@@ -1818,7 +1853,7 @@ test("AIService charges image jobs only after provider result succeeds", async (
     })
     ai.use({
       id: "priced-image",
-      provider_id: "image-provider",
+      channel_id: "image-provider",
       name: "Priced Image",
       bill(ctx, output) {
         return {
@@ -1829,31 +1864,33 @@ test("AIService charges image jobs only after provider result succeeds", async (
             service_id: "ai",
             action_id: ctx.metering?.metadata?.mode,
             model_id: ctx.metering?.model_id,
-            provider_id: ctx.metering?.provider_id,
+            channel_id: ctx.metering?.channel_id,
             image_count: ctx.metering?.image_count,
           },
         }
       },
-      actions: {
-        image_create: async () => ({
-          job_id: "img_priced_1",
-          status: "running",
-        }),
-        image_fetch: async (ctx) => {
-          fetch_calls += 1
-          await new Promise((resolve) => setTimeout(resolve, 20))
-          return {
-            job_id: String(ctx.input.job_id),
-            status: "succeeded",
-            result: {
-              id: "msg_priced_image",
-              role: "assistant",
-              parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,abc" }],
-            },
-            metadata: {
-              user_id: "user_1",
-            },
-          }
+      runtime: {
+        actions: {
+          image_create: async () => ({
+            job_id: "img_priced_1",
+            status: "running",
+          }),
+          image_fetch: async (ctx) => {
+            fetch_calls += 1
+            await new Promise((resolve) => setTimeout(resolve, 20))
+            return {
+              job_id: String(ctx.input.job_id),
+              status: "succeeded",
+              result: {
+                id: "msg_priced_image",
+                role: "assistant",
+                parts: [{ type: "file", mediaType: "image/png", url: "data:image/png;base64,abc" }],
+              },
+              metadata: {
+                user_id: "user_1",
+              },
+            }
+          },
         },
       },
     })
@@ -1919,7 +1956,7 @@ test("AIService charges image jobs only after provider result succeeds", async (
         service_id: "ai",
         action_id: "image/fetch",
         model_id: "priced-image",
-        provider_id: "image-provider",
+        channel_id: "image-provider",
         image_count: 1,
       },
     }])
@@ -1966,7 +2003,7 @@ test("AIService prefers action charge over model bill", async () => {
     })
     ai.use({
       id: "priority-text",
-      provider_id: "priority-provider",
+      channel_id: "priority-provider",
       name: "Priority Text",
       bill() {
         return {
@@ -1974,18 +2011,20 @@ test("AIService prefers action charge over model bill", async () => {
           note: "model bill",
         }
       },
-      actions: {
-        text: async () => ({
-          output: {
-            id: "msg_priority",
-            role: "assistant",
-            parts: [{ type: "text", text: "ok" }],
-          },
-          charge: {
-            credits: 111,
-            note: "action charge",
-          },
-        }),
+      runtime: {
+        actions: {
+          text: async () => ({
+            output: {
+              id: "msg_priority",
+              role: "assistant",
+              parts: [{ type: "text", text: "ok" }],
+            },
+            charge: {
+              credits: 111,
+              note: "action charge",
+            },
+          }),
+        },
       },
     })
     base.use(ai)
@@ -2050,45 +2089,47 @@ test("Federation AI image jobs can advance through result polling", async () => 
     ai.use({
       id: "step-image",
       name: "Step Image",
-      actions: {
-        image_create: async (ctx) => {
-          calls += 1
-          const job_id = "up_1"
-          jobs.set(job_id, { step: "created" })
-          return {
-            job_id,
-            status: "running",
-            message: "running",
-            poll_after_ms: 10,
-            metadata: jobs.get(job_id),
-          }
-        },
-        image_fetch: async (ctx) => {
-          calls += 1
-          const image_job = ctx.locals.ai_image_job
-          const job_id = String(image_job.record.job_id)
-          if (image_job.state.step === "created") {
-            const running = { step: "polled_once" }
-            jobs.set(job_id, running)
+      runtime: {
+        actions: {
+          image_create: async (ctx) => {
+            calls += 1
+            const job_id = "up_1"
+            jobs.set(job_id, { step: "created" })
             return {
               job_id,
               status: "running",
-              message: "still running",
+              message: "running",
               poll_after_ms: 10,
-              metadata: running,
+              metadata: jobs.get(job_id),
             }
-          }
-          assert.deepEqual(image_job.state, { step: "polled_once" })
-          const finished = { step: "finished" }
-          jobs.set(job_id, finished)
-          return {
-            job_id,
-            status: "succeeded",
-            result: message,
-            message: "succeeded",
-            poll_after_ms: 2000,
-            metadata: finished,
-          }
+          },
+          image_fetch: async (ctx) => {
+            calls += 1
+            const image_job = ctx.locals.ai_image_job
+            const job_id = String(image_job.record.job_id)
+            if (image_job.state.step === "created") {
+              const running = { step: "polled_once" }
+              jobs.set(job_id, running)
+              return {
+                job_id,
+                status: "running",
+                message: "still running",
+                poll_after_ms: 10,
+                metadata: running,
+              }
+            }
+            assert.deepEqual(image_job.state, { step: "polled_once" })
+            const finished = { step: "finished" }
+            jobs.set(job_id, finished)
+            return {
+              job_id,
+              status: "succeeded",
+              result: message,
+              message: "succeeded",
+              poll_after_ms: 2000,
+              metadata: finished,
+            }
+          },
         },
       },
     })
@@ -2181,23 +2222,25 @@ test("Federation AI image jobs fail after max pending duration", async () => {
     ai.use({
       id: "timeout-image",
       name: "Timeout Image",
-      actions: {
-        image_create: async () => ({
-          job_id: "img_timeout_1",
-          status: "running",
-          message: "running",
-          poll_after_ms: 10,
-          metadata: { upstream_job_id: "up_timeout_1" },
-        }),
-        image_fetch: async (ctx) => {
-          fetchCalls += 1
-          return {
-            job_id: String(ctx.input.job_id),
+      runtime: {
+        actions: {
+          image_create: async () => ({
+            job_id: "img_timeout_1",
             status: "running",
-            message: "still running",
+            message: "running",
             poll_after_ms: 10,
             metadata: { upstream_job_id: "up_timeout_1" },
-          }
+          }),
+          image_fetch: async (ctx) => {
+            fetchCalls += 1
+            return {
+              job_id: String(ctx.input.job_id),
+              status: "running",
+              message: "still running",
+              poll_after_ms: 10,
+              metadata: { upstream_job_id: "up_timeout_1" },
+            }
+          },
         },
       },
     })
@@ -2278,8 +2321,10 @@ test("Federation exposes service env requirements and env catalog", async () => 
       env: {
         DEEPSEEK_API_KEY: "DeepSeek API Key",
       },
-      actions: {
-        text: async () => ({ ok: true }),
+      runtime: {
+        actions: {
+          text: async () => ({ ok: true }),
+        },
       },
     })
     base.use(ai)

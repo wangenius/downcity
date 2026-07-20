@@ -241,10 +241,6 @@ export class SessionTurn {
           turnId: turn_id,
           text: "",
           success: false,
-          assistantMessage: build_prompt_runtime_error_assistant_message({
-            session_id: this.session_id,
-            message,
-          }),
           error: message,
         };
         active_turn.result = final_result;
@@ -291,10 +287,6 @@ export class SessionTurn {
         turnId: turn_id,
         text: "",
         success: false,
-        assistantMessage: build_prompt_runtime_error_assistant_message({
-          session_id: this.session_id,
-          message: QUEUED_PROMPT_CANCELLED_MESSAGE,
-        }),
         error: QUEUED_PROMPT_CANCELLED_MESSAGE,
       };
       cancelled_turn.result = final_result;
@@ -628,27 +620,6 @@ function is_assistant_content_chunk(type: string): boolean {
     type.startsWith("tool-") ||
     type === "file"
   );
-}
-
-function build_prompt_runtime_error_assistant_message(input: {
-  session_id: string;
-  message: string;
-}): SessionMessageRecordV1 {
-  return {
-    id: `a:${input.session_id}:${Date.now()}:${nanoid(6)}`,
-    role: "assistant",
-    metadata: {
-      v: 1,
-      ts: Date.now(),
-      sessionId: input.session_id,
-      source: "egress",
-      kind: "normal",
-      extra: {
-        note: "session_prompt_runtime_error",
-      },
-    },
-    parts: [{ type: "text", text: input.message }],
-  };
 }
 
 function create_deferred<T>(): SessionDeferred<T> {

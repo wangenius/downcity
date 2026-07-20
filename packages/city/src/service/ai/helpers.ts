@@ -1,13 +1,13 @@
  /**
-  * AI Provider 通用工具模块。
+  * AIChannel 通用工具模块。
   *
-  * 集中管理 Provider 子类常用的输入解析、消息构造、usage 归一化、
+  * 集中管理 AIChannel 子类常用的输入解析、消息构造、usage 归一化、
   * HTTP 响应读取等工具函数。
   */
 
  import type { DynamicToolUIPart, FileUIPart, ToolSet, UIMessage } from "ai";
  import { jsonSchema, tool } from "ai";
- import type { AIProviderChargeLine } from "./charge.js";
+ import type { AICharge, AIChargedResult } from "../../types/AI.js";
  import type { Context } from "../service.js";
 
  // ===========================================================================
@@ -58,7 +58,7 @@
  /**
   * 读取必填环境变量。
   */
- export function readRequiredEnv(ctx: Context, key: string): string {
+ export function read_required_env(ctx: Context, key: string): string {
    const value = ctx.env(key);
    if (!value) throw new Error(`${key} is required`);
    return value;
@@ -69,11 +69,12 @@
   *
   * 优先使用 model meta 中的 upstream_model，其次使用 fallback。
   */
- export function resolveUpstreamModel(ctx: Context, fallback: string): string {
-   const meta_model = typeof ctx.variant?.meta?.upstream_model === "string"
-     ? ctx.variant.meta.upstream_model.trim()
-     : "";
-   return meta_model || fallback;
+ export function resolve_upstream_model(ctx: Context): string {
+   const upstream_model = ctx.variant?.upstream_model?.trim() ?? "";
+   if (!upstream_model) {
+     throw new Error("Resolved AI model is missing upstream_model");
+   }
+   return upstream_model;
  }
 
  // ===========================================================================
@@ -156,8 +157,8 @@
    text: string,
    ctx: Context,
    result: BuildAssistantMessageResult,
-   charge?: AIProviderChargeLine,
- ): { output: UIMessage; charge?: AIProviderChargeLine } {
+   charge?: AICharge,
+ ): AIChargedResult<UIMessage> {
    const parts: UIMessage["parts"] = [{ type: "text", text }];
 
    if (result.toolCalls) {
@@ -358,143 +359,4 @@
  function readNestedNumberFieldValue(record: UsageRecord, parent: string, keys: string[]): number | undefined {
    const nested = record[parent];
    return isRecord(nested) ? readNumberFieldValue(nested, keys) : undefined;
- }
-
- // ===========================================================================
- // OpenAI 兼容透传工具
- // ===========================================================================
-
- type OpenAIChatMessage = {
-   role?: unknown;
-   content?: unknown;
-   [key: string]: unknown;
- };
-
- /**
-  * 给 /chat/completions 透传前规整 body。
-  *
-  * - 替换 model 为实际上游模型
-  * - 当 stream 为 true 时补充 include_usage
-  * - 保留 OpenAI-compatible content 数组，让 image_url 等多模态输入原样透传
-  */
- export function normalizeOpenAICompatibleBody(
-   input: Record<string, unknown>,
-   model: string,
- ): Record<string, unknown> {
-   return normalizeOpenAICompatibleBodyBase(input, model);
- }
-
- /**
-  * 给文本模型 /chat/completions 透传前规整 body。
-  *
-  * - 替换 model 为实际上游模型
-  * - 当 stream 为 true 时补充 include_usage
-  * - 把多模态 content 中的文本片段拼成纯文本，适合不支持 image_url 的上游
-  */
- export function normalizeTextOnlyOpenAICompatibleBody(
-   input: Record<string, unknown>,
-   model: string,
- ): Record<string, unknown> {
-   const body = normalizeOpenAICompatibleBodyBase(input, model);
-   return {
-     ...body,
-     messages: Array.isArray(input.messages)
-       ? input.messages.map((message) => normalizeOpenAIMessageForTextOnly(message))
-       : input.messages,
-   };
- }
-
- function normalizeOpenAICompatibleBodyBase(
-   input: Record<string, unknown>,
-   model: string,
- ): Record<string, unknown> {
-   const stream_options = input.stream === true
-     ? {
-         ...(isRecord(input.stream_options) ? input.stream_options : {}),
-         include_usage: true,
-       }
-     : input.stream_options;
-   return {
-     ...input,
-     model,
-     ...(stream_options !== undefined ? { stream_options } : {}),
-   };
- }
-
- function normalizeOpenAIMessageForTextOnly(message: unknown): unknown {
-   if (!message || typeof message !== "object") return message;
-   const record = message as OpenAIChatMessage;
-   if (record.role !== "user") return record;
-   return {
-     ...record,
-     content: stringifyOpenAIContent(record.content),
-   };
- }
-
- function stringifyOpenAIContent(content: unknown): string {
-   if (typeof content === "string") return content;
-   if (!Array.isArray(content)) return content == null ? "" : String(content);
-
-   const texts: string[] = [];
-   for (const part of content) {
-     if (!part || typeof part !== "object") continue;
-     const record = part as Record<string, unknown>;
-     if (record.type === "text" && typeof record.text === "string") {
-       texts.push(record.text);
-     }
-   }
-   return texts.join("\n");
- }
-
- /**
-  * 从 OpenAI-compatible SSE 流中读取最后一个 usage。
-  */
- export async function readOpenAICompatibleSseUsage(
-   body: ReadableStream<Uint8Array>,
- ): Promise<unknown | undefined> {
-   const reader = body.getReader();
-   const decoder = new TextDecoder();
-   let buffer = "";
-   let usage: unknown;
-
-   try {
-     while (true) {
-       const { done, value } = await reader.read();
-       if (done) break;
-       buffer += decoder.decode(value, { stream: true });
-       const lines = buffer.split(/\r?\n/);
-       buffer = lines.pop() ?? "";
-       for (const line of lines) {
-         const data = parseSseDataLine(line);
-         if (!data || data === "[DONE]") continue;
-         const parsed = parseJsonObject(data);
-         if (parsed && "usage" in parsed) usage = parsed.usage;
-       }
-     }
-     buffer += decoder.decode();
-     for (const line of buffer.split(/\r?\n/)) {
-       const data = parseSseDataLine(line);
-       if (!data || data === "[DONE]") continue;
-       const parsed = parseJsonObject(data);
-       if (parsed && "usage" in parsed) usage = parsed.usage;
-     }
-     return usage;
-   } finally {
-     reader.releaseLock();
-   }
- }
-
- function parseSseDataLine(line: string): string | undefined {
-   const trimmed = line.trimStart();
-   if (!trimmed.startsWith("data:")) return undefined;
-   return trimmed.slice("data:".length).trim();
- }
-
- function parseJsonObject(value: string): Record<string, unknown> | undefined {
-   try {
-     const parsed = JSON.parse(value) as unknown;
-     return isRecord(parsed) ? parsed : undefined;
-   } catch {
-     return undefined;
-   }
  }

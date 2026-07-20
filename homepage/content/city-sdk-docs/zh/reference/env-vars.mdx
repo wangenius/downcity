@@ -24,54 +24,47 @@ description: Federation 常见环境变量。
 model handler 直接读取 `ctx.env`：
 
 ```ts
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { generateText } from "ai";
+import { createDeepSeek } from "@ai-sdk/deepseek";
 import {
-  Provider,
-  buildAssistantMessage,
+  AIChannel,
+  read_required_env,
+  resolve_upstream_model,
+  type LanguageModelV3CallOptions,
+  type LanguageModelV3StreamResult,
   type Context,
-  type AIProviderChargedOutput,
-  type OpenAICompatibleClientConfig,
 } from "@downcity/city";
-import type { UIMessage } from "ai";
 
-class DeepSeekProvider extends Provider {
+class DeepSeekChannel extends AIChannel {
   constructor() {
     super({
       id: "deepseek",
       env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
-      envKey: "DEEPSEEK_API_KEY",
-      baseURL: "https://api.deepseek.com",
+      env_key: "DEEPSEEK_API_KEY",
+      base_url: "https://api.deepseek.com",
     });
   }
 
-  protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
-    return createOpenAICompatible({ apiKey, baseURL, name: "deepseek" });
-  }
-
-  async text(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
-    const apiKey = ctx.env("DEEPSEEK_API_KEY");
-    const client = createOpenAICompatible({
-      apiKey,
-      baseURL: this.baseURL ?? "",
-      name: "deepseek",
+  protected async stream(
+    ctx: Context,
+    call: LanguageModelV3CallOptions,
+  ): Promise<LanguageModelV3StreamResult> {
+    const deepseek = createDeepSeek({
+      apiKey: read_required_env(ctx, this.env_key ?? ""),
+      baseURL: this.base_url,
     });
-    const result = await generateText({
-      model: city.chat("deepseek-v4-flash"),
-      prompt: ctx.input.prompt,
-    });
-    return buildAssistantMessage(result.text, ctx, { finishReason: "stop" });
+    const model = deepseek(resolve_upstream_model(ctx));
+    return this.stream_ai_sdk_model(ctx, call, model);
   }
 }
 
-const deepseek = new DeepSeekProvider();
+const deepseek = new DeepSeekChannel();
 ```
 
 所以实际约束很简单：
 
 - env key 名称由你自己决定
 - 建议使用大写下划线命名
-- handler 里通过 `ctx.env(key)` 读取
+- `stream()` 里通过 `ctx.env(key)` 或 `read_required_env()` 读取
 
 ## 写入数据库
 
@@ -86,4 +79,4 @@ await admin.env.upsert({
 
 这些值会保存到 Federation 数据库的 `env` 表。业务 Runtime 只从 Federation 自己的 env 表读取，不再回退到 `.env` 或进程环境变量。
 
-详见 [Provider 环境变量](/zh/city-sdk-docs/guides/provider-env)。
+详见 [AIChannel 环境变量](/zh/city-sdk-docs/guides/provider-env)。

@@ -2,10 +2,9 @@
  * SessionRecord 类型定义。
  *
  * 关键点（中文）
- * - 这里统一描述 session JSONL 中的持久化 record 结构。
- * - record 是 session 内部事实源；其中 message record 继续使用 AI SDK `UIMessage`。
- * - action record 是 UI record，不属于 LLM 输入。
- * - 这些类型会被 Store、Composer、compact、control UI、task runtime 共同复用。
+ * - SessionMessage 是唯一持久化事实，record 只作为 Executor、Composer 和旧 UI 的内部投影。
+ * - message record 继续使用 AI SDK `UIMessage`，action record 不属于 LLM 输入。
+ * - 这些类型不定义 canonical Session 存储结构。
  */
 
 import type { UIMessage } from "ai";
@@ -15,9 +14,8 @@ import type { JsonObject } from "@/types/common/Json.js";
  * Session message record 类别。
  *
  * 关键点（中文）
- * - 持久化存储在 `.downcity/agents/<encodedAgentId>/sessions/<encodedSessionId>/messages/messages.jsonl`
- * - record 文件默认包含 message record，或 `type=action` 的 UI 状态记录。
- * - compact 会把更早 message record 压缩为一条 `assistant` 摘要 record。
+ * - User / Assistant SessionMessage 会在执行边界临时投影为 message record。
+ * - Compact Summary 同样投影为一条内部 `assistant` record。
  * - action 只用于 UI timeline，不进入 LLM 输入
  */
 export type SessionMessageKind = "normal" | "summary";

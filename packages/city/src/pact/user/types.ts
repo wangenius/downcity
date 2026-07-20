@@ -6,11 +6,10 @@ import type { UIMessage, UIMessageChunk } from "ai";
 import type { FetchLike } from "../http.js";
 import type { UserModelInput } from "../invoker/ai/types.js";
 import type {
-  AIImageJobStatus,
-  UserImageJobCreateResult,
-  UserImageJobResult,
-  UserImageJobResultInput,
-} from "../../service/ai/job-types.js";
+  AIImageCreateResult,
+  AIImageResult,
+  AIImageStatus,
+} from "../../types/AI.js";
 import type {
   UserPaymentMethod,
   UserPaymentMethodReason,
@@ -86,11 +85,17 @@ export interface UserAsrResult {
   durationInSeconds?: number;
 }
 export type {
-  AIImageJobStatus as UserImageJobStatus,
-  UserImageJobCreateResult,
-  UserImageJobResult,
-  UserImageJobResultInput,
+  AIImageStatus as UserImageJobStatus,
 };
+/** image/create 返回给客户端的结果。 */
+export type UserImageJobCreateResult = AIImageCreateResult;
+/** image/result 返回给客户端的结果。 */
+export type UserImageJobResult = AIImageResult;
+/** image/result 查询输入。 */
+export interface UserImageJobResultInput {
+  /** image_create 返回的图片任务 ID。 */
+  job_id: string;
+}
 export type { UserPaymentMethod, UserPaymentMethodReason, UserPaymentMethodType };
 
 /** 图片生成文本内容片段。 */
@@ -126,8 +131,6 @@ export interface UserImageMessage {
 
 /** 图片生成输入。 */
 export interface UserImageInput extends UserServiceInput {
-  /** 图片模型引用，AIService 不会自动选择默认模型。 */
-  model: UserModelInput;
   /** 单句快捷提示词。 */
   prompt?: string;
   /** 多轮或多模态图片生成上下文。 */

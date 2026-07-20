@@ -1,29 +1,26 @@
 /**
  * AIService 值解析与类型守卫模块。
  *
- * 集中管理 Provider 输出、usage 和图片任务数据的纯函数转换，让 AIService 主模块
+ * 集中管理 AIChannel 输出、usage 和图片任务数据的纯函数转换，让 AIService 主模块
  * 只保留路由、生命周期与持久化编排。
  */
 
 import { httpError } from "../../utils/helpers.js";
 import type { AsyncJobRecord, AsyncJobStatus } from "../../types/AsyncJob.js";
 import type {
-  AIProviderChargedOutput,
-  AIProviderChargedResponse,
-  AIProviderChargeLine,
-} from "./charge.js";
-import type {
-  AIImageProviderCreateResult,
-  AIImageProviderResult,
-} from "./job-types.js";
+  AICharge,
+  AIChargedResult,
+  AIImageCreateResult,
+  AIImageResult,
+} from "../../types/AI.js";
 import { normalizeAIUsage } from "./helpers.js";
 
-/** Provider action 拆包后的统一输出。 */
-export interface ResolvedProviderOutput {
-  /** Provider 对外输出。 */
+/** AIChannel action 拆包后的统一输出。 */
+export interface ResolvedChannelOutput {
+  /** AIChannel 对外输出。 */
   output: unknown;
-  /** Provider 计算的可选扣费行。 */
-  charge?: AIProviderChargeLine | Promise<AIProviderChargeLine | undefined>;
+  /** AIChannel 计算的可选扣费行。 */
+  charge?: AICharge | Promise<AICharge | undefined>;
 }
 
 /** 可转存到 Federation storage 的图片文件 part。 */
@@ -44,13 +41,8 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
-/** 判断 Provider 是否返回了带账单 Response。 */
-export function isProviderChargedResponse(value: unknown): value is AIProviderChargedResponse {
-  return isRecord(value) && value.response instanceof Response;
-}
-
-/** 判断 Provider 是否返回了带账单普通输出。 */
-export function isProviderChargedOutput(value: unknown): value is AIProviderChargedOutput {
+/** 判断 AIChannel 是否返回了带账单 Response。 */
+export function isChannelChargedOutput(value: unknown): value is AIChargedResult {
   return isRecord(value) && "output" in value;
 }
 
@@ -107,10 +99,10 @@ export function parseRecordJson(value: unknown): Record<string, unknown> {
 }
 
 /** 安全解析 UIMessage。 */
-export function parseImageMessage(value: unknown): AIImageProviderResult["result"] | undefined {
+export function parseImageMessage(value: unknown): AIImageResult["result"] | undefined {
   const record = parseRecordJson(value);
   return record.role === "assistant" && Array.isArray(record.parts)
-    ? record as unknown as AIImageProviderResult["result"]
+    ? record as unknown as AIImageResult["result"]
     : undefined;
 }
 
@@ -141,7 +133,7 @@ export function imageActionError(error: unknown, fallback_message: string): Erro
   return httpError(502, error instanceof Error ? error.message : fallback_message);
 }
 
-/** 从输出对象中读取 Provider usage。 */
+/** 从输出对象中读取上游 usage。 */
 export function extractUsage(output: unknown): unknown {
   if (!isRecord(output)) return undefined;
   const metadata = isRecord(output.metadata) ? output.metadata : undefined;
@@ -151,7 +143,7 @@ export function extractUsage(output: unknown): unknown {
   return undefined;
 }
 
-/** 兼容常见 Provider usage 字段。 */
+/** 兼容常见上游 usage 字段。 */
 export function normalizeUsage(usage: unknown): {
   /** 输入 token 数。 */
   input_tokens?: number;
@@ -194,15 +186,15 @@ export function readFilePartFilename(part: Record<string, unknown>): string | un
   return readOptionalString(part.filename);
 }
 
-/** 判断 Provider 是否返回了图片任务创建结果。 */
-export function isImageProviderCreateResult(value: unknown): value is AIImageProviderCreateResult {
+/** 判断 AIChannel 是否返回了图片任务创建结果。 */
+export function isImageChannelCreateResult(value: unknown): value is AIImageCreateResult {
   if (!value || typeof value !== "object") return false;
   const record = value as { job_id?: unknown; status?: unknown };
   return typeof record.job_id === "string" && Boolean(record.job_id.trim()) && isImageJobStatus(record.status);
 }
 
-/** 判断 Provider 是否返回了图片任务查询结果。 */
-export function isImageProviderResult(value: unknown): value is AIImageProviderResult {
+/** 判断 AIChannel 是否返回了图片任务查询结果。 */
+export function isImageChannelResult(value: unknown): value is AIImageResult {
   if (!value || typeof value !== "object") return false;
   const record = value as { job_id?: unknown; status?: unknown; result?: unknown };
   if (typeof record.job_id !== "string" || !record.job_id.trim() || !isImageJobStatus(record.status)) return false;

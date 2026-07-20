@@ -17,7 +17,7 @@ session.subscribe((mutation) => {
 
 The five variants are `message`, `part`, `delta`, `turn`, and `session`. All Mutations contain `mutation_id`, `session_id`, and `created_at`. Message-related Mutations also carry `message_id` and `revision` for safe snapshot updates.
 
-An approval-required Tool Part carries the complete request. The subscription remains a data-only channel; submit a user decision through the Session command API:
+An approval-required Tool Part carries an approval snapshot; the complete local-tool request is under `approval.request`. The subscription remains a data-only channel; submit a user decision through the Session command API:
 
 ```ts
 session.subscribe((mutation) => {
@@ -25,9 +25,9 @@ session.subscribe((mutation) => {
     mutation.variant === "part" &&
     mutation.type === "tool" &&
     mutation.part.state === "approval-required" &&
-    mutation.part.approval
+    mutation.part.approval?.request
   ) {
-    show_approval_request(mutation.part.approval);
+    show_approval_request(mutation.part.approval.request);
   }
 });
 

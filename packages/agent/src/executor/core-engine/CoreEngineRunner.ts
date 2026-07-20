@@ -601,10 +601,6 @@ export class CoreEngineRunner {
       return {
         success: false,
         error: error_text,
-        assistantMessage: build_fallback_assistant_message(
-          session_id,
-          `Execution failed: ${error_text}`,
-        ),
         ...(compact_required ? { compact_required: true } : {}),
         deferredPersistedUserMessages: [
           ...input.run_context.deferredPersistedUserMessages,
@@ -635,7 +631,7 @@ function build_internal_user_message(input: {
   };
 }
 
-/** 构造 Executor 失败或空结果使用的临时 Assistant Message。 */
+/** 构造成功执行但缺少最终消息时使用的临时 Assistant Message。 */
 function build_fallback_assistant_message(
   session_id: string,
   text: string,

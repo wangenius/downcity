@@ -1,52 +1,27 @@
 ---
-title: AI Service
-description: AIService 管理 AI 模型，提供两条独立通路：SDK 通路和 OpenAI 兼容通路。
+title: AIService
+description: AIService 统一模型注册、路由、LanguageModelV3 和 OpenAI 兼容协议。
 ---
 
-`AIService` 是内建的 Service，通过 Provider 注册模型，为每个模型提供两条调用通路。
+`AIService` 是 Federation 的 AI 服务。它注册 `AIModelDefinition`，负责鉴权、模型可用性、fallback、reasoning、计量和计费。
 
-## 两条通路
+| 概念 | 作用 |
+|---|---|
+| `AIChannel` | Federation 到一个上游 AI 渠道的执行边界 |
+| `AIModelSpec` | `channel.model()` 的模型声明参数 |
+| `AIModelDefinition` | AIService 内部完整运行时模型 |
+| `CityModelDescriptor` | 客户端公开模型目录结构 |
+| `CityModel` | 实现 AI SDK `LanguageModelV3` 的客户端模型 |
 
-| | SDK 通路 | OpenAI 兼容通路 |
-|---|---|---|
-| 路由 | `POST /v1/ai/text`, `/stream`, `/image`, ... | `POST /v1/ai/chat/completions` |
-| 调用方 | `User City`、Agent 的 `CityModel` | OpenAI SDK、curl |
-| 输入格式 | text action 或 LanguageModelV3 transport | `{ messages, model, stream }` |
-| 返回格式 | UIMessage 或 LanguageModelV3 SSE | OpenAI 格式 JSON / SSE |
-| Provider 能力 | `text` / `stream(ctx, call)` | `openai`（未提供则自动透传） |
+所有语言模型入口都统一到 `AIChannel.stream(ctx, call)`：
 
-## 快速开始
-
-```ts
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { AIService, Provider, type OpenAICompatibleClientConfig } from "@downcity/city";
-
-class DeepSeekProvider extends Provider {
-  constructor() {
-    super({
-      id: "deepseek",
-      baseURL: "https://api.deepseek.com/v1",
-      envKey: "DEEPSEEK_API_KEY",
-    });
-  }
-
-  protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
-    return createOpenAICompatible({ apiKey, baseURL, name: "deepseek" });
-  }
-}
-
-const deepseek = new DeepSeekProvider();
-
-// 注册模型
-const ai = new AIService();
-ai.use(deepseek.model({ id: "deepseek-v4-flash", name: "DeepSeek V4 Flash" }));
-base.use(ai);
+```text
+city.ai.text()          -> LanguageModelV3 -> AIChannel.stream
+city.ai.stream()        -> CityModel       -> AIChannel.stream
+CityModel.doGenerate()  -> CityModel       -> AIChannel.stream
+chat/completions        -> OpenAI adapter   -> AIChannel.stream
 ```
 
-注册后自动生成路由：
+OpenAI 兼容端点只负责协议转换，支持 system/user/assistant/tool、图片 URL、function tools、tool choice、reasoning、JSON/SSE。它不会把请求原样转发给上游，也不需要 `AIChannel.openai()`。
 
-```
-POST /v1/ai/text              → SDK 文本
-POST /v1/ai/stream            → CityModel LanguageModelV3 模型流
-POST /v1/ai/chat/completions  → OpenAI 兼容（自动透传）
-```
+详见 [AIChannel 与模型注册](./provider)。

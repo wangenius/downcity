@@ -32,7 +32,8 @@ export interface AgentSessionTurnResult {
    * 当前 turn 最终 assistant 消息。
    *
    * 说明（中文）
-   * - `turn.finished` 返回的结果以这条消息作为最终事实源。
+   * - 仅在当前 turn 实际产生 assistant 内容时存在。
+   * - 失败状态由 `success` 与 `error` 表达，不会伪造成 assistant 正文。
    * - transport / runtime service 若需要读取最终结构化输出，应优先消费这里。
    */
   assistantMessage?: SessionMessageRecordV1;

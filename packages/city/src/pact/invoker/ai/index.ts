@@ -10,7 +10,7 @@ import {
 import { CityModel } from "./CityModel.js";
 import { create_client_ui_stream } from "./client-stream.js";
 import type { UserModelRef } from "./types.js";
-import type { CityLanguageModelStreamRequestV1 } from "../../../types/CityLanguageModelTransport.js";
+import type { CityLanguageModelStreamRequestV1 } from "../../../types/AITransport.js";
 import type {
   UserImageInput,
   UserImageJobCreateResult,

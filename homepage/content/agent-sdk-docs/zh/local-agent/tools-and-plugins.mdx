@@ -81,7 +81,7 @@ await session.resolve_approval({
 });
 ```
 
-实时 UI 在 `session.subscribe((mutation) => {})` 收到 `approval-required` Tool Part 时，从 `mutation.part.approval` 读取完整请求，并在用户决定后调用 `session.resolve_approval(...)`。
+实时 UI 在 `session.subscribe((mutation) => {})` 收到 `approval-required` Tool Part 时，从 `mutation.part.approval.request` 读取完整本地工具请求，并在用户决定后调用 `session.resolve_approval(...)`。
 
 ## plugin 实例
 

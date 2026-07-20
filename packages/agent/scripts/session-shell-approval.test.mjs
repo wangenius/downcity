@@ -154,9 +154,9 @@ test("unrestricted Shell 审批保留当前 Turn 并等待用户决定", async (
       .flatMap((message) => message.type === "assistant" ? message.parts : [])
       .find((part) => part.type === "tool" && part.tool_call_id === "call_unrestricted");
     assert.ok(approval_snapshot, JSON.stringify(messages.items));
-    assert.equal(approval_snapshot.session_id, session.id);
-    assert.equal(approval_snapshot.turn_id, turn.id);
-    assert.equal(approval_snapshot.tool_call_id, "call_unrestricted");
+    assert.equal(approval_snapshot.request.session_id, session.id);
+    assert.equal(approval_snapshot.request.turn_id, turn.id);
+    assert.equal(approval_snapshot.request.tool_call_id, "call_unrestricted");
     assert.deepEqual(await approval_result, {
       success: true,
       approval_id: approval_snapshot.approval_id,

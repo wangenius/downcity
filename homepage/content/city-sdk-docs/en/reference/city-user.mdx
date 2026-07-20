@@ -152,7 +152,7 @@ if (!model) throw new Error("model not found");
 
 This keeps raw model IDs from scattering across your product code.
 
-`model.price` contains Provider-supplied pricing display strings. It is for
+`model.price` contains AIChannel-supplied pricing display strings. It is for
 display only and does not represent the final charge.
 
 The catalog's `CityModel` is an AI SDK `LanguageModelV3` and can be passed directly to Agent or `streamText()`:
@@ -197,7 +197,7 @@ The input object is still intentionally open:
 
 - `model` is required; AIService never chooses a default model
 - `reasoning_effort` is optional and must come from the current model's catalog entry
-- other fields are defined by the Provider `text` action resolved by `AIService`
+- other fields are defined by the AIChannel standard model stream resolved by `AIService`
 - the handler result should be a `UIMessage`
 
 If you call a custom service with a non-`UIMessage` result shape, use `city.service(...).action(...).invoke<T>()`.
@@ -254,7 +254,7 @@ if (current.status === "succeeded") {
 }
 ```
 
-Generated image file-part `url` values are returned exactly as the concrete Provider supplies them. A Provider may return HTTPS URLs, R2/resource URLs, or `data:image/...;base64,...` data URLs.
+Generated image file-part `url` values are returned exactly as the concrete AIChannel supplies them. A Channel may return HTTPS URLs, R2/resource URLs, or `data:image/...;base64,...` data URLs.
 
 `image_create()` returns after the task is submitted. AIService schedules a background `image/fetch` queue task to query upstream status and stores the latest state in the built-in `async_jobs` table. `image_result()` only reads that cached state.
 
@@ -275,9 +275,9 @@ const job = await city.ai.image_create({
 });
 ```
 
-The low-level contract is intentionally small: the client sends `prompt` / `messages` / `model` / `size` / `ratio` / `quality` / `count` / `provider_options`; the City-side Provider creates upstream jobs and implements `image_fetch()` for upstream status, while AIService owns Queue scheduling and Downcity job storage in `async_jobs`.
+The low-level contract is intentionally small: the client sends `prompt` / `messages` / `model` / `size` / `ratio` / `quality` / `count` / `provider_options`; the City-side AIChannel creates upstream jobs and implements `image_fetch()` for upstream status, while AIService owns Queue scheduling and Downcity job storage in `async_jobs`.
 
-`video()` still returns AI SDK `UIMessage`. The City-side Provider `video` action should also return `UIMessage`.
+`video()` still returns AI SDK `UIMessage`. The City-side AIChannel `video` action should also return `UIMessage`.
 
 ## `ai.tts()` / `ai.asr()`
 

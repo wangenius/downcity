@@ -37,7 +37,7 @@ description: 部署一个可复用的 City，让新 AI 产品直接接入。
   <div className="dc-doc-lane">
     <div className="dc-doc-node">
       <strong>Downcity City</strong>
-      <span>校验 token，读取模型目录，再把请求交给 AIService 命中的 Provider action。</span>
+      <span>校验 token，读取模型目录，再把请求交给 AIService 命中的 AIChannel action。</span>
     </div>
   </div>
   <div className="dc-doc-arrow" aria-hidden="true">→</div>
@@ -53,7 +53,7 @@ description: 部署一个可复用的 City，让新 AI 产品直接接入。
 
 1. [现在怎么用](/zh/city-sdk-docs/quickstart/use-now)：先用 `cities/node` 和 `cli/city` 跑通一条完整链路
 2. [创建 City](/zh/city-sdk-docs/quickstart/create-city)：创建 City，并在启动服务时自动初始化默认数据库
-3. [添加模型](/zh/city-sdk-docs/quickstart/add-model)：用 Provider 和 AIService 注册模型
+3. [添加模型](/zh/city-sdk-docs/quickstart/add-model)：用 AIChannel 和 AIService 注册模型
 4. [签发 user_token](/zh/city-sdk-docs/quickstart/issue-token)：给产品用户一个调用凭证
 5. [连接 client](/zh/city-sdk-docs/quickstart/connect-client)：在产品侧用 `User City` 调 City
 
@@ -75,4 +75,4 @@ description: 部署一个可复用的 City，让新 AI 产品直接接入。
 - 示例 City 使用 `sqlite:./data.sqlite`
 - model 来自运行时代码注册，不需要手写模型表
 - 所有 city 当前共享同一套 AIService 模型目录
-- 默认模型由 `Provider.model({ default })` 决定
+- 模型通过 `AIChannel.model()` 声明，并使用 `AIService.use()` 注册

@@ -6,7 +6,7 @@
  */
 
 import type { ProviderMetadata } from "ai";
-import type { JsonValue } from "@/types/common/Json.js";
+import type { JsonObject, JsonValue } from "@/types/common/Json.js";
 
 /** 把任意运行时输入转换为可持久化的 JSON 值。 */
 export function to_session_json_value(input: unknown): JsonValue {
@@ -22,6 +22,17 @@ export function to_session_json_value(input: unknown): JsonValue {
     return JSON.parse(JSON.stringify(input)) as JsonValue;
   } catch {
     return String(input);
+  }
+}
+
+/** 把任意运行时输入转换为可持久化 JSON 对象，非对象输入返回 undefined。 */
+export function to_session_json_object(input: unknown): JsonObject | undefined {
+  if (!is_plain_object(input)) return undefined;
+  try {
+    const value = JSON.parse(JSON.stringify(input)) as unknown;
+    return is_plain_object(value) ? value as JsonObject : undefined;
+  } catch {
+    return undefined;
   }
 }
 

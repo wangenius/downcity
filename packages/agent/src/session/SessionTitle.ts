@@ -215,12 +215,6 @@ async function generateSessionTitle(input: {
         "",
         input.firstUserText,
       ].join("\n"),
-      // 标题生成是一次性调用，不参与 Responses continuation。
-      providerOptions: {
-        openai: {
-          store: false,
-        },
-      },
       onError: ({ error }) => {
         observedStreamError = error;
       },

@@ -86,7 +86,7 @@ await admin.service("cities").action("create").invoke({ name: "My App" });
 | 非 Fed 模型 API | 产品侧自己创建对应 provider |
 
 `CityModel` 自身实现 AI SDK `LanguageModelV3`，并通过 Federation 原生模型通路
-传输 text、reasoning、tool call、usage 和 finish reason。Provider 的上游协议仍由
+传输 text、reasoning、tool call、usage 和 finish reason。AIChannel 的上游协议仍由
 Federation 决定。
 
 ## service、AI service 的关系

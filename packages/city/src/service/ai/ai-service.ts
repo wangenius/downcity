@@ -21,35 +21,35 @@ import { httpError } from "../../utils/helpers.js";
 import type { ActionFn } from "../action.js";
 import { sqliteAsyncJobs } from "../async-job/schema.js";
 import type { AsyncJobRecord } from "../../types/AsyncJob.js";
-import type {
-  AIServiceOptions,
-  ModelConfig,
-  ModelActions,
-  PublicModel,
-} from "./types.js";
+import type { CityModelDescriptor } from "@downcity/type";
 import type {
   AIBalanceBridge,
-  AIProviderChargeLine,
-} from "./charge.js";
-import type {
+  AICharge,
+  AIImageCreateResult,
   AIImageJobContext,
-  AIImageProviderCreateResult,
-  AIImageProviderFetchResult,
-  AIImageProviderResult,
+  AIImageResult,
+  AIModelActions,
+  AIModelDefinition,
+  AIResolvedAction,
+  AIResolvedRoutingPlan,
+  AIRoutingFallbackReason,
+  AIServiceOptions,
+  LanguageModelV3CallOptions,
+  LanguageModelV3StreamResult,
+} from "../../types/AI.js";
+import type {
+  OpenAIChatCompletionRequest,
+} from "../../types/AITransport.js";
+import type {
   UserImageJobCreateResult,
   UserImageJobResult,
-} from "./job-types.js";
+} from "../../pact/user/types.js";
 import {
   attach_resolved_reasoning,
   resolve_model_reasoning,
 } from "./reasoning.js";
 import { AIModelRegistry } from "./model-registry.js";
 import { resolve_text_routing_plan } from "./model-routing.js";
-import type {
-  AIRoutingFallbackReason,
-  AIResolvedAction,
-  AIResolvedRoutingPlan,
-} from "../../types/AIRouting.js";
 import {
   claim_image_job,
   finish_image_job_fetch,
@@ -61,19 +61,18 @@ import {
   decode_city_language_model_request,
   prepare_city_language_model_call,
 } from "./language-model-stream.js";
-import type {
-  CityRuntimeCallOptions,
-  CityRuntimeStreamResult,
-} from "../../types/CityLanguageModelRuntime.js";
+import {
+  create_openai_chat_completion_response,
+  openai_chat_request_to_language_model_call,
+} from "./OpenAIChatCompletionsAdapter.js";
 import {
   countImageOutputs,
   extractUsage,
   imageActionError,
-  isImageProviderCreateResult,
-  isImageProviderResult,
+  isImageChannelCreateResult,
+  isImageChannelResult,
   isPromiseLike,
-  isProviderChargedOutput,
-  isProviderChargedResponse,
+  isChannelChargedOutput,
   isResponse,
   isStorableRemoteFilePart,
   normalizePositiveNumber,
@@ -85,7 +84,7 @@ import {
   readOptionalNumber,
   readOptionalString,
   rowToAsyncJobRecord,
-  type ResolvedProviderOutput,
+  type ResolvedChannelOutput,
 } from "./ai-service-values.js";
 
 /** AIService 直接暴露的 action 模态列表。模型流与图片任务使用独立 handler。 */
@@ -108,8 +107,8 @@ const IMAGE_PENDING_TIMEOUT_ERROR = "upstream timeout";
 type Modality = (typeof MODALITIES)[number];
 type EnvReader = (key: string) => string | undefined;
 
-/** 判断 Provider runtime 是否返回了标准模型流结果。 */
-function is_language_model_stream_result(value: unknown): value is CityRuntimeStreamResult {
+/** 判断 AIChannel runtime 是否返回了标准模型流结果。 */
+function is_language_model_stream_result(value: unknown): value is LanguageModelV3StreamResult {
   if (!value || typeof value !== "object") return false;
   const stream = (value as { stream?: unknown }).stream;
   return Boolean(stream && typeof stream === "object" && "getReader" in stream &&
@@ -176,12 +175,12 @@ export class AIService extends Service {
 
   // ========== 模型注册 ==========
 
-  use(...inputs: (ModelConfig | ModelConfig[])[]): this {
+  use(...inputs: (AIModelDefinition | AIModelDefinition[])[]): this {
     this.models.register(...inputs);
     return this;
   }
 
-  listModels(): ModelConfig[] {
+  listModels(): AIModelDefinition[] {
     return this.models.list();
   }
 
@@ -191,9 +190,8 @@ export class AIService extends Service {
 
   // ========== 模型匹配 ==========
 
-  resolve(query: { model?: string; mode?: string }, env?: EnvReader): { model?: ModelConfig; action: ActionFn } {
+  resolve(query: { model?: string; mode?: string }, env?: EnvReader): { model?: AIModelDefinition; action: ActionFn } {
     const { model: modelId, mode } = query;
-    const isOpenAIMode = mode === "openai";
 
     if (!modelId) throw httpError(422, "model is required");
 
@@ -202,7 +200,7 @@ export class AIService extends Service {
     if (env && this.models.get_missing_env(model, env).length > 0) {
       throw httpError(422, `No available model: ${modelId}`);
     }
-    const action = isOpenAIMode ? this.resolveOpenAIAction(model) : this.getAction(model, mode);
+    const action = this.getAction(model, mode);
     if (!action) throw httpError(422, `Model ${modelId} does not support mode: ${mode ?? "text"}`);
     return { model, action };
   }
@@ -212,73 +210,32 @@ export class AIService extends Service {
     return model_id || undefined;
   }
 
-  private getAction(model: ModelConfig, mode?: string): ActionFn | undefined {
+  private getAction(model: AIModelDefinition, mode?: string): ActionFn | undefined {
     if (mode === LANGUAGE_MODEL_MODE) {
-      return model.language_model
-        ? (ctx) => model.language_model?.stream(
+      return model.runtime.stream
+        ? (ctx) => model.runtime.stream?.(
             ctx,
-            ctx.input.call as CityRuntimeCallOptions,
+            ctx.input.call as LanguageModelV3CallOptions,
           )
         : undefined;
     }
     if (mode === "image" || IMAGE_ACTION_MODES.includes(mode as (typeof IMAGE_ACTION_MODES)[number])) {
-      const has_image_actions = Boolean(model.actions.image_create && model.actions.image_fetch);
+      const has_image_actions = Boolean(model.runtime.actions.image_create && model.runtime.actions.image_fetch);
       if (!has_image_actions) return undefined;
       return mode === "image"
-        ? model.actions.image_create
-        : model.actions[mode as keyof ModelActions];
+        ? model.runtime.actions.image_create
+        : model.runtime.actions[mode as keyof AIModelActions];
     }
-    return model.actions[(mode ?? "text") as keyof ModelActions];
+    return model.runtime.actions[(mode ?? "text") as keyof AIModelActions];
   }
 
-  private resolveOpenAIAction(model: ModelConfig): ActionFn | undefined {
-    if (model.actions.openai) return model.actions.openai;
-    if (model.baseURL && model.envKey) return this.createAutoPassthroughAction(model);
-    return undefined;
-  }
-
-  private createAutoPassthroughAction(model: ModelConfig): ActionFn {
-    const baseURL = model.baseURL!;
-    const envKey = model.envKey!;
-    const passthroughModel = model.passthroughModel;
-
-    return async (ctx: Context): Promise<Response> => {
-      const apiKey = ctx.env(envKey);
-      if (!apiKey) {
-        return new Response(JSON.stringify({
-          error: { message: `${envKey} is required`, type: "authentication_error" },
-        }), { status: 401, headers: { "content-type": "application/json" } });
-      }
-
-      const body = { ...ctx.input } as Record<string, unknown>;
-      if (passthroughModel) {
-        body.model = passthroughModel;
-      }
-
-      const response = await fetch(`${baseURL}/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: response.headers,
-      });
-    };
-  }
-
-  private getModelModalities(model: ModelConfig): string[] {
-    const modalities = Object.keys(model.actions).filter((key) => model.actions[key] !== undefined);
-    if (model.language_model && !modalities.includes("stream")) modalities.push("stream");
+  private getModelModalities(model: AIModelDefinition): string[] {
+    const modalities = Object.keys(model.runtime.actions)
+      .filter((key) => model.runtime.actions[key] !== undefined);
+    if (model.runtime.stream && !modalities.includes("stream")) modalities.push("stream");
     if (modalities.includes("image_create") && modalities.includes("image_fetch")) {
       modalities.push("image");
     }
-    if (!modalities.includes("openai") && this.resolveOpenAIAction(model)) modalities.push("openai");
     return modalities.filter((mode) => mode !== "image_create" && mode !== "image_fetch" && mode !== "image_result");
   }
 
@@ -289,12 +246,8 @@ export class AIService extends Service {
     mode: string,
   ): AIResolvedRoutingPlan {
     return resolve_text_routing_plan(resolved, ctx.input, mode, {
-      resolve_model: (input) => typeof input === "string"
-        ? this.models.get(input)
-        : this.models.get(input.id) ?? input,
-      resolve_action: (model, target_mode) => target_mode === "openai"
-        ? this.resolveOpenAIAction(model)
-        : this.getAction(model, target_mode),
+      resolve_model: (input) => this.models.get(input),
+      resolve_action: (model, target_mode) => this.getAction(model, target_mode),
       is_available: (model) => this.models.get_missing_env(model, ctx.env).length === 0,
     });
   }
@@ -312,8 +265,8 @@ export class AIService extends Service {
     const started_at = Date.now();
 
     try {
-      const provider_output = await resolved.action(ctx);
-      const { output, charge } = this.resolveProviderOutput(provider_output);
+      const channel_output = await resolved.action(ctx);
+      const { output, charge } = this.resolveChannelOutput(channel_output);
       this.attachOutputMetering(ctx, output, modality, started_at);
       const resolved_charge = charge ?? resolved.model?.bill?.(ctx, output);
       const defer_charge = isResponse(output) || isPromiseLike(resolved_charge);
@@ -337,8 +290,8 @@ export class AIService extends Service {
   /**
    * 执行 CityModel LanguageModelV3 模型流调用。
    *
-   * 路由、fallback、reasoning 和计费仍由 AIService 统一拥有；Provider 负责执行
-   * 标准模型流，transport 模块只编码 SSE，避免把 Provider 决策泄漏到客户端。
+   * 路由、fallback、reasoning 和计费仍由 AIService 统一拥有；AIChannel 负责执行
+   * 标准模型流，transport 模块只编码 SSE，避免把 Channel 决策泄漏到客户端。
    */
   private async handleLanguageModelStream(ctx: Context): Promise<Response> {
     const request = decode_city_language_model_request(ctx.input);
@@ -359,7 +312,7 @@ export class AIService extends Service {
 
     const output = await resolved.action(ctx);
     if (!is_language_model_stream_result(output)) {
-      throw httpError(500, "Provider stream did not return a LanguageModelV3 stream result");
+      throw httpError(500, "AIChannel stream did not return a LanguageModelV3 stream result");
     }
     const execution = create_city_language_model_stream({
       result: output,
@@ -389,7 +342,7 @@ export class AIService extends Service {
     this.attachResolvedModel(ctx, resolved.model, "image/create");
     try {
       const created = await resolved.action(ctx);
-      if (!isImageProviderCreateResult(created)) {
+      if (!isImageChannelCreateResult(created)) {
         throw httpError(500, "image_create action returned invalid result");
       }
       await this.insertImageJob(ctx, created);
@@ -412,7 +365,7 @@ export class AIService extends Service {
   /**
    * 后台抓取图片任务状态，并根据结果更新 async_jobs。
    */
-  private async fetchImageJob(ctx: Context): Promise<AIImageProviderFetchResult> {
+  private async fetchImageJob(ctx: Context): Promise<AIImageResult> {
     let claim: Awaited<ReturnType<typeof claim_image_job>> = null;
     const initial_job = await this.requireImageJob(ctx);
     try {
@@ -431,15 +384,15 @@ export class AIService extends Service {
       const model_id = job.model_id ?? readOptionalString(ctx.input.model);
       if (!model_id) throw httpError(422, "Image job is missing model_id");
       const model = this.models.get(model_id);
-      if (!model?.actions.image_fetch) {
+      if (!model?.runtime.actions.image_fetch) {
         throw httpError(422, `No image_fetch action for model: ${model_id}`);
       }
 
       this.attachResolvedModel(ctx, model, IMAGE_FETCH_ACTION);
       this.attachImageJobContext(ctx, job);
       const started_at = Date.now();
-      const output = await model.actions.image_fetch(ctx);
-      if (!isImageProviderResult(output)) {
+      const output = await model.runtime.actions.image_fetch(ctx);
+      if (!isImageChannelResult(output)) {
         throw httpError(500, "image_fetch action returned invalid result");
       }
       const stored_output = await this.normalizeImageResultStorage(ctx, output);
@@ -487,7 +440,7 @@ export class AIService extends Service {
   /**
    * 构造 pending 超时后的统一失败结果。
    */
-  private createImageJobPendingTimeoutResult(job: AsyncJobRecord): AIImageProviderFetchResult {
+  private createImageJobPendingTimeoutResult(job: AsyncJobRecord): AIImageResult {
     return {
       job_id: job.job_id,
       status: "failed",
@@ -524,8 +477,8 @@ export class AIService extends Service {
    */
   private async normalizeImageResultStorage(
     ctx: Context,
-    output: AIImageProviderFetchResult,
-  ): Promise<AIImageProviderFetchResult> {
+    output: AIImageResult,
+  ): Promise<AIImageResult> {
     if (!ctx.storage || output.status !== "succeeded" || !output.result) return output;
     const result = output.result as { parts?: unknown[] };
     if (!Array.isArray(result.parts)) return output;
@@ -581,7 +534,7 @@ export class AIService extends Service {
   /**
    * 写入图片任务。
    */
-  private async insertImageJob(ctx: Context, created: AIImageProviderCreateResult): Promise<void> {
+  private async insertImageJob(ctx: Context, created: AIImageCreateResult): Promise<void> {
     const table = ctx.db.async_jobs;
     if (!table) throw httpError(500, "AI async_jobs table is not initialized");
     const now = new Date().toISOString();
@@ -619,7 +572,7 @@ export class AIService extends Service {
   }
 
   /**
-   * 把 async_jobs 记录注入 Provider 可读取的上下文。
+   * 把 async_jobs 记录注入 AIChannel 可读取的上下文。
    */
   private attachImageJobContext(ctx: Context, job: AsyncJobRecord): void {
     const image_job: AIImageJobContext = {
@@ -638,7 +591,7 @@ export class AIService extends Service {
   /**
    * 将图片任务记录转成默认 result 返回。
    */
-  private imageJobToResult(job: AsyncJobRecord): AIImageProviderResult {
+  private imageJobToResult(job: AsyncJobRecord): AIImageResult {
     return {
       job_id: job.job_id,
       status: job.status === "fetching" ? "running" : job.status,
@@ -653,34 +606,50 @@ export class AIService extends Service {
   // ========== OpenAI 兼容通路 ==========
 
   private async handleChatCompletions(ctx: Context): Promise<Response> {
-    const body = ctx.input as Record<string, unknown>;
-    const modelId = this.normalizeModelId(body.model);
-    const initial_resolved = this.resolve({ model: modelId, mode: "openai" }, ctx.env);
-    const { resolved, fallback_from, fallback_reason, fallback_media_type } = this.plan_text_execution(initial_resolved, ctx, "openai");
-    const reasoning = resolved.model
-      ? resolve_model_reasoning(resolved.model, body)
-      : undefined;
-    this.attachResolvedModel(ctx, resolved.model, "openai", { fallback_from, fallback_reason, fallback_media_type });
-    ctx.input = body;
-    attach_resolved_reasoning(ctx, reasoning);
-    const started_at = Date.now();
-
     try {
+      const body = ctx.input as unknown as OpenAIChatCompletionRequest;
+      const model_id = this.normalizeModelId(body.model);
+      const call = openai_chat_request_to_language_model_call(body, ctx.request?.signal);
+      ctx.input = {
+        ...body,
+        model: model_id,
+        call,
+      };
+      const initial_resolved = this.resolve({ model: model_id, mode: LANGUAGE_MODEL_MODE }, ctx.env);
+      const routing = this.plan_text_execution(initial_resolved, ctx, LANGUAGE_MODEL_MODE);
+      const resolved = routing.resolved;
+      const reasoning = resolved.model
+        ? resolve_model_reasoning(resolved.model, body)
+        : undefined;
+      this.attachResolvedModel(ctx, resolved.model, "openai", routing);
+      attach_resolved_reasoning(ctx, reasoning);
+      const started_at = Date.now();
+
       const output = await resolved.action(ctx);
-      const provider_output = this.resolveProviderOutput(output);
-      this.attachOutputMetering(ctx, provider_output.output, "openai", started_at);
-      const resolved_charge = provider_output.charge ?? resolved.model?.bill?.(ctx, provider_output.output);
-      const defer_charge = isResponse(provider_output.output) || isPromiseLike(resolved_charge);
+      if (!is_language_model_stream_result(output)) {
+        throw httpError(500, "AIChannel stream did not return a LanguageModelV3 stream result");
+      }
+      const execution = await create_openai_chat_completion_response({
+        model_id: resolved.model?.id ?? model_id ?? "",
+        stream: body.stream === true,
+        result: output as LanguageModelV3StreamResult,
+      });
+      const completion = execution.completion.then((result) => {
+        if (result) this.attachOutputMetering(ctx, result, "openai", started_at);
+        return result;
+      });
+      const charge = resolved.model?.bill
+        ? completion.then((result) => result ? resolved.model?.bill?.(ctx, result) : undefined)
+        : undefined;
       const charged_response = await this.handleCharge(
         ctx,
-        resolved_charge,
-        defer_charge,
+        charge,
+        true,
         undefined,
         undefined,
-        isResponse(provider_output.output) ? provider_output.output : undefined,
+        execution.response,
       );
-      if (isResponse(provider_output.output)) return charged_response ?? provider_output.output;
-      return new Response(JSON.stringify(provider_output.output), { status: 200, headers: { "content-type": "application/json" } });
+      return charged_response ?? execution.response;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const status = (error as { statusCode?: number }).statusCode ?? 500;
@@ -693,19 +662,23 @@ export class AIService extends Service {
    */
   private attachResolvedModel(
     ctx: Context,
-    model: ModelConfig | undefined,
+    model: AIModelDefinition | undefined,
     mode: string,
     routing?: { fallback_from?: string; fallback_reason?: AIRoutingFallbackReason; fallback_media_type?: string },
   ): void {
     if (!model) return;
-    ctx.variant = { id: model.id, name: model.name, meta: model.meta };
+    ctx.variant = {
+      id: model.id,
+      name: model.name,
+      meta: model.meta,
+      upstream_model: model.upstream_model,
+      channel_id: model.channel_id,
+    };
     ctx.metering = {
       ...ctx.metering,
-      provider_id: model.provider_id,
+      channel_id: model.channel_id,
       model_id: model.id,
-      upstream_model: typeof model.meta?.upstream_model === "string"
-        ? model.meta.upstream_model
-        : model.passthroughModel,
+      upstream_model: model.upstream_model,
       request_count: ctx.metering?.request_count ?? 1,
       metadata: {
         ...(ctx.metering?.metadata ?? {}),
@@ -751,20 +724,14 @@ export class AIService extends Service {
   }
 
   /**
-   * 拆包 Provider 返回值。
+   * 拆包 AIChannel 返回值。
    *
    * 关键说明（中文）
-   * - 新 Provider 可以返回 `{ output, charge }` 或 `{ response, charge }`。
-   * - 老 Provider 继续直接返回 UIMessage / Response，保持兼容。
+   * - Channel 可以返回统一的 `{ output, charge }`。
+   * - 普通 action 也可以直接返回 UIMessage / Response。
    */
-  private resolveProviderOutput(value: unknown): ResolvedProviderOutput {
-    if (isProviderChargedResponse(value)) {
-      return {
-        output: value.response,
-        charge: value.charge,
-      };
-    }
-    if (isProviderChargedOutput(value)) {
+  private resolveChannelOutput(value: unknown): ResolvedChannelOutput {
+    if (isChannelChargedOutput(value)) {
       return {
         output: value.output,
         charge: value.charge,
@@ -778,7 +745,7 @@ export class AIService extends Service {
    */
   private async handleCharge(
     ctx: Context,
-    charge: AIProviderChargeLine | Promise<AIProviderChargeLine | undefined> | undefined,
+    charge: AICharge | Promise<AICharge | undefined> | undefined,
     defer: boolean,
     idempotency_key?: string,
     fallback_user_id?: string,
@@ -786,7 +753,7 @@ export class AIService extends Service {
   ): Promise<Response | undefined> {
     if (!charge || !this.balance) return response;
     ctx.locals.ai_charge_handled = true;
-    let charge_line: AIProviderChargeLine | undefined;
+    let charge_line: AICharge | undefined;
     let charge_user_id: string | undefined;
     const promise = Promise.resolve(charge)
       .then(async (line) => {
@@ -808,7 +775,7 @@ export class AIService extends Service {
           service_id: ctx.service?.id,
           action_id: ctx.action?.id,
           model_id: ctx.metering?.model_id,
-          provider_id: ctx.metering?.provider_id,
+          channel_id: ctx.metering?.channel_id,
           credits: charge_line?.credits,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -837,7 +804,7 @@ export class AIService extends Service {
   static listModels(aiService: AIService, options: {
     env: EnvReader;
     identity: "guest" | "user" | "admin";
-  }): PublicModel[] {
+  }): CityModelDescriptor[] {
     return aiService.models.list_public({
       ...options,
       get_modalities: (model) => aiService.getModelModalities(model),

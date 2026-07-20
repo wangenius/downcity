@@ -4,9 +4,23 @@
 
 import type { UIMessage, UIMessageChunk } from "ai";
 import type {
+  AIBill,
+  AIChannelOptions,
+  AICharge,
+  AIChargedResult,
   AIInvoker,
-  CityProviderStreamCall,
-  CityProviderStreamResult,
+  AIImageCreateResult,
+  AIImageResult,
+  AIModelDefinition,
+  AIModelFallbackMedia,
+  AIModelFallbackRule,
+  AIModelSpec,
+  AIResolvedReasoning,
+  AISDKProviderOptions,
+  AIServiceOptions,
+  LanguageModelV3,
+  LanguageModelV3CallOptions,
+  LanguageModelV3StreamResult,
   CityModelDescriptor,
   City,
   ModelCatalog,
@@ -18,8 +32,37 @@ import type {
   UserServiceSummary,
 } from "../src/index.js";
 
-declare const provider_stream_call: CityProviderStreamCall;
-declare const provider_stream_result: CityProviderStreamResult;
+// @ts-expect-error 旧计费类型不再从公共入口导出
+import type { AIChannelChargeLine } from "../src/index.js";
+// @ts-expect-error 语言运行时已经收进 AIModelDefinition.runtime
+import type { AIModelLanguageRuntime } from "../src/index.js";
+// @ts-expect-error 图片 Channel 结果已统一为 AIImageResult
+import type { AIImageChannelResult } from "../src/index.js";
+// @ts-expect-error OpenAI Chat 细粒度协议只属于内部 transport
+import type { OpenAIChatCompletionRequest } from "../src/index.js";
+
+/** 公共 AI 类型必须从单一 SDK 入口稳定导出。 */
+type PublicAITypeContract = [
+  AIChannelOptions,
+  AIModelSpec,
+  AIModelDefinition,
+  AIModelFallbackMedia,
+  AIModelFallbackRule,
+  AIServiceOptions,
+  LanguageModelV3,
+  AISDKProviderOptions,
+  AIResolvedReasoning,
+  AICharge,
+  AIBill,
+  AIChargedResult,
+  AIImageCreateResult,
+  AIImageResult,
+];
+declare const public_ai_type_contract: PublicAITypeContract;
+void public_ai_type_contract;
+
+declare const provider_stream_call: LanguageModelV3CallOptions;
+declare const provider_stream_result: LanguageModelV3StreamResult;
 void provider_stream_call;
 void provider_stream_result;
 

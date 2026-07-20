@@ -48,10 +48,7 @@ async function submit(query: string): Promise<void> {
 
   const result = await turn.finished;
   clear_active_turn(turn.id);
-
-  if (!result.success) {
-    show_turn_error(result.error || "Execution failed");
-  }
+  set_turn_status(turn.id, result.success ? "completed" : "failed");
 }
 
 async function stop(): Promise<void> {
@@ -71,9 +68,10 @@ Disable Send for empty input. Drive the Stop button from Turn Mutations or `get_
 - Append a `delta` only to its current text/reasoning Part.
 - Replace complete Part state by stable `part_id`.
 - Replace complete Message state by `message_id + revision`.
+- Treat the top-level `error` Message as the single user-visible error for one failure.
 - Render approval controls for `approval-required`, progress for `running`, and errors for `failed` Tool Parts.
 
-Do not flatten tool calls into another persisted list and do not overwrite an Assistant already rendered by Parts with final `turn.text`.
+Do not flatten tool calls into another persisted list and do not overwrite an Assistant already rendered by Parts with final `turn.text`. Use `turn.finished.error` only for control flow and logging; when the UI already renders an `error` Message, do not append another error notice.
 
 ## Approval card
 

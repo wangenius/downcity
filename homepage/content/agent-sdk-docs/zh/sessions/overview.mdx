@@ -42,23 +42,22 @@ const unsubscribe = session.subscribe((mutation) => {
     mutation.variant === "part" &&
     mutation.type === "tool" &&
     mutation.part.state === "approval-required" &&
-    mutation.part.approval
+    mutation.part.approval?.request
   ) {
-    show_approval_request(mutation.part.approval);
+    show_approval_request(mutation.part.approval.request);
   }
 });
 
 const turn = await session.prompt({ query: "分析这个仓库的 Session 设计" });
 const result = await turn.finished;
-
-if (!result.success) {
-  show_error(result.error || "Turn failed");
-}
+set_turn_status(turn.id, result.success ? "completed" : "failed");
 
 unsubscribe();
 ```
 
 `apply_mutation_to_ui()` 应按 `message_id + revision` 合并完整快照；对 `delta` 只追加增量文本。完整做法见 [实时订阅](/zh/agent-sdk-docs/sessions/subscribe) 和 [重连与同步](/zh/agent-sdk-docs/sessions/reconnect-and-sync)。
+
+失败时，用户可见错误由 canonical `error` Message 提供。`turn.finished.error` 用于控制流、日志或非 Message 界面；已经渲染 Session Message 的聊天界面不要再把它追加成第二条错误。
 
 ## Session 里有哪些对象
 

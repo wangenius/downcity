@@ -55,8 +55,19 @@ export interface Context {
   /** 所属 city */
   city?: { city_id: string; status: string };
   /** 当前解析的 variant（如 AI model、翻译语言对等）。由 Service 自行注入 */
-  variant?: { id: string; name: string; meta?: Record<string, unknown> };
-  /** 当前调用的标准化计量信息。由 Service 或 Provider 自行注入 */
+  variant?: {
+    /** variant 唯一 ID。 */
+    id: string;
+    /** variant 展示名称。 */
+    name: string;
+    /** AI 模型对应的真实上游模型 ID。 */
+    upstream_model?: string;
+    /** AI 模型所属 Channel ID。 */
+    channel_id?: string;
+    /** variant 可公开扩展信息。 */
+    meta?: Record<string, unknown>;
+  };
+  /** 当前调用的标准化计量信息。由 Service 或 AIChannel 自行注入 */
   metering?: RuntimeMetering;
   /** Action 开始时间（框架自动填充） */
   started_at?: Date;

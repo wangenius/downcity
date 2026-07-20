@@ -72,34 +72,27 @@ export type {
 } from "./service/instruction.js";
 
 export { AIService } from "./service/ai/ai-service.js";
-export { Provider } from "./service/ai/provider.js";
+export { AIChannel } from "./service/ai/AIChannel.js";
 export { read_resolved_reasoning } from "./service/ai/reasoning.js";
 
 export type {
+  AIChannelOptions,
+  AIModelSpec,
+  AIModelDefinition,
+  AIModelFallbackMedia,
+  AIModelFallbackRule,
   AIServiceOptions,
-  ModelConfig,
-  ModelFallbackMedia,
-  ModelFallbackRule,
-  ModelActions,
-  ModelLanguageRuntime,
-  CityLanguageModelV3,
-  OpenAICompatibleClient,
-  OpenAICompatibleClientConfig,
-  ProviderOptions,
-  PublicModel,
-} from "./service/ai/types.js";
-
-export type {
-  AIProviderOptionObject,
-  AIProviderOptions,
-  AIProviderOptionValue,
+  LanguageModelV3,
+  LanguageModelV3CallOptions,
+  LanguageModelV3StreamResult,
+  AISDKProviderOptions,
   AIResolvedReasoning,
-} from "./types/AIReasoning.js";
-
-export type {
-  CityProviderStreamCall,
-  CityProviderStreamResult,
-} from "./types/CityLanguageModelRuntime.js";
+  AICharge,
+  AIBill,
+  AIChargedResult,
+  AIImageCreateResult,
+  AIImageResult,
+} from "./types/AI.js";
 
 export {
   buildAssistantMessage,
@@ -107,14 +100,11 @@ export {
   buildToolSet,
   isRecord,
   normalizeAIUsage,
-  normalizeOpenAICompatibleBody,
-  normalizeTextOnlyOpenAICompatibleBody,
   readErrorMessage,
   readJsonResponse,
-  readOpenAICompatibleSseUsage,
-  readRequiredEnv,
+  read_required_env,
   readString,
-  resolveUpstreamModel,
+  resolve_upstream_model,
   stripUndefined,
   toRecord,
   trimTrailingSlash,
@@ -125,15 +115,6 @@ export type {
   ExtractedImage,
   ToolCallShape,
 } from "./service/ai/helpers.js";
-
-export type {
-  AIBalanceBridge,
-  AIBalanceChargeInput,
-  AIProviderBillFn,
-  AIProviderChargedOutput,
-  AIProviderChargedResponse,
-  AIProviderChargeLine,
-} from "./service/ai/charge.js";
 
 // ===========================================================================
 // 场景 3：用户鉴权与 Token
@@ -225,12 +206,6 @@ export type {
   UserTextResult,
   UserVideoResult,
 } from "./pact/user/types.js";
-
-export type {
-  AIImageProviderCreateResult,
-  AIImageProviderFetchResult,
-  AIImageProviderResult,
-} from "./service/ai/job-types.js";
 
 export type {
   UserPaymentMethod as PaymentMethod,

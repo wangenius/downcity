@@ -25,11 +25,11 @@ import {
   waffoPaymentProvider,
 } from "@downcity/services";
 import {
-  GeminiImageProvider,
-  LuchiImageProvider,
-  OpenAIImageProvider,
-} from "./image-provider.js";
-import { DeepSeekProvider } from "./deepseek-provider.js";
+  GeminiImageChannel,
+  LuchiImageChannel,
+  OpenAIImageChannel,
+} from "./image-channel.js";
+import { DeepSeekChannel } from "./deepseek-channel.js";
 
 const INITIAL_BALANCE = 100_000_000;
 const CHAT_REQUEST_COST_CREDITS = 10_000;
@@ -87,49 +87,48 @@ async function init_federation(env: Env): Promise<Federation> {
 
   federation.use(new UsageService({ record_errors: true }));
 
-  const deepseek_provider = new DeepSeekProvider();
-  const luchi_image_provider = new LuchiImageProvider({
+  const deepseek_channel = new DeepSeekChannel();
+  const luchi_image_channel = new LuchiImageChannel({
     id: "luchi-image",
-    envKey: "LUCHI_IMAGE_API_KEY",
-    defaultModelId: "gpt-image-2",
+    env_key: "LUCHI_IMAGE_API_KEY",
   });
-  const image_302_provider = new OpenAIImageProvider({
+  const image_302_channel = new OpenAIImageChannel({
     id: "302-image",
-    envKey: "AI302_API_KEY",
-    baseURL: "https://api.302.ai/v1",
-    defaultModelId: "gpt-image-1",
-    providerOptionsKey: "302ai",
+    env_key: "AI302_API_KEY",
+    base_url: "https://api.302.ai/v1",
+    provider_options_key: "302ai",
   });
-  const openai_image_provider = new OpenAIImageProvider({
+  const openai_image_channel = new OpenAIImageChannel({
     id: "openai-image",
-    envKey: "OPENAI_API_KEY",
-    baseURL: "https://api.openai.com/v1",
-    defaultModelId: "gpt-image-1",
+    env_key: "OPENAI_API_KEY",
+    base_url: "https://api.openai.com/v1",
   });
-  const gemini_image_provider = new GeminiImageProvider({
+  const gemini_image_channel = new GeminiImageChannel({
     id: "gemini-image",
-    envKey: "GEMINI_API_KEY",
-    defaultModelId: "gemini-2.5-flash-image",
+    env_key: "GEMINI_API_KEY",
   });
 
   const ai = new AIService({ balance });
   ai.use([
-    deepseek_provider.model({
+    deepseek_channel.model({
       id: "deepseek-v4-flash",
+      upstream_model: "deepseek-v4-flash",
       name: "DeepSeek V4 Flash",
       description: "DeepSeek OpenAI-compatible text model",
       tags: ["deepseek", "text"],
       bill: (ctx, output) => bill_ai_request(ctx, output, CHAT_REQUEST_COST_CREDITS),
     }),
-    deepseek_provider.model({
+    deepseek_channel.model({
       id: "deepseek-v4-pro",
+      upstream_model: "deepseek-v4-pro",
       name: "DeepSeek V4 Pro",
       description: "DeepSeek OpenAI-compatible text model",
       tags: ["deepseek", "text"],
       bill: (ctx, output) => bill_ai_request(ctx, output, CHAT_REQUEST_COST_CREDITS),
     }),
-    luchi_image_provider.model({
+    luchi_image_channel.model({
       id: "luchi-gpt-image-2",
+      upstream_model: "gpt-image-2",
       name: "Luchi GPT Image 2",
       description: "Luchi async image generation model",
       tags: ["luchi", "image"],
@@ -138,8 +137,9 @@ async function init_federation(env: Env): Promise<Federation> {
       },
       bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_CREDITS),
     }),
-    luchi_image_provider.model({
+    luchi_image_channel.model({
       id: "luchi-gpt-image-1",
+      upstream_model: "gpt-image-1",
       name: "Luchi GPT Image 1",
       description: "Luchi async image generation model",
       tags: ["luchi", "image"],
@@ -148,24 +148,27 @@ async function init_federation(env: Env): Promise<Federation> {
       },
       bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_CREDITS),
     }),
-    image_302_provider.model({
+    image_302_channel.model({
       id: "302-gpt-image-1",
+      upstream_model: "gpt-image-1",
       name: "302.ai GPT Image 1",
       description: "302.ai OpenAI-compatible image generation model",
       tags: ["302.ai", "image"],
       meta: { upstream_model: "gpt-image-1" },
       bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_CREDITS),
     }),
-    openai_image_provider.model({
+    openai_image_channel.model({
       id: "openai-gpt-image-1",
+      upstream_model: "gpt-image-1",
       name: "OpenAI GPT Image 1",
       description: "OpenAI image generation model",
       tags: ["openai", "image"],
       meta: { upstream_model: "gpt-image-1" },
       bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_CREDITS),
     }),
-    gemini_image_provider.model({
+    gemini_image_channel.model({
       id: "gemini-2.5-flash-image",
+      upstream_model: "gemini-2.5-flash-image",
       name: "Gemini 2.5 Flash Image",
       description: "Gemini generateContent image model",
       tags: ["gemini", "image"],
@@ -233,7 +236,7 @@ function bill_ai_request(ctx: Context, output: unknown, credits: number) {
       service_id: "ai",
       action_id: mode,
       model_id: ctx.metering?.model_id ?? ctx.variant?.id,
-      provider_id: ctx.metering?.provider_id,
+      channel_id: ctx.metering?.channel_id,
     },
   };
 }

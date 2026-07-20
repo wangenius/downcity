@@ -9,7 +9,8 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import { MockLanguageModelV3 } from "ai/test"
 
-import { AIService, CityModel, Provider } from "../bin/index.js"
+import { AIChannel, AIService, CityModel } from "../bin/index.js"
+import { prepare_city_language_model_call } from "../bin/service/ai/language-model-stream.js"
 
 const usage = {
   inputTokens: { total: 12, noCache: 8, cacheRead: 4, cacheWrite: 0 },
@@ -69,6 +70,20 @@ function create_context(input, signal) {
   }
 }
 
+test("Federation removes client providerOptions before Provider execution", () => {
+  const abort_controller = new AbortController()
+  const call = prepare_city_language_model_call({
+    prompt: [],
+    providerOptions: {
+      openai: { store: true },
+      custom: { unsafe: true },
+    },
+  }, abort_controller.signal)
+
+  assert.equal(call.abortSignal, abort_controller.signal)
+  assert.equal("providerOptions" in call, false)
+})
+
 test("CityModel directly streams through Federation LanguageModelV3 runtime", async () => {
   const charges = []
   const requests = []
@@ -87,20 +102,18 @@ test("CityModel directly streams through Federation LanguageModelV3 runtime", as
       charge: async (input) => charges.push(input),
     },
   })
-  const provider = new (class extends Provider {
-    createClient() {
-      return {
-        chat: () => provider_model,
-      }
+  const channel = new (class extends AIChannel {
+    async stream(ctx, call) {
+      return this.stream_ai_sdk_model(ctx, call, provider_model)
     }
   })({
     id: "mock",
     env: {},
-    envKey: "MOCK_API_KEY",
-    passthroughModel: "upstream-model",
+    env_key: "MOCK_API_KEY",
   })
-  ai.use(provider.model({
+  ai.use(channel.model({
     id: "city-model",
+    upstream_model: "upstream-model",
     name: "City Model",
     reasoning: {
       efforts: [{ id: "high", name: "High" }],

@@ -1,26 +1,26 @@
 /**
- * 图片 Provider。
+ * 图片 AIChannel 实现。
  *
  * 关键点（中文）
  * - city.ai.image_create() / image_result() 的统一结果协议是 AI SDK UIMessage。
- * - AIService 使用内置 async_jobs 表持久化任务状态，Provider 不管理任务存储。
+ * - AIService 使用内置 async_jobs 表持久化任务状态，AIChannel 不管理任务存储。
  * - image_create() 创建或启动上游任务；image_fetch() 从 AIService 注入的任务上下文读取 state 并查询上游结果。
- * - OpenAI / 302、Gemini、Luchi 三种图片 Provider 都继承 Provider 基类。
+ * - OpenAI / 302、Gemini、Luchi 三种图片 Channel 都继承 AIChannel 基类。
  * - 不同上游的同步响应、Gemini content parts、Luchi 异步 job 都在这里归一成 file parts。
  * - 第一版只支持 JSON / URL / data URL，不处理 multipart 本地文件上传。
  */
 
 import {
-  Provider,
-  type AIImageProviderCreateResult,
-  type AIImageProviderResult,
+  AIChannel,
+  type AIImageCreateResult,
+  type AIImageResult,
   type Context,
   buildImageMessage,
   readErrorMessage,
   readJsonResponse,
-  readRequiredEnv,
+  read_required_env,
   readString,
-  resolveUpstreamModel,
+  resolve_upstream_model,
   stripUndefined,
   toRecord,
   trimTrailingSlash,
@@ -85,52 +85,47 @@ export interface ImageActionInput extends Record<string, unknown> {
   seed?: number;
   /** 业务侧任务 ID，用于异步图片任务幂等和恢复。 */
   client_job_id?: string;
-  /** Provider 私有参数。 */
+  /** 上游私有参数。 */
   provider_options?: Record<string, unknown>;
 }
 
-/** OpenAI / 302 images API Provider 配置。 */
-export interface OpenAIImageProviderOptions {
-  /** Provider 唯一 ID。 */
+/** OpenAI / 302 images API Channel 配置。 */
+export interface OpenAIImageChannelOptions {
+  /** Channel 唯一 ID。 */
   id: string;
   /** API Key 环境变量。 */
-  envKey: string;
+  env_key: string;
   /** OpenAI-compatible base URL，通常包含 `/v1`。 */
-  baseURL: string;
+  base_url: string;
   /** 默认上游模型 ID。 */
-  defaultModelId: string;
   /** 图片生成路径。 */
-  generationPath?: string;
+  generation_path?: string;
   /** provider_options 中读取私有参数的 key，默认 `openai`。 */
-  providerOptionsKey?: string;
+  provider_options_key?: string;
 }
 
-/** Gemini 图片 Provider 配置。 */
-export interface GeminiImageProviderOptions {
-  /** Provider 唯一 ID。 */
+/** Gemini 图片 Channel 配置。 */
+export interface GeminiImageChannelOptions {
+  /** Channel 唯一 ID。 */
   id: string;
   /** API Key 环境变量。 */
-  envKey: string;
+  env_key: string;
   /** Gemini API base URL。 */
-  baseURL?: string;
-  /** 默认上游模型 ID。 */
-  defaultModelId: string;
+  base_url?: string;
 }
 
-/** Luchi 图片 Provider 配置。 */
-export interface LuchiImageProviderOptions {
-  /** Provider 唯一 ID。 */
+/** Luchi 图片 Channel 配置。 */
+export interface LuchiImageChannelOptions {
+  /** Channel 唯一 ID。 */
   id: string;
   /** Luchi 长期 API Key 环境变量。 */
-  envKey: string;
+  env_key: string;
   /** Luchi image API base URL。 */
-  baseURL?: string;
-  /** 默认上游模型 ID。 */
-  defaultModelId: string;
+  base_url?: string;
   /** 轮询间隔毫秒。 */
-  pollIntervalMs?: number;
+  poll_interval_ms?: number;
   /** 最大轮询次数。 */
-  maxPolls?: number;
+  max_polls?: number;
 }
 
 interface ExtractedImage {
@@ -160,27 +155,26 @@ interface RuntimeImageJobContext {
 const DEFAULT_IMAGE_MEDIA_TYPE = "image/png";
 
 // ===========================================================================
-// OpenAI / 302 images API Provider
+// OpenAI / 302 images API Channel
 // ===========================================================================
 
-/** OpenAI / 302 images API 图片 Provider。 */
-export class OpenAIImageProvider extends Provider {
+/** OpenAI / 302 images API 图片 Channel。 */
+export class OpenAIImageChannel extends AIChannel {
   private readonly generation_path: string;
   private readonly provider_options_key: string;
 
-  constructor(options: OpenAIImageProviderOptions) {
+  constructor(options: OpenAIImageChannelOptions) {
     super({
       id: options.id,
-      envKey: options.envKey,
-      baseURL: options.baseURL,
-      passthroughModel: options.defaultModelId,
+      env_key: options.env_key,
+      base_url: options.base_url,
     });
-    this.generation_path = options.generationPath ?? "/images/generations";
-    this.provider_options_key = options.providerOptionsKey ?? "openai";
+    this.generation_path = options.generation_path ?? "/images/generations";
+    this.provider_options_key = options.provider_options_key ?? "openai";
   }
 
-  async image_create(ctx: Context): Promise<AIImageProviderCreateResult> {
-    const upstream_model = resolveUpstreamModel(ctx, this.passthroughModel ?? "");
+  async image_create(ctx: Context): Promise<AIImageCreateResult> {
+    const upstream_model = resolve_upstream_model(ctx);
     const job_id = `openai_img_${crypto.randomUUID()}`;
     return {
       job_id,
@@ -195,10 +189,10 @@ export class OpenAIImageProvider extends Provider {
     };
   }
 
-  async image_fetch(ctx: Context): Promise<AIImageProviderResult> {
+  async image_fetch(ctx: Context): Promise<AIImageResult> {
     const job = readImageJobContext(ctx);
     try {
-      const api_key = readRequiredEnv(ctx, this.envKey ?? "");
+      const api_key = read_required_env(ctx, this.env_key ?? "");
       const provider_options = readProviderOptions(job.input, this.provider_options_key);
       const body = stripUndefined({
         model: job.upstream_model,
@@ -210,7 +204,7 @@ export class OpenAIImageProvider extends Provider {
         ...provider_options,
       });
 
-      const response = await fetch(`${trimTrailingSlash(this.baseURL ?? "")}${this.generation_path}`, {
+      const response = await fetch(`${trimTrailingSlash(this.base_url ?? "")}${this.generation_path}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${api_key}`,
@@ -248,24 +242,24 @@ export class OpenAIImageProvider extends Provider {
 }
 
 // ===========================================================================
-// Gemini generateContent Provider
+// Gemini generateContent Channel
 // ===========================================================================
 
-/** Gemini generateContent 图片 Provider。 */
-export class GeminiImageProvider extends Provider {
-  private readonly base_url: string;
+/** Gemini generateContent 图片 Channel。 */
+export class GeminiImageChannel extends AIChannel {
+  private readonly api_base_url: string;
 
-  constructor(options: GeminiImageProviderOptions) {
+  constructor(options: GeminiImageChannelOptions) {
     super({
       id: options.id,
-      envKey: options.envKey,
-      passthroughModel: options.defaultModelId,
+      env_key: options.env_key,
+      base_url: options.base_url ?? "https://generativelanguage.googleapis.com/v1beta",
     });
-    this.base_url = options.baseURL ?? "https://generativelanguage.googleapis.com/v1beta";
+    this.api_base_url = options.base_url ?? "https://generativelanguage.googleapis.com/v1beta";
   }
 
-  async image_create(ctx: Context): Promise<AIImageProviderCreateResult> {
-    const upstream_model = resolveUpstreamModel(ctx, this.passthroughModel ?? "");
+  async image_create(ctx: Context): Promise<AIImageCreateResult> {
+    const upstream_model = resolve_upstream_model(ctx);
     const job_id = `gemini_img_${crypto.randomUUID()}`;
     return {
       job_id,
@@ -276,10 +270,10 @@ export class GeminiImageProvider extends Provider {
     };
   }
 
-  async image_fetch(ctx: Context): Promise<AIImageProviderResult> {
+  async image_fetch(ctx: Context): Promise<AIImageResult> {
     const job = readImageJobContext(ctx);
     try {
-      const api_key = readRequiredEnv(ctx, this.envKey ?? "");
+      const api_key = read_required_env(ctx, this.env_key ?? "");
       const provider_options = readProviderOptions(job.input, "gemini");
       const body = stripUndefined({
         contents: toGeminiContents(job.input),
@@ -290,7 +284,7 @@ export class GeminiImageProvider extends Provider {
         ...omitKeys(provider_options, ["generationConfig"]),
       });
 
-      const response = await fetch(`${trimTrailingSlash(this.base_url)}/models/${encodeURIComponent(job.upstream_model)}:generateContent`, {
+      const response = await fetch(`${trimTrailingSlash(this.api_base_url)}/models/${encodeURIComponent(job.upstream_model)}:generateContent`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -326,35 +320,35 @@ export class GeminiImageProvider extends Provider {
 }
 
 // ===========================================================================
-// Luchi 异步 job Provider
+// Luchi 异步 job Channel
 // ===========================================================================
 
-/** Luchi 异步 job 图片 Provider。 */
-export class LuchiImageProvider extends Provider {
-  private readonly base_url: string;
+/** Luchi 异步 job 图片 Channel。 */
+export class LuchiImageChannel extends AIChannel {
+  private readonly api_base_url: string;
   private readonly poll_interval_ms: number;
   private readonly max_polls: number;
 
-  constructor(options: LuchiImageProviderOptions) {
+  constructor(options: LuchiImageChannelOptions) {
     super({
       id: options.id,
-      envKey: options.envKey,
-      passthroughModel: options.defaultModelId,
+      env_key: options.env_key,
+      base_url: options.base_url ?? "https://image.luchikey.com",
     });
-    this.base_url = options.baseURL ?? "https://image.luchikey.com";
-    this.poll_interval_ms = options.pollIntervalMs ?? 3000;
-    this.max_polls = options.maxPolls ?? 60;
+    this.api_base_url = options.base_url ?? "https://image.luchikey.com";
+    this.poll_interval_ms = options.poll_interval_ms ?? 3000;
+    this.max_polls = options.max_polls ?? 60;
   }
 
-  async image_create(ctx: Context): Promise<AIImageProviderCreateResult> {
+  async image_create(ctx: Context): Promise<AIImageCreateResult> {
     const input = normalizeImageActionInput(ctx.input);
-    const api_key = readRequiredEnv(ctx, this.envKey ?? "");
-    const upstream_model = resolveUpstreamModel(ctx, this.passthroughModel ?? "");
+    const api_key = read_required_env(ctx, this.env_key ?? "");
+    const upstream_model = resolve_upstream_model(ctx);
     const job_id = await createLuchiJob({
       ctx,
       input,
       api_key,
-      base_url: this.base_url,
+      base_url: this.api_base_url,
       upstream_model,
     });
     return {
@@ -366,11 +360,11 @@ export class LuchiImageProvider extends Provider {
     };
   }
 
-  async image_fetch(ctx: Context): Promise<AIImageProviderResult> {
+  async image_fetch(ctx: Context): Promise<AIImageResult> {
     const job = readImageJobContext(ctx);
-    const api_key = readRequiredEnv(ctx, this.envKey ?? "");
+    const api_key = read_required_env(ctx, this.env_key ?? "");
     const data = await readLuchiJob({
-      base_url: this.base_url,
+      base_url: this.api_base_url,
       api_key,
       job_id: job.job_id,
     });
@@ -381,7 +375,7 @@ export class LuchiImageProvider extends Provider {
         job_id: job.job_id,
         status: "succeeded",
         message: "succeeded",
-        result: buildImageMessage(ctx, extractImagesFromLuchiResponse(data, this.base_url), {
+        result: buildImageMessage(ctx, extractImagesFromLuchiResponse(data, this.api_base_url), {
           provider: this.id,
           upstream_model: job.upstream_model,
           city_id: job.city_id,
@@ -448,12 +442,12 @@ function readImageJobContext(ctx: Context): RuntimeImageJobContext {
     input: normalizeImageActionInput(toRecord(value)?.input),
     user_id: readString(record?.user_id) || readString(state.user_id),
     city_id: readString(record?.city_id) || readString(state.city_id),
-    upstream_model: readString(state.upstream_model) || resolveUpstreamModel(ctx, ""),
+    upstream_model: readString(state.upstream_model) || resolve_upstream_model(ctx),
     state,
   };
 }
 
-function failedImageFetch(job: RuntimeImageJobContext, error: unknown): AIImageProviderResult {
+function failedImageFetch(job: RuntimeImageJobContext, error: unknown): AIImageResult {
   return {
     job_id: job.job_id,
     status: "failed",

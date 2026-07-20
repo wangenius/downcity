@@ -1,168 +1,31 @@
 ---
-title: Model Pathways
-description: The two-pathway architecture of Provider + AIService.
+title: Model Adapters
+description: Adapt upstream protocols once through AIChannel.stream().
 ---
 
-Downcity's AI service has **two independent pathways** sharing a single model registry:
+Downcity has two public protocols and one internal execution path:
 
-```
-                    Provider.model({ id: "deepseek-v4-flash", ... })
-                                    │
-                              ai.use(model)
-                                    │
-              ┌─────────────────────┴─────────────────────┐
-              │                                           │
-      City SDK / CityModel Pathway              OpenAI-Compatible Pathway
-  For User City / Agent CityModel            For curl / OpenAI SDK / compatible clients
-              │                                           │
-   POST /v1/ai/text               POST /v1/ai/chat/completions
-   POST /v1/ai/stream                  ↑
-              │                         OpenAI-format body
-              ▼                        { model, messages, stream }
-   provider.text                                     │
-   provider.stream(ctx, call)                       ▼
-              │                             provider.openai
-              ▼                         (passthrough or format conversion)
- UIMessage / LanguageModelV3StreamPart              │
-              │                                    ▼
- city.ai.stream() converts locally             Response
-              │                           (upstream raw response)
-              ▼
-       UIMessageChunk
+```text
+City SDK / CityModel ------\
+                            -> LanguageModelV3CallOptions -> AIChannel.stream()
+OpenAI Chat Completions ---/                              -> V3 stream
 ```
 
-## Provider Pattern
+Use `stream_ai_sdk_model()` for an AI SDK model. For a private HTTP protocol, implement `stream()` directly and return `LanguageModelV3StreamResult`. AIService does not know the vendor request format.
 
-```ts
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { Provider, type OpenAICompatibleClientConfig, type Context, type AIProviderChargedResponse } from "@downcity/city";
+OpenAI Chat Completions is an HTTP adapter around the same V3 path. There is no raw passthrough and no separate `openai` action, so tools, fallback, reasoning, metering, and billing behave consistently across clients.
 
-// OpenAI-compatible: createClient provides text and CityModel streaming;
-// no openai method means automatic passthrough.
-class DeepSeekProvider extends Provider {
-  constructor() {
-    super({
-      id: "deepseek",
-      env: { DEEPSEEK_API_KEY: "DeepSeek API Key" },
-      baseURL: "https://api.deepseek.com",
-      envKey: "DEEPSEEK_API_KEY",
-    });
-  }
+Keep upstream-specific behavior in the Channel:
 
-  protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
-    return createOpenAICompatible({ apiKey, baseURL, name: "deepseek" });
-  }
-}
+- credentials and base URL;
+- upstream model factory and protocol selection;
+- model-specific AI SDK providerOptions;
+- usage interpretation and billing;
+- conversion from private streams to V3 parts.
 
-const deepseek = new DeepSeekProvider();
+Keep Federation behavior in AIService:
 
-// Non-OpenAI format: provide a custom openai method
-class OpenAICustomProvider extends Provider {
-  constructor() {
-    super({
-      id: "openai-custom",
-      env: { OPENAI_API_KEY: "OpenAI API Key" },
-      baseURL: "https://api.openai.com/v1",
-      envKey: "OPENAI_API_KEY",
-    });
-  }
-
-  protected createClient({ apiKey, baseURL }: OpenAICompatibleClientConfig) {
-    return createOpenAICompatible({ apiKey, baseURL, name: "openai-custom" });
-  }
-
-  async openai(ctx: Context): Promise<AIProviderChargedResponse> {
-    return openaiCompatibleHandler(ctx);
-  }
-}
-
-const openaiCustom = new OpenAICustomProvider();
-```
-
-## Auto Passthrough
-
-When no `openai` handler but `baseURL` + `envKey` exist, AIService auto-generates a passthrough:
-
-```
-POST /chat/completions → fetch(baseURL + body) → raw upstream Response
-```
-
-Zero adapter code. Fully OpenAI-compatible.
-
-## Format Conversion
-
-For OpenAI-compatible providers with custom upstream requirements, the `openai` handler can do bidirectional conversion:
-
-- Downstream: OpenAI body → provider-specific request body
-- Upstream (non-streaming): Provider JSON → OpenAI JSON
-- Upstream (streaming): Provider SSE events → OpenAI SSE chunks (event by event)
-
-## Provider Billing
-
-Provider actions may return a charge line next to the normal output, but the preferred place for shared pricing logic is `bill(ctx, output)` on the provider or model. This keeps provider-specific usage parsing inside the provider instead of exposing token/cache fields as a global protocol.
-
-When `AIService` receives a balance bridge, it prechecks model-consuming requests before the provider call. The default check only blocks users whose wallet is already negative; the actual debit still happens after success from the returned charge line.
-
-```ts
-import { Provider, buildAssistantMessage, type Context, type AIProviderChargedOutput } from "@downcity/city";
-import type { UIMessage } from "ai";
-
-const ai = new AIService({
-  balance,
-});
-
-class PricedProvider extends Provider {
-  constructor() {
-    super({ id: "priced-provider" });
-  }
-
-  protected bill(ctx: Context, output: unknown) {
-    return {
-      credits: priceUpstreamUsage(output?.metadata?.usage),
-      note: "priced-provider text",
-      metadata: {
-        provider_id: "priced-provider",
-        raw_usage: output?.metadata?.usage,
-      },
-    };
-  }
-
-  async text(ctx: Context): Promise<AIProviderChargedOutput<UIMessage>> {
-    const result = await callUpstream(ctx.input);
-
-    return buildAssistantMessage(result.text, ctx, {
-      finishReason: "stop",
-      usage: result.usage,
-    });
-  }
-}
-
-const provider = new PricedProvider();
-```
-
-When a CityModel stream finishes, AIService passes the final `finish` part with
-usage to the model's `bill(ctx, output)` and settles the deferred charge.
-`stream()` only executes the protocol and does not return a charge promise:
-
-```ts
-protected bill(ctx: Context, output: unknown) {
-  return {
-    credits: priceLanguageModelFinish(output),
-    note: "priced-provider stream",
-  };
-}
-```
-
-## Routes
-
-| Route | Pathway |
-|---|---|
-| `POST /v1/ai/text` | SDK |
-| `POST /v1/ai/stream` | CityModel LanguageModelV3 transport |
-| `POST /v1/ai/image/create` | SDK |
-| `POST /v1/ai/image/result` | SDK |
-| `POST /v1/ai/video` | SDK |
-| `POST /v1/ai/tts` | SDK |
-| `POST /v1/ai/asr` | SDK |
-| `POST /v1/ai/chat/completions` | OpenAI-Compatible |
-| `GET /v1/ai/models` | Model Catalog |
+- model registry and public catalog;
+- authentication and availability;
+- media fallback and reasoning validation;
+- metering, balance checks, and charge settlement.

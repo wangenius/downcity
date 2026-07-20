@@ -42,15 +42,21 @@ interface SessionMessagePage {
 
 A Session has one top-level Message sequence ordered by `sequence`. Tool calls are neither a second Timeline nor top-level Messages: they live in an Assistant Message's `parts`, so `text -> tool -> text` is persisted in its real generation order.
 
+`SessionMessage` is the persistence format; AI SDK `UIMessage` is the Executor and UI boundary format. Serializable User and Assistant UI parts can be projected into Session parts and restored as an equivalent `UIMessage`. `action` and `error` are Downcity Session top-level types and are never sent to the model.
+
+If a Turn fails before producing any Assistant content, the Session writes one `error` Message and does not fabricate an Assistant reply from the error text. If partial content already exists, that Assistant is retained with `status: "failed"`, followed by the structured `error` Message.
+
 ## Assistant Parts
 
 | `type` | Key fields | Meaning |
 | --- | --- | --- |
 | `text` | `text`, `state` | Visible output, `streaming -> done` |
 | `reasoning` | `text`, `state` | Reasoning output; product decides whether to display it |
-| `tool` | `tool_call_id`, `tool_name`, `state`, `call_provider_metadata`, `result_provider_metadata` | Tool input, approval, execution, and result |
-| `file` | `url`, `media_type` | A file generated or referenced by the Assistant |
-| `data` | `data_type`, `data` | Structured UI data |
+| `tool` | `tool_call_id`, `tool_name`, `state`, `approval`, metadata | Tool input, approval, execution, and result |
+| `file` | `url`, `media_type`, `provider_metadata` | A file generated or referenced by the Assistant |
+| `source` | `source_type`, `source_id`, URL or document fields | An AI SDK URL or document source |
+| `data` | `data_type`, `data`, `data_id` | Persisted structured UI data |
+| `step-start` | No business fields | A boundary in a multi-step response |
 
 Every Assistant Part has a stable `part_id` and immutable internal `sequence`. A tool state change updates the same Part; a UI should not create separate request and result rows.
 
@@ -60,13 +66,32 @@ A Tool Part preserves metadata attached to the tool call and tool result by the 
 
 ```ts
 interface SessionAssistantToolPart {
+  title?: string;
+  tool_metadata?: JsonObject;
+  dynamic?: boolean;
   call_provider_metadata?: ProviderMetadata;
   result_provider_metadata?: ProviderMetadata;
   provider_executed?: boolean;
+  preliminary?: boolean;
 }
 ```
 
 These fields are opaque data required by capabilities such as Provider continuation. Applications may read and persist them unchanged, but should not modify Provider-specific fields. Older Sessions without these optional fields continue to load normally.
+
+Text, reasoning, file, and source parts also preserve their own `provider_metadata`. Stream updates with the same `data_id` or `source_id` replace the existing Part without changing its `sequence`. An AI SDK data chunk with `transient: true` is delivered to the live UI but is not persisted in the Session.
+
+Tool approvals use one snapshot:
+
+```ts
+interface SessionToolApprovalSnapshot {
+  approval_id: string;
+  approved?: boolean;
+  reason?: string;
+  request?: SessionApproval;
+}
+```
+
+Native AI SDK approvals persist `approval_id / approved / reason`. A local Downcity Shell approval additionally stores its command, working directory, and expiry under `approval.request`. The `approval-required -> running/completed` path and a rejected `failed` state all update the same Tool Part.
 
 ## Order, revision, and visibility
 

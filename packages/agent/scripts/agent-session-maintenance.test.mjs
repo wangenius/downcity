@@ -28,6 +28,7 @@ test("AgentContext sessions 负责清空消息和删除 Session 数据", async (
   const root_path = create_project_root();
   const agent = new Agent({ id: "agent_test", path: root_path });
   try {
+    await agent.ready();
     assert.equal(agent.getContext().sessions, agent.sessions);
     const session_id = "session_test";
     await agent.sessions.create({ sessionId: session_id });
@@ -47,6 +48,11 @@ test("AgentContext sessions 负责清空消息和删除 Session 数据", async (
     assert.equal(fs.existsSync(session_path), false);
   } finally {
     await agent.dispose();
-    fs.rmSync(root_path, { recursive: true, force: true });
+    fs.rmSync(root_path, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 50,
+    });
   }
 });

@@ -54,7 +54,7 @@ description: 调试 City、client、token 和 env 的常见路径。
 检查：
 
 - City `.env` 是否存在对应 key。
-- handler 是否读取了正确的 `ctx.env` 字段。
+- handler 是否通过 `input.env()` 读取了正确的 key。
 - model `meta` 是否和当前 provider 调用方式匹配。
 
 ## usage 没有记录

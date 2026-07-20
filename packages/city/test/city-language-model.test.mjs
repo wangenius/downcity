@@ -103,13 +103,14 @@ test("CityModel directly streams through Federation LanguageModelV3 runtime", as
     },
   })
   const channel = new (class extends AIChannel {
-    async stream(ctx, call) {
-      return this.stream_ai_sdk_model(ctx, call, provider_model)
+    async stream(input) {
+      return provider_model.doStream(input.call)
     }
   })({
     id: "mock",
     env: {},
     env_key: "MOCK_API_KEY",
+    ai_sdk_provider_id: "mock",
   })
   ai.use(channel.model({
     id: "city-model",

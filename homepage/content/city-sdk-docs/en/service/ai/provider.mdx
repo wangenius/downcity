@@ -15,9 +15,7 @@ import {
   AIChannel,
   AIService,
   read_required_env,
-  resolve_upstream_model,
-  type Context,
-  type LanguageModelV3CallOptions,
+  type AIChannelStreamInput,
   type LanguageModelV3StreamResult,
 } from "@downcity/city";
 
@@ -27,22 +25,18 @@ class DeepSeekChannel extends AIChannel {
       id: "deepseek",
       env_key: "DEEPSEEK_API_KEY",
       base_url: "https://api.deepseek.com/v1",
+      ai_sdk_provider_id: "deepseek",
     });
   }
 
   protected async stream(
-    ctx: Context,
-    call: LanguageModelV3CallOptions,
+    input: AIChannelStreamInput,
   ): Promise<LanguageModelV3StreamResult> {
     const deepseek = createDeepSeek({
-      apiKey: read_required_env(ctx, this.env_key ?? ""),
+      apiKey: read_required_env(input, this.env_key ?? ""),
       baseURL: this.base_url,
     });
-    return this.stream_ai_sdk_model(
-      ctx,
-      call,
-      deepseek(resolve_upstream_model(ctx)),
-    );
+    return deepseek(input.model.upstream_model).doStream(input.call);
   }
 }
 
@@ -73,15 +67,17 @@ AIChannelOptions
   -> CityModel + LanguageModelV3
 ```
 
-- `AIChannelOptions`: Channel connection configuration, including `id`, `env_key`, `base_url`, and default `ai_sdk_provider_options`.
+- `AIChannelOptions`: Channel connection configuration, including `id`, `env_key`, `base_url`, `ai_sdk_provider_id`, and default `ai_sdk_provider_options`.
 - `AIModelSpec`: input to `channel.model()`, including the Federation ID, `upstream_model`, catalog fields, reasoning, fallback, and model options.
 - `AIModelDefinition`: complete AIService runtime model with `channel_id`, the unified `runtime` field, and private connection data.
 - `CityModelDescriptor`: public `/v1/ai/models` catalog data without secrets, upstream IDs, or providerOptions.
 - `CityModel`: an executable client object that combines descriptor fields with AI SDK `LanguageModelV3`.
 
+Set `ai_sdk_provider_id` when the Channel uses AIChannel's default reasoning mapping. It must match the providerOptions namespace, such as `openai`, `deepseek`, or `anthropic`. A custom protocol can override `build_reasoning_provider_options(input)` instead.
+
 ## One language execution path
 
-Every language entry point eventually calls the same `AIChannel.stream(ctx, call)`:
+Every language entry point eventually calls the same `AIChannel.stream(input)`:
 
 ```text
 city.ai.text()            -> AI SDK generateText -> AIChannel.stream
@@ -100,6 +96,7 @@ Both the Channel and a model can declare private server-side options:
 const openai_channel = new OpenAIResponsesChannel({
   id: "openai",
   env_key: "OPENAI_API_KEY",
+  ai_sdk_provider_id: "openai",
   ai_sdk_provider_options: {
     openai: { store: true, serviceTier: "default" },
   },
@@ -143,7 +140,7 @@ ai.use(channel.model({
 }));
 ```
 
-AIService resolves fallback first, then validates reasoning against the final model. A Channel can read the trusted result with `read_resolved_reasoning(ctx)`. `stream_ai_sdk_model()` maps it to the AI SDK Provider's `reasoningEffort` by default.
+AIService resolves fallback first, then validates reasoning against the final model. The trusted result is available as `input.reasoning`; AIChannel injects its mapped providerOptions into `input.call` before invoking `stream()`.
 
 ## Images and other modalities
 
@@ -158,7 +155,8 @@ Image Channels return `AIImageCreateResult` and `AIImageResult`. AIService owns 
 | `id` | Unique Channel ID within the Federation |
 | `env` / `env_key` | Declare and read Federation env values |
 | `base_url` | Upstream API root used by the Channel subclass |
-| `stream(ctx, call)` | The single language-model execution entry point |
-| `stream_ai_sdk_model(ctx, call, model)` | Execute an AI SDK V3 model with server-side options |
+| `stream(input)` | The single language-model execution entry point |
+| `input.call` | Sanitized V3 call with server-side providerOptions |
+| `input.model` | Final Federation model ID and upstream model ID |
 | `model(spec)` | Convert `AIModelSpec` into a registerable `AIModelDefinition` |
-| `bill(ctx, output)` | Produce an optional charge draft |
+| `bill(input)` | Produce an optional charge draft from scoped `AIBillInput` |

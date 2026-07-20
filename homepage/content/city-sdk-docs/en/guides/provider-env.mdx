@@ -12,11 +12,12 @@ class DeepSeekChannel extends AIChannel {
       id: "deepseek",
       env_key: "DEEPSEEK_API_KEY",
       base_url: "https://api.deepseek.com/v1",
+      ai_sdk_provider_id: "deepseek",
     });
   }
 
-  protected async stream(ctx: Context, call: LanguageModelV3CallOptions) {
-    const api_key = read_required_env(ctx, this.env_key ?? "");
+  protected async stream(input: AIChannelStreamInput) {
+    const api_key = read_required_env(input, this.env_key ?? "");
     // create the upstream model and return its V3 stream
   }
 }
@@ -24,4 +25,4 @@ class DeepSeekChannel extends AIChannel {
 
 `env_key` automatically creates a required env declaration for the model catalog's admin view. Use `env` instead when a Channel needs multiple values.
 
-Values are stored in Federation's env table and read at execution time with `ctx.env(key)` or `read_required_env(ctx, key)`. They never enter `CityModelDescriptor` or the client runtime.
+Values are stored in Federation's env table and read at execution time with `input.env(key)` or `read_required_env(input, key)`. They never enter `CityModelDescriptor` or the client runtime.

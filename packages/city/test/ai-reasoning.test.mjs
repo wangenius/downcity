@@ -225,8 +225,8 @@ test("AIChannel merges defaults, model overrides, and validated reasoning in ord
   })
 
   class OpenAIReasoningChannel extends AIChannel {
-    async stream(ctx, call) {
-      return this.stream_ai_sdk_model(ctx, call, language_model)
+    async stream(input) {
+      return language_model.doStream(input.call)
     }
   }
 
@@ -251,6 +251,7 @@ test("AIChannel merges defaults, model overrides, and validated reasoning in ord
   }
   const provider = new OpenAIReasoningChannel({
     id: "openai",
+    ai_sdk_provider_id: "openai",
     ai_sdk_provider_options: provider_options,
   })
   const ai = new AIService()
@@ -308,11 +309,12 @@ test("AIChannel default text action passes reasoning providerOptions into AI SDK
       super({
         id: "openai",
         env_key: "OPENAI_API_KEY",
+        ai_sdk_provider_id: "openai",
       })
     }
 
-    async stream(ctx, call) {
-      return this.stream_ai_sdk_model(ctx, call, language_model)
+    async stream(input) {
+      return language_model.doStream(input.call)
     }
   }
 
@@ -378,8 +380,8 @@ test("AIChannel text action adapts tools through the same LanguageModelV3 stream
   })
 
   class ToolsChannel extends AIChannel {
-    async stream(ctx, call) {
-      return this.stream_ai_sdk_model(ctx, call, language_model)
+    async stream(input) {
+      return language_model.doStream(input.call)
     }
   }
 
@@ -432,11 +434,12 @@ test("AIChannel does not infer store policy from OpenAI Responses model identity
       super({
         id: "openai",
         env_key: "OPENAI_API_KEY",
+        ai_sdk_provider_id: "openai",
       })
     }
 
-    async stream(ctx, call) {
-      return this.stream_ai_sdk_model(ctx, call, language_model)
+    async stream(input) {
+      return language_model.doStream(input.call)
     }
   }
 
@@ -465,16 +468,21 @@ test("AIChannel does not infer store policy from OpenAI Responses model identity
 test("OpenAI-compatible action receives the validated default reasoning_effort", async () => {
   let received_reasoning
   let received_call
+  let received_model
   class OpenAICompatibleChannel extends AIChannel {
-    async stream(ctx, call) {
-      received_reasoning = read_resolved_reasoning(ctx)
-      received_call = call
+    async stream(input) {
+      received_reasoning = input.reasoning
+      received_call = input.call
+      received_model = input.model
       return create_text_stream("hello")
     }
   }
 
   const ai = new AIService()
-  const channel = new OpenAICompatibleChannel({ id: "openai" })
+  const channel = new OpenAICompatibleChannel({
+    id: "openai",
+    ai_sdk_provider_id: "openai",
+  })
   ai.use(channel.model({
     id: "openai-route-model",
     upstream_model: "upstream-openai-route-model",
@@ -496,6 +504,10 @@ test("OpenAI-compatible action receives the validated default reasoning_effort",
   assert.equal(output.model, "openai-route-model")
   assert.equal(output.choices[0].message.content, "hello")
   assert.deepEqual(received_reasoning, { effort: "high", source: "default" })
+  assert.deepEqual(received_model, {
+    id: "openai-route-model",
+    upstream_model: "upstream-openai-route-model",
+  })
   assert.deepEqual(received_call.prompt, [{
     role: "user",
     content: [{ type: "text", text: "hello" }],

@@ -24,6 +24,7 @@ import type { AsyncJobRecord } from "../../types/AsyncJob.js";
 import type { CityModelDescriptor } from "@downcity/type";
 import type {
   AIBalanceBridge,
+  AIBillInput,
   AICharge,
   AIImageCreateResult,
   AIImageJobContext,
@@ -268,7 +269,9 @@ export class AIService extends Service {
       const channel_output = await resolved.action(ctx);
       const { output, charge } = this.resolveChannelOutput(channel_output);
       this.attachOutputMetering(ctx, output, modality, started_at);
-      const resolved_charge = charge ?? resolved.model?.bill?.(ctx, output);
+      const resolved_charge = charge ?? (resolved.model
+        ? resolved.model.bill?.(this.build_bill_input(ctx, resolved.model, output))
+        : undefined);
       const defer_charge = isResponse(output) || isPromiseLike(resolved_charge);
       const charged_response = await this.handleCharge(
         ctx,
@@ -322,7 +325,9 @@ export class AIService extends Service {
       return part;
     });
     const charge = resolved.model?.bill
-      ? completion.then((part) => part ? resolved.model?.bill?.(ctx, part) : undefined)
+      ? completion.then((part) => part && resolved.model
+        ? resolved.model.bill?.(this.build_bill_input(ctx, resolved.model, part))
+        : undefined)
       : undefined;
     const charged_response = await this.handleCharge(
       ctx,
@@ -399,7 +404,7 @@ export class AIService extends Service {
       const should_charge = output.status === "succeeded" && Boolean(output.result) && !job.result_json;
       if (should_charge) {
         this.attachOutputMetering(ctx, stored_output.result, "image", started_at);
-        const charge = model.bill?.(ctx, stored_output);
+        const charge = model.bill?.(this.build_bill_input(ctx, model, stored_output));
         await this.handleCharge(
           ctx,
           charge,
@@ -639,7 +644,9 @@ export class AIService extends Service {
         return result;
       });
       const charge = resolved.model?.bill
-        ? completion.then((result) => result ? resolved.model?.bill?.(ctx, result) : undefined)
+      ? completion.then((result) => result && resolved.model
+        ? resolved.model.bill?.(this.build_bill_input(ctx, resolved.model, result))
+        : undefined)
         : undefined;
       const charged_response = await this.handleCharge(
         ctx,
@@ -720,6 +727,24 @@ export class AIService extends Service {
       ...(image_count ? { image_count } : {}),
       duration_ms: Date.now() - started_at,
       raw_usage: usage ?? ctx.metering?.raw_usage,
+    };
+  }
+
+  /** 构造账单函数允许访问的显式领域输入。 */
+  private build_bill_input(
+    ctx: Context,
+    model: AIModelDefinition,
+    output: unknown,
+  ): AIBillInput {
+    return {
+      output,
+      model: {
+        id: model.id,
+        upstream_model: model.upstream_model,
+      },
+      ...(ctx.metering ? { metering: ctx.metering } : {}),
+      ...(ctx.user?.user_id ? { user_id: ctx.user.user_id } : {}),
+      ...(ctx.city?.city_id ? { city_id: ctx.city.city_id } : {}),
     };
   }
 

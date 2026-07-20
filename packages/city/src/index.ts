@@ -77,6 +77,9 @@ export { read_resolved_reasoning } from "./service/ai/reasoning.js";
 
 export type {
   AIChannelOptions,
+  AIChannelActionInput,
+  AIChannelModel,
+  AIChannelStreamInput,
   AIModelSpec,
   AIModelDefinition,
   AIModelFallbackMedia,
@@ -89,6 +92,7 @@ export type {
   AIResolvedReasoning,
   AICharge,
   AIBill,
+  AIBillInput,
   AIChargedResult,
   AIImageCreateResult,
   AIImageResult,
@@ -104,7 +108,6 @@ export {
   readJsonResponse,
   read_required_env,
   readString,
-  resolve_upstream_model,
   stripUndefined,
   toRecord,
   trimTrailingSlash,

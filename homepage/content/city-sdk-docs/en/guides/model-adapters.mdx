@@ -11,7 +11,7 @@ City SDK / CityModel ------\
 OpenAI Chat Completions ---/                              -> V3 stream
 ```
 
-Use `stream_ai_sdk_model()` for an AI SDK model. For a private HTTP protocol, implement `stream()` directly and return `LanguageModelV3StreamResult`. AIService does not know the vendor request format.
+For an AI SDK model, call `model.doStream(input.call)` directly. For a private HTTP protocol, implement `stream(input)` and return `LanguageModelV3StreamResult`. AIService does not know the vendor request format.
 
 OpenAI Chat Completions is an HTTP adapter around the same V3 path. There is no raw passthrough and no separate `openai` action, so tools, fallback, reasoning, metering, and billing behave consistently across clients.
 

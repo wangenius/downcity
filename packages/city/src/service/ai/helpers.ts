@@ -7,7 +7,11 @@
 
  import type { DynamicToolUIPart, FileUIPart, ToolSet, UIMessage } from "ai";
  import { jsonSchema, tool } from "ai";
- import type { AICharge, AIChargedResult } from "../../types/AI.js";
+ import type {
+   AIChannelActionInput,
+   AICharge,
+   AIChargedResult,
+ } from "../../types/AI.js";
  import type { Context } from "../service.js";
 
  // ===========================================================================
@@ -58,23 +62,13 @@
  /**
   * 读取必填环境变量。
   */
- export function read_required_env(ctx: Context, key: string): string {
-   const value = ctx.env(key);
+ export function read_required_env(
+   source: { env(key: string): string | undefined },
+   key: string,
+ ): string {
+   const value = source.env(key);
    if (!value) throw new Error(`${key} is required`);
    return value;
- }
-
- /**
-  * 解析上游模型 ID。
-  *
-  * 优先使用 model meta 中的 upstream_model，其次使用 fallback。
-  */
- export function resolve_upstream_model(ctx: Context): string {
-   const upstream_model = ctx.variant?.upstream_model?.trim() ?? "";
-   if (!upstream_model) {
-     throw new Error("Resolved AI model is missing upstream_model");
-   }
-   return upstream_model;
  }
 
  // ===========================================================================
@@ -207,7 +201,7 @@
   * 构造标准图片 file-parts UIMessage。
   */
  export function buildImageMessage(
-   ctx: Context,
+   input: AIChannelActionInput,
    images: ExtractedImage[],
    metadata: Record<string, unknown>,
  ): UIMessage {
@@ -226,9 +220,9 @@
      role: "assistant",
      parts,
      metadata: stripUndefined({
-       model: ctx.variant?.id,
-       city_id: ctx.city?.city_id,
-       user_id: ctx.user?.user_id,
+       model: input.model.id,
+       city_id: input.city_id,
+       user_id: input.user_id,
        ...metadata,
      }),
    };

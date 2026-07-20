@@ -6,24 +6,24 @@
  * - BalanceService 负责真正扣款和记录账单。
  */
 
-import type { Context } from "@downcity/city";
+import type { AIBillInput } from "@downcity/city";
 
 const CHAT_REQUEST_COST_CREDITS = 10_000;
 
 /**
  * 生成一次 AI 调用的账单行。
  */
-export function bill_ai_request(ctx: Context, output: unknown, credits = CHAT_REQUEST_COST_CREDITS) {
-  const mode = String(ctx.metering?.metadata?.mode ?? "request");
+export function bill_ai_request(input: AIBillInput, credits = CHAT_REQUEST_COST_CREDITS) {
+  const mode = String(input.metering?.metadata?.mode ?? "request");
   return {
     credits,
     note: `AI ${mode}`,
-    ref: read_bill_ref(output),
+    ref: read_bill_ref(input.output),
     metadata: {
       service_id: "ai",
       action_id: mode,
-      model_id: ctx.metering?.model_id ?? ctx.variant?.id,
-      channel_id: ctx.metering?.channel_id,
+      model_id: input.metering?.model_id ?? input.model.id,
+      channel_id: input.metering?.channel_id,
     },
   };
 }

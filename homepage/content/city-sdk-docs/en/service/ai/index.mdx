@@ -8,12 +8,14 @@ description: AIService unifies model registration, routing, LanguageModelV3, and
 | Concept | Purpose |
 |---|---|
 | `AIChannel` | Federation execution boundary for one upstream AI channel |
+| `AIChannelStreamInput` | Explicit language call, resolved model, env, and reasoning |
+| `AIChannelActionInput` | Scoped input for image and other non-language actions |
 | `AIModelSpec` | Model declaration passed to `channel.model()` |
 | `AIModelDefinition` | Complete AIService runtime model |
 | `CityModelDescriptor` | Public client model catalog shape |
 | `CityModel` | Client model implementing AI SDK `LanguageModelV3` |
 
-Every language entry point converges on `AIChannel.stream(ctx, call)`:
+Every language entry point converges on `AIChannel.stream(input)`:
 
 ```text
 city.ai.text()          -> LanguageModelV3 -> AIChannel.stream

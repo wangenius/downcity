@@ -800,14 +800,14 @@ test("AIService uses provider bill when model bill is not set", async () => {
       return create_text_stream()
     }
 
-    bill(ctx, output) {
+    bill(input) {
       return {
         credits: 222,
         note: "provider bill",
-        ref: output.id,
+        ref: input.output.id,
         metadata: {
-          model_id: ctx.metering?.model_id,
-          channel_id: ctx.metering?.channel_id,
+          model_id: input.metering?.model_id,
+          channel_id: input.metering?.channel_id,
         },
       }
     }
@@ -1855,17 +1855,17 @@ test("AIService charges image jobs only after provider result succeeds", async (
       id: "priced-image",
       channel_id: "image-provider",
       name: "Priced Image",
-      bill(ctx, output) {
+      bill(input) {
         return {
           credits: 777,
           note: "AI image result",
-          ref: output.job_id,
+          ref: input.output.job_id,
           metadata: {
             service_id: "ai",
-            action_id: ctx.metering?.metadata?.mode,
-            model_id: ctx.metering?.model_id,
-            channel_id: ctx.metering?.channel_id,
-            image_count: ctx.metering?.image_count,
+            action_id: input.metering?.metadata?.mode,
+            model_id: input.metering?.model_id,
+            channel_id: input.metering?.channel_id,
+            image_count: input.metering?.image_count,
           },
         }
       },

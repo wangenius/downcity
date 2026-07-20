@@ -25,9 +25,8 @@ import {
   Federation,
   AIService,
   AIChannel,
-  type LanguageModelV3CallOptions,
+  type AIChannelStreamInput,
   type LanguageModelV3StreamResult,
-  type Context,
 } from "@downcity/city";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -48,10 +47,9 @@ class EchoChannel extends AIChannel {
   }
 
   protected async stream(
-    _ctx: Context,
-    call: LanguageModelV3CallOptions,
+    input: AIChannelStreamInput,
   ): Promise<LanguageModelV3StreamResult> {
-    const input_text = call.prompt
+    const input_text = input.call.prompt
       .flatMap((message) => Array.isArray(message.content) ? message.content : [])
       .filter((part) => part.type === "text")
       .map((part) => part.text)

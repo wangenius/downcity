@@ -10,11 +10,9 @@
  import { createDeepSeek } from "@ai-sdk/deepseek";
  import {
    AIChannel,
-   type Context,
-   type LanguageModelV3CallOptions,
+   type AIChannelStreamInput,
    type LanguageModelV3StreamResult,
    read_required_env,
-   resolve_upstream_model,
  } from "@downcity/city";
 
  /**
@@ -26,20 +24,18 @@
        id: "deepseek",
        env_key: "DEEPSEEK_API_KEY",
        base_url: "https://api.deepseek.com/v1",
+       ai_sdk_provider_id: "deepseek",
      });
    }
 
    protected async stream(
-     ctx: Context,
-     call: LanguageModelV3CallOptions,
+     input: AIChannelStreamInput,
    ): Promise<LanguageModelV3StreamResult> {
      const deepseek = createDeepSeek({
-       apiKey: read_required_env(ctx, this.env_key ?? ""),
+       apiKey: read_required_env(input, this.env_key ?? ""),
        baseURL: this.base_url,
      });
-     const model = deepseek(
-       resolve_upstream_model(ctx),
-     );
-     return this.stream_ai_sdk_model(ctx, call, model);
+     const model = deepseek(input.model.upstream_model);
+     return model.doStream(input.call);
    }
  }

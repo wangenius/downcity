@@ -77,7 +77,7 @@ curl -X POST https://base.example.com/v1/env/upsert \
   -d '{"key":"DEEPSEEK_API_KEY","value":"your_api_key"}'
 ```
 
-At runtime, `ctx.env.OPENAI_API_KEY` and `ctx.env.DEEPSEEK_API_KEY` are read from the Federation database first.
+At runtime, `input.env("OPENAI_API_KEY")` and `input.env("DEEPSEEK_API_KEY")` read from the Federation database first.
 
 ## Verify
 

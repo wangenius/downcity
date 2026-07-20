@@ -12,15 +12,14 @@
 
 import {
   AIChannel,
+  type AIChannelActionInput,
   type AIImageCreateResult,
   type AIImageResult,
-  type Context,
   buildImageMessage,
   readErrorMessage,
   readJsonResponse,
   read_required_env,
   readString,
-  resolve_upstream_model,
   stripUndefined,
   toRecord,
   trimTrailingSlash,
@@ -173,8 +172,8 @@ export class OpenAIImageChannel extends AIChannel {
     this.provider_options_key = options.provider_options_key ?? "openai";
   }
 
-  async image_create(ctx: Context): Promise<AIImageCreateResult> {
-    const upstream_model = resolve_upstream_model(ctx);
+  async image_create(input: AIChannelActionInput): Promise<AIImageCreateResult> {
+    const upstream_model = input.model.upstream_model;
     const job_id = `openai_img_${crypto.randomUUID()}`;
     return {
       job_id,
@@ -189,10 +188,10 @@ export class OpenAIImageChannel extends AIChannel {
     };
   }
 
-  async image_fetch(ctx: Context): Promise<AIImageResult> {
-    const job = readImageJobContext(ctx);
+  async image_fetch(input: AIChannelActionInput): Promise<AIImageResult> {
+    const job = readImageJobContext(input);
     try {
-      const api_key = read_required_env(ctx, this.env_key ?? "");
+      const api_key = read_required_env(input, this.env_key ?? "");
       const provider_options = readProviderOptions(job.input, this.provider_options_key);
       const body = stripUndefined({
         model: job.upstream_model,
@@ -218,7 +217,7 @@ export class OpenAIImageChannel extends AIChannel {
         job_id: job.job_id,
         status: "succeeded",
         message: "succeeded",
-        result: buildImageMessage(ctx, extractImagesFromOpenAIResponse(data), {
+        result: buildImageMessage(input, extractImagesFromOpenAIResponse(data), {
           provider: this.id,
           provider_options_key: this.provider_options_key,
           upstream_model: job.upstream_model,
@@ -258,8 +257,8 @@ export class GeminiImageChannel extends AIChannel {
     this.api_base_url = options.base_url ?? "https://generativelanguage.googleapis.com/v1beta";
   }
 
-  async image_create(ctx: Context): Promise<AIImageCreateResult> {
-    const upstream_model = resolve_upstream_model(ctx);
+  async image_create(input: AIChannelActionInput): Promise<AIImageCreateResult> {
+    const upstream_model = input.model.upstream_model;
     const job_id = `gemini_img_${crypto.randomUUID()}`;
     return {
       job_id,
@@ -270,10 +269,10 @@ export class GeminiImageChannel extends AIChannel {
     };
   }
 
-  async image_fetch(ctx: Context): Promise<AIImageResult> {
-    const job = readImageJobContext(ctx);
+  async image_fetch(input: AIChannelActionInput): Promise<AIImageResult> {
+    const job = readImageJobContext(input);
     try {
-      const api_key = read_required_env(ctx, this.env_key ?? "");
+      const api_key = read_required_env(input, this.env_key ?? "");
       const provider_options = readProviderOptions(job.input, "gemini");
       const body = stripUndefined({
         contents: toGeminiContents(job.input),
@@ -298,7 +297,7 @@ export class GeminiImageChannel extends AIChannel {
         job_id: job.job_id,
         status: "succeeded",
         message: "succeeded",
-        result: buildImageMessage(ctx, extractImagesFromGeminiResponse(data), {
+        result: buildImageMessage(input, extractImagesFromGeminiResponse(data), {
           provider: this.id,
           upstream_model: job.upstream_model,
           city_id: job.city_id,
@@ -340,12 +339,11 @@ export class LuchiImageChannel extends AIChannel {
     this.max_polls = options.max_polls ?? 60;
   }
 
-  async image_create(ctx: Context): Promise<AIImageCreateResult> {
-    const input = normalizeImageActionInput(ctx.input);
-    const api_key = read_required_env(ctx, this.env_key ?? "");
-    const upstream_model = resolve_upstream_model(ctx);
+  async image_create(action: AIChannelActionInput): Promise<AIImageCreateResult> {
+    const input = normalizeImageActionInput(action.input);
+    const api_key = read_required_env(action, this.env_key ?? "");
+    const upstream_model = action.model.upstream_model;
     const job_id = await createLuchiJob({
-      ctx,
       input,
       api_key,
       base_url: this.api_base_url,
@@ -360,9 +358,9 @@ export class LuchiImageChannel extends AIChannel {
     };
   }
 
-  async image_fetch(ctx: Context): Promise<AIImageResult> {
-    const job = readImageJobContext(ctx);
-    const api_key = read_required_env(ctx, this.env_key ?? "");
+  async image_fetch(input: AIChannelActionInput): Promise<AIImageResult> {
+    const job = readImageJobContext(input);
+    const api_key = read_required_env(input, this.env_key ?? "");
     const data = await readLuchiJob({
       base_url: this.api_base_url,
       api_key,
@@ -375,7 +373,7 @@ export class LuchiImageChannel extends AIChannel {
         job_id: job.job_id,
         status: "succeeded",
         message: "succeeded",
-        result: buildImageMessage(ctx, extractImagesFromLuchiResponse(data, this.api_base_url), {
+        result: buildImageMessage(input, extractImagesFromLuchiResponse(data, this.api_base_url), {
           provider: this.id,
           upstream_model: job.upstream_model,
           city_id: job.city_id,
@@ -433,16 +431,16 @@ function normalizeImageActionInput(input: unknown): ImageActionInput {
     : {};
 }
 
-function readImageJobContext(ctx: Context): RuntimeImageJobContext {
-  const value = ctx.locals.ai_image_job;
-  const record = toRecord(toRecord(value)?.record);
-  const state = toRecord(toRecord(value)?.state) ?? {};
+function readImageJobContext(input: AIChannelActionInput): RuntimeImageJobContext {
+  const value = input.image_job;
+  const record = toRecord(value?.record);
+  const state = toRecord(value?.state) ?? {};
   return {
-    job_id: readString(record?.job_id) || readString(ctx.input.job_id),
-    input: normalizeImageActionInput(toRecord(value)?.input),
+    job_id: readString(record?.job_id) || readString(input.input.job_id),
+    input: normalizeImageActionInput(value?.input),
     user_id: readString(record?.user_id) || readString(state.user_id),
     city_id: readString(record?.city_id) || readString(state.city_id),
-    upstream_model: readString(state.upstream_model) || resolve_upstream_model(ctx),
+    upstream_model: readString(state.upstream_model) || input.model.upstream_model,
     state,
   };
 }
@@ -656,7 +654,6 @@ function omitKeys(value: Record<string, unknown>, keys: string[]): Record<string
 // ===========================================================================
 
 async function createLuchiJob(params: {
-  ctx: Context;
   input: ImageActionInput;
   api_key: string;
   base_url: string;

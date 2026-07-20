@@ -2,11 +2,15 @@
  * Federation AIChannel 基类模块。
  *
  * AIChannel 是 Federation 服务端的上游 AI 执行渠道。语言能力只通过标准
- * LanguageModelV3 `stream(ctx, call)` 暴露，text action 由同一标准流自动派生。
+ * LanguageModelV3 `stream(input)` 暴露，text action 由同一标准流自动派生。
  */
 
 import type {
   AIChannelOptions,
+  AIChannelActionInput,
+  AIChannelModel,
+  AIChannelStreamInput,
+  AIBillInput,
   AICharge,
   AIChargedResult,
   AIImageCreateResult,
@@ -16,12 +20,10 @@ import type {
   AIModelSpec,
   AIModelStream,
   AISDKProviderOptions,
-  LanguageModelV3,
   LanguageModelV3CallOptions,
   LanguageModelV3StreamResult,
 } from "../../types/AI.js";
 import type { UIMessage } from "ai";
-import type { ActionFn } from "../action.js";
 import type { Context } from "../service.js";
 import { execute_language_model_text } from "./language-model-text.js";
 import { read_resolved_reasoning } from "./reasoning.js";
@@ -36,10 +38,10 @@ export abstract class AIChannel {
   protected readonly base_url?: string;
   /** 默认 API Key 对应的 Federation env key。 */
   protected readonly env_key?: string;
+  /** reasoning 映射使用的 AI SDK providerOptions 命名空间。 */
+  private readonly ai_sdk_provider_id?: string;
   /** Channel 级 AI SDK providerOptions 默认值。 */
   private readonly ai_sdk_provider_options?: AISDKProviderOptions;
-  /** 按 Federation 模型 ID 保存的模型级 AI SDK providerOptions。 */
-  private readonly model_provider_options = new Map<string, AISDKProviderOptions>();
 
   constructor(options: AIChannelOptions) {
     this.id = options.id;
@@ -48,6 +50,7 @@ export abstract class AIChannel {
       : undefined);
     this.base_url = options.base_url;
     this.env_key = options.env_key;
+    this.ai_sdk_provider_id = options.ai_sdk_provider_id?.trim() || undefined;
     this.ai_sdk_provider_options = clone_provider_options(
       options.ai_sdk_provider_options,
     );
@@ -58,25 +61,7 @@ export abstract class AIChannel {
    *
    * 子类实现后，该 Channel 注册的模型自动获得 text 与 stream 能力。
    */
-  protected stream?(
-    ctx: Context,
-    call: LanguageModelV3CallOptions,
-  ): Promise<LanguageModelV3StreamResult>;
-
-  /**
-   * 执行真实 AI SDK LanguageModelV3，并注入服务端私有 providerOptions。
-   */
-  protected async stream_ai_sdk_model(
-    ctx: Context,
-    call: LanguageModelV3CallOptions,
-    model: LanguageModelV3,
-  ): Promise<LanguageModelV3StreamResult> {
-    const provider_options = this.build_model_provider_options(ctx, model);
-    return model.doStream({
-      ...call,
-      ...(provider_options ? { providerOptions: provider_options } : {}),
-    });
-  }
+  protected stream?(input: AIChannelStreamInput): Promise<LanguageModelV3StreamResult>;
 
   /**
    * 把 AIService 已校验 reasoning 映射成真实 AI SDK Provider 的选项。
@@ -84,14 +69,15 @@ export abstract class AIChannel {
    * 默认实现适用于使用 `reasoningEffort` 的 Provider；其它 Provider 应覆盖。
    */
   protected build_reasoning_provider_options(
-    ctx: Context,
-    model: LanguageModelV3,
+    input: AIChannelStreamInput,
   ): AISDKProviderOptions | undefined {
-    const reasoning = read_resolved_reasoning(ctx);
+    const reasoning = input.reasoning;
     if (!reasoning) return undefined;
-    const provider_id = model.provider.split(".")[0]?.trim();
+    const provider_id = this.ai_sdk_provider_id;
     if (!provider_id) {
-      throw new Error(`AIChannel ${this.id} cannot resolve AI SDK provider id`);
+      throw new Error(
+        `AIChannel ${this.id} requires ai_sdk_provider_id to map reasoning options`,
+      );
     }
     return {
       [provider_id]: {
@@ -100,50 +86,64 @@ export abstract class AIChannel {
     };
   }
 
-  /** 构建本次真实上游模型调用的完整 providerOptions。 */
-  protected build_model_provider_options(
+  /** 构建传给 Channel stream 的完整显式输入。 */
+  private build_stream_input(
     ctx: Context,
-    model: LanguageModelV3,
-  ): AISDKProviderOptions | undefined {
-    return merge_provider_options(
+    call: LanguageModelV3CallOptions,
+    model: AIChannelStreamInput["model"],
+    model_provider_options: AISDKProviderOptions | undefined,
+  ): AIChannelStreamInput {
+    const { providerOptions: _client_provider_options, ...safe_call } = call;
+    const reasoning = read_resolved_reasoning(ctx);
+    const base_input: AIChannelStreamInput = {
+      call: safe_call as LanguageModelV3CallOptions,
+      model,
+      env: (key) => ctx.env(key),
+      ...(reasoning ? { reasoning } : {}),
+    };
+    const provider_options = merge_provider_options(
       this.ai_sdk_provider_options,
-      ctx.variant?.id
-        ? this.model_provider_options.get(ctx.variant.id)
-        : undefined,
-      this.build_reasoning_provider_options(ctx, model),
+      model_provider_options,
+      this.build_reasoning_provider_options(base_input),
     );
+    return {
+      ...base_input,
+      call: {
+        ...safe_call,
+        ...(provider_options ? { providerOptions: provider_options } : {}),
+      } as LanguageModelV3CallOptions,
+    };
   }
 
   /** 模型成功完成后生成账单草稿。 */
-  protected bill(_ctx: Context, _output: unknown): AICharge | undefined {
+  protected bill(_input: AIBillInput): AICharge | undefined {
     return undefined;
   }
 
   /** 图片任务创建 action。 */
-  image_create?(ctx: Context): Promise<AIImageCreateResult>;
+  image_create?(input: AIChannelActionInput): Promise<AIImageCreateResult>;
   /** 图片任务抓取 action。 */
-  image_fetch?(ctx: Context): Promise<AIImageResult>;
+  image_fetch?(input: AIChannelActionInput): Promise<AIImageResult>;
   /** 图片任务查询 action。 */
-  image_result?(ctx: Context): Promise<AIImageResult>;
+  image_result?(input: AIChannelActionInput): Promise<AIImageResult>;
   /** 视频生成 action。 */
-  video?(ctx: Context): Promise<AIChargedResult<UIMessage>>;
+  video?(input: AIChannelActionInput): Promise<AIChargedResult<UIMessage>>;
   /** 语音合成 action。 */
-  tts?(ctx: Context): Promise<AIChargedResult<Response>>;
+  tts?(input: AIChannelActionInput): Promise<AIChargedResult<Response>>;
   /** 语音识别 action。 */
-  asr?(ctx: Context): Promise<AIChargedResult<Response>>;
+  asr?(input: AIChannelActionInput): Promise<AIChargedResult<Response>>;
 
   /** 把当前 Channel 下的模型声明转换为 Federation 内部模型定义。 */
   model(spec: AIModelSpec): AIModelDefinition {
     const model_provider_options = clone_provider_options(
       spec.ai_sdk_provider_options,
     );
-    if (model_provider_options) {
-      this.model_provider_options.set(spec.id, model_provider_options);
-    } else {
-      this.model_provider_options.delete(spec.id);
-    }
 
     const actions: AIModelActions = {};
+    const channel_model: AIChannelModel = Object.freeze({
+      id: spec.id,
+      upstream_model: spec.upstream_model,
+    });
     const modalities = [
       "image_create",
       "image_fetch",
@@ -156,12 +156,21 @@ export abstract class AIChannel {
     for (const modality of modalities) {
       const fn = (this as unknown as Record<string, unknown>)[modality];
       if (typeof fn === "function") {
-        actions[modality] = fn.bind(this) as ActionFn;
+        const action = fn.bind(this) as (
+          input: AIChannelActionInput,
+        ) => unknown | Promise<unknown>;
+        actions[modality] = (ctx: Context) =>
+          action(this.build_action_input(ctx, channel_model));
       }
     }
 
     const stream: AIModelStream | undefined = this.stream
-      ? (ctx, call) => this.stream!(ctx, call)
+      ? (ctx, call) => this.stream!(this.build_stream_input(
+          ctx,
+          call,
+          channel_model,
+          model_provider_options,
+        ))
       : undefined;
     if (stream) {
       actions.text = (ctx: Context) =>
@@ -183,6 +192,24 @@ export abstract class AIChannel {
         actions,
       },
       bill: spec.bill ?? this.bill.bind(this),
+    };
+  }
+
+  /** 从通用 Action Context 构造 Channel 允许访问的领域输入。 */
+  private build_action_input(
+    ctx: Context,
+    model: AIChannelModel,
+  ): AIChannelActionInput {
+    const image_job = ctx.locals.ai_image_job;
+    return {
+      input: ctx.input,
+      model,
+      env: (key) => ctx.env(key),
+      ...(ctx.user?.user_id ? { user_id: ctx.user.user_id } : {}),
+      ...(ctx.city?.city_id ? { city_id: ctx.city.city_id } : {}),
+      ...(image_job && typeof image_job === "object"
+        ? { image_job: image_job as AIChannelActionInput["image_job"] }
+        : {}),
     };
   }
 }

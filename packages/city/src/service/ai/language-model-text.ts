@@ -1,9 +1,9 @@
 /**
  * AIChannel LanguageModelV3 流的通用 text action。
  *
- * AIChannel 只实现标准 `stream(ctx, call)`；本模块把该运行时包装成一个本地
- * LanguageModelV3，再复用 AI SDK `generateText()` 完成 UIMessage、tools 和 usage
- * 的非流式收口。这里不创建任何上游客户端，也不注入 Channel 私有配置。
+ * AIChannel.model() 把显式 `stream(input)` 适配成内部 AIModelStream；本模块再把
+ * 该运行时包装成一个本地 LanguageModelV3，并复用 AI SDK `generateText()` 完成
+ * UIMessage、tools 和 usage 的非流式收口。这里不创建上游客户端或注入私有配置。
  */
 
 import { convertToModelMessages, generateText } from "ai";

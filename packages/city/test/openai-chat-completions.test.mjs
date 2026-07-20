@@ -19,9 +19,11 @@ function create_context(input) {
 
 test("OpenAI-compatible tools and SSE use the same AIChannel stream", async () => {
   let received_call
+  let received_model
   class ToolsChannel extends AIChannel {
-    async stream(_ctx, call) {
-      received_call = call
+    async stream(input) {
+      received_call = input.call
+      received_model = input.model
       return {
         stream: new ReadableStream({
           start(controller) {
@@ -103,6 +105,10 @@ test("OpenAI-compatible tools and SSE use the same AIChannel stream", async () =
     },
   }])
   assert.deepEqual(received_call.toolChoice, { type: "tool", toolName: "weather" })
+  assert.deepEqual(received_model, {
+    id: "tools-model",
+    upstream_model: "vendor-tools-model",
+  })
 
   const sse = await response.text()
   assert.match(sse, /"name":"weather"/)

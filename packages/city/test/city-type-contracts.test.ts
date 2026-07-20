@@ -5,7 +5,11 @@
 import type { UIMessage, UIMessageChunk } from "ai";
 import type {
   AIBill,
+  AIBillInput,
+  AIChannelActionInput,
+  AIChannelModel,
   AIChannelOptions,
+  AIChannelStreamInput,
   AICharge,
   AIChargedResult,
   AIInvoker,
@@ -40,10 +44,15 @@ import type { AIModelLanguageRuntime } from "../src/index.js";
 import type { AIImageChannelResult } from "../src/index.js";
 // @ts-expect-error OpenAI Chat 细粒度协议只属于内部 transport
 import type { OpenAIChatCompletionRequest } from "../src/index.js";
+// @ts-expect-error 上游模型通过 AIChannel 输入显式传递
+import { resolve_upstream_model } from "../src/index.js";
 
 /** 公共 AI 类型必须从单一 SDK 入口稳定导出。 */
 type PublicAITypeContract = [
   AIChannelOptions,
+  AIChannelModel,
+  AIChannelStreamInput,
+  AIChannelActionInput,
   AIModelSpec,
   AIModelDefinition,
   AIModelFallbackMedia,
@@ -54,6 +63,7 @@ type PublicAITypeContract = [
   AIResolvedReasoning,
   AICharge,
   AIBill,
+  AIBillInput,
   AIChargedResult,
   AIImageCreateResult,
   AIImageResult,

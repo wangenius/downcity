@@ -10,10 +10,8 @@
  import {
    AIChannel,
    read_required_env,
-   resolve_upstream_model,
-   type LanguageModelV3CallOptions,
+   type AIChannelStreamInput,
    type LanguageModelV3StreamResult,
-   type Context,
  } from "@downcity/city";
 
  /**
@@ -25,20 +23,17 @@
      env_key: string;
      base_url: string;
    }) {
-     super(options);
+     super({ ...options, ai_sdk_provider_id: "openai" });
    }
 
    protected async stream(
-     ctx: Context,
-     call: LanguageModelV3CallOptions,
+     input: AIChannelStreamInput,
    ): Promise<LanguageModelV3StreamResult> {
      const openai = createOpenAI({
-       apiKey: read_required_env(ctx, this.env_key ?? ""),
+       apiKey: read_required_env(input, this.env_key ?? ""),
        baseURL: this.base_url,
      });
-     const model = openai.chat(
-       resolve_upstream_model(ctx),
-     );
-     return this.stream_ai_sdk_model(ctx, call, model);
+     const model = openai.chat(input.model.upstream_model);
+     return model.doStream(input.call);
    }
  }

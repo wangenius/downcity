@@ -13,6 +13,7 @@ import type {
 import type { ActionFn } from "../service/action.js";
 import type { Context } from "../service/service.js";
 import type { AsyncJobRecord } from "./AsyncJob.js";
+import type { RuntimeMetering } from "./Metering.js";
 
 // ===========================================================================
 // AI SDK 标准边界
@@ -64,8 +65,46 @@ export interface AIChannelOptions {
   base_url?: string;
   /** Channel 默认 API Key 对应的 Federation env key。 */
   env_key?: string;
+  /** reasoning 映射使用的 AI SDK providerOptions 命名空间。 */
+  ai_sdk_provider_id?: string;
   /** Channel 下所有模型共享的 AI SDK providerOptions 默认值。 */
   ai_sdk_provider_options?: AISDKProviderOptions;
+}
+
+/** AIService 已解析完成、可供 Channel 执行的模型身份。 */
+export interface AIChannelModel {
+  /** Federation 对外模型 ID。 */
+  readonly id: string;
+  /** 真实上游模型 ID。 */
+  readonly upstream_model: string;
+}
+
+/** AIChannel 语言执行时可读取的显式输入。 */
+export interface AIChannelStreamInput {
+  /** 已移除客户端私有选项并注入服务端 providerOptions 的标准调用。 */
+  readonly call: LanguageModelV3CallOptions;
+  /** AIService 已解析完成的最终模型。 */
+  readonly model: AIChannelModel;
+  /** 读取 Federation 服务端环境变量。 */
+  readonly env: (key: string) => string | undefined;
+  /** AIService 已校验的可选 reasoning。 */
+  readonly reasoning?: AIResolvedReasoning;
+}
+
+/** AIChannel 非语言 action 可读取的显式输入。 */
+export interface AIChannelActionInput {
+  /** 当前 action 的业务输入。 */
+  readonly input: Record<string, unknown>;
+  /** AIService 已解析完成的最终模型。 */
+  readonly model: AIChannelModel;
+  /** 读取 Federation 服务端环境变量。 */
+  readonly env: (key: string) => string | undefined;
+  /** 当前请求的可选用户 ID。 */
+  readonly user_id?: string;
+  /** 当前请求所属的可选 City ID。 */
+  readonly city_id?: string;
+  /** 图片抓取 action 可读取的异步任务上下文。 */
+  readonly image_job?: AIImageJobContext;
 }
 
 /** fallback 匹配时使用的媒体信息。 */
@@ -203,10 +242,23 @@ export interface AIBalanceBridge {
   charge(input: AIBalanceChargeInput): Promise<unknown>;
 }
 
+/** Channel 或模型生成账单时可读取的显式输入。 */
+export interface AIBillInput {
+  /** 本次模型执行的最终输出。 */
+  readonly output: unknown;
+  /** AIService 已解析完成的最终模型。 */
+  readonly model: AIChannelModel;
+  /** AIService 已归一化的可选计量信息。 */
+  readonly metering?: RuntimeMetering;
+  /** 当前请求的可选用户 ID。 */
+  readonly user_id?: string;
+  /** 当前请求所属的可选 City ID。 */
+  readonly city_id?: string;
+}
+
 /** Channel 或模型生成扣费行的方法。 */
 export type AIBill = (
-  ctx: Context,
-  output: unknown,
+  input: AIBillInput,
 ) => AICharge | Promise<AICharge | undefined> | undefined;
 
 /** AIChannel action 返回的统一带计费结果。 */

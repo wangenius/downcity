@@ -10,7 +10,7 @@
 
 import { drizzle } from "drizzle-orm/d1";
 import { Federation, AIService } from "@downcity/city";
-import type { Context } from "@downcity/city";
+import type { AIBillInput } from "@downcity/city";
 import {
   AccountsService,
   BalanceService,
@@ -116,7 +116,7 @@ async function init_federation(env: Env): Promise<Federation> {
       name: "DeepSeek V4 Flash",
       description: "DeepSeek OpenAI-compatible text model",
       tags: ["deepseek", "text"],
-      bill: (ctx, output) => bill_ai_request(ctx, output, CHAT_REQUEST_COST_CREDITS),
+      bill: (input) => bill_ai_request(input, CHAT_REQUEST_COST_CREDITS),
     }),
     deepseek_channel.model({
       id: "deepseek-v4-pro",
@@ -124,7 +124,7 @@ async function init_federation(env: Env): Promise<Federation> {
       name: "DeepSeek V4 Pro",
       description: "DeepSeek OpenAI-compatible text model",
       tags: ["deepseek", "text"],
-      bill: (ctx, output) => bill_ai_request(ctx, output, CHAT_REQUEST_COST_CREDITS),
+      bill: (input) => bill_ai_request(input, CHAT_REQUEST_COST_CREDITS),
     }),
     luchi_image_channel.model({
       id: "luchi-gpt-image-2",
@@ -135,7 +135,7 @@ async function init_federation(env: Env): Promise<Federation> {
       meta: {
         upstream_model: "gpt-image-2",
       },
-      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_CREDITS),
+      bill: (input) => bill_ai_request(input, IMAGE_COST_CREDITS),
     }),
     luchi_image_channel.model({
       id: "luchi-gpt-image-1",
@@ -146,7 +146,7 @@ async function init_federation(env: Env): Promise<Federation> {
       meta: {
         upstream_model: "gpt-image-1",
       },
-      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_CREDITS),
+      bill: (input) => bill_ai_request(input, IMAGE_COST_CREDITS),
     }),
     image_302_channel.model({
       id: "302-gpt-image-1",
@@ -155,7 +155,7 @@ async function init_federation(env: Env): Promise<Federation> {
       description: "302.ai OpenAI-compatible image generation model",
       tags: ["302.ai", "image"],
       meta: { upstream_model: "gpt-image-1" },
-      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_CREDITS),
+      bill: (input) => bill_ai_request(input, IMAGE_COST_CREDITS),
     }),
     openai_image_channel.model({
       id: "openai-gpt-image-1",
@@ -164,7 +164,7 @@ async function init_federation(env: Env): Promise<Federation> {
       description: "OpenAI image generation model",
       tags: ["openai", "image"],
       meta: { upstream_model: "gpt-image-1" },
-      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_CREDITS),
+      bill: (input) => bill_ai_request(input, IMAGE_COST_CREDITS),
     }),
     gemini_image_channel.model({
       id: "gemini-2.5-flash-image",
@@ -173,7 +173,7 @@ async function init_federation(env: Env): Promise<Federation> {
       description: "Gemini generateContent image model",
       tags: ["gemini", "image"],
       meta: { upstream_model: "gemini-2.5-flash-image" },
-      bill: (ctx, output) => bill_ai_request(ctx, output, IMAGE_COST_CREDITS),
+      bill: (input) => bill_ai_request(input, IMAGE_COST_CREDITS),
     }),
   ]);
   federation.use(ai);
@@ -225,18 +225,18 @@ function withCors(response: Response): Response {
 /**
  * 生成一次 AI 调用的账单行。
  */
-function bill_ai_request(ctx: Context, output: unknown, credits: number) {
-  const mode = String(ctx.metering?.metadata?.mode ?? "request");
+function bill_ai_request(input: AIBillInput, credits: number) {
+  const mode = String(input.metering?.metadata?.mode ?? "request");
   return {
-    user_id: read_bill_user_id(output),
+    user_id: read_bill_user_id(input.output),
     credits,
     note: `AI ${mode}`,
-    ref: read_bill_ref(output),
+    ref: read_bill_ref(input.output),
     metadata: {
       service_id: "ai",
       action_id: mode,
-      model_id: ctx.metering?.model_id ?? ctx.variant?.id,
-      channel_id: ctx.metering?.channel_id,
+      model_id: input.metering?.model_id ?? input.model.id,
+      channel_id: input.metering?.channel_id,
     },
   };
 }

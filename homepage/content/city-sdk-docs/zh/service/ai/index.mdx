@@ -8,12 +8,14 @@ description: AIService 统一模型注册、路由、LanguageModelV3 和 OpenAI 
 | 概念 | 作用 |
 |---|---|
 | `AIChannel` | Federation 到一个上游 AI 渠道的执行边界 |
+| `AIChannelStreamInput` | 显式语言调用、最终模型、env 与 reasoning |
+| `AIChannelActionInput` | 图片及其它非语言 action 的受限输入 |
 | `AIModelSpec` | `channel.model()` 的模型声明参数 |
 | `AIModelDefinition` | AIService 内部完整运行时模型 |
 | `CityModelDescriptor` | 客户端公开模型目录结构 |
 | `CityModel` | 实现 AI SDK `LanguageModelV3` 的客户端模型 |
 
-所有语言模型入口都统一到 `AIChannel.stream(ctx, call)`：
+所有语言模型入口都统一到 `AIChannel.stream(input)`：
 
 ```text
 city.ai.text()          -> LanguageModelV3 -> AIChannel.stream

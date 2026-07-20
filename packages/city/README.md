@@ -152,8 +152,7 @@ City 会自动映射为：
 import {
   AIChannel,
   AIService,
-  type Context,
-  type LanguageModelV3CallOptions,
+  type AIChannelStreamInput,
   type LanguageModelV3StreamResult,
 } from "@downcity/city";
 
@@ -163,14 +162,14 @@ class DeepSeekChannel extends AIChannel {
       id: "deepseek",
       base_url: "https://api.deepseek.com/v1",
       env_key: "DEEPSEEK_API_KEY",
+      ai_sdk_provider_id: "deepseek",
     });
   }
 
   protected stream(
-    _ctx: Context,
-    _call: LanguageModelV3CallOptions,
+    input: AIChannelStreamInput,
   ): Promise<LanguageModelV3StreamResult> {
-    return myStreamAction();
+    return myStreamAction(input);
   }
 }
 

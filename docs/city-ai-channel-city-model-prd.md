@@ -26,7 +26,7 @@ AIChannel
 所有语言调用最终只进入：
 
 ```ts
-AIChannel.stream(ctx, call)
+AIChannel.stream(input)
 ```
 
 ## 2. 最终设计结论
@@ -317,6 +317,9 @@ export interface AIChannelOptions {
   /** Channel 默认 API Key 的 Federation env key。 */
   env_key?: string;
 
+  /** reasoning 映射使用的 AI SDK providerOptions 命名空间。 */
+  ai_sdk_provider_id?: string;
+
   /** Channel 下所有语言模型共享的 AI SDK providerOptions 默认值。 */
   ai_sdk_provider_options?: AISDKProviderOptions;
 }
@@ -328,6 +331,43 @@ export interface AIChannelOptions {
 - `env_key` 不再隐式创建任何语言 action。
 - Channel 是否支持语言模型，只由是否实现 `stream()` 决定。
 - 自定义 Channel 需要多个 key 时使用 `env`，并在子类中显式读取。
+
+Channel 执行不接收通用 Federation `Context`，而是使用明确的领域输入：
+
+```ts
+export interface AIChannelModel {
+  /** Federation 对外模型 ID。 */
+  id: string;
+  /** 真实上游模型 ID。 */
+  upstream_model: string;
+}
+
+export interface AIChannelStreamInput {
+  /** 已清理并注入服务端 providerOptions 的标准调用。 */
+  call: LanguageModelV3CallOptions;
+  /** AIService 已解析完成的最终模型。 */
+  model: AIChannelModel;
+  /** 读取 Federation 服务端环境变量。 */
+  env(key: string): string | undefined;
+  /** AIService 已校验的 reasoning。 */
+  reasoning?: AIResolvedReasoning;
+}
+
+export interface AIChannelActionInput {
+  /** 当前非语言 action 的业务输入。 */
+  input: Record<string, unknown>;
+  /** AIService 已解析完成的最终模型。 */
+  model: AIChannelModel;
+  /** 读取 Federation 服务端环境变量。 */
+  env(key: string): string | undefined;
+  /** 当前请求的可选用户 ID。 */
+  user_id?: string;
+  /** 当前请求所属的可选 City ID。 */
+  city_id?: string;
+  /** 图片抓取 action 的可选任务上下文。 */
+  image_job?: AIImageJobContext;
+}
+```
 
 ### 8.4 AIModelSpec
 
@@ -452,6 +492,9 @@ export interface AIModelDefinition
 ```text
 AIChannel
 AIChannelOptions
+AIChannelModel
+AIChannelStreamInput
+AIChannelActionInput
 AIModelSpec
 AIModelDefinition
 AIModelFallbackMedia
@@ -464,6 +507,7 @@ AISDKProviderOptions
 AIResolvedReasoning
 AICharge
 AIBill
+AIBillInput
 AIChargedResult<T>
 AIImageCreateResult
 AIImageResult
@@ -472,8 +516,8 @@ AIImageResult
 `AIModelStream`、`AIModelActions`、`AIModelRuntime`、路由计划、图片任务 claim、
 `LanguageModelV3StreamPart`、`LanguageModelV3GenerateResult` 以及 OpenAI Chat
 细粒度协议类型只属于 Federation 内部实现，集中放在 `AI.ts` 或 `AITransport.ts`
-但不从公共入口导出。这样用户只需要理解 Channel、模型声明、标准 LanguageModelV3
-边界和统一结果类型，不会接触 AIService 的编排细节。
+但不从公共入口导出。Channel 实现者只接触明确的 Channel 输入、模型声明、标准
+LanguageModelV3 边界和统一结果类型，不会接触 AIService 的 Action Context。
 
 ### 8.9 CityModelDescriptor
 
@@ -542,6 +586,9 @@ export abstract class AIChannel {
   /** 默认 API Key 的 Federation env key。 */
   protected readonly env_key?: string;
 
+  /** reasoning 映射使用的 providerOptions 命名空间。 */
+  private readonly ai_sdk_provider_id?: string;
+
   /** Channel 级 AI SDK providerOptions 默认值。 */
   private readonly ai_sdk_provider_options?: AISDKProviderOptions;
 
@@ -553,29 +600,18 @@ export abstract class AIChannel {
    * 子类实现后，该 Channel 注册的模型获得 text 和 stream 能力。
    */
   protected stream?(
-    ctx: Context,
-    call: LanguageModelV3CallOptions,
-  ): Promise<LanguageModelV3StreamResult>;
-
-  /**
-   * 执行一个真实 AI SDK LanguageModelV3，并注入服务端私有选项。
-   */
-  protected stream_ai_sdk_model(
-    ctx: Context,
-    call: LanguageModelV3CallOptions,
-    model: LanguageModelV3,
+    input: AIChannelStreamInput,
   ): Promise<LanguageModelV3StreamResult>;
 
   /**
    * 把 AIService 已校验的 reasoning 映射为真实上游 providerOptions。
    */
   protected build_reasoning_provider_options(
-    ctx: Context,
-    model: LanguageModelV3,
+    input: AIChannelStreamInput,
   ): AISDKProviderOptions | undefined;
 
   /** 模型调用完成后生成账单草稿。 */
-  protected bill?(ctx: Context, output: unknown): AICharge | undefined;
+  protected bill?(input: AIBillInput): AICharge | undefined;
 
   /** 注册当前 Channel 下的一个模型。 */
   model(spec: AIModelSpec): AIModelDefinition;
@@ -616,25 +652,22 @@ import {
   AIChannel,
   AIService,
   read_required_env,
-  resolve_upstream_model,
-  type Context,
+  type AIChannelStreamInput,
 } from "@downcity/city";
 import type {
-  LanguageModelV3CallOptions,
   LanguageModelV3StreamResult,
 } from "@ai-sdk/provider";
 
 class OpenAIChannel extends AIChannel {
   protected async stream(
-    ctx: Context,
-    call: LanguageModelV3CallOptions,
+    input: AIChannelStreamInput,
   ): Promise<LanguageModelV3StreamResult> {
     const openai = createOpenAI({
-      apiKey: read_required_env(ctx, this.env_key ?? ""),
+      apiKey: read_required_env(input, this.env_key ?? ""),
       baseURL: this.base_url,
     });
-    const model = openai.responses(resolve_upstream_model(ctx));
-    return this.stream_ai_sdk_model(ctx, call, model);
+    const model = openai.responses(input.model.upstream_model);
+    return model.doStream(input.call);
   }
 }
 
@@ -642,6 +675,7 @@ const openai_channel = new OpenAIChannel({
   id: "openai-main",
   env_key: "OPENAI_API_KEY",
   base_url: "https://api.openai.com/v1",
+  ai_sdk_provider_id: "openai",
   ai_sdk_provider_options: {
     openai: {
       store: true,
@@ -699,13 +733,13 @@ Chat 与 Responses 的选择必须写在 Channel 内，不由 City 推断：
 
 ```ts
 class OpenAIChatChannel extends AIChannel {
-  protected async stream(ctx, call) {
+  protected async stream(input) {
     const openai = createOpenAI({
-      apiKey: read_required_env(ctx, this.env_key ?? ""),
+      apiKey: read_required_env(input, this.env_key ?? ""),
       baseURL: this.base_url,
     });
-    const model = openai.chat(resolve_upstream_model(ctx));
-    return this.stream_ai_sdk_model(ctx, call, model);
+    const model = openai.chat(input.model.upstream_model);
+    return model.doStream(input.call);
   }
 }
 ```
@@ -714,17 +748,17 @@ class OpenAIChatChannel extends AIChannel {
 
 ```ts
 class AnthropicChannel extends AIChannel {
-  protected async stream(ctx, call) {
+  protected async stream(input) {
     const anthropic = createAnthropic({
-      apiKey: read_required_env(ctx, this.env_key ?? ""),
+      apiKey: read_required_env(input, this.env_key ?? ""),
       baseURL: this.base_url,
     });
-    const model = anthropic(resolve_upstream_model(ctx));
-    return this.stream_ai_sdk_model(ctx, call, model);
+    const model = anthropic(input.model.upstream_model);
+    return model.doStream(input.call);
   }
 
-  protected build_reasoning_provider_options(ctx) {
-    const reasoning = read_resolved_reasoning(ctx);
+  protected build_reasoning_provider_options(input) {
+    const reasoning = input.reasoning;
     if (!reasoning) return undefined;
     return {
       anthropic: {
@@ -742,21 +776,20 @@ class AnthropicChannel extends AIChannel {
 ```ts
 class PrivateHTTPChannel extends AIChannel {
   protected async stream(
-    ctx: Context,
-    call: LanguageModelV3CallOptions,
+    input: AIChannelStreamInput,
   ): Promise<LanguageModelV3StreamResult> {
     const response = await fetch(`${this.base_url}/generate`, {
       method: "POST",
       headers: {
-        authorization: `Bearer ${read_required_env(ctx, this.env_key ?? "")}`,
+        authorization: `Bearer ${read_required_env(input, this.env_key ?? "")}`,
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: resolve_upstream_model(ctx),
-        prompt: call.prompt,
-        tools: call.tools,
+        model: input.model.upstream_model,
+        prompt: input.call.prompt,
+        tools: input.call.tools,
       }),
-      signal: call.abortSignal,
+      signal: input.call.abortSignal,
     });
 
     return {
@@ -1081,7 +1114,7 @@ sequenceDiagram
   City->>Service: POST /v1/ai/text
   Service->>Service: resolve model / env / fallback / reasoning
   Service->>Service: 构造 LanguageModelV3CallOptions
-  Service->>Channel: stream(ctx, call)
+  Service->>Channel: stream(input)
   Channel->>Channel: 合并服务端 providerOptions
   Channel->>Model: doStream(call)
   Model-->>Channel: LanguageModelV3StreamResult
@@ -1106,7 +1139,7 @@ sequenceDiagram
   ClientAI->>CityModel: streamText(model, call)
   CityModel->>Service: POST /v1/ai/stream
   Service->>Service: decode / sanitize / route / reasoning
-  Service->>Channel: stream(ctx, call)
+  Service->>Channel: stream(input)
   Channel->>Upstream: LanguageModelV3.doStream()
   Upstream-->>Channel: StreamPart
   Channel-->>Service: StreamPart
@@ -1121,7 +1154,7 @@ sequenceDiagram
 CityModel.doGenerate(call)
   -> CityModel.doStream(call)
   -> /v1/ai/stream
-  -> AIChannel.stream(ctx, call)
+  -> AIChannel.stream(input)
   -> 聚合标准 LanguageModelV3 stream
   -> LanguageModelV3GenerateResult
 ```

@@ -77,7 +77,7 @@ curl -X POST https://base.example.com/v1/env/upsert \
   -d '{"key":"DEEPSEEK_API_KEY","value":"your_api_key"}'
 ```
 
-运行时 `ctx.env.OPENAI_API_KEY` 和 `ctx.env.DEEPSEEK_API_KEY` 会优先从 Federation 数据库读取。
+运行时 `input.env("OPENAI_API_KEY")` 和 `input.env("DEEPSEEK_API_KEY")` 会优先从 Federation 数据库读取。
 
 ## 验证
 

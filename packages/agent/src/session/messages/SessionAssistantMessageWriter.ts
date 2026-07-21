@@ -378,22 +378,54 @@ export class SessionAssistantMessageWriter {
   }
 
   /**
-   * 用 AI SDK 最终 UIMessage 中的 Tool 快照校准流式写入结果。
+   * 用 AI SDK 最终 UIMessage 原子校准流式写入结果。
    *
-   * 关键点（中文）：最终快照只覆盖实际存在的字段；缺失 metadata 时继续保留
-   * 流式阶段已经写入的 Provider 快照。
+   * 关键点（中文）
+   * - 最终快照决定完整 part 的相对顺序，避免漏写 Tool 在末尾补齐时落到正文之后。
+   * - 已有流式 part 保留 part_id，最终快照只补齐内容与 metadata。
+   * - 最终快照没有携带的流式 part 按原始相对位置锚定到最近的后继 part。
    */
-  async reconcile_final_tool_part(
-    part: SessionAssistantToolPart,
+  async reconcile_final_parts(
+    parts: SessionAssistantMessagePart[],
   ): Promise<void> {
     await this.enqueue_write(async () => {
-      const current = this.find_tool(part.tool_call_id);
-      await this.upsert_part({
-        ...(current || {}),
-        ...part,
-        part_id: current?.part_id || `tool:${part.tool_call_id}`,
-        sequence: current?.sequence || this.next_part_sequence(),
+      if (parts.length === 0) return;
+      const current_parts = this.current_message().parts;
+      const matched_part_ids = new Set<string>();
+      const reconciled_parts = parts.map((part) => {
+        const current_part = this.find_matching_final_part(
+          part,
+          current_parts,
+          matched_part_ids,
+        );
+        if (current_part) matched_part_ids.add(current_part.part_id);
+        return {
+          ...(current_part || {}),
+          ...part,
+          part_id: current_part?.part_id || this.final_part_id(part),
+          sequence: 0,
+        } as SessionAssistantMessagePart;
       });
+
+      // 最终快照可能不包含流式阶段的临时可见 part，按原顺序锚定到最近后继。
+      for (const [current_index, current_part] of current_parts.entries()) {
+        if (matched_part_ids.has(current_part.part_id)) continue;
+        const next_matched_part = current_parts
+          .slice(current_index + 1)
+          .find((part) => matched_part_ids.has(part.part_id));
+        const next_index = next_matched_part
+          ? reconciled_parts.findIndex(
+            (part) => part.part_id === next_matched_part.part_id,
+          )
+          : -1;
+        if (next_index >= 0) reconciled_parts.splice(next_index, 0, current_part);
+        else reconciled_parts.push(current_part);
+      }
+
+      await this.recorder.reconcile_assistant_parts(
+        this.message_id,
+        reconciled_parts.map((part, index) => ({ ...part, sequence: index + 1 })),
+      );
     });
   }
 
@@ -498,6 +530,56 @@ export class SessionAssistantMessageWriter {
       (part): part is SessionAssistantToolPart =>
         part.type === "tool" && part.tool_call_id === tool_call_id,
     );
+  }
+
+  /** 在当前流式快照中寻找最终 Part 对应的稳定 identity。 */
+  private find_matching_final_part(
+    final_part: SessionAssistantMessagePart,
+    current_parts: SessionAssistantMessagePart[],
+    matched_part_ids: Set<string>,
+  ): SessionAssistantMessagePart | undefined {
+    const available_parts = current_parts.filter(
+      (part) => !matched_part_ids.has(part.part_id),
+    );
+    if (final_part.type === "tool") {
+      return available_parts.find(
+        (part) => part.type === "tool" && part.tool_call_id === final_part.tool_call_id,
+      );
+    }
+    if (final_part.type === "file") {
+      return available_parts.find(
+        (part) =>
+          part.type === "file" &&
+          part.url === final_part.url &&
+          part.media_type === final_part.media_type,
+      );
+    }
+    if (final_part.type === "source") {
+      return available_parts.find(
+        (part) => part.type === "source" && part.source_id === final_part.source_id,
+      );
+    }
+    if (final_part.type === "data" && final_part.data_id !== undefined) {
+      return available_parts.find(
+        (part) =>
+          part.type === "data" &&
+          part.data_type === final_part.data_type &&
+          part.data_id === final_part.data_id,
+      );
+    }
+    if (final_part.type === "text" || final_part.type === "reasoning") {
+      return available_parts.find(
+        (part) => part.type === final_part.type && part.text === final_part.text,
+      ) || available_parts.find((part) => part.type === final_part.type);
+    }
+    return available_parts.find((part) => part.type === final_part.type);
+  }
+
+  /** 为最终快照中新出现的 Part 创建 canonical identity。 */
+  private final_part_id(part: SessionAssistantMessagePart): string {
+    if (part.type === "tool") return `tool:${part.tool_call_id}`;
+    if (part.type === "source") return `source:${part.source_id}`;
+    return `${part.type}:${generateId()}`;
   }
 
   /** 计算下一个不可变 Part 顺序号。 */

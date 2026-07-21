@@ -1,5 +1,5 @@
 /**
- * @file 验证 Turn 失败只写入一次结构化错误，并保留已经生成的 Assistant 内容。
+ * @file 验证 Turn 失败收口与最终 Assistant 快照顺序。
  */
 
 import assert from "node:assert/strict";
@@ -98,4 +98,44 @@ test("Provider 在部分输出后失败时保留 failed Assistant 并追加 Erro
   assert.equal(page.items[1].status, "failed");
   assert.equal(page.items[1].parts[0].text, "partial response");
   assert.equal(page.items[2].message, "stream interrupted");
+});
+
+test("Turn 最终快照按真实顺序补齐流式阶段缺失的 Tool", async () => {
+  const { messages, turn } = await create_turn_harness(async (run_context) => {
+    await run_context.onUiMessageChunkCallback({ type: "text-start", id: "text-1" });
+    await run_context.onUiMessageChunkCallback({
+      type: "text-delta",
+      id: "text-1",
+      delta: "最终结论",
+    });
+    await run_context.onUiMessageChunkCallback({ type: "text-end", id: "text-1" });
+    return {
+      success: true,
+      assistantMessage: {
+        id: "assistant-1",
+        role: "assistant",
+        parts: [
+          {
+            type: "dynamic-tool",
+            toolCallId: "call-1",
+            toolName: "shell_exec",
+            state: "output-available",
+            input: { cmd: "pwd" },
+            output: { success: true },
+          },
+          { type: "text", text: "最终结论", state: "done" },
+        ],
+      },
+      deferredPersistedUserMessages: [],
+    };
+  });
+
+  const handle = await turn.prompt({ query: "diagnose" });
+  const result = await handle.finished;
+  const page = await messages.list_messages();
+  const assistant = page.items.find((message) => message.type === "assistant");
+
+  assert.equal(result.success, true);
+  assert.deepEqual(assistant.parts.map((part) => part.type), ["tool", "text"]);
+  assert.deepEqual(assistant.parts.map((part) => part.sequence), [1, 2]);
 });

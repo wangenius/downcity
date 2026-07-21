@@ -610,6 +610,26 @@ export class SessionMessages {
     } as SessionMutation, message);
   }
 
+  /** @internal 原子提交 Assistant 最终 Parts 顺序。 */
+  async reconcile_assistant_parts(
+    message_id: string,
+    parts: SessionAssistantMessagePart[],
+  ): Promise<void> {
+    await this.enqueue_assistant_write(message_id, async () => {
+      const current = require_message([...this.messages_by_id.values()], message_id, "assistant");
+      require_streaming_assistant(current);
+      const created_at = Date.now();
+      const message: SessionAssistantMessage = {
+        ...current,
+        revision: current.revision + 1,
+        updated_at: created_at,
+        parts: structuredClone(parts).sort((left, right) => left.sequence - right.sequence),
+      };
+      await this.store.write_assistant_message(message);
+      this.accept_message(message);
+    });
+  }
+
   /** @internal 收口 Assistant Message。 */
   async complete_assistant_message(
     message_id: string,

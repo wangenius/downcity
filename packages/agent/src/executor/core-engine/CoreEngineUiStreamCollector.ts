@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 必须完整消费 AI SDK UI stream，才能稳定触发 `onFinish`。
  * - 优先使用结构化 `responseMessage`；缺失时才回退到纯文本。
- * - UI chunk 回调是展示层副作用，失败不应阻断 session 执行。
+ * - UI chunk 回调负责上层 canonical message 写入，失败必须终止本轮收敛。
  */
 
 import type { streamText } from "ai";
@@ -54,6 +54,7 @@ export async function collectFinalAssistantMessageFromUiStream(params: {
   let streamedAssistantMessage: SessionMessageRecordV1 | null = null;
   let uiFinishSummary: JsonObject | null = null;
   let streamed_text = "";
+  let callback_failed = false;
 
   const uiStream = params.result.toUIMessageStream<SessionMessageRecordV1>({
     // 关键点（中文）：SDK stream 需要 reasoning 旁路事件时可直接消费；最终落盘仍由 responseMessage 收敛。
@@ -91,12 +92,13 @@ export async function collectFinalAssistantMessageFromUiStream(params: {
       if (typeof params.onUiMessageChunkCallback !== "function") continue;
       try {
         await params.onUiMessageChunkCallback(chunk);
-      } catch {
-        // ignore UI stream callback failures
+      } catch (error) {
+        callback_failed = true;
+        throw error;
       }
     }
   } catch (error) {
-    if (!params.abortSignal?.aborted) {
+    if (callback_failed || !params.abortSignal?.aborted) {
       throw error;
     }
   }

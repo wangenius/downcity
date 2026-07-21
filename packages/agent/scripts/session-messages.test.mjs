@@ -256,7 +256,7 @@ test("Streaming Tool Provider metadata 在输入和输出状态间完整保留",
     providerExecuted: true,
     providerMetadata: { openai: { resultId: "result_1" } },
   });
-  await writer.reconcile_final_tool_part({
+  await writer.reconcile_final_parts([{
     part_id: "call_1",
     sequence: 1,
     type: "tool",
@@ -267,7 +267,7 @@ test("Streaming Tool Provider metadata 在输入和输出状态间完整保留",
     output: "ok",
     provider_executed: true,
     call_provider_metadata: { openai: { itemId: "fc_final" } },
-  });
+  }]);
   await writer.complete();
 
   const assistant = (await read_jsonl(file_path))[0];
@@ -900,6 +900,44 @@ test("空 Text Start 不会抢占后续 Tool 的真实顺序", async () => {
       ["text", 3],
     ],
   );
+});
+
+test("最终快照按真实相对位置补齐流式阶段缺失的 Tool", async () => {
+  const { recorder, events, file_path } = await create_recorder("final-reconcile-order-test");
+  const writer = await recorder.open_assistant_message({ turn_id: "turn-1", segment_index: 1 });
+
+  await writer.apply_chunk({ type: "text-start", id: "text-0" });
+  await writer.apply_chunk({ type: "text-delta", id: "text-0", delta: "最终结论" });
+  await writer.apply_chunk({ type: "text-end", id: "text-0" });
+  const streamed_text_part_id = events.find(
+    (event) => event.variant === "part" && event.type === "text",
+  ).part.part_id;
+
+  await writer.reconcile_final_parts([
+    {
+      part_id: "call-1",
+      sequence: 1,
+      type: "tool",
+      tool_call_id: "call-1",
+      tool_name: "shell_exec",
+      state: "completed",
+      input: { cmd: "pwd" },
+      output: { success: true },
+    },
+    {
+      part_id: "text-1",
+      sequence: 2,
+      type: "text",
+      text: "最终结论",
+      state: "done",
+    },
+  ]);
+  await writer.complete();
+
+  const assistant = (await read_jsonl(file_path))[0];
+  assert.deepEqual(assistant.parts.map((part) => part.type), ["tool", "text"]);
+  assert.deepEqual(assistant.parts.map((part) => part.sequence), [1, 2]);
+  assert.equal(assistant.parts[1].part_id, streamed_text_part_id);
 });
 
 test("重启时将 Assistant 草稿收口为 stopped，并将运行中 Action 标记失败", async () => {

@@ -58,7 +58,7 @@ Turn 在产生任何 Assistant 内容前失败时，只写入一条 `error` Mess
 | `data` | `data_type`, `data`, `data_id` | 可持久化的结构化 UI 数据 |
 | `step-start` | 无业务字段 | 多 step 回复的边界 |
 
-每个 Assistant Part 有稳定的 `part_id` 和不可变的内部 `sequence`。工具状态变化更新同一个 Part，不应在 UI 中创建“请求”和“结果”两个重复行。
+每个 Assistant Part 有稳定的 `part_id`。`sequence` 表示当前 Message revision 中的线性顺序；如果最终 AI SDK 快照补充了流式阶段未出现的 Part，Assistant 完成前的最终完整快照可能校正 `sequence`。Message 完成后，canonical parts 顺序保持稳定。工具状态变化更新同一个 Part，不应在 UI 中创建“请求”和“结果”两个重复行。
 
 ### Tool Provider metadata
 
@@ -96,6 +96,8 @@ AI SDK 原生审批保存 `approval_id / approved / reason`。Downcity 本地 Sh
 ## 顺序、版本与可见性
 
 每条 Message 都有稳定 `message_id`、创建后不变的 `sequence`，以及随完整快照更新递增的 `revision`。客户端不能用较低 revision 覆盖较高 revision。
+
+Assistant 完成前，SDK 会用最终 UIMessage 原子收敛完整 parts。流式阶段缺失的工具会按最终相对位置补齐，不会被简单追加到正文之后。canonical part 写入失败会使 Turn 失败，不会发布一个历史不完整的 completed Turn。客户端收到更高 revision 的完整 `message` Mutation 时，应替换整条 Message，而不是保留旧 revision 的 parts 数组。
 
 默认 `messages()` 只返回 `visibility: "visible"` 的 Message。调试或审计时可传 `include_internal: true`。Compact Summary 不是 Message，不占用 sequence，也不会出现在 `messages()` 结果中。
 

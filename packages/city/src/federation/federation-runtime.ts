@@ -11,6 +11,7 @@ import {
   pg_federation_auth_keys,
   sqlite_federation_auth_keys,
 } from "./auth/key-schema.js";
+import { pg_bureau_tokens, sqlite_bureau_tokens } from "./auth/bureau-token-schema.js";
 import { EnvStore } from "../service/env/env-store.js";
 import { pgCities, sqliteCities } from "../service/cities/schema.js";
 import { normalizeEnvKey, parseDotenvEntries } from "../utils/helpers.js";
@@ -50,11 +51,13 @@ function builtin_tables_for(dialect: "pg" | "sqlite"): BuiltinTables {
         cities: pgCities,
         env: pgEnv,
         federation_auth_keys: pg_federation_auth_keys,
+        bureau_tokens: pg_bureau_tokens,
       }
     : {
         cities: sqliteCities,
         env: sqliteEnv,
         federation_auth_keys: sqlite_federation_auth_keys,
+        bureau_tokens: sqlite_bureau_tokens,
       };
 }
 

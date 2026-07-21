@@ -828,7 +828,7 @@ export class AIService extends Service {
 
   static listModels(aiService: AIService, options: {
     env: EnvReader;
-    identity: "guest" | "user" | "admin";
+    identity: "guest" | "user" | "bureau" | "admin";
   }): CityModelDescriptor[] {
     return aiService.models.list_public({
       ...options,

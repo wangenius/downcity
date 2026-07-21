@@ -12,6 +12,7 @@ import { CityStore } from "../service/cities/city-store.js";
 import { Authenticator } from "./auth/authenticator.js";
 import { FederationKeyStore } from "./auth/federation-key-store.js";
 import { UserTokenAuthority } from "./auth/user-token-authority.js";
+import { BureauTokenStore } from "./auth/bureau-token-store.js";
 import { randomSecret } from "../utils/helpers.js";
 import type { Service } from "../service/service.js";
 import type { CityUserSchemaInput } from "../store/types.js";
@@ -19,6 +20,7 @@ import type { Runtime } from "./runtime.js";
 import type { CityRecord } from "../service/cities/types.js";
 import type { EnvEntry } from "../service/env/types.js";
 import type { FederationAuthKeyRecord } from "./auth/types.js";
+import type { BureauTokenRecord } from "../types/Bureau.js";
 import type { Database, DbClient } from "../store/db.js";
 
 /**
@@ -61,6 +63,7 @@ export async function initialize_federation(params: {
     "federation_auth_keys",
     new TableApi(database, builtinTables.federation_auth_keys),
   );
+  table_map.set("bureau_tokens", new TableApi(database, builtinTables.bureau_tokens));
 
   for (const [name, table] of Object.entries(user_schema)) {
     table_map.set(name, new TableApi(database, table));
@@ -100,7 +103,18 @@ export async function initialize_federation(params: {
     key_store,
     `urn:downcity:federation:${federation_id}`,
   );
-  const authenticator = new Authenticator(env, require_ready, token_authority, key_store);
+  const bureau_token_table = table_map.get("bureau_tokens");
+  if (!bureau_token_table) throw new Error("Federation Bureau Token table is not initialized");
+  const bureau_token_store = new BureauTokenStore(
+    bureau_token_table as CityTableApi<BureauTokenRecord>,
+  );
+  const authenticator = new Authenticator(
+    env,
+    require_ready,
+    token_authority,
+    key_store,
+    bureau_token_store,
+  );
 
   for (const service of services) {
     service._db = database;
@@ -108,6 +122,7 @@ export async function initialize_federation(params: {
     service._authenticator = authenticator;
     service._env = env;
     service._cityStore = city_store;
+    service._bureauTokenStore = bureau_token_store;
     service._raw = runtime.raw;
     service._baseURL = configured_base_url ?? runtime.baseURL;
     service._queue = params.queue as never;

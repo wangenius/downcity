@@ -5,7 +5,7 @@
  *
  * 关键说明（中文）
  * - 用于配合 `templates/node` 本地 HTTP 服务进行交互式调试。
- * - 优先读取环境变量中的 user_token；缺失时使用 admin key 自动签发一个开发 token。
+ * - 优先读取环境变量中的 user_token；缺失时使用 Bureau Token 自动签发一个开发 token。
  * - 该入口只做本地请求与终端交互，不承载 SDK 业务逻辑。
  */
 
@@ -14,7 +14,7 @@ import { stdin as input, stdout as output } from "node:process";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { Agent } from "@downcity/agent";
-import { City, FederationAdmin, type CityModel } from "@downcity/city";
+import { City, Bureau, type CityModel } from "@downcity/city";
 
 const DEFAULT_FEDERATION_URL = "http://127.0.0.1:43127";
 const DEFAULT_CITY_ID = "city_downcity";
@@ -47,16 +47,16 @@ interface ClientConfig {
   /**
    * 可选的 City user_token。
    *
-   * 未提供时会尝试通过 admin key 自动签发。
+   * 未提供时会尝试通过 Bureau Token 自动签发。
    */
   user_token?: string;
 
   /**
-   * 可选的 City admin secret key。
+   * 可选的 Federation Bureau Token。
    *
    * 用于本地开发时自动签发 user_token。
    */
-  admin_secret_key?: string;
+  bureau_token?: string;
 
   /**
    * 必填的 City AIService 模型 ID。
@@ -93,7 +93,7 @@ function read_config(): ClientConfig {
     city_id: read_optional_env("DOWNCITY_CLIENT_CITY_ID") ?? read_optional_env("CITY_ID") ?? DEFAULT_CITY_ID,
     user_id: read_optional_env("DOWNCITY_CLIENT_USER_ID") ?? read_optional_env("USER_ID") ?? DEFAULT_USER_ID,
     user_token: read_optional_env("DOWNCITY_CLIENT_USER_TOKEN") ?? read_optional_env("USER_TOKEN"),
-    admin_secret_key: read_optional_env("DOWNCITY_FEDERATION_ADMIN_SECRET_KEY") ?? read_optional_env("ADMIN_SECRET_KEY"),
+    bureau_token: read_optional_env("DOWNCITY_CLIENT_BUREAU_TOKEN") ?? read_optional_env("BUREAU_TOKEN"),
     model_id: read_optional_env("DOWNCITY_CLIENT_MODEL_ID") ?? read_optional_env("MODEL_ID"),
     agent_id: read_optional_env("DOWNCITY_CLIENT_AGENT_ID") ?? DEFAULT_AGENT_ID,
     agent_path: resolve(read_optional_env("DOWNCITY_CLIENT_AGENT_PATH") ?? DEFAULT_AGENT_PATH),
@@ -105,19 +105,19 @@ function read_config(): ClientConfig {
  */
 async function resolve_user_token(config: ClientConfig): Promise<string> {
   if (config.user_token) return config.user_token;
-  if (!config.admin_secret_key) {
+  if (!config.bureau_token) {
     throw new Error(
       [
         "缺少 user_token。",
-        "请设置 DOWNCITY_CLIENT_USER_TOKEN，或设置 DOWNCITY_FEDERATION_ADMIN_SECRET_KEY 让 client 自动签发本地开发 token。",
-        "node 模板启动后会在终端打印 Admin key。",
+        "请设置 DOWNCITY_CLIENT_USER_TOKEN，或设置 DOWNCITY_CLIENT_BUREAU_TOKEN 让 client 自动签发本地开发 token。",
+        "Bureau Token 必须具备 Federation 管理能力。",
       ].join("\n"),
     );
   }
 
-  const admin = new FederationAdmin({
+  const admin = new Bureau({
     federation_url: config.federation_url,
-    admin_secret_key: config.admin_secret_key,
+    bureau_token: config.bureau_token,
   });
   const issued = await admin.cities.tokens.apply({
     city_id: config.city_id,

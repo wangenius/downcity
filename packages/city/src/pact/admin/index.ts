@@ -1,11 +1,14 @@
 /**
- * 管理端 SDK。
+ * Bureau HTTP 访问层。
+ *
+ * 统一使用 bureau_token 调用产品后端身份接口和 Federation 管理接口。
  */
 
 import { ServiceClient } from "../invoker/invoker.js";
 import { BalanceInvoker } from "../invoker/balance/index.js";
 import { EnvInvoker } from "../invoker/env/index.js";
 import { CitiesInvoker } from "../invoker/cities/index.js";
+import { BureausInvoker } from "../invoker/bureaus/index.js";
 import {
   requiredString,
   type RequestInitLike,
@@ -24,6 +27,7 @@ export class AdminPactAccess {
   readonly balance: BalanceInvoker;
   readonly cities: CitiesInvoker;
   readonly env: EnvInvoker;
+  readonly bureaus: BureausInvoker;
 
   private readonly base_url: string;
   private readonly secret: string | undefined;
@@ -31,11 +35,11 @@ export class AdminPactAccess {
 
   constructor(options: AdminPactAccessOptions) {
     if (!options || typeof options !== "object") {
-      throw new TypeError("Federation admin options are required");
+      throw new TypeError("Bureau access options are required");
     }
 
     this.base_url = requiredString(options.base_url, "base_url").replace(/\/+$/, "");
-    this.secret = requiredString(options.admin_secret_key, "admin_secret_key");
+    this.secret = requiredString(options.bureau_token, "bureau_token");
     this.requester = create_http_requester({
       base_url: this.base_url,
       fetch: options.fetch,
@@ -46,6 +50,7 @@ export class AdminPactAccess {
     this.balance = new BalanceInvoker({ requestJSON: req });
     this.cities = new CitiesInvoker({ requestJSON: req });
     this.env = new EnvInvoker({ requestJSON: req });
+    this.bureaus = new BureausInvoker({ requestJSON: req });
   }
 
   /** 获取 Service 调用器（与 User City 共用同一路由） */
@@ -88,10 +93,10 @@ export class AdminPactAccess {
     return this.requester.text(path, init);
   }
   /**
-   * 为管理端请求统一补齐鉴权头。
+   * 为 Bureau 请求统一补齐鉴权头。
    *
    * 关键说明（中文）
-   * - 所有管理端请求都必须带上 admin bearer token
+   * - 所有 Bureau 请求都必须带上 bureau_token
    * - 默认仍然补 `content-type: application/json`，便于 POST action 统一行为
    */
   private withAuth(init: RequestInitLike): RequestInitLike {

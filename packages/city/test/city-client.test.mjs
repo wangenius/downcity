@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { City, FederationAdmin } from "../bin/index.js"
+import { City, Bureau } from "../bin/index.js"
 
 test("City rejects Federation rpc URLs", async () => {
   assert.throws(
@@ -408,11 +408,11 @@ test("User City payment.method(id).invoke() rejects disabled or user-required me
   )
 })
 
-test("FederationAdmin service() uses the shared /v1 route prefix", async () => {
+test("Bureau service() uses the shared /v1 route prefix", async () => {
   const requests = []
-  const admin = new FederationAdmin({
+  const admin = new Bureau({
     federation_url: "http://localhost:3001/",
-    admin_secret_key: "sk",
+    bureau_token: "sk",
     fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) },
   })
   const result = await admin.service("usage").action("report").invoke({ range: "today" })
@@ -421,11 +421,11 @@ test("FederationAdmin service() uses the shared /v1 route prefix", async () => {
   assert.equal(requests[0].init.headers.authorization, "Bearer sk")
 })
 
-test("FederationAdmin env list / catalog / upsert / remove", async () => {
+test("Bureau env list / catalog / upsert / remove", async () => {
   const requests = []
-  const admin = new FederationAdmin({
+  const admin = new Bureau({
     federation_url: "http://localhost:3001/",
-    admin_secret_key: "sk",
+    bureau_token: "sk",
     fetch: async (url, init) => {
     requests.push({ url, init })
     if (url.endsWith("/v1/env/list")) return json({ items: [{ key: "K", value: "V", source: "database" }] })
@@ -458,11 +458,11 @@ test("FederationAdmin env list / catalog / upsert / remove", async () => {
   assert.equal(requests[3].url, "http://localhost:3001/v1/env/remove")
 })
 
-test("FederationAdmin cities CRUD + tokens.apply", async () => {
+test("Bureau cities CRUD + tokens.apply", async () => {
   const requests = []; const p = { city_id: "p1", name: "Demo", status: "active", created_at: "t", updated_at: "t" }
-  const admin = new FederationAdmin({
+  const admin = new Bureau({
     federation_url: "http://localhost:3001/",
-    admin_secret_key: "sk",
+    bureau_token: "sk",
     fetch: async (url, init) => {
     requests.push({ url, init })
     if (url.endsWith("/v1/cities/list")) return json({ items: [p] })
@@ -482,11 +482,11 @@ test("FederationAdmin cities CRUD + tokens.apply", async () => {
   })
 })
 
-test("FederationAdmin listServices() / listModels() / instruction()", async () => {
+test("Bureau listServices() / listModels() / instruction()", async () => {
   const requests = []
-  const admin = new FederationAdmin({
+  const admin = new Bureau({
     federation_url: "http://localhost:3001/",
-    admin_secret_key: "sk",
+    bureau_token: "sk",
     fetch: async (url, init) => {
       requests.push({ url, init })
       if (url.endsWith("/v1/services")) {

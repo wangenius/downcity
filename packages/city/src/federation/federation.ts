@@ -15,6 +15,7 @@ import { Service } from "../service/service.js";
 import { asInstallableService, type ServiceDefinition } from "../service/installable-service.js";
 import { EnvService } from "../service/env/env-service.js";
 import { CitiesService } from "../service/cities/cities-service.js";
+import { BureausService } from "../service/bureaus/bureaus-service.js";
 import { build_federation_instruction } from "./federation-instruction.js";
 import { initialize_federation } from "./federation-init.js";
 import { build_federation_router } from "./federation-router.js";
@@ -59,6 +60,7 @@ export class Federation {
     });
     this.use(new EnvService());
     this.use(new CitiesService());
+    this.use(new BureausService());
   }
 
   /**

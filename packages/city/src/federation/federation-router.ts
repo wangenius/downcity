@@ -17,14 +17,16 @@ import { httpError } from "../utils/helpers.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Runtime } from "./runtime.js";
 import type { RuntimeUser } from "./auth/types.js";
+import type { RuntimeBureau } from "../types/Bureau.js";
 import { build_federation_instruction } from "./federation-instruction.js";
 import { collect_federation_env_catalog } from "./federation-env-catalog.js";
 import type { FederationRequestTransport, FederationTrustedIdentity } from "./types.js";
 
 declare module "hono" {
   interface ContextVariableMap {
-    identity?: { kind: "guest" | "user" | "admin" };
+    identity?: { kind: "guest" | "user" | "bureau" | "admin" };
     user?: RuntimeUser;
+    bureau?: RuntimeBureau;
     city?: { city_id: string; status: string };
   }
 }
@@ -184,6 +186,7 @@ export function build_federation_router(params: {
           const identity = await authorize_request(authenticator, trusted_identity_from_env(c.env), c.req.raw, def.auth);
           ctx.identity = { kind: identity.level };
           ctx.user = identity.user;
+          ctx.bureau = identity.bureau;
           ctx.city = identity.city;
           ensure_city_identity_match(ctx);
 

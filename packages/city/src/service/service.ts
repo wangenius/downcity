@@ -13,9 +13,11 @@ import { Action, type ActionFn } from "./action.js";
 import type { CityTableApi } from "../store/table-api.js";
 import type { Database, DbClient } from "../store/db.js";
 import type { RuntimeUser } from "../federation/auth/types.js";
+import type { RuntimeBureau } from "../types/Bureau.js";
 import type { Authenticator } from "../federation/auth/authenticator.js";
 import type { EnvProvider } from "../federation/runtime.js";
 import type { CityStore } from "./cities/city-store.js";
+import type { BureauTokenStore } from "../federation/auth/bureau-token-store.js";
 import type { InstructionActionDefinition, InstructionCapable, InstructionDefinition } from "./instruction.js";
 import type { RuntimeMetering } from "../types/Metering.js";
 import type { FederationQueue } from "../federation/queue.js";
@@ -27,7 +29,7 @@ import type { FederationRequestTransport } from "../federation/types.js";
 // ===========================================================================
 
 /** 当前请求最终解析出的身份。 */
-export type RouteIdentity = "guest" | "user" | "admin";
+export type RouteIdentity = "guest" | "user" | "bureau" | "admin";
 /** Action 可声明的可访问身份。空数组表示免登录。 */
 export type RouteAuth = Array<Exclude<RouteIdentity, "guest">>;
 
@@ -50,6 +52,8 @@ export interface Context {
   output?: unknown;
   /** 当前用户（user_token 解析成功时可用） */
   user?: RuntimeUser;
+  /** 当前 Bureau（bureau_token 解析成功时可用）。 */
+  bureau?: RuntimeBureau;
   /** 当前请求身份 */
   identity?: { kind: RouteIdentity };
   /** 所属 city */
@@ -183,6 +187,8 @@ export class Service {
   _authenticator?: Authenticator;
   _env?: EnvProvider;
   _cityStore?: CityStore;
+  /** Federation Bureau Token Store。 */
+  _bureauTokenStore?: BureauTokenStore;
 
   /** 原始数据库实例（better-sqlite3 / D1 等） */
   _raw?: unknown;

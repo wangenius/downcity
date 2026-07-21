@@ -6,7 +6,7 @@
 
 - 挂载 `Service` / `AIService`
 - 初始化内置 `cities` / `env` 表
-- 校验 `user_token` 和 `admin_secret_key`
+- 校验 `user_token` 和 `bureau_token`
 - 暴露统一的 `/v1/*` HTTP 路由
 - 提供 env、数据库、hook 和鉴权上下文
 
@@ -114,7 +114,7 @@ console.log(text);
 GET /v1/federation/instruction
 ```
 
-这个接口只允许 `admin_secret_key` 访问，返回 `text/plain`。
+这个接口只允许具备管理能力的 `bureau_token` 访问，返回 `text/plain`。
 
 ## Service
 
@@ -208,7 +208,7 @@ base.use(usageService());
 ## 鉴权语义
 
 - 默认 action 需要 `user_token`
-- `auth: ["admin"]` 只允许 `admin_secret_key`
+- `auth: ["admin"]` 只允许具备管理能力的 `bureau_token`
 - `auth: []` 表示免登录
 
 Federation 首次启动会自动生成并持久化 Ed25519 Key Ring。私钥只用于 Federation
@@ -230,23 +230,23 @@ const city = new City({
 
 `city_id` 由 Federation 验签后从 token 中读取，客户端不再重复传入。
 
-独立产品后端通过 `FedBureau` 识别请求身份：
+独立产品后端通过 `Bureau` 在线识别请求身份：
 
 ```ts
-const bureau = new FedBureau({
+const bureau = new Bureau({
   federation_url: "https://fed.example.com",
-  city_id: "city_product_a",
+  bureau_token,
 });
 
 const identity = await bureau.identify(request);
 ```
 
-Federation 管理控制面使用独立的 `FederationAdmin`：
+Federation 管理控制面也使用 `Bureau`，管理型 Token 需要 `federation:admin` capability：
 
 ```ts
-const admin = new FederationAdmin({
+const admin = new Bureau({
   federation_url: "https://fed.example.com",
-  admin_secret_key,
+  bureau_token: admin_bureau_token,
 });
 ```
 
@@ -260,8 +260,7 @@ const admin = new FederationAdmin({
 - `AIChannel`
 - `CityModel`
 - `CityModelDescriptor`
-- `FedBureau`
-- `FederationAdmin`
+- `Bureau`
 - `EnvService`
 - `CitiesService`
 

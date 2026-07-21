@@ -98,6 +98,8 @@ export interface BuiltinTables {
   env: TableDef;
   /** Federation 用户 token Ed25519 Key Ring 表。 */
   federation_auth_keys: TableDef;
+  /** Federation Bureau Token 表。 */
+  bureau_tokens: TableDef;
 }
 
 // ===========================================================================

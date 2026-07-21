@@ -407,6 +407,55 @@ export class AccountsService extends InstallableService {
 
     ctx.route({
       method: "POST",
+      path: "/identify",
+      auth: ["bureau", "admin"],
+      handler: async (c) => {
+        const user_token = String((await c.json<{ user_token?: string }>()).user_token ?? "").trim();
+        if (!user_token) return c.jsonResponse({ registered: false }, 200);
+
+        if (c.bureau && !c.bureau.capabilities.includes("accounts:read")
+          && !c.bureau.capabilities.includes("federation:admin")) {
+          return c.jsonResponse({ error: "Bureau capability accounts:read is required" }, 403);
+        }
+
+        let payload;
+        try {
+          payload = await this._authenticator!.verifyToken(user_token);
+        } catch {
+          return c.jsonResponse({ registered: false }, 200);
+        }
+
+        if (c.bureau?.city_id && c.bureau.city_id !== payload.city_id) {
+          return c.jsonResponse({ registered: false }, 200);
+        }
+
+        const user = await this.findAuthUserById(payload.user_id);
+        if (!user) {
+          return c.jsonResponse({
+            registered: false,
+            user_id: payload.user_id,
+            city_id: payload.city_id,
+          }, 200);
+        }
+
+        return c.jsonResponse({
+          registered: true,
+          user_id: payload.user_id,
+          city_id: payload.city_id,
+          user: {
+            user_id: user.id,
+            email: user.email,
+            email_verified: normalizeBool(user.emailVerified),
+            name: user.name,
+            image: user.image,
+          },
+          profile: await this.readProfile(payload.user_id),
+        }, 200);
+      },
+    });
+
+    ctx.route({
+      method: "POST",
       path: "/logout",
       auth: ["user"],
       handler: async (c) => c.jsonResponse({ success: true }),

@@ -36,7 +36,7 @@ Services and Actions are registered with City and can be discovered and called b
 - Service/Action infrastructure (backend capabilities)
 - Usage, balance, and billing (City Services)
 
-Federation generates an Ed25519 Key Ring on first startup and publishes verification keys through `/.well-known/jwks.json`. Product backends can use `FedBureau` to identify requests belonging to their configured `city_id`.
+Federation generates an Ed25519 Key Ring on first startup and publishes verification keys through `/.well-known/jwks.json`. Product backends use `Bureau`, configured with a required `bureau_token`, to identify users online. Federation resolves `city_id` from the Bureau Token record instead of accepting it from the backend.
 
 ## Where to learn more
 

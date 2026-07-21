@@ -27,7 +27,8 @@ import type {
   LanguageModelV3StreamResult,
   CityModelDescriptor,
   City,
-  FederationAdmin,
+  Bureau,
+  BureauTokenIssueResult,
   ModelCatalog,
   PaymentMethodHandle,
   UserImageJobCreateResult,
@@ -78,9 +79,9 @@ void provider_stream_call;
 void provider_stream_result;
 
 declare const city: City;
-declare const admin: FederationAdmin;
+declare const admin: Bureau;
 declare const user_city: City;
-declare const admin_city: FederationAdmin;
+declare const admin_city: Bureau;
 
 const ai: AIInvoker = city.ai;
 
@@ -117,6 +118,13 @@ const adminModelsContract: Promise<CityModelDescriptor[]> = adminModels;
 
 const adminInstruction = admin.instruction();
 const adminInstructionContract: Promise<string> = adminInstruction;
+
+const bureau_token = admin.bureaus.create({
+  name: "Product Backend",
+  city_id: "city_product",
+});
+const bureau_token_contract: Promise<BureauTokenIssueResult> = bureau_token;
+void bureau_token_contract;
 
 const paymentMethods = city.payment.methods();
 const paymentMethodsContract: Promise<UserPaymentMethod[]> = paymentMethods;

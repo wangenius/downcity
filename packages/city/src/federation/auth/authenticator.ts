@@ -10,6 +10,7 @@ import { normalizeRouteAuth, type RouteAuth, type RouteIdentity } from "../../se
 import type { EnvProvider } from "../runtime.js";
 import { parse_user_token_ttl, type UserTokenAuthority } from "./user-token-authority.js";
 import type { FederationKeyStore } from "./federation-key-store.js";
+import type { BureauTokenStore } from "./bureau-token-store.js";
 
 import type {
   CreateUserTokenInput,
@@ -19,6 +20,7 @@ import type {
   UserTokenIssueResult,
   RuntimeUser,
 } from "./types.js";
+import type { RuntimeBureau } from "../../types/Bureau.js";
 import type { FederationTrustedIdentity } from "../types.js";
 
 /** 鉴权级别 */
@@ -30,6 +32,8 @@ export interface AuthResult {
   user?: RuntimeUser;
   /** 解析出的 City 信息（user 级别时可用） */
   city?: { city_id: string; status: string };
+  /** 解析出的 Bureau 信息（bureau token 时可用）。 */
+  bureau?: RuntimeBureau;
 }
 
 /** 统一鉴权器 */
@@ -39,6 +43,7 @@ export class Authenticator {
     private store: () => Promise<{ city: { get(id: string): Promise<{ city_id: string; status: string } | undefined> } }>,
     private readonly token_authority: UserTokenAuthority,
     private readonly key_store: FederationKeyStore,
+    private readonly bureau_token_store: BureauTokenStore,
   ) {}
 
   /**
@@ -54,6 +59,17 @@ export class Authenticator {
     const adminKey = this.env.get("DOWNCITY_FEDERATION_ADMIN_SECRET_KEY");
     if (adminKey && token === adminKey) {
       return { level: "admin" };
+    }
+
+    const bureau = await this.bureau_token_store.resolve(token);
+    if (bureau) {
+      if (bureau.capabilities.includes("federation:admin")) {
+        return { level: "admin", bureau };
+      }
+      const store = await this.store();
+      const city = await store.city.get(bureau.city_id);
+      if (!city || city.status !== "active") return { level: "guest" };
+      return { level: "bureau", bureau, city };
     }
 
     try {

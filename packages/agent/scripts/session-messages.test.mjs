@@ -230,6 +230,7 @@ test("Streaming Tool Provider metadata 在输入和输出状态间完整保留",
     turn_id: "turn-provider-metadata",
     segment_index: 1,
   });
+  await writer.begin_step();
   await writer.apply_chunk({
     type: "tool-input-start",
     toolCallId: "call_1",
@@ -256,7 +257,7 @@ test("Streaming Tool Provider metadata 在输入和输出状态间完整保留",
     providerExecuted: true,
     providerMetadata: { openai: { resultId: "result_1" } },
   });
-  await writer.reconcile_final_parts([{
+  await writer.finish_step([{
     part_id: "call_1",
     sequence: 1,
     type: "tool",
@@ -820,6 +821,7 @@ test("不同模型 step 重复使用 Text chunk ID 时仍保持真实 Part 顺�
   const { recorder, file_path } = await create_recorder("reused-text-id-order-test");
   const writer = await recorder.open_assistant_message({ turn_id: "turn-1", segment_index: 1 });
 
+  await writer.begin_step();
   await writer.apply_chunk({ type: "text-start", id: "txt-0" });
   await writer.apply_chunk({ type: "text-delta", id: "txt-0", delta: "first" });
   await writer.apply_chunk({ type: "text-end", id: "txt-0" });
@@ -831,7 +833,27 @@ test("不同模型 step 重复使用 Text chunk ID 时仍保持真实 Part 顺�
     input: { query: "first" },
   });
   await writer.apply_chunk({ type: "tool-output-available", toolCallId: "call-1", output: "one" });
+  await writer.finish_step([
+    {
+      part_id: "text-1",
+      sequence: 1,
+      type: "text",
+      text: "first",
+      state: "done",
+    },
+    {
+      part_id: "call-1",
+      sequence: 2,
+      type: "tool",
+      tool_call_id: "call-1",
+      tool_name: "search",
+      state: "completed",
+      input: { query: "first" },
+      output: "one",
+    },
+  ]);
 
+  await writer.begin_step();
   await writer.apply_chunk({ type: "text-start", id: "txt-0" });
   await writer.apply_chunk({ type: "text-delta", id: "txt-0", delta: "second" });
   await writer.apply_chunk({ type: "text-end", id: "txt-0" });
@@ -843,6 +865,25 @@ test("不同模型 step 重复使用 Text chunk ID 时仍保持真实 Part 顺�
     input: { query: "second" },
   });
   await writer.apply_chunk({ type: "tool-output-available", toolCallId: "call-2", output: "two" });
+  await writer.finish_step([
+    {
+      part_id: "text-1",
+      sequence: 1,
+      type: "text",
+      text: "second",
+      state: "done",
+    },
+    {
+      part_id: "call-2",
+      sequence: 2,
+      type: "tool",
+      tool_call_id: "call-2",
+      tool_name: "search",
+      state: "completed",
+      input: { query: "second" },
+      output: "two",
+    },
+  ]);
   await writer.complete();
 
   const assistant = (await read_jsonl(file_path))[0];
@@ -855,10 +896,58 @@ test("不同模型 step 重复使用 Text chunk ID 时仍保持真实 Part 顺�
   assert.notEqual(assistant.parts[0].part_id, assistant.parts[2].part_id);
 });
 
+test("不同模型 step 重复 Source 与 Data ID 时创建独立 canonical Parts", async () => {
+  const { recorder, file_path } = await create_recorder("reused-structured-id-order-test");
+  const writer = await recorder.open_assistant_message({ turn_id: "turn-1", segment_index: 1 });
+
+  for (const step of [1, 2]) {
+    await writer.begin_step();
+    await writer.apply_chunk({
+      type: "source-url",
+      sourceId: "source-1",
+      url: `https://example.com/${step}`,
+    });
+    await writer.apply_chunk({
+      type: "data-status",
+      id: "status-1",
+      data: { step },
+    });
+    await writer.finish_step([
+      {
+        part_id: "source-1",
+        sequence: 1,
+        type: "source",
+        source_type: "url",
+        source_id: "source-1",
+        url: `https://example.com/${step}`,
+      },
+      {
+        part_id: "data-1",
+        sequence: 2,
+        type: "data",
+        data_type: "data-status",
+        data: { step },
+        data_id: "status-1",
+      },
+    ]);
+  }
+  await writer.complete();
+
+  const assistant = (await read_jsonl(file_path))[0];
+  assert.deepEqual(
+    assistant.parts.map((part) => part.type),
+    ["source", "data", "source", "data"],
+  );
+  assert.deepEqual(assistant.parts.map((part) => part.sequence), [1, 2, 3, 4]);
+  assert.notEqual(assistant.parts[0].part_id, assistant.parts[2].part_id);
+  assert.notEqual(assistant.parts[1].part_id, assistant.parts[3].part_id);
+});
+
 test("空 Text Start 不会抢占后续 Tool 的真实顺序", async () => {
   const { recorder, events, file_path } = await create_recorder("deferred-text-order-test");
   const writer = await recorder.open_assistant_message({ turn_id: "turn-1", segment_index: 1 });
 
+  await writer.begin_step();
   await writer.apply_chunk({ type: "reasoning-start", id: "reasoning-0" });
   await writer.apply_chunk({ type: "reasoning-delta", id: "reasoning-0", delta: "先执行命令" });
   await writer.apply_chunk({ type: "reasoning-end", id: "reasoning-0" });
@@ -881,6 +970,32 @@ test("空 Text Start 不会抢占后续 Tool 的真实顺序", async () => {
   });
   await writer.apply_chunk({ type: "text-delta", id: "text-0", delta: "命令执行完成" });
   await writer.apply_chunk({ type: "text-end", id: "text-0" });
+  await writer.finish_step([
+    {
+      part_id: "reasoning-1",
+      sequence: 1,
+      type: "reasoning",
+      text: "先执行命令",
+      state: "done",
+    },
+    {
+      part_id: "call-1",
+      sequence: 2,
+      type: "tool",
+      tool_call_id: "call-1",
+      tool_name: "shell_exec",
+      state: "completed",
+      input: { cmd: "pwd" },
+      output: { success: true },
+    },
+    {
+      part_id: "text-1",
+      sequence: 3,
+      type: "text",
+      text: "命令执行完成",
+      state: "done",
+    },
+  ]);
   await writer.complete();
 
   const assistant = (await read_jsonl(file_path))[0];
@@ -902,10 +1017,11 @@ test("空 Text Start 不会抢占后续 Tool 的真实顺序", async () => {
   );
 });
 
-test("最终快照按真实相对位置补齐流式阶段缺失的 Tool", async () => {
+test("step 最终快照缺少 canonical Tool chunk 时拒绝猜测顺序", async () => {
   const { recorder, events, file_path } = await create_recorder("final-reconcile-order-test");
   const writer = await recorder.open_assistant_message({ turn_id: "turn-1", segment_index: 1 });
 
+  await writer.begin_step();
   await writer.apply_chunk({ type: "text-start", id: "text-0" });
   await writer.apply_chunk({ type: "text-delta", id: "text-0", delta: "最终结论" });
   await writer.apply_chunk({ type: "text-end", id: "text-0" });
@@ -913,31 +1029,36 @@ test("最终快照按真实相对位置补齐流式阶段缺失的 Tool", async 
     (event) => event.variant === "part" && event.type === "text",
   ).part.part_id;
 
-  await writer.reconcile_final_parts([
-    {
-      part_id: "call-1",
-      sequence: 1,
-      type: "tool",
-      tool_call_id: "call-1",
-      tool_name: "shell_exec",
-      state: "completed",
-      input: { cmd: "pwd" },
-      output: { success: true },
-    },
-    {
-      part_id: "text-1",
-      sequence: 2,
-      type: "text",
-      text: "最终结论",
-      state: "done",
-    },
-  ]);
-  await writer.complete();
+  await assert.rejects(
+    writer.finish_step([
+      {
+        part_id: "call-1",
+        sequence: 1,
+        type: "tool",
+        tool_call_id: "call-1",
+        tool_name: "shell_exec",
+        state: "completed",
+        input: { cmd: "pwd" },
+        output: { success: true },
+      },
+      {
+        part_id: "text-1",
+        sequence: 2,
+        type: "text",
+        text: "最终结论",
+        state: "done",
+      },
+    ]),
+    /snapshot mismatch: part count 1 != 2/,
+  );
+  await writer.abort_step();
+  await writer.fail("canonical snapshot mismatch");
 
   const assistant = (await read_jsonl(file_path))[0];
-  assert.deepEqual(assistant.parts.map((part) => part.type), ["tool", "text"]);
-  assert.deepEqual(assistant.parts.map((part) => part.sequence), [1, 2]);
-  assert.equal(assistant.parts[1].part_id, streamed_text_part_id);
+  assert.equal(assistant.status, "failed");
+  assert.deepEqual(assistant.parts.map((part) => part.type), ["text"]);
+  assert.deepEqual(assistant.parts.map((part) => part.sequence), [1]);
+  assert.equal(assistant.parts[0].part_id, streamed_text_part_id);
 });
 
 test("重启时将 Assistant 草稿收口为 stopped，并将运行中 Action 标记失败", async () => {

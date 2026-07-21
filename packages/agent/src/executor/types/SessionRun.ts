@@ -7,7 +7,7 @@
  * - 输出暴露可选 assistantMessage（UIMessage）。
  */
 
-import type { Tool, UIMessageChunk } from "ai";
+import type { FileUIPart, Tool, UIMessageChunk } from "ai";
 import type {
   SessionRecordV1,
   SessionMessageRecordV1,
@@ -81,6 +81,17 @@ export type SessionUiMessageChunkCallback = (
   chunk: SessionUiMessageChunk,
 ) => Promise<void>;
 
+/** 单个模型 UI stream 开始前的 canonical step 回调。 */
+export type SessionUiMessageStepStartCallback = () => Promise<void>;
+
+/** 单个模型 UI stream 完成后的 canonical step 快照回调。 */
+export type SessionUiMessageStepFinishCallback = (
+  message: SessionMessageRecordV1,
+) => Promise<void>;
+
+/** 单个模型 UI stream 未完成时的 canonical step 清理回调。 */
+export type SessionUiMessageStepAbortCallback = () => Promise<void>;
+
 /**
  * Session 执行结果。
  */
@@ -103,6 +114,14 @@ export interface SessionRunResult {
    * - turn 状态通过 `success` / `error` 表达，不应伪造成 assistant 正文。
    */
   assistantMessage?: SessionMessageRecordV1 | null;
+
+  /**
+   * 工具运行期显式生成、并在 Assistant 末尾持久化的文件 Parts。
+   *
+   * 关键点（中文）：该字段与聚合 `assistantMessage` 分离，Session 不需要从最终
+   * UIMessage 反推哪些文件来自工具通道。
+   */
+  assistant_file_parts?: FileUIPart[];
 
   /**
    * 本轮执行结束后待写入长期历史的 user 消息。

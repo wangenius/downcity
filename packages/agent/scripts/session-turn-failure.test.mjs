@@ -100,8 +100,25 @@ test("Provider 在部分输出后失败时保留 failed Assistant 并追加 Erro
   assert.equal(page.items[2].message, "stream interrupted");
 });
 
-test("Turn 最终快照按真实顺序补齐流式阶段缺失的 Tool", async () => {
+test("Turn 使用 step canonical chunks 保持 Tool 与最终正文顺序", async () => {
   const { messages, turn } = await create_turn_harness(async (run_context) => {
+    await run_context.on_ui_message_step_start();
+    await run_context.onUiMessageChunkCallback({
+      type: "tool-input-start",
+      toolCallId: "call-1",
+      toolName: "shell_exec",
+    });
+    await run_context.onUiMessageChunkCallback({
+      type: "tool-input-available",
+      toolCallId: "call-1",
+      toolName: "shell_exec",
+      input: { cmd: "pwd" },
+    });
+    await run_context.onUiMessageChunkCallback({
+      type: "tool-output-available",
+      toolCallId: "call-1",
+      output: { success: true },
+    });
     await run_context.onUiMessageChunkCallback({ type: "text-start", id: "text-1" });
     await run_context.onUiMessageChunkCallback({
       type: "text-delta",
@@ -109,9 +126,51 @@ test("Turn 最终快照按真实顺序补齐流式阶段缺失的 Tool", async (
       delta: "最终结论",
     });
     await run_context.onUiMessageChunkCallback({ type: "text-end", id: "text-1" });
+    const assistant_message = {
+      id: "assistant-1",
+      role: "assistant",
+      parts: [
+        {
+          type: "dynamic-tool",
+          toolCallId: "call-1",
+          toolName: "shell_exec",
+          state: "output-available",
+          input: { cmd: "pwd" },
+          output: { success: true },
+        },
+        { type: "text", text: "最终结论", state: "done" },
+      ],
+    };
+    await run_context.on_ui_message_step_finish(assistant_message);
     return {
       success: true,
-      assistantMessage: {
+      assistantMessage: assistant_message,
+      deferredPersistedUserMessages: [],
+    };
+  });
+
+  const handle = await turn.prompt({ query: "diagnose" });
+  const result = await handle.finished;
+  const page = await messages.list_messages();
+  const assistant = page.items.find((message) => message.type === "assistant");
+
+  assert.equal(result.success, true);
+  assert.deepEqual(assistant.parts.map((part) => part.type), ["tool", "text"]);
+  assert.deepEqual(assistant.parts.map((part) => part.sequence), [1, 2]);
+});
+
+test("Turn 在 step 最终快照出现未流式写入的 Tool 时失败", async () => {
+  const { messages, turn } = await create_turn_harness(async (run_context) => {
+    await run_context.on_ui_message_step_start();
+    await run_context.onUiMessageChunkCallback({ type: "text-start", id: "text-1" });
+    await run_context.onUiMessageChunkCallback({
+      type: "text-delta",
+      id: "text-1",
+      delta: "最终结论",
+    });
+    await run_context.onUiMessageChunkCallback({ type: "text-end", id: "text-1" });
+    try {
+      await run_context.on_ui_message_step_finish({
         id: "assistant-1",
         role: "assistant",
         parts: [
@@ -125,9 +184,15 @@ test("Turn 最终快照按真实顺序补齐流式阶段缺失的 Tool", async (
           },
           { type: "text", text: "最终结论", state: "done" },
         ],
-      },
-      deferredPersistedUserMessages: [],
-    };
+      });
+    } catch (error) {
+      await run_context.on_ui_message_step_abort();
+      return {
+        success: false,
+        error: error.message,
+        deferredPersistedUserMessages: [],
+      };
+    }
   });
 
   const handle = await turn.prompt({ query: "diagnose" });
@@ -135,7 +200,9 @@ test("Turn 最终快照按真实顺序补齐流式阶段缺失的 Tool", async (
   const page = await messages.list_messages();
   const assistant = page.items.find((message) => message.type === "assistant");
 
-  assert.equal(result.success, true);
-  assert.deepEqual(assistant.parts.map((part) => part.type), ["tool", "text"]);
-  assert.deepEqual(assistant.parts.map((part) => part.sequence), [1, 2]);
+  assert.equal(result.success, false);
+  assert.match(result.error, /snapshot mismatch/);
+  assert.equal(assistant.status, "failed");
+  assert.deepEqual(assistant.parts.map((part) => part.type), ["text"]);
+  assert.equal(page.items.at(-1).type, "error");
 });

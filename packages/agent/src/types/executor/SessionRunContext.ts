@@ -15,6 +15,9 @@ import type {
 import type {
   SessionAssistantStepCallback,
   SessionUiMessageChunkCallback,
+  SessionUiMessageStepAbortCallback,
+  SessionUiMessageStepFinishCallback,
+  SessionUiMessageStepStartCallback,
 } from "@/executor/types/SessionRun.js";
 import type { SessionUserMessageV1 } from "@/executor/types/SessionRecords.js";
 import type { FileUIPart } from "ai";
@@ -106,6 +109,29 @@ export interface SessionRunContext {
    * - 用于把底层模型 UI chunk 旁路输出到订阅流或 transport。
    */
   onUiMessageChunkCallback?: SessionUiMessageChunkCallback;
+
+  /**
+   * 单个模型 UI stream 开始回调。
+   *
+   * 关键点（中文）：Session writer 用它建立独立 step 作用域，确保重复 chunk id
+   * 不会跨模型调用复用同一个 canonical Part。
+   */
+  on_ui_message_step_start?: SessionUiMessageStepStartCallback;
+
+  /**
+   * 单个模型 UI stream 完成快照回调。
+   *
+   * 关键点（中文）：最终快照只校验当前 step 的顺序并补充 metadata，不能创建、
+   * 删除或重排 canonical Part。
+   */
+  on_ui_message_step_finish?: SessionUiMessageStepFinishCallback;
+
+  /**
+   * 单个模型 UI stream 异常结束回调。
+   *
+   * 关键点（中文）：用于释放 step 作用域；已经持久化的流式 Part 继续保留。
+   */
+  on_ui_message_step_abort?: SessionUiMessageStepAbortCallback;
 
   /** Tool 实现开始执行前提交完整输入的顺序屏障。 */
   on_tool_input_ready?: (input: SessionToolInputReady) => Promise<void>;

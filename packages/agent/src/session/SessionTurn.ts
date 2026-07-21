@@ -471,6 +471,18 @@ export class SessionTurn {
         const writer = await ensure_assistant_writer();
         await writer.apply_chunk(chunk);
       },
+      on_ui_message_step_start: async () => {
+        const writer = await ensure_assistant_writer();
+        await writer.begin_step();
+      },
+      on_ui_message_step_finish: async (message) => {
+        const writer = await ensure_assistant_writer();
+        await writer.finish_step(from_ui_assistant_parts(message.parts));
+      },
+      on_ui_message_step_abort: async () => {
+        const writer = assistant_writer_ref.current;
+        if (writer) await writer.abort_step();
+      },
       on_tool_input_ready: async (tool_input) => {
         const writer = await ensure_assistant_writer();
         await writer.prepare_tool_input(tool_input);
@@ -511,7 +523,9 @@ export class SessionTurn {
       : [];
     const final_assistant_writer = assistant_writer_ref.current;
     if (final_assistant_writer) {
-      await final_assistant_writer.reconcile_final_parts(final_assistant_parts);
+      for (const part of from_ui_assistant_parts(result.assistant_file_parts)) {
+        if (part.type === "file") await final_assistant_writer.append_file_part(part);
+      }
       if (input.abort_signal?.aborted) {
         await final_assistant_writer.stop();
       } else if (result.success) {
@@ -612,7 +626,11 @@ function is_assistant_content_chunk(type: string): boolean {
     type === "reasoning-delta" ||
     type === "reasoning-end" ||
     type.startsWith("tool-") ||
-    type === "file"
+    type === "file" ||
+    type === "source-url" ||
+    type === "source-document" ||
+    type === "start-step" ||
+    type.startsWith("data-")
   );
 }
 

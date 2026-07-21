@@ -610,20 +610,31 @@ export class SessionMessages {
     } as SessionMutation, message);
   }
 
-  /** @internal 原子提交 Assistant 最终 Parts 顺序。 */
-  async reconcile_assistant_parts(
+  /** @internal 原子提交当前 Assistant step 的 metadata 快照。 */
+  async commit_assistant_step(
     message_id: string,
     parts: SessionAssistantMessagePart[],
   ): Promise<void> {
     await this.enqueue_assistant_write(message_id, async () => {
       const current = require_message([...this.messages_by_id.values()], message_id, "assistant");
       require_streaming_assistant(current);
+      if (
+        parts.length !== current.parts.length ||
+        parts.some((part, index) =>
+          part.part_id !== current.parts[index]?.part_id ||
+          part.sequence !== current.parts[index]?.sequence
+        )
+      ) {
+        throw new Error(
+          `Assistant step changed canonical Part identity: ${message_id}`,
+        );
+      }
       const created_at = Date.now();
       const message: SessionAssistantMessage = {
         ...current,
         revision: current.revision + 1,
         updated_at: created_at,
-        parts: structuredClone(parts).sort((left, right) => left.sequence - right.sequence),
+        parts: structuredClone(parts),
       };
       await this.store.write_assistant_message(message);
       this.accept_message(message);

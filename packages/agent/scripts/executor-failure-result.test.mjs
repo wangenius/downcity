@@ -9,12 +9,57 @@ import { MockLanguageModelV3 } from "ai/test";
 import { CoreEngineRunner } from "../bin/executor/core-engine/CoreEngineRunner.js";
 import { ExecutorRecoveryPolicy } from "../bin/executor/services/ExecutorRecoveryPolicy.js";
 
-function create_run_context() {
+function create_run_context(overrides = {}) {
   return {
     sessionId: "executor-failure-test",
     injectedUserMessages: [],
     deferredPersistedUserMessages: [],
     pendingAssistantFileParts: [],
+    ...overrides,
+  };
+}
+
+function create_text_stream(text) {
+  return {
+    stream: new ReadableStream({
+      start(controller) {
+        controller.enqueue({ type: "stream-start", warnings: [] });
+        controller.enqueue({ type: "text-start", id: "text-1" });
+        controller.enqueue({ type: "text-delta", id: "text-1", delta: text });
+        controller.enqueue({ type: "text-end", id: "text-1" });
+        controller.enqueue({
+          type: "finish",
+          finishReason: { unified: "stop", raw: "stop" },
+          usage: {
+            inputTokens: { total: 0, noCache: 0, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 0, text: 0, reasoning: 0 },
+          },
+        });
+        controller.close();
+      },
+    }),
+  };
+}
+
+function create_runner_input(model, run_context) {
+  const messages = [{
+    id: "user-1",
+    role: "user",
+    metadata: {
+      v: 1,
+      ts: 1,
+      sessionId: "executor-failure-test",
+      source: "ingress",
+      kind: "normal",
+    },
+    parts: [{ type: "text", text: "hello" }],
+  }];
+  return {
+    execute_input: { query: "hello", system: [], messages, tools: {} },
+    model,
+    run_context,
+    resolve_step_inputs: async () => ({ model, system: [], tools: {} }),
+    reload_history: async () => messages,
   };
 }
 
@@ -54,6 +99,64 @@ test("CoreEngine Provider 失败时只返回结构化错误", async () => {
   assert.equal(result.success, false);
   assert.match(result.error, /quota exceeded/);
   assert.equal(result.assistantMessage, undefined);
+});
+
+test("CoreEngine 成功流按 start、chunks、finish 完成 canonical step", async () => {
+  const events = [];
+  const model = new MockLanguageModelV3({
+    modelId: "canonical-step-model",
+    doStream: async () => create_text_stream("done"),
+  });
+  const runner = new CoreEngineRunner({
+    session_id: "executor-failure-test",
+    logger: { log: async () => {} },
+    should_compact_on_error: () => false,
+  });
+  const result = await runner.run(create_runner_input(
+    model,
+    create_run_context({
+      on_ui_message_step_start: async () => events.push("start"),
+      onUiMessageChunkCallback: async (chunk) => events.push(chunk.type),
+      on_ui_message_step_finish: async (message) => {
+        events.push(`finish:${message.parts.map((part) => part.type).join(",")}`);
+      },
+      on_ui_message_step_abort: async () => events.push("abort"),
+    }),
+  ));
+
+  assert.equal(result.success, true);
+  assert.equal(events[0], "start");
+  assert.equal(events.includes("text-delta"), true);
+  assert.match(events.at(-1), /^finish:/);
+  assert.equal(events.includes("abort"), false);
+});
+
+test("CoreEngine chunk 写入失败时中止 canonical step", async () => {
+  const events = [];
+  const model = new MockLanguageModelV3({
+    modelId: "canonical-step-failure-model",
+    doStream: async () => create_text_stream("partial"),
+  });
+  const runner = new CoreEngineRunner({
+    session_id: "executor-failure-test",
+    logger: { log: async () => {} },
+    should_compact_on_error: () => false,
+  });
+  const result = await runner.run(create_runner_input(
+    model,
+    create_run_context({
+      on_ui_message_step_start: async () => events.push("start"),
+      onUiMessageChunkCallback: async () => {
+        throw new Error("canonical write failed");
+      },
+      on_ui_message_step_finish: async () => events.push("finish"),
+      on_ui_message_step_abort: async () => events.push("abort"),
+    }),
+  ));
+
+  assert.equal(result.success, false);
+  assert.match(result.error, /canonical write failed/);
+  assert.deepEqual(events, ["start", "abort"]);
 });
 
 test("恢复策略捕获普通异常后只返回结构化错误", async () => {

@@ -298,7 +298,13 @@ export class CoreEngineRunner {
         last_observed_stream_error = undefined;
         let step_assistant_ui_message: SessionMessageRecordV1;
         let executed_steps: StepResult<Record<string, Tool>>[];
+        let canonical_step_started = false;
+        let canonical_step_finished = false;
         try {
+          if (input.run_context.on_ui_message_step_start) {
+            await input.run_context.on_ui_message_step_start();
+            canonical_step_started = true;
+          }
           const result = streamText({
             model: step_inputs.model,
             system,
@@ -326,6 +332,13 @@ export class CoreEngineRunner {
               abortSignal: input.run_context.abortSignal,
             });
 
+          if (input.run_context.on_ui_message_step_finish) {
+            await input.run_context.on_ui_message_step_finish(
+              step_assistant_ui_message,
+            );
+          }
+          canonical_step_finished = true;
+
           final_assistant_ui_message = mergeAssistantUiMessages(
             final_assistant_ui_message,
             step_assistant_ui_message,
@@ -336,6 +349,13 @@ export class CoreEngineRunner {
           message_state.appendRuntimeSessionMessage(step_assistant_ui_message);
           executed_steps = await result.steps;
         } catch (error) {
+          if (
+            canonical_step_started &&
+            !canonical_step_finished &&
+            input.run_context.on_ui_message_step_abort
+          ) {
+            await input.run_context.on_ui_message_step_abort();
+          }
           const compact_error = this.should_compact_on_error(error)
             ? error
             : last_observed_stream_error;
@@ -557,6 +577,7 @@ export class CoreEngineRunner {
       return {
         success: true,
         assistantMessage: final_message,
+        assistant_file_parts: [...input.run_context.pendingAssistantFileParts],
         ...(compact_required ? { compact_required: true } : {}),
         deferredPersistedUserMessages: [
           ...input.run_context.deferredPersistedUserMessages,
@@ -578,6 +599,7 @@ export class CoreEngineRunner {
           success: false,
           error: error_text,
           ...(stopped_message ? { assistantMessage: stopped_message } : {}),
+          assistant_file_parts: [...input.run_context.pendingAssistantFileParts],
           ...(compact_required ? { compact_required: true } : {}),
           deferredPersistedUserMessages: [
             ...input.run_context.deferredPersistedUserMessages,
@@ -601,6 +623,7 @@ export class CoreEngineRunner {
       return {
         success: false,
         error: error_text,
+        assistant_file_parts: [...input.run_context.pendingAssistantFileParts],
         ...(compact_required ? { compact_required: true } : {}),
         deferredPersistedUserMessages: [
           ...input.run_context.deferredPersistedUserMessages,

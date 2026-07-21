@@ -108,7 +108,7 @@ export interface SessionUserMessage extends SessionMessageBase {
 export interface SessionAssistantTextPart {
   /** Assistant Message 内稳定的 part 标识。 */
   part_id: string;
-  /** Assistant Part 在当前 revision 中的线性顺序，从 1 开始；Message 完成后稳定。 */
+  /** Assistant Part 在当前 Message 中的不可变线性顺序，从 1 开始。 */
   sequence: number;
   /** part 是可见文本或推理文本。 */
   type: "text" | "reasoning";
@@ -136,7 +136,7 @@ export interface SessionToolApprovalSnapshot {
 export interface SessionAssistantToolPart {
   /** Assistant Message 内稳定的 part 标识。 */
   part_id: string;
-  /** Assistant Part 在当前 revision 中的线性顺序，从 1 开始；Message 完成后稳定。 */
+  /** Assistant Part 在当前 Message 中的不可变线性顺序，从 1 开始。 */
   sequence: number;
   /** part 类型固定为 tool。 */
   type: "tool";
@@ -178,7 +178,7 @@ export interface SessionAssistantToolPart {
 export interface SessionAssistantFilePart {
   /** Assistant Message 内稳定的 part 标识。 */
   part_id: string;
-  /** Assistant Part 在当前 revision 中的线性顺序，从 1 开始；Message 完成后稳定。 */
+  /** Assistant Part 在当前 Message 中的不可变线性顺序，从 1 开始。 */
   sequence: number;
   /** part 类型固定为 file。 */
   type: "file";
@@ -196,7 +196,7 @@ export interface SessionAssistantFilePart {
 export interface SessionAssistantDataPart {
   /** Assistant Message 内稳定的 part 标识。 */
   part_id: string;
-  /** Assistant Part 在当前 revision 中的线性顺序，从 1 开始；Message 完成后稳定。 */
+  /** Assistant Part 在当前 Message 中的不可变线性顺序，从 1 开始。 */
   sequence: number;
   /** part 类型固定为 data。 */
   type: "data";
@@ -212,7 +212,7 @@ export interface SessionAssistantDataPart {
 export interface SessionAssistantUrlSourcePart {
   /** Assistant Message 内稳定的 part 标识。 */
   part_id: string;
-  /** Assistant Part 在当前 revision 中的线性顺序，从 1 开始；Message 完成后稳定。 */
+  /** Assistant Part 在当前 Message 中的不可变线性顺序，从 1 开始。 */
   sequence: number;
   /** part 类型固定为 source。 */
   type: "source";
@@ -232,7 +232,7 @@ export interface SessionAssistantUrlSourcePart {
 export interface SessionAssistantDocumentSourcePart {
   /** Assistant Message 内稳定的 part 标识。 */
   part_id: string;
-  /** Assistant Part 在当前 revision 中的线性顺序，从 1 开始；Message 完成后稳定。 */
+  /** Assistant Part 在当前 Message 中的不可变线性顺序，从 1 开始。 */
   sequence: number;
   /** part 类型固定为 source。 */
   type: "source";
@@ -259,7 +259,7 @@ export type SessionAssistantSourcePart =
 export interface SessionAssistantStepPart {
   /** Assistant Message 内稳定的 part 标识。 */
   part_id: string;
-  /** Assistant Part 在当前 revision 中的线性顺序，从 1 开始；Message 完成后稳定。 */
+  /** Assistant Part 在当前 Message 中的不可变线性顺序，从 1 开始。 */
   sequence: number;
   /** part 类型固定为 step-start。 */
   type: "step-start";

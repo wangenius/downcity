@@ -31,7 +31,10 @@ export class SessionAssistantMessageWriter {
     Pick<SessionAssistantTextPart, "type" | "provider_metadata">
   >();
   private readonly active_text_part_ids = new Map<string, string>();
+  private readonly current_step_part_ids = new Set<string>();
   private write_chain: Promise<void> = Promise.resolve();
+  private step_index = 0;
+  private step_active = false;
   private closed = false;
 
   constructor(recorder: SessionMessages, message_id: string) {
@@ -43,6 +46,70 @@ export class SessionAssistantMessageWriter {
   async apply_chunk(chunk: UIMessageChunk): Promise<void> {
     await this.enqueue_write(async () => {
       await this.apply_chunk_serialized(chunk);
+    });
+  }
+
+  /** 建立一个独立模型 UI stream 的 canonical step 作用域。 */
+  async begin_step(): Promise<void> {
+    await this.enqueue_write(async () => {
+      if (this.closed) throw new Error("Assistant Message writer is closed");
+      if (this.step_active) {
+        throw new Error("Assistant canonical step is already active");
+      }
+      this.step_index += 1;
+      this.step_active = true;
+      this.current_step_part_ids.clear();
+      this.pending_text_parts.clear();
+      this.active_text_part_ids.clear();
+    });
+  }
+
+  /**
+   * 校验当前 step 的最终快照并原子补充 metadata。
+   *
+   * 最终快照不能创建、删除或重排 Part；任何不一致都表示 canonical chunk
+   * 链路不完整，必须让当前 Turn 失败。
+   */
+  async finish_step(parts: SessionAssistantMessagePart[]): Promise<void> {
+    await this.enqueue_write(async () => {
+      if (!this.step_active) {
+        throw new Error("Assistant canonical step is not active");
+      }
+      const current = this.current_message();
+      const current_step_parts = current.parts.filter(
+        (part) =>
+          this.current_step_part_ids.has(part.part_id) &&
+          part.type !== "step-start",
+      );
+      const final_step_parts = parts.filter((part) => part.type !== "step-start");
+      if (current_step_parts.length !== final_step_parts.length) {
+        throw this.step_snapshot_error(
+          `part count ${current_step_parts.length} != ${final_step_parts.length}`,
+        );
+      }
+
+      const merged_parts = new Map<string, SessionAssistantMessagePart>();
+      for (let index = 0; index < current_step_parts.length; index += 1) {
+        const current_part = current_step_parts[index];
+        const final_part = final_step_parts[index];
+        merged_parts.set(
+          current_part.part_id,
+          this.merge_step_part(current_part, final_part, index),
+        );
+      }
+      await this.recorder.commit_assistant_step(
+        this.message_id,
+        current.parts.map((part) => merged_parts.get(part.part_id) || part),
+      );
+      this.reset_step_state();
+    });
+  }
+
+  /** 释放异常结束的 step 作用域并保留已经写入的 canonical Parts。 */
+  async abort_step(): Promise<void> {
+    await this.enqueue_write(async () => {
+      if (!this.step_active) return;
+      this.reset_step_state();
     });
   }
 
@@ -306,7 +373,7 @@ export class SessionAssistantMessageWriter {
         });
         return;
       case "source-url": {
-        const part_id = `source:${chunk.sourceId}`;
+        const part_id = `source:${this.step_index}:${chunk.sourceId}`;
         const current_part = current.parts.find((part) => part.part_id === part_id);
         const provider_metadata = to_session_provider_metadata(chunk.providerMetadata);
         await this.upsert_part({
@@ -324,7 +391,7 @@ export class SessionAssistantMessageWriter {
         return;
       }
       case "source-document": {
-        const part_id = `source:${chunk.sourceId}`;
+        const part_id = `source:${this.step_index}:${chunk.sourceId}`;
         const current_part = current.parts.find((part) => part.part_id === part_id);
         const provider_metadata = to_session_provider_metadata(chunk.providerMetadata);
         await this.upsert_part({
@@ -356,7 +423,9 @@ export class SessionAssistantMessageWriter {
           const data_id = typeof data_chunk.id === "string"
             ? data_chunk.id
             : undefined;
-          const part_id = `data:${data_id ?? generateId()}`;
+          const part_id = data_id
+            ? `data:${this.step_index}:${data_id}`
+            : `data:${generateId()}`;
           const current_part = current.parts.find((part) => part.part_id === part_id);
           await this.upsert_part({
             part_id,
@@ -375,58 +444,7 @@ export class SessionAssistantMessageWriter {
   /** 写入一个完整 Assistant part。 */
   async upsert_part(part: SessionAssistantMessagePart): Promise<void> {
     await this.recorder.update_assistant_part(this.message_id, part);
-  }
-
-  /**
-   * 用 AI SDK 最终 UIMessage 原子校准流式写入结果。
-   *
-   * 关键点（中文）
-   * - 最终快照决定完整 part 的相对顺序，避免漏写 Tool 在末尾补齐时落到正文之后。
-   * - 已有流式 part 保留 part_id，最终快照只补齐内容与 metadata。
-   * - 最终快照没有携带的流式 part 按原始相对位置锚定到最近的后继 part。
-   */
-  async reconcile_final_parts(
-    parts: SessionAssistantMessagePart[],
-  ): Promise<void> {
-    await this.enqueue_write(async () => {
-      if (parts.length === 0) return;
-      const current_parts = this.current_message().parts;
-      const matched_part_ids = new Set<string>();
-      const reconciled_parts = parts.map((part) => {
-        const current_part = this.find_matching_final_part(
-          part,
-          current_parts,
-          matched_part_ids,
-        );
-        if (current_part) matched_part_ids.add(current_part.part_id);
-        return {
-          ...(current_part || {}),
-          ...part,
-          part_id: current_part?.part_id || this.final_part_id(part),
-          sequence: 0,
-        } as SessionAssistantMessagePart;
-      });
-
-      // 最终快照可能不包含流式阶段的临时可见 part，按原顺序锚定到最近后继。
-      for (const [current_index, current_part] of current_parts.entries()) {
-        if (matched_part_ids.has(current_part.part_id)) continue;
-        const next_matched_part = current_parts
-          .slice(current_index + 1)
-          .find((part) => matched_part_ids.has(part.part_id));
-        const next_index = next_matched_part
-          ? reconciled_parts.findIndex(
-            (part) => part.part_id === next_matched_part.part_id,
-          )
-          : -1;
-        if (next_index >= 0) reconciled_parts.splice(next_index, 0, current_part);
-        else reconciled_parts.push(current_part);
-      }
-
-      await this.recorder.reconcile_assistant_parts(
-        this.message_id,
-        reconciled_parts.map((part, index) => ({ ...part, sequence: index + 1 })),
-      );
-    });
+    if (this.step_active) this.current_step_part_ids.add(part.part_id);
   }
 
   /** Executor 在调用 Tool 实现前写入完整输入。 */
@@ -458,6 +476,7 @@ export class SessionAssistantMessageWriter {
     const existing = current.parts.find(
       (part) =>
         part.type === "file" &&
+        (!this.step_active || this.current_step_part_ids.has(part.part_id)) &&
         part.url === input.url &&
         part.media_type === input.media_type,
     );
@@ -532,54 +551,71 @@ export class SessionAssistantMessageWriter {
     );
   }
 
-  /** 在当前流式快照中寻找最终 Part 对应的稳定 identity。 */
-  private find_matching_final_part(
+  /** 校验并合并同一位置的 canonical Part 与 step 最终快照。 */
+  private merge_step_part(
+    current_part: SessionAssistantMessagePart,
     final_part: SessionAssistantMessagePart,
-    current_parts: SessionAssistantMessagePart[],
-    matched_part_ids: Set<string>,
-  ): SessionAssistantMessagePart | undefined {
-    const available_parts = current_parts.filter(
-      (part) => !matched_part_ids.has(part.part_id),
-    );
-    if (final_part.type === "tool") {
-      return available_parts.find(
-        (part) => part.type === "tool" && part.tool_call_id === final_part.tool_call_id,
+    index: number,
+  ): SessionAssistantMessagePart {
+    if (current_part.type !== final_part.type) {
+      throw this.step_snapshot_error(
+        `part ${index + 1} type ${current_part.type} != ${final_part.type}`,
       );
     }
-    if (final_part.type === "file") {
-      return available_parts.find(
-        (part) =>
-          part.type === "file" &&
-          part.url === final_part.url &&
-          part.media_type === final_part.media_type,
-      );
+    if (
+      (current_part.type === "text" || current_part.type === "reasoning") &&
+      (final_part.type === "text" || final_part.type === "reasoning")
+    ) {
+      if (current_part.text !== final_part.text) {
+        throw this.step_snapshot_error(`part ${index + 1} text differs`);
+      }
+    } else if (current_part.type === "tool" && final_part.type === "tool") {
+      if (current_part.tool_call_id !== final_part.tool_call_id) {
+        throw this.step_snapshot_error(`part ${index + 1} tool_call_id differs`);
+      }
+    } else if (current_part.type === "file" && final_part.type === "file") {
+      if (
+        current_part.url !== final_part.url ||
+        current_part.media_type !== final_part.media_type
+      ) {
+        throw this.step_snapshot_error(`part ${index + 1} file identity differs`);
+      }
+    } else if (current_part.type === "source" && final_part.type === "source") {
+      if (
+        current_part.source_type !== final_part.source_type ||
+        current_part.source_id !== final_part.source_id
+      ) {
+        throw this.step_snapshot_error(`part ${index + 1} source identity differs`);
+      }
+    } else if (current_part.type === "data" && final_part.type === "data") {
+      if (
+        current_part.data_type !== final_part.data_type ||
+        current_part.data_id !== final_part.data_id
+      ) {
+        throw this.step_snapshot_error(`part ${index + 1} data identity differs`);
+      }
     }
-    if (final_part.type === "source") {
-      return available_parts.find(
-        (part) => part.type === "source" && part.source_id === final_part.source_id,
-      );
-    }
-    if (final_part.type === "data" && final_part.data_id !== undefined) {
-      return available_parts.find(
-        (part) =>
-          part.type === "data" &&
-          part.data_type === final_part.data_type &&
-          part.data_id === final_part.data_id,
-      );
-    }
-    if (final_part.type === "text" || final_part.type === "reasoning") {
-      return available_parts.find(
-        (part) => part.type === final_part.type && part.text === final_part.text,
-      ) || available_parts.find((part) => part.type === final_part.type);
-    }
-    return available_parts.find((part) => part.type === final_part.type);
+    return {
+      ...current_part,
+      ...final_part,
+      part_id: current_part.part_id,
+      sequence: current_part.sequence,
+    } as SessionAssistantMessagePart;
   }
 
-  /** 为最终快照中新出现的 Part 创建 canonical identity。 */
-  private final_part_id(part: SessionAssistantMessagePart): string {
-    if (part.type === "tool") return `tool:${part.tool_call_id}`;
-    if (part.type === "source") return `source:${part.source_id}`;
-    return `${part.type}:${generateId()}`;
+  /** 构造不包含正文与工具输出的结构化 step 快照错误。 */
+  private step_snapshot_error(detail: string): Error {
+    return new Error(
+      `Assistant canonical step ${this.step_index} snapshot mismatch: ${detail}`,
+    );
+  }
+
+  /** 清理当前 step 的临时关联状态。 */
+  private reset_step_state(): void {
+    this.step_active = false;
+    this.current_step_part_ids.clear();
+    this.pending_text_parts.clear();
+    this.active_text_part_ids.clear();
   }
 
   /** 计算下一个不可变 Part 顺序号。 */
@@ -613,7 +649,7 @@ export class SessionAssistantMessageWriter {
     type: "text" | "reasoning",
     chunk_id: string,
   ): string {
-    return `${type}:${chunk_id}`;
+    return `${this.step_index}:${type}:${chunk_id}`;
   }
 
   /** 在首个有效 Delta 到达时才固定文本 Part 的真实顺序。 */
@@ -685,8 +721,7 @@ export class SessionAssistantMessageWriter {
     status: "completed" | "stopped" | "failed",
   ): Promise<void> {
     if (this.closed) return;
-    this.pending_text_parts.clear();
-    this.active_text_part_ids.clear();
+    this.reset_step_state();
     await this.recorder.complete_assistant_message(this.message_id, status);
     this.closed = true;
   }

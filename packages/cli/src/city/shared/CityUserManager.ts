@@ -102,7 +102,7 @@ export class CityUserManager {
     /**
      * 绑定当前用户身份的 City SDK 实例。
      */
-    city: City<"user">;
+    city: City;
   }> {
     const user = await this.resolveCurrentUser({
       ...input,
@@ -114,9 +114,7 @@ export class CityUserManager {
     return {
       user,
       city: new City({
-        role: "user",
         federation_url: user.federation_url,
-        city_id: user.city_id,
         user_token: user.user_token,
       }),
     };
@@ -136,9 +134,7 @@ export class CityUserManager {
     session_user_id?: string,
   ): Promise<ResolvedCityUser> {
     const city = new City({
-      role: "user",
       federation_url: user.federation_url,
-      city_id: user.city_id,
       user_token: user.user_token,
     });
     const result = await city.service("accounts").get<CityAccountsMeResult>("me");

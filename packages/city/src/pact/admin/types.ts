@@ -6,20 +6,13 @@ import type { FetchLike } from "../http.js";
 import type { CityModelDescriptor } from "@downcity/type";
 import type { UserServiceSummary } from "../user/types.js";
 
-/** Admin City 内部访问层构造参数 */
+/** FederationAdmin 内部访问层构造参数。 */
 export interface AdminPactAccessOptions {
-  /** City 管理端入口地址，支持 `http(s)://`。 */
+  /** Federation 管理端入口地址，支持 `http(s)://`。 */
   base_url: string;
 
-  /**
-   * 当前管理的 City ID。
-   *
-   * 传入后 token 签发等服务会自动使用该 ID，调用方无需再传 city_id。
-   */
-  city_id: string;
-
   /** 管理密钥。 */
-  admin_secret_key?: string;
+  admin_secret_key: string;
   /** 自定义 fetch 实现 */
   fetch?: FetchLike;
 }

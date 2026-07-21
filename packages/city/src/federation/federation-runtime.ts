@@ -7,6 +7,10 @@
  */
 
 import { pgEnv, sqliteEnv } from "../service/env/schema.js";
+import {
+  pg_federation_auth_keys,
+  sqlite_federation_auth_keys,
+} from "./auth/key-schema.js";
 import { EnvStore } from "../service/env/env-store.js";
 import { pgCities, sqliteCities } from "../service/cities/schema.js";
 import { normalizeEnvKey, parseDotenvEntries } from "../utils/helpers.js";
@@ -42,8 +46,16 @@ export function create_federation_runtime(options: FederationOptions): Runtime {
  */
 function builtin_tables_for(dialect: "pg" | "sqlite"): BuiltinTables {
   return dialect === "pg"
-    ? { cities: pgCities, env: pgEnv }
-    : { cities: sqliteCities, env: sqliteEnv };
+    ? {
+        cities: pgCities,
+        env: pgEnv,
+        federation_auth_keys: pg_federation_auth_keys,
+      }
+    : {
+        cities: sqliteCities,
+        env: sqliteEnv,
+        federation_auth_keys: sqlite_federation_auth_keys,
+      };
 }
 
 /**

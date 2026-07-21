@@ -56,6 +56,11 @@ export interface UserTokenPayload {
   aud: "downcity:user";
 
   /**
+   * 签发该 token 的 Federation 稳定 issuer。
+   */
+  iss: string;
+
+  /**
    * token 所属 City ID。
    */
   city_id: string;
@@ -64,6 +69,11 @@ export interface UserTokenPayload {
    * token 所属用户 ID。
    */
   user_id: string;
+
+  /**
+   * JWT 标准主体字段，与 user_id 保持一致。
+   */
+  sub: string;
 
   /**
    * 业务元数据。
@@ -78,7 +88,78 @@ export interface UserTokenPayload {
   /**
    * 过期时间。
    */
-  exp?: number;
+  exp: number;
+
+  /**
+   * token 唯一 ID，用于审计与后续撤销扩展。
+   */
+  jti: string;
+}
+
+/** Federation 签名密钥生命周期状态。 */
+export type FederationAuthKeyStatus = "active" | "retired" | "revoked";
+
+/** Federation 数据库中的 Ed25519 签名密钥记录。 */
+export interface FederationAuthKeyRecord extends Record<string, unknown> {
+  /** JWT protected header 使用的密钥 ID。 */
+  key_id: string;
+
+  /** JOSE 签名算法，当前固定为 EdDSA。 */
+  algorithm: "EdDSA";
+
+  /** 可公开发布的 Ed25519 Public JWK JSON。 */
+  public_jwk: string;
+
+  /** 仅 Federation 签发路径可读的 Ed25519 Private JWK JSON。 */
+  private_jwk: string;
+
+  /** 当前密钥生命周期状态。 */
+  status: FederationAuthKeyStatus;
+
+  /** 密钥创建时间。 */
+  created_at: string;
+
+  /** 密钥停止签发时间；active 状态为空字符串。 */
+  retired_at: string;
+}
+
+/** Federation 对外发布的 JSON Web Key。 */
+export interface FederationPublicJwk extends Record<string, unknown> {
+  /** 密钥类型，Ed25519 固定为 OKP。 */
+  kty: "OKP";
+
+  /** 椭圆曲线，固定为 Ed25519。 */
+  crv: "Ed25519";
+
+  /** JOSE 签名算法。 */
+  alg: "EdDSA";
+
+  /** 公钥用途，固定用于签名验证。 */
+  use: "sig";
+
+  /** JWT protected header 对应的密钥 ID。 */
+  kid: string;
+
+  /** Ed25519 公钥的 Base64URL 编码。 */
+  x: string;
+}
+
+/** Federation JWKS 响应。 */
+export interface FederationJwks {
+  /** 当前可用于验签的 active 与 retired 公钥。 */
+  keys: FederationPublicJwk[];
+}
+
+/** Federation 公共发现信息。 */
+export interface FederationDiscovery {
+  /** Federation 首次启动后保持稳定的 issuer。 */
+  issuer: string;
+
+  /** 当前 Federation 的公开 JWKS 地址。 */
+  jwks_uri: string;
+
+  /** user_token 必须包含的 audience。 */
+  user_token_audience: "downcity:user";
 }
 
 /**
@@ -102,8 +183,6 @@ export interface UserTokenIssueResult {
 
   /**
    * token 过期时间。
-   *
-   * 未设置 ttl 时省略。
    */
-  expires_at?: string;
+  expires_at: string;
 }

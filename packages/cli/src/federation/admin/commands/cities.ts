@@ -2,12 +2,12 @@
  * Admin Cities 管理命令。
  */
 
-import { City } from "@downcity/city";
+import { FederationAdmin } from "@downcity/city";
 import { t } from "@/shared/CliLocale.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "@/federation/admin/auth-error.js";
 import type { admin_tui_runtime } from "@/federation/types/AdminTui.js";
 
-export async function manageCities(city: City, _baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
+export async function manageCities(city: FederationAdmin, _baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
   while (true) {
     const act = await runtime.select(t({ zh: "产品管理", en: "Products" }), [
         {
@@ -102,7 +102,9 @@ export async function manageCities(city: City, _baseUrl: string, runtime: admin_
       } else if (act === "token") {
         const user_id = await runtime.text("user_id");
         if (!user_id) continue;
-        const token = await runtime.with_loading(t({ zh: "签发 Token", en: "Issue Token" }), async () => await city.tokens.apply({ user_id }));
+        const city_id = await runtime.text("city_id");
+        if (!city_id) continue;
+        const token = await runtime.with_loading(t({ zh: "签发 Token", en: "Issue Token" }), async () => await city.cities.tokens.apply({ city_id, user_id }));
         await runtime.show_text("City Token", token.user_token);
       }
     } catch (e) {

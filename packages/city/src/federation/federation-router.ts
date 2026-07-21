@@ -63,6 +63,23 @@ export function build_federation_router(params: {
     service_list: services.map((service) => ({ id: service.id, name: service.name })),
   }));
 
+  app.get("/.well-known/downcity.json", (c) => {
+    const origin = new URL(c.req.raw.url).origin;
+    return c.json(authenticator.get_discovery(origin), 200, {
+      "cache-control": "public, max-age=300",
+    });
+  });
+
+  app.get("/.well-known/jwks.json", async (c) => {
+    try {
+      return c.json(await authenticator.get_public_jwks(), 200, {
+        "cache-control": "public, max-age=300",
+      });
+    } catch (error) {
+      return build_error_response(error);
+    }
+  });
+
   app.use("/v1/*", async (c, next) => {
     // 关键说明（中文）
     // Federation env 默认读取运行时内存 cache。

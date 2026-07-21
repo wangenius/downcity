@@ -22,7 +22,6 @@ export class UserPactAccess {
   readonly serverUrl: string;
   readonly token: string | undefined;
 
-  private readonly city_id?: string;
   private readonly requester: CityRequester;
 
   constructor(options: UserPactAccessOptions) {
@@ -32,7 +31,6 @@ export class UserPactAccess {
 
     this.serverUrl = requiredString(options.base_url, "base_url").replace(/\/+$/, "");
     this.token = readOptional(options.user_token);
-    this.city_id = readOptional(options.city_id);
     this.requester = create_http_requester({
       base_url: this.serverUrl,
       fetch: options.fetch,
@@ -63,7 +61,6 @@ export class UserPactAccess {
       (path, init) => this.json(path, init),
       "/v1",
       id,
-      this.city_id,
     );
   }
 

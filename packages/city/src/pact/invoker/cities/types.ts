@@ -52,6 +52,6 @@ export interface TokenApplyResult {
   city_id: string;
   /** token 所属用户 ID */
   user_id: string;
-  /** token 过期时间；未设置 ttl 时省略 */
-  expires_at?: string;
+  /** token 过期时间；所有 user token 都具有有限有效期。 */
+  expires_at: string;
 }

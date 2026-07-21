@@ -99,7 +99,7 @@ function mapProvidersToOptions(items: AccountsProviderItem[]): AuthOption[] {
 }
 
 async function loadAuthOptions(federation_url: string): Promise<AuthOption[]> {
-  const city = new City({ role: "user", federation_url });
+  const city = new City({ federation_url });
   const accounts = city.service("accounts");
   const result = await accounts.get<{ items?: AccountsProviderItem[] }>("providers");
   return mapProvidersToOptions(result.items ?? []);
@@ -145,7 +145,7 @@ async function emailLogin(input: CityLoginInput): Promise<CityUserSession | null
   const password = String(response.password || "");
   if (!email || !email.includes("@") || !password) return null;
 
-  const city = new City({ role: "user", federation_url: input.federation_url });
+  const city = new City({ federation_url: input.federation_url });
   const accounts = city.service("accounts");
   const started = await accounts.action("login/start").invoke<AuthStartResult>({
     provider: "email",
@@ -193,7 +193,7 @@ async function emailRegister(input: CityLoginInput): Promise<CityUserSession | n
   if (!email || !email.includes("@")) throw new Error("invalid email");
   if (password.length < 8) throw new Error("password must be at least 8 characters");
 
-  const city = new City({ role: "user", federation_url: input.federation_url });
+  const city = new City({ federation_url: input.federation_url });
   const accounts = city.service("accounts");
   const registered = await accounts.action("register").invoke<RegisterResult>({
     email,
@@ -236,7 +236,7 @@ async function oauthAuth(
   input: CityLoginInput,
   provider: string,
 ): Promise<CityUserSession | null> {
-  const city = new City({ role: "user", federation_url: input.federation_url });
+  const city = new City({ federation_url: input.federation_url });
   const accounts = city.service("accounts");
   const started = await accounts.action("login/start").invoke<AuthStartResult>({
     provider,
@@ -276,7 +276,7 @@ async function inputAuth(
   input: CityLoginInput,
   provider: string,
 ): Promise<CityUserSession | null> {
-  const city = new City({ role: "user", federation_url: input.federation_url });
+  const city = new City({ federation_url: input.federation_url });
   const started = await city.service("accounts").action("login/start").invoke<AuthStartResult>({
     provider,
     city_id: input.city_id,
@@ -349,9 +349,7 @@ async function readUserSessionFromToken(input: CityLoginInput & {
   user_label?: string;
 }> {
   const city = new City({
-    role: "user",
     federation_url: input.federation_url,
-    city_id: input.city_id,
     user_token: input.user_token,
   });
   const result = await city.service("accounts").get<AccountsMeResult>("me");

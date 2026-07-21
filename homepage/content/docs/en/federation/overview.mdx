@@ -5,7 +5,7 @@ description: What Federation and Service are in Downcity's AI infrastructure
 
 # Federation & Service
 
-**Federation** is the model abstraction layer in City. It provides a unified interface over multiple AI providers (OpenAI, Anthropic, Google, local models, etc.) so that Agents do not need to hardcode provider-specific APIs.
+**Federation** is the shared server runtime that City connects to. It owns user identity, City isolation, Service routing, model catalogs, usage, and payments, while providing a unified interface over multiple AI providers.
 
 ## Federation AIService
 
@@ -29,12 +29,14 @@ Services and Actions are registered with City and can be discovered and called b
 
 ## Relationship to City
 
-Federation is a subsystem of City. When you use the City SDK, you are interacting with:
+`Federation` is the server and `City` is the user client carrying a `user_token`. When you use the City SDK, you are interacting with:
 
 - City identity and auth
 - Federation AIService (model catalog and routing)
 - Service/Action infrastructure (backend capabilities)
 - Usage, balance, and billing (City Services)
+
+Federation generates an Ed25519 Key Ring on first startup and publishes verification keys through `/.well-known/jwks.json`. Product backends can use `FedBureau` to identify requests belonging to their configured `city_id`.
 
 ## Where to learn more
 

@@ -10,12 +10,15 @@ import { TableApi, buildCreateUserTableSQL, type CityTableApi } from "../store/t
 import { EnvStore } from "../service/env/env-store.js";
 import { CityStore } from "../service/cities/city-store.js";
 import { Authenticator } from "./auth/authenticator.js";
+import { FederationKeyStore } from "./auth/federation-key-store.js";
+import { UserTokenAuthority } from "./auth/user-token-authority.js";
 import { randomSecret } from "../utils/helpers.js";
 import type { Service } from "../service/service.js";
 import type { CityUserSchemaInput } from "../store/types.js";
 import type { Runtime } from "./runtime.js";
 import type { CityRecord } from "../service/cities/types.js";
 import type { EnvEntry } from "../service/env/types.js";
+import type { FederationAuthKeyRecord } from "./auth/types.js";
 import type { Database, DbClient } from "../store/db.js";
 
 /**
@@ -54,6 +57,10 @@ export async function initialize_federation(params: {
   const table_map = new Map<string, CityTableApi>();
   table_map.set("cities", new TableApi(database, builtinTables.cities));
   table_map.set("env", new TableApi(database, builtinTables.env));
+  table_map.set(
+    "federation_auth_keys",
+    new TableApi(database, builtinTables.federation_auth_keys),
+  );
 
   for (const [name, table] of Object.entries(user_schema)) {
     table_map.set(name, new TableApi(database, table));
@@ -81,7 +88,19 @@ export async function initialize_federation(params: {
 
   await bootstrap_default_keys(env);
 
-  const authenticator = new Authenticator(env, require_ready);
+  const federation_id = env.get("DOWNCITY_FEDERATION_ID");
+  if (!federation_id) throw new Error("DOWNCITY_FEDERATION_ID is required");
+  const auth_key_table = table_map.get("federation_auth_keys");
+  if (!auth_key_table) throw new Error("Federation auth key table is not initialized");
+  const key_store = new FederationKeyStore(
+    auth_key_table as CityTableApi<FederationAuthKeyRecord>,
+  );
+  await key_store.ensure_active_key();
+  const token_authority = new UserTokenAuthority(
+    key_store,
+    `urn:downcity:federation:${federation_id}`,
+  );
+  const authenticator = new Authenticator(env, require_ready, token_authority, key_store);
 
   for (const service of services) {
     service._db = database;
@@ -139,9 +158,9 @@ async function bootstrap_default_keys(
     await env.upsert({ key: "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY", value: admin_key });
   }
 
-  const token_key = env.get("DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY") || `sign_${randomSecret()}`;
-  if (!env.get("DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY")) {
-    await env.upsert({ key: "DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY", value: token_key });
+  const federation_id = env.get("DOWNCITY_FEDERATION_ID") || `fed_${randomSecret(16)}`;
+  if (!env.get("DOWNCITY_FEDERATION_ID")) {
+    await env.upsert({ key: "DOWNCITY_FEDERATION_ID", value: federation_id });
   }
 
   const better_auth_secret = env.get("BETTER_AUTH_SECRET") || `better_auth_${randomSecret()}${randomSecret()}`;

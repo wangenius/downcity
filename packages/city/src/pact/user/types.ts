@@ -51,8 +51,6 @@ export interface UserServiceSummary {
 export interface UserPactAccessOptions {
   /** City 的访问入口地址，支持 `http(s)://`。 */
   base_url: string;
-  /** 当前 user_token 绑定的 City ID。 */
-  city_id?: string;
   /** 终端用户访问 token；调用需要 user 身份的 action 时必须传入。 */
   user_token?: string;
   /** 自定义 fetch 实现。 */

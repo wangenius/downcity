@@ -27,6 +27,7 @@ import type {
   LanguageModelV3StreamResult,
   CityModelDescriptor,
   City,
+  FederationAdmin,
   ModelCatalog,
   PaymentMethodHandle,
   UserImageJobCreateResult,
@@ -76,10 +77,10 @@ declare const provider_stream_result: LanguageModelV3StreamResult;
 void provider_stream_call;
 void provider_stream_result;
 
-declare const city: City<"user">;
-declare const admin: City<"admin">;
-declare const user_city: City<"user">;
-declare const admin_city: City<"admin">;
+declare const city: City;
+declare const admin: FederationAdmin;
+declare const user_city: City;
+declare const admin_city: FederationAdmin;
 
 const ai: AIInvoker = city.ai;
 

@@ -197,14 +197,14 @@ test("Federation bootstraps internal secrets into the env table", async () => {
 
     const envProvider = base.getService("env")._env
     assert.match(envProvider.get("DOWNCITY_FEDERATION_ADMIN_SECRET_KEY"), /^admin_/)
-    assert.match(envProvider.get("DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY"), /^sign_/)
+    assert.match(envProvider.get("DOWNCITY_FEDERATION_ID"), /^fed_/)
     assert.match(envProvider.get("BETTER_AUTH_SECRET"), /^better_auth_/)
 
     const items = await envProvider.list()
     assert.deepEqual(items.map((item) => item.key).sort(), [
       "BETTER_AUTH_SECRET",
       "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY",
-      "DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY",
+      "DOWNCITY_FEDERATION_ID",
     ])
 
     const envTable = await base.table("env")
@@ -216,6 +216,14 @@ test("Federation bootstraps internal secrets into the env table", async () => {
       assert.equal(typeof row.created_at, "string")
       assert.equal(typeof row.updated_at, "string")
     }
+
+    const keyTable = await base.table("federation_auth_keys")
+    const keyRows = await keyTable.select()
+    assert.equal(keyRows.length, 1)
+    assert.equal(keyRows[0].algorithm, "EdDSA")
+    assert.equal(keyRows[0].status, "active")
+    assert.equal(JSON.parse(keyRows[0].public_jwk).d, undefined)
+    assert.equal(typeof JSON.parse(keyRows[0].private_jwk).d, "string")
   } finally {
     process.chdir(cwd)
     await fs.rm(tempDir, { recursive: true, force: true })

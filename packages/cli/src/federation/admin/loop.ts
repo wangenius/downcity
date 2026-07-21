@@ -6,7 +6,7 @@
  * - City 连接配置、admin key 更新等低频操作通过 `更多` 回调交给 workspace 层处理。
  */
 
-import { City } from "@downcity/city";
+import { FederationAdmin } from "@downcity/city";
 import { type AdminSession } from "@/federation/core/session.js";
 import { adminErrorMessage, isAdminAuthError } from "@/federation/admin/auth-error.js";
 import { create_admin_tui_runtime } from "@/federation/tui/AdminTuiRuntime.js";
@@ -23,7 +23,7 @@ import { manageModels } from "@/federation/admin/commands/models.js";
 import { manageInstruction } from "@/federation/admin/commands/instruction.js";
 import { t } from "@/shared/CliLocale.js";
 
-const commands: Record<string, (a: City, baseUrl: string, runtime: admin_tui_runtime) => Promise<void>> = {
+const commands: Record<string, (a: FederationAdmin, baseUrl: string, runtime: admin_tui_runtime) => Promise<void>> = {
   dashboard: manageDashboard,
   env: manageEnv,
   instruction: manageInstruction,
@@ -45,10 +45,8 @@ export async function adminLoop(
     runtime?: admin_tui_runtime;
   },
 ): Promise<"logout" | "quit" | "switch_identity" | "back"> {
-  const admin = new City({
-    role: "admin",
+  const admin = new FederationAdmin({
     federation_url: session.base_url,
-    city_id: session.city_id,
     admin_secret_key: session.admin_secret_key,
   });
   const embedded = options?.embedded !== false;

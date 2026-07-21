@@ -211,7 +211,44 @@ base.use(usageService());
 - `auth: ["admin"]` 只允许 `admin_secret_key`
 - `auth: []` 表示免登录
 
-对于用户侧请求，`user_token` 绑定 city 身份。如果请求体或 query 中传了 `city_id`，它必须与 token 里的 city 一致。
+Federation 首次启动会自动生成并持久化 Ed25519 Key Ring。私钥只用于 Federation
+签发 `user_token`，公开公钥通过以下接口发布：
+
+```text
+GET /.well-known/downcity.json
+GET /.well-known/jwks.json
+```
+
+用户侧 `City` 只需要 Federation 地址和登录后获得的 token：
+
+```ts
+const city = new City({
+  federation_url: "https://fed.example.com",
+  user_token,
+});
+```
+
+`city_id` 由 Federation 验签后从 token 中读取，客户端不再重复传入。
+
+独立产品后端通过 `FedBureau` 识别请求身份：
+
+```ts
+const bureau = new FedBureau({
+  federation_url: "https://fed.example.com",
+  city_id: "city_product_a",
+});
+
+const identity = await bureau.identify(request);
+```
+
+Federation 管理控制面使用独立的 `FederationAdmin`：
+
+```ts
+const admin = new FederationAdmin({
+  federation_url: "https://fed.example.com",
+  admin_secret_key,
+});
+```
 
 ## 主要导出
 
@@ -223,7 +260,8 @@ base.use(usageService());
 - `AIChannel`
 - `CityModel`
 - `CityModelDescriptor`
-- `TokenSigner`
+- `FedBureau`
+- `FederationAdmin`
 - `EnvService`
 - `CitiesService`
 

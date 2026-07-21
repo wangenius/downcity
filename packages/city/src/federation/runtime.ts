@@ -96,6 +96,8 @@ export interface BuiltinTables {
   cities: TableDef;
   /** 环境变量表 */
   env: TableDef;
+  /** Federation 用户 token Ed25519 Key Ring 表。 */
+  federation_auth_keys: TableDef;
 }
 
 // ===========================================================================

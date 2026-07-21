@@ -2,7 +2,7 @@
  * Admin Payment 管理命令。
  */
 
-import { City } from "@downcity/city";
+import { FederationAdmin } from "@downcity/city";
 import { buildStripeEndpoints } from "@/federation/core/stripe.js";
 import { t } from "@/shared/CliLocale.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "@/federation/admin/auth-error.js";
@@ -38,7 +38,7 @@ interface StripeEventListItem {
   created_at: string;
 }
 
-export async function managePayment(a: City, baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
+export async function managePayment(a: FederationAdmin, baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
   const svc = a.service("payment.stripe");
   const endpoints = buildStripeEndpoints(baseUrl);
   while (true) {

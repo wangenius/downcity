@@ -95,7 +95,6 @@ const db = drizzle(sqlite);
 
 const bootstrap_env_keys = [
   "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY",
-  "DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY",
   "BETTER_AUTH_SECRET",
   "DEEPSEEK_API_KEY",
 ] as const;

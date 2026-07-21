@@ -1,6 +1,6 @@
 {
   "name": "@downcity/city",
-  "version": "0.2.205",
+  "version": "0.2.206",
   "description": "Downcity City runtime and City access SDK for services, actions, auth, env, and cities.",
   "type": "module",
   "main": "./bin/index.js",
@@ -53,6 +53,7 @@
     "@downcity/type": "workspace:*",
     "ai": "^6.0.193",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.12.23"
+    "hono": "^4.12.23",
+    "jose": "^6.2.3"
   }
 }

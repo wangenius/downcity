@@ -4,23 +4,51 @@ title: Identity
 description: How City manages user identity, authentication, and permissions
 ---
 
-# Identity
+# City User Identity
 
-City manages global user identity, authentication, and permissions. This is shared infrastructure that all Agents and products connect to, rather than being replicated in every project.
+Federation issues user identities, while the City client uses a `user_token` to access Federation or a product backend. One Federation can serve multiple products, isolated by `city_id`.
 
-## What City owns
+## Identity boundaries
 
-- **User accounts** — global downcity accounts with profile and credentials
-- **API tokens** — scoped tokens for programmatic access
-- **Permissions** — role-based access control for resources and actions
-- **Channel accounts** — bot credentials for Telegram, Feishu, QQ, etc.
+- **Federation** — stores the Ed25519 private key and issues `user_token` values
+- **City** — stores `federation_url + user_token` and makes user requests
+- **Product backend** — identifies users with `FedBureau` and Federation public keys
+- **FederationAdmin** — provides the separate Federation management control plane
 
 ## Authentication flow
 
-1. User logs in via Console or CLI
-2. City issues an identity token
-3. The token is used for all subsequent API calls
-4. Agents validate tokens through City when serving HTTP requests
+1. The user selects a product `city_id` during login
+2. Federation signs a `user_token` bound to that `city_id`
+3. The user calls Federation through `new City({ federation_url, user_token })`
+4. The user sends the same Bearer Token to the product backend
+5. The backend's `FedBureau` fetches and caches Federation JWKS, then identifies the user
+
+```ts
+const city = new City({
+  federation_url: "https://fed.example.com",
+  user_token,
+});
+```
+
+Product backend:
+
+```ts
+const bureau = new FedBureau({
+  federation_url: "https://fed.example.com",
+  city_id: "city_product_a",
+});
+
+const identity = await bureau.identify(request);
+```
+
+The public key is safe to publish: it can verify tokens but cannot issue or forge them. Federation publishes:
+
+```text
+/.well-known/downcity.json
+/.well-known/jwks.json
+```
+
+The product backend must preconfigure its trusted `federation_url` and `city_id`. It must never select JWKS from an unverified token.
 
 ## Channel accounts
 

@@ -1,14 +1,12 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { City } from "../bin/index.js"
+import { City, FederationAdmin } from "../bin/index.js"
 
 test("City rejects Federation rpc URLs", async () => {
   assert.throws(
     () => new City({
-      role: "user",
       federation_url: "rpc://127.0.0.1:15315",
-      city_id: "city_demo",
       user_token: "ub_test",
     }),
     /http:\/\/ or https:\/\//,
@@ -17,9 +15,7 @@ test("City rejects Federation rpc URLs", async () => {
 
 test("AIInvoker.base_url returns OpenAI-compatible endpoint", async () => {
   const city = new City({
-    role: "user",
     federation_url: "https://api.example.com/base/",
-    city_id: "city_demo",
     user_token: "ub_test",
   })
 
@@ -30,9 +26,7 @@ test("AIInvoker.text() posts to /v1/ai/text", async () => {
   const requests = []
   const msg = { id: "msg_1", role: "assistant", parts: [{ type: "text", text: "hello", state: "done" }] }
   const city = new City({
-    role: "user",
     federation_url: "https://api.example.com/base/",
-    city_id: "city_demo",
     user_token: "ub_test",
     fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
   })
@@ -47,9 +41,7 @@ test("AIInvoker.text() serializes reasoning_effort", async () => {
   const requests = []
   const msg = { id: "msg_1", role: "assistant", parts: [{ type: "text", text: "hello", state: "done" }] }
   const city = new City({
-    role: "user",
     federation_url: "https://api.example.com/base/",
-    city_id: "city_demo",
     user_token: "ub_test",
     fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
   })
@@ -70,9 +62,7 @@ test("AIInvoker.text() serializes reasoning_effort", async () => {
 test("AIInvoker.image_create() posts to /v1/ai/image/create", async () => {
   const requests = []
   const city = new City({
-    role: "user",
     federation_url: "https://api.example.com/base/",
-    city_id: "city_demo",
     user_token: "ub_test",
     fetch: async (url, init) => {
       requests.push({ url, init })
@@ -101,9 +91,7 @@ test("AIInvoker.image_create() posts to /v1/ai/image/create", async () => {
 test("AIInvoker.image_result() posts to /v1/ai/image/result", async () => {
   const requests = []
   const city = new City({
-    role: "user",
     federation_url: "https://api.example.com/base/",
-    city_id: "city_demo",
     user_token: "ub_test",
     fetch: async (url, init) => {
       requests.push({ url, init })
@@ -133,9 +121,7 @@ test("AIInvoker.text() serializes AI SDK provider tools with inputSchema", async
     additionalProperties: false,
   }
   const city = new City({
-    role: "user",
     federation_url: "https://api.example.com/base/",
-    city_id: "city_demo",
     user_token: "ub_test",
     fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
   })
@@ -169,9 +155,7 @@ test("User City delegates AI calls", async () => {
   const requests = []
   const msg = { id: "msg_1", role: "assistant", parts: [{ type: "text", text: "hello", state: "done" }] }
   const city = new City({
-    role: "user",
     federation_url: "https://api.example.com/base/",
-    city_id: "city_demo",
     user_token: "ub_test",
     fetch: async (url, init) => { requests.push({ url, init }); return json(msg) },
   })
@@ -183,7 +167,6 @@ test("User City delegates AI calls", async () => {
 
 test("AIInvoker.catalog() returns ModelCatalog", async () => {
   const city = new City({
-    role: "user",
     federation_url: "https://api.example.com/base/",
     city_id: "city_demo", user_token: "ub_test",
     fetch: async () => json({ items: [
@@ -215,7 +198,6 @@ test("AIInvoker.stream() converts CityModel parts into UIMessage chunks", async 
     },
   ]
   const city = new City({
-    role: "user",
     federation_url: "https://api.example.com/base/", city_id: "city_demo", user_token: "ub_test",
     fetch: async (url, init) => {
       requests.push({ url, init })
@@ -258,9 +240,7 @@ test("AIInvoker.stream() converts CityModel parts into UIMessage chunks", async 
 
 test("User City listServices()", async () => {
   const city = new City({
-    role: "user",
     federation_url: "https://api.example.com/base/",
-    city_id: "p",
     user_token: "t",
     fetch: async () => json({
       items: [
@@ -278,20 +258,17 @@ test("User City listServices()", async () => {
 test("User City service() → ServiceInvoker", async () => {
   const requests = []
   const city = new City({
-    role: "user",
-    federation_url: "https://api.example.com/base/", city_id: "p", user_token: "t", fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) } })
+    federation_url: "https://api.example.com/base/", user_token: "t", fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) } })
   const result = await city.service("notes").action("create").invoke({ title: "hello" })
   assert.deepEqual(result, { ok: true })
   assert.equal(requests[0].url, "https://api.example.com/base/v1/notes/create")
-  assert.deepEqual(JSON.parse(requests[0].init.body), { title: "hello", city_id: "p" })
+  assert.deepEqual(JSON.parse(requests[0].init.body), { title: "hello" })
 })
 
 test("ServiceClient.get() appends query params for GET actions", async () => {
   const requests = []
   const city = new City({
-    role: "user",
     federation_url: "https://api.example.com/base/",
-    city_id: "p",
     user_token: "t",
     fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) },
   })
@@ -304,9 +281,7 @@ test("ServiceClient.get() appends query params for GET actions", async () => {
 test("User City payment.methods() reads the unified payment directory", async () => {
   const requests = []
   const city = new City({
-    role: "user",
     federation_url: "https://api.example.com/base/",
-    city_id: "p",
     fetch: async (url, init) => {
       requests.push({ url, init })
       return json({
@@ -345,9 +320,7 @@ test("User City payment.methods() reads the unified payment directory", async ()
 test("User City payment.method(id).invoke() dispatches to the unified payment checkout endpoint", async () => {
   const requests = []
   const city = new City({
-    role: "user",
     federation_url: "https://api.example.com/base/",
-    city_id: "p",
     user_token: "t",
     fetch: async (url, init) => {
       requests.push({ url, init })
@@ -388,9 +361,7 @@ test("User City payment.method(id).invoke() dispatches to the unified payment ch
 
 test("User City payment.method(id).invoke() rejects disabled or user-required methods early", async () => {
   const disabledClient = new City({
-    role: "user",
     federation_url: "https://api.example.com/base/",
-    city_id: "p",
     fetch: async () => json({
       items: [
         {
@@ -414,9 +385,7 @@ test("User City payment.method(id).invoke() rejects disabled or user-required me
   )
 
   const guestClient = new City({
-    role: "user",
     federation_url: "https://api.example.com/base/",
-    city_id: "p",
     fetch: async () => json({
       items: [
         {
@@ -439,12 +408,10 @@ test("User City payment.method(id).invoke() rejects disabled or user-required me
   )
 })
 
-test("Admin City service() uses the shared /v1 route prefix", async () => {
+test("FederationAdmin service() uses the shared /v1 route prefix", async () => {
   const requests = []
-  const admin = new City({
-    role: "admin",
+  const admin = new FederationAdmin({
     federation_url: "http://localhost:3001/",
-    city_id: "p",
     admin_secret_key: "sk",
     fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) },
   })
@@ -454,12 +421,10 @@ test("Admin City service() uses the shared /v1 route prefix", async () => {
   assert.equal(requests[0].init.headers.authorization, "Bearer sk")
 })
 
-test("Admin City env list / catalog / upsert / remove", async () => {
+test("FederationAdmin env list / catalog / upsert / remove", async () => {
   const requests = []
-  const admin = new City({
-    role: "admin",
+  const admin = new FederationAdmin({
     federation_url: "http://localhost:3001/",
-    city_id: "p",
     admin_secret_key: "sk",
     fetch: async (url, init) => {
     requests.push({ url, init })
@@ -493,12 +458,10 @@ test("Admin City env list / catalog / upsert / remove", async () => {
   assert.equal(requests[3].url, "http://localhost:3001/v1/env/remove")
 })
 
-test("Admin City cities CRUD + tokens.apply", async () => {
+test("FederationAdmin cities CRUD + tokens.apply", async () => {
   const requests = []; const p = { city_id: "p1", name: "Demo", status: "active", created_at: "t", updated_at: "t" }
-  const admin = new City({
-    role: "admin",
+  const admin = new FederationAdmin({
     federation_url: "http://localhost:3001/",
-    city_id: "p1",
     admin_secret_key: "sk",
     fetch: async (url, init) => {
     requests.push({ url, init })
@@ -519,12 +482,10 @@ test("Admin City cities CRUD + tokens.apply", async () => {
   })
 })
 
-test("Admin City listServices() / listModels() / instruction()", async () => {
+test("FederationAdmin listServices() / listModels() / instruction()", async () => {
   const requests = []
-  const admin = new City({
-    role: "admin",
+  const admin = new FederationAdmin({
     federation_url: "http://localhost:3001/",
-    city_id: "p",
     admin_secret_key: "sk",
     fetch: async (url, init) => {
       requests.push({ url, init })
@@ -596,9 +557,7 @@ test("AIInvoker fetch retries transient 'fetch failed' errors", async () => {
   let calls = 0
   const msg = { id: "m", role: "assistant", parts: [{ type: "text", text: "ok", state: "done" }] }
   const city = new City({
-    role: "user",
     federation_url: "https://api.example.com/base/",
-    city_id: "city_demo",
     user_token: "ub_test",
     fetch: async () => {
       calls += 1
@@ -619,9 +578,7 @@ test("AIInvoker fetch retries transient 'fetch failed' errors", async () => {
 
 test("AIInvoker fetch surfaces cause chain when retries exhausted", async () => {
   const city = new City({
-    role: "user",
     federation_url: "https://api.example.com/base/",
-    city_id: "city_demo",
     user_token: "ub_test",
     fetch: async () => {
       const cause = new Error("other side closed")

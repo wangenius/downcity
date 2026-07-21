@@ -14,7 +14,7 @@ import { stdin as input, stdout as output } from "node:process";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { Agent } from "@downcity/agent";
-import { City, type CityModel } from "@downcity/city";
+import { City, FederationAdmin, type CityModel } from "@downcity/city";
 
 const DEFAULT_FEDERATION_URL = "http://127.0.0.1:43127";
 const DEFAULT_CITY_ID = "city_downcity";
@@ -115,10 +115,8 @@ async function resolve_user_token(config: ClientConfig): Promise<string> {
     );
   }
 
-  const admin = new City({
-    role: "admin",
+  const admin = new FederationAdmin({
     federation_url: config.federation_url,
-    city_id: config.city_id,
     admin_secret_key: config.admin_secret_key,
   });
   const issued = await admin.cities.tokens.apply({
@@ -139,7 +137,7 @@ function is_readline_closed_error(error: unknown): boolean {
 /**
  * 解析本地 Agent 使用的 City 模型。
  */
-async function resolve_agent_model(city: City<"user">, model_id: string | undefined): Promise<CityModel> {
+async function resolve_agent_model(city: City, model_id: string | undefined): Promise<CityModel> {
   const resolved_model_id = String(model_id ?? "").trim();
   if (!resolved_model_id) {
     throw new Error("必须配置 DOWNCITY_CLIENT_MODEL_ID 或 MODEL_ID，AIService 不会自动选择默认模型。");
@@ -180,7 +178,7 @@ async function create_agent_session(config: ClientConfig, model: CityModel) {
 /**
  * 打印可用模型列表。
  */
-async function print_models(city: City<"user">): Promise<void> {
+async function print_models(city: City): Promise<void> {
   const catalog = await city.ai.catalog();
   const models = catalog.all();
 
@@ -200,7 +198,7 @@ async function print_models(city: City<"user">): Promise<void> {
  * 通过 Downcity Agent SDK 执行一次文本请求。
  */
 async function request_text(input: {
-  city: City<"user">;
+  city: City;
   config: ClientConfig;
   session?: LocalAgentSession;
   prompt: string;
@@ -229,10 +227,8 @@ async function request_text(input: {
 async function main(): Promise<void> {
   const config = read_config();
   const user_token = await resolve_user_token(config);
-  const city = new City<"user">({
-    role: "user",
+  const city = new City({
     federation_url: config.federation_url,
-    city_id: config.city_id,
     user_token,
   });
   let session: LocalAgentSession | undefined;

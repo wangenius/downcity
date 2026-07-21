@@ -10,12 +10,14 @@
 
 镜像构建逻辑已经内联在 `docker-compose.yml` 中，不需要单独配置 Dockerfile。
 
-Dokploy 里必须配置这两个稳定的 bootstrap secret：
+Dokploy 里必须配置稳定的 Federation 管理凭证：
 
 ```env
-DOWNCITY_CITY_ADMIN_SECRET_KEY=admin_xxx
-DOWNCITY_CITY_TOKEN_SIGNING_KEY=sign_xxx
+DOWNCITY_FEDERATION_ADMIN_SECRET_KEY=admin_xxx
 ```
+
+用户 token 的 Ed25519 Key Ring 由 Federation 首次启动时自动生成并保存在数据库中，
+不需要在 Dokploy 中配置 signing key。
 
 `HOST`、`PORT` 和 `DOWNCITY_CITY_DATABASE_URL` 已经写在 `docker-compose.yml` 中。容器内数据库路径是：
 
@@ -44,7 +46,7 @@ curl -X POST https://your-domain/v1/env/upsert \
 
 之后 Runtime handler 里的 `ctx.env.MOONSHOT_API_KEY` 会从 City 数据库读取。
 
-`DOWNCITY_CITY_ADMIN_SECRET_KEY` 和 `DOWNCITY_CITY_TOKEN_SIGNING_KEY` 是启动级 bootstrap secret，生产环境必须在 Dokploy env 中固定配置。
+`DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` 是启动级 bootstrap secret，生产环境必须在 Dokploy env 中固定配置。Federation 数据 volume 也必须持久化，否则重建数据库会生成新的 issuer 与 Key Ring，并使旧 user token 失效。
 
 ## 本地验证
 

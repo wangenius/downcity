@@ -1,18 +1,24 @@
 /**
  * 统一鉴权模块。
  *
- * Authenticator 统一处理 admin（secret key）和 user（JWT token）两种鉴权方式。
+ * Authenticator 统一处理 admin（secret key）和 user（Ed25519 JWT）两种鉴权方式。
  * 所有鉴权失败统一抛出 httpError（ErrorWithStatus）。
- *
- * TokenSigner 实例通过 getSigner() 缓存，避免重复 new TokenSigner(key)。
  */
 
 import { bearerToken, httpError } from "../../utils/helpers.js";
-import { TokenSigner } from "./token-signer.js";
 import { normalizeRouteAuth, type RouteAuth, type RouteIdentity } from "../../service/service.js";
 import type { EnvProvider } from "../runtime.js";
+import { parse_user_token_ttl, type UserTokenAuthority } from "./user-token-authority.js";
+import type { FederationKeyStore } from "./federation-key-store.js";
 
-import type { CreateUserTokenInput, UserTokenPayload, UserTokenIssueResult, RuntimeUser } from "./types.js";
+import type {
+  CreateUserTokenInput,
+  FederationDiscovery,
+  FederationJwks,
+  UserTokenPayload,
+  UserTokenIssueResult,
+  RuntimeUser,
+} from "./types.js";
 import type { FederationTrustedIdentity } from "../types.js";
 
 /** 鉴权级别 */
@@ -28,27 +34,12 @@ export interface AuthResult {
 
 /** 统一鉴权器 */
 export class Authenticator {
-  /** 缓存的 TokenSigner 实例 */
-  private tokenSigner?: TokenSigner;
-
   constructor(
     private env: EnvProvider,
     private store: () => Promise<{ city: { get(id: string): Promise<{ city_id: string; status: string } | undefined> } }>,
+    private readonly token_authority: UserTokenAuthority,
+    private readonly key_store: FederationKeyStore,
   ) {}
-
-  /**
-   * 获取（或创建）TokenSigner 单例。
-   *
-   * 首次调用时从 env 读取 DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY 创建实例并缓存。
-   */
-  private getSigner(): TokenSigner {
-    if (!this.tokenSigner) {
-      const signingKey = this.env.get("DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY");
-      if (!signingKey) throw new Error("DOWNCITY_FEDERATION_TOKEN_SIGNING_KEY is required");
-      this.tokenSigner = new TokenSigner(signingKey);
-    }
-    return this.tokenSigner;
-  }
 
   /**
    * 解析请求身份。
@@ -66,7 +57,7 @@ export class Authenticator {
     }
 
     try {
-      const payload = await this.getSigner().verify(token);
+      const payload = await this.token_authority.verify(token);
       const store = await this.store();
       const city = await store.city.get(payload.city_id);
       if (!city) return { level: "guest" };
@@ -138,14 +129,13 @@ export class Authenticator {
     if (!city) throw httpError(404, `Unknown city: ${input.city_id}`);
     if (city.status !== "active") throw httpError(403, `City is not active: ${input.city_id}`);
 
-    const user_token = await this.getSigner().sign(input);
+    const ttl_seconds = parse_user_token_ttl(input.ttl);
+    const user_token = await this.token_authority.sign(input);
     return {
       user_token,
       city_id: input.city_id,
       user_id: input.user_id,
-      ...(input.ttl
-        ? { expires_at: new Date(Date.now() + TokenSigner.parseTTL(input.ttl) * 1000).toISOString() }
-        : {}),
+      expires_at: new Date(Date.now() + ttl_seconds * 1000).toISOString(),
     };
   }
 
@@ -156,6 +146,22 @@ export class Authenticator {
    * @returns 解析出的 token 载荷
    */
   async verifyToken(token: string): Promise<UserTokenPayload> {
-    return this.getSigner().verify(token);
+    return this.token_authority.verify(token);
+  }
+
+  /** 返回 Federation 当前可公开使用的 JWKS。 */
+  get_public_jwks(): Promise<FederationJwks> {
+    return this.key_store.get_public_jwks();
+  }
+
+  /** 根据当前请求 origin 生成 Federation 发现信息。 */
+  get_discovery(origin: string): FederationDiscovery {
+    const federation_id = this.env.get("DOWNCITY_FEDERATION_ID");
+    if (!federation_id) throw new Error("DOWNCITY_FEDERATION_ID is required");
+    return {
+      issuer: `urn:downcity:federation:${federation_id}`,
+      jwks_uri: `${origin.replace(/\/+$/, "")}/.well-known/jwks.json`,
+      user_token_audience: "downcity:user",
+    };
   }
 }

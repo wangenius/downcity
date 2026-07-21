@@ -26,21 +26,16 @@ export class AdminPactAccess {
   readonly env: EnvInvoker;
 
   private readonly base_url: string;
-  readonly city_id: string;
   private readonly secret: string | undefined;
   private readonly requester: CityRequester;
 
   constructor(options: AdminPactAccessOptions) {
     if (!options || typeof options !== "object") {
-      throw new TypeError("Admin City options are required");
+      throw new TypeError("Federation admin options are required");
     }
 
     this.base_url = requiredString(options.base_url, "base_url").replace(/\/+$/, "");
-    this.city_id = requiredString(options.city_id, "city_id");
-    this.secret = requiredString(
-      options.admin_secret_key ?? process.env.DOWNCITY_FEDERATION_ADMIN_SECRET_KEY,
-      "admin_secret_key",
-    );
+    this.secret = requiredString(options.admin_secret_key, "admin_secret_key");
     this.requester = create_http_requester({
       base_url: this.base_url,
       fetch: options.fetch,
@@ -92,24 +87,6 @@ export class AdminPactAccess {
   private text(path: string, init: RequestInitLike): Promise<string> {
     return this.requester.text(path, init);
   }
-
-
-  /**
-   * 为当前 City 签发 user token。
-   *
-   * 不需要传 city_id，构造时传入的 city_id 会自动注入。
-   */
-  async applyToken(input: {
-    user_id: string;
-    metadata?: Record<string, unknown>;
-    ttl?: string | number;
-  }): Promise<{ user_token: string; city_id: string; user_id: string; expires_at?: string }> {
-    return this.json('/v1/cities/tokens/apply', {
-      method: 'POST',
-      body: JSON.stringify({ ...input, city_id: this.city_id }),
-    });
-  }
-
   /**
    * 为管理端请求统一补齐鉴权头。
    *

@@ -59,12 +59,12 @@ function create_session_system_block(
   session: AgentSessionSystemSessionInfo,
 ): AgentSessionSystemBlock {
   const content = [
-    "当前会话上下文：",
-    `你正在服务 agent "${session.agentId}" 的 session "${session.sessionId}"。`,
-    `当前项目根目录是 "${session.projectRoot}"。`,
-    `本会话创建于 ${session.createdAt}，参考时区是 ${session.timezone}。`,
-    "这个创建时间是当前会话的稳定参考时间，不代表每轮运行时的当前时间。",
-    "如果用户消息中提供了新的当前时间、相对时间或其他动态上下文，应优先使用用户消息中的动态信息。",
+    "Current session context:",
+    `You are serving agent "${session.agentId}" in session "${session.sessionId}".`,
+    `The current project root is "${session.projectRoot}".`,
+    `This session was created at ${session.createdAt}, with ${session.timezone} as its reference timezone.`,
+    "This creation time is a stable reference for the session and does not represent the current time for every run.",
+    "If the user message provides a newer current time, a relative time, or other dynamic context, prioritize the dynamic information from the user message.",
   ].join("\n");
   return {
     source: "session",

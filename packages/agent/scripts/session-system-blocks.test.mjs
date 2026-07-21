@@ -69,5 +69,18 @@ test("session system blocks are ordered as instruction, core, plugin, session", 
   );
   assert.equal(blocks[0].content, "使用中文回复。");
   assert.match(blocks[1].content, /plugin_call/);
-  assert.match(blocks[3].content, /session-test/);
+  assert.match(blocks[3].content, /^Current session context:/);
+  assert.match(
+    blocks[3].content,
+    /You are serving agent "agent-test" in session "session-test"\./,
+  );
+  assert.match(
+    blocks[3].content,
+    /The current project root is "\/tmp\/downcity-project"\./,
+  );
+  assert.match(
+    blocks[3].content,
+    /This session was created at 2026-07-09T08:00:00\.000Z, with Asia\/Shanghai as its reference timezone\./,
+  );
+  assert.doesNotMatch(blocks[3].content, /[\u3400-\u9fff]/u);
 });

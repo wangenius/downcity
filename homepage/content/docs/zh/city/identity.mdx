@@ -5,13 +5,14 @@ description: City 如何管理用户身份、认证和权限
 
 # City 用户身份
 
-Federation 统一签发用户身份，City 客户端使用 `user_token` 访问 Federation 或产品后端。可信产品后端使用 `bureau_token` 在线识别用户。一个 Federation 可以服务多个产品，每个产品由 `city_id` 隔离。
+Federation 统一签发用户身份和账户数据，City 客户端直接访问 Federation。产品需要自己的后端能力时，再部署可选的 Bureau。一个 Federation 可以服务多个产品，每个产品由 `city_id` 隔离。
 
 ## 身份边界
 
 - **Federation** — 保存 Ed25519 私钥并签发 `user_token`
 - **City** — 保存 `federation_url + user_token` 并发起用户请求
-- **Bureau** — 保存 `federation_url + bureau_token`，供产品后端识别用户或执行被授权的管理操作
+- **Bureau** — 某个 City 的可选产品后端，使用 Federation 公钥本地验证用户
+- **FederationAdmin** — Federation 独立控制面，供 CLI 和运维使用
 
 ## 认证流程
 
@@ -19,17 +20,20 @@ Federation 统一签发用户身份，City 客户端使用 `user_token` 访问 F
 2. Federation 使用私钥签发绑定该 `city_id` 的 `user_token`
 3. 用户通过 `new City({ federation_url, user_token })` 调用 Federation
 4. 用户携带同一个 Bearer Token 调用产品后端
-5. 产品后端的 `Bureau` 将 `bureau_token + user_token` 发送给 Federation
-6. Federation 从 Bureau Token 记录读取 `city_id`，验证用户 Token 并查询 Accounts 当前用户记录
+5. City 直接携带 `user_token` 调用 Federation 的 Profile、余额和标准 Service
+6. 如果产品有自己的后端，City 将产品请求发送给 Bureau
+7. Bureau 使用 Federation 公钥本地验证 `user_token`，需要当前数据时再携带同一个 Token 请求 Federation
 
 ```ts
 const city = new City({
   federation_url: "https://fed.example.com",
   user_token,
 });
+
+const profile = await city.user().profile();
 ```
 
-产品后端：
+可选的产品后端：
 
 ```ts
 const bureau = new Bureau({
@@ -38,9 +42,10 @@ const bureau = new Bureau({
 });
 
 const identity = await bureau.identify(request);
+const profile = await (await bureau.user(request)).profile();
 ```
 
-`Bureau` 必须配置 `bureau_token`，但不配置 `city_id`。Federation 在签发 Bureau Token 时把它绑定到 City，并且数据库只保存 Token hash。`identify()` 每次在线查询 Federation，因此 Token 撤销、City 暂停和 Accounts 用户状态会立即生效。
+`Bureau` 是可选后端。它使用 `bureau_token` 获取自己绑定的 City 上下文，之后在本地使用 Federation 公钥验证 `user_token`。`identify()` 不调用在线 introspection；只有需要当前 Profile、余额等数据时，Bureau 才请求 Federation。
 
 Federation 仍会发布 Ed25519 公钥，供 Federation 自身和其他协议验证用户 Token：
 
@@ -49,7 +54,7 @@ Federation 仍会发布 Ed25519 公钥，供 Federation 自身和其他协议验
 /.well-known/jwks.json
 ```
 
-管理后端使用同一个 `Bureau` 类，区别仅在 `bureau_token` 是否拥有 `federation:admin` capability。
+Federation 管理使用独立的 `FederationAdmin`，不通过 Bureau 管理 Federation。
 
 ## 渠道账号
 

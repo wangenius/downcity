@@ -1,23 +1,28 @@
 /**
  * Bureau 公共类型模块。
  *
- * Bureau 是产品后端与 Federation 管理端统一使用的在线身份客户端。
+ * Bureau 是某个 City 部署在独立服务器上的可选后端。它使用 Bureau Token
+ * 获取自身 City 上下文，并使用 Federation 公钥在本地验证 user_token。
  */
 
-import type { FetchLike } from "../pact/http.js";
+/** Bureau 使用的标准 fetch 能力。 */
+export type BureauFetch = (
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) => Promise<Response>;
 
-/** Bureau Token 可授予的能力。 */
-export type BureauCapability = "accounts:read" | "federation:admin";
+/** Bureau Token 可访问的 Federation 服务端能力。 */
+export type BureauCapability = "accounts:read";
 
 /** Federation 数据库中的 Bureau Token 记录。 */
 export interface BureauTokenRecord extends Record<string, unknown> {
   /** Bureau Token 的公开查找 ID。 */
   token_id: string;
 
-  /** 便于管理员识别用途的名称。 */
+  /** 便于部署者识别用途的名称。 */
   name: string;
 
-  /** Token 绑定的 City ID；root token 使用空字符串。 */
+  /** Bureau 所属的唯一 City ID。 */
   city_id: string;
 
   /** Bureau Token 完整明文的 SHA-256 Base64URL hash。 */
@@ -26,7 +31,7 @@ export interface BureauTokenRecord extends Record<string, unknown> {
   /** JSON 编码的 Bureau capability 列表。 */
   capabilities: string;
 
-  /** Token 状态。 */
+  /** Token 当前状态。 */
   status: "active" | "revoked";
 
   /** Token 创建时间。 */
@@ -36,7 +41,7 @@ export interface BureauTokenRecord extends Record<string, unknown> {
   updated_at: string;
 }
 
-/** 已通过 Federation 验证的 Bureau 身份。 */
+/** 已通过 Federation 验证的 Bureau 服务端身份。 */
 export interface RuntimeBureau {
   /** Bureau Token ID。 */
   token_id: string;
@@ -44,26 +49,26 @@ export interface RuntimeBureau {
   /** Bureau 展示名称。 */
   name: string;
 
-  /** Token 绑定的 City ID；root Bureau 为空字符串。 */
+  /** Bureau 所属的唯一 City ID。 */
   city_id: string;
 
-  /** Bureau 被授予的 capability。 */
+  /** Bureau 被授予的 Federation 能力。 */
   capabilities: BureauCapability[];
 }
 
-/** 创建 Bureau Token 的输入。 */
+/** Federation 服务端创建 Bureau Token 的输入。 */
 export interface CreateBureauTokenInput {
-  /** 便于管理员识别用途的名称。 */
+  /** 便于部署者识别用途的名称。 */
   name: string;
 
-  /** Token 绑定的 City ID；管理型 Token 可以省略。 */
-  city_id?: string;
+  /** Bureau 所属的唯一 City ID。 */
+  city_id: string;
 
-  /** Token capability；默认只允许读取用户身份。 */
+  /** Bureau capability；默认允许读取用户账户数据。 */
   capabilities?: BureauCapability[];
 }
 
-/** Bureau Token 签发结果。 */
+/** Federation 服务端创建 Bureau Token 的结果。 */
 export interface BureauTokenIssueResult {
   /** 只返回一次的 Bureau Token 明文。 */
   bureau_token: string;
@@ -71,25 +76,25 @@ export interface BureauTokenIssueResult {
   /** Bureau Token 的公开查找 ID。 */
   token_id: string;
 
-  /** Token 绑定的 City ID；管理型 Token 为空字符串。 */
+  /** Bureau 所属的唯一 City ID。 */
   city_id: string;
 
-  /** Token capability。 */
+  /** Bureau capability。 */
   capabilities: BureauCapability[];
 }
 
-/** Bureau Token 管理列表项。 */
+/** Federation 服务端列出的 Bureau Token 元数据。 */
 export interface BureauTokenSummary {
   /** Bureau Token 的公开查找 ID。 */
   token_id: string;
 
-  /** 便于管理员识别用途的名称。 */
+  /** 便于部署者识别用途的名称。 */
   name: string;
 
-  /** Token 绑定的 City ID；管理型 Token 为空字符串。 */
+  /** Bureau 所属的唯一 City ID。 */
   city_id: string;
 
-  /** Token capability。 */
+  /** Bureau capability。 */
   capabilities: BureauCapability[];
 
   /** Token 当前状态。 */
@@ -102,74 +107,50 @@ export interface BureauTokenSummary {
   updated_at: string;
 }
 
+/** Bureau 从 Federation 获取的可信运行上下文。 */
+export interface BureauContext {
+  /** Bureau Token ID。 */
+  token_id: string;
+
+  /** Bureau 展示名称。 */
+  name: string;
+
+  /** Bureau 所属的唯一 City ID。 */
+  city_id: string;
+
+  /** Bureau 被授予的 Federation 能力。 */
+  capabilities: BureauCapability[];
+}
+
 /** Bureau 构造参数。 */
 export interface BureauOptions {
-  /** Federation HTTP 入口地址。 */
+  /** 预先信任的 Federation HTTP 入口地址。 */
   federation_url: string;
 
-  /** Federation 签发的 Bureau Token。 */
+  /** Federation 注册表中属于该 City 后端的 Bureau Token。 */
   bureau_token: string;
 
   /** 自定义 fetch 实现。 */
-  fetch?: FetchLike;
+  fetch?: BureauFetch;
+
+  /** Federation 上下文与 JWKS 的本地缓存时间，单位毫秒。 */
+  jwks_cache_ttl?: number;
 }
 
-/** Bureau identify 返回的认证用户信息。 */
-export interface BureauUserInfo {
-  /** Federation 用户 ID。 */
-  user_id: string;
-
-  /** 用户认证邮箱。 */
-  email: string;
-
-  /** 邮箱是否已验证。 */
-  email_verified: boolean;
-
-  /** 认证系统展示名称。 */
-  name: string;
-
-  /** 认证系统头像 URL。 */
-  image: string | null;
-}
-
-/** Bureau identify 返回的用户资料。 */
-export interface BureauUserProfile {
-  /** Federation 用户 ID。 */
-  user_id: string;
-
-  /** 用户资料邮箱。 */
-  email: string;
-
-  /** 用户展示名称。 */
-  display_name: string;
-
-  /** 用户头像 URL。 */
-  avatar_url: string;
-
-  /** 用户个人简介。 */
-  bio: string;
-
-  /** 资料创建时间。 */
-  created_at: string;
-
-  /** 资料更新时间。 */
-  updated_at: string;
-}
-
-/** Bureau 在线识别结果。 */
+/** Bureau 本地验签后得到的 Federation 用户身份。 */
 export interface BureauIdentity {
-  /** 用户当前是否仍存在于 Federation Accounts。 */
-  registered: boolean;
+  /** Federation 用户 ID，来源于已验证 JWT。 */
+  user_id: string;
 
-  /** user_token 中的 Federation 用户 ID。 */
-  user_id?: string;
+  /** 与当前 Bureau 注册记录一致的 City ID。 */
+  city_id: string;
 
-  /** user_token 绑定的 City ID。 */
-  city_id?: string;
+  /** user_token 中携带的可信业务元数据。 */
+  metadata: Record<string, unknown>;
 
-  /** 当前注册用户认证信息。 */
-  user?: BureauUserInfo;
+  /** user_token 唯一 ID，来源于 JWT jti。 */
+  token_id: string;
 
-  /** 当前注册用户资料；未创建资料时为空。 */
-  profile?: BureauUserProfile | null;
+  /** user_token 过期时间，Unix 秒。 */
+  expires_at: number;
 }

@@ -36,7 +36,7 @@ Service 和 Action 向 City 注册，可被任何已连接的 Agent 发现和调
 - Service/Action 基础设施（后端能力）
 - 用量、余额和计费（City Services）
 
-Federation 首次启动会自动生成 Ed25519 Key Ring，并通过 `/.well-known/jwks.json` 发布公开验签密钥。产品后端使用必须配置 `bureau_token` 的 `Bureau` 在线识别用户；`city_id` 由 Federation 中的 Bureau Token 记录决定，不再由产品后端传入。
+Federation 首次启动会自动生成 Ed25519 Key Ring，并通过 `/.well-known/jwks.json` 发布公开验签密钥。City 可以直接访问 Federation；产品需要自有后端能力时，再使用 Bureau 获取自己的 City 上下文并本地验证用户 Token。Federation 启动不会默认创建 Bureau Token。
 
 ## 继续阅读
 

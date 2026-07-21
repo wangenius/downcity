@@ -123,7 +123,9 @@ export type {
 // 场景 3：用户鉴权与 Token
 // ===========================================================================
 
-export { Bureau } from "./client/bureau.js";
+export { Bureau, BureauUser } from "./client/bureau.js";
+export { FederationAdmin } from "./client/federation-admin.js";
+export { FederationBureaus } from "./federation/federation-bureaus.js";
 
 export type {
   RuntimeUser,
@@ -139,12 +141,17 @@ export type {
   BureauIdentity,
   BureauOptions,
   BureauCapability,
+  BureauContext,
+  BureauFetch,
   BureauTokenIssueResult,
   BureauTokenSummary,
-  BureauUserInfo,
-  BureauUserProfile,
   CreateBureauTokenInput,
+  RuntimeBureau,
 } from "./types/Bureau.js";
+
+export type { UserProfile } from "./types/User.js";
+
+export type { FederationAdminOptions } from "./types/FederationAdmin.js";
 
 // ===========================================================================
 // 场景 4：管理环境变量（内置 Service）
@@ -192,8 +199,8 @@ export type { CityOptions } from "./client/types.js";
 
 export { AIInvoker, ModelCatalog } from "./pact/invoker/ai/index.js";
 export { CityModel } from "./pact/invoker/ai/CityModel.js";
-export { BureausInvoker } from "./pact/invoker/bureaus/index.js";
 export { PaymentInvoker, PaymentMethodHandle } from "./pact/invoker/payment/index.js";
+export { UserInvoker } from "./pact/invoker/user/index.js";
 export { ServiceClient, ActionClient } from "./pact/invoker/invoker.js";
 
 export type {

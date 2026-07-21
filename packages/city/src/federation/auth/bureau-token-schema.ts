@@ -15,7 +15,7 @@ export const sqlite_bureau_tokens = sqliteTable(BUREAU_TOKEN_TABLE, {
   token_id: sqliteText("token_id").primaryKey(),
   /** Bureau 名称。 */
   name: sqliteText("name").notNull(),
-  /** Token 绑定 City；root token 为空字符串。 */
+  /** Token 绑定的 City。 */
   city_id: sqliteText("city_id").notNull(),
   /** Token SHA-256 Base64URL hash。 */
   token_hash: sqliteText("token_hash").notNull(),
@@ -35,7 +35,7 @@ export const pg_bureau_tokens = pgTable(BUREAU_TOKEN_TABLE, {
   token_id: pgText("token_id").primaryKey(),
   /** Bureau 名称。 */
   name: pgText("name").notNull(),
-  /** Token 绑定 City；root token 为空字符串。 */
+  /** Token 绑定的 City。 */
   city_id: pgText("city_id").notNull(),
   /** Token SHA-256 Base64URL hash。 */
   token_hash: pgText("token_hash").notNull(),

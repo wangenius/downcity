@@ -5,6 +5,7 @@
 import { AIInvoker, serializeModel } from "../invoker/ai/index.js";
 import { PaymentInvoker } from "../invoker/payment/index.js";
 import { ServiceClient } from "../invoker/invoker.js";
+import { UserInvoker } from "../invoker/user/index.js";
 import type { UserPactAccessOptions, UserServiceInput, UserServiceSummary } from "./types.js";
 import {
   requiredString,
@@ -18,6 +19,7 @@ import {
 export class UserPactAccess {
   readonly ai: AIInvoker;
   readonly payment: PaymentInvoker;
+  readonly user: UserInvoker;
 
   readonly serverUrl: string;
   readonly token: string | undefined;
@@ -44,6 +46,10 @@ export class UserPactAccess {
       buildInput: (input) => this.buildInput(input),
     });
     this.payment = new PaymentInvoker({
+      requestJSON: (path, init) => this.json(path, init),
+      hasUserToken: () => Boolean(this.token),
+    });
+    this.user = new UserInvoker({
       requestJSON: (path, init) => this.json(path, init),
       hasUserToken: () => Boolean(this.token),
     });

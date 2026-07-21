@@ -29,12 +29,15 @@ import type {
   City,
   Bureau,
   BureauTokenIssueResult,
+  Federation,
+  FederationAdmin,
   ModelCatalog,
   PaymentMethodHandle,
   UserImageJobCreateResult,
   UserImageJobResult,
   UserModelRef,
   UserPaymentMethod,
+  UserProfile,
   UserServiceSummary,
 } from "../src/index.js";
 
@@ -79,9 +82,11 @@ void provider_stream_call;
 void provider_stream_result;
 
 declare const city: City;
-declare const admin: Bureau;
+declare const admin: FederationAdmin;
+declare const bureau: Bureau;
+declare const federation: Federation;
 declare const user_city: City;
-declare const admin_city: Bureau;
+declare const admin_city: FederationAdmin;
 
 const ai: AIInvoker = city.ai;
 
@@ -119,12 +124,25 @@ const adminModelsContract: Promise<CityModelDescriptor[]> = adminModels;
 const adminInstruction = admin.instruction();
 const adminInstructionContract: Promise<string> = adminInstruction;
 
-const bureau_token = admin.bureaus.create({
+const bureau_token = federation.bureaus.create({
   name: "Product Backend",
   city_id: "city_product",
 });
 const bureau_token_contract: Promise<BureauTokenIssueResult> = bureau_token;
 void bureau_token_contract;
+
+const bureau_identity = bureau.identify("ub_header.payload.signature");
+void bureau_identity;
+
+// @ts-expect-error Bureau 不属于 Federation City 控制面
+bureau.cities;
+// @ts-expect-error Bureau 不管理 Federation env
+bureau.env;
+// @ts-expect-error Bureau 不能创建或撤销其他 Bureau
+bureau.bureaus;
+
+const user_profile: Promise<UserProfile | null> = city.user().profile();
+void user_profile;
 
 const paymentMethods = city.payment.methods();
 const paymentMethodsContract: Promise<UserPaymentMethod[]> = paymentMethods;

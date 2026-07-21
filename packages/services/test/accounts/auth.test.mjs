@@ -3,7 +3,7 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
-import { Bureau, Federation } from "@downcity/city"
+import { Bureau, City, Federation, FederationAdmin } from "@downcity/city"
 import { createSqliteDb } from "./sqlite-db.mjs"
 import {
   AccountsService,
@@ -89,21 +89,21 @@ test("accountsService registers users, logs in, and issues Federation tokens", a
   }
 })
 
-test("Bureau 在线识别 Federation 注册用户并执行 City 隔离", async () => {
+test("City 直读 Profile，Bureau 本地验签后按需读取同一 Federation Profile", async () => {
   const cwd = process.cwd()
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-accounts-bureau-"))
 
   try {
     process.chdir(tempDir)
     const { base, adminSecret } = await setupBase(tempDir)
-    const root = create_bureau(base, adminSecret)
-    const city_a = await root.cities.create({ name: "Product A" })
-    const city_b = await root.cities.create({ name: "Product B" })
-    const token_a = await root.bureaus.create({
+    const admin = create_admin(base, adminSecret)
+    const city_a = await admin.cities.create({ name: "Product A" })
+    const city_b = await admin.cities.create({ name: "Product B" })
+    const token_a = await base.bureaus.create({
       name: "Product A Backend",
       city_id: city_a.city_id,
     })
-    const token_b = await root.bureaus.create({
+    const token_b = await base.bureaus.create({
       name: "Product B Backend",
       city_id: city_b.city_id,
     })
@@ -112,32 +112,31 @@ test("Bureau 在线识别 Federation 注册用户并执行 City 隔离", async (
       email: "bureau@example.com",
       password: "password123",
     }))).json()
-    const user_token = await root.cities.tokens.apply({
+    const user_token = await admin.cities.tokens.apply({
       city_id: city_a.city_id,
       user_id: registered.user_id,
       ttl: "1h",
     })
 
+    const city_client = create_city(base, user_token.user_token)
+    const city_profile = await city_client.user().profile()
+    assert.equal(city_profile.user_id, registered.user_id)
+
     const bureau_a = create_bureau(base, token_a.bureau_token)
-    const identity = await bureau_a.identify(user_request(user_token.user_token))
-    assert.equal(identity.registered, true)
-    assert.equal(identity.user_id, registered.user_id)
-    assert.equal(identity.city_id, city_a.city_id)
-    assert.equal(identity.user.user_id, registered.user_id)
-    assert.equal(identity.profile.user_id, registered.user_id)
+    const bureau_user = await bureau_a.user(user_request(user_token.user_token))
+    assert.equal(bureau_user.identity.user_id, registered.user_id)
+    assert.equal(bureau_user.identity.city_id, city_a.city_id)
+    const bureau_profile = await bureau_user.profile()
+    assert.deepEqual(bureau_profile, city_profile)
 
     const bureau_b = create_bureau(base, token_b.bureau_token)
-    assert.deepEqual(await bureau_b.identify(user_request(user_token.user_token)), {
-      registered: false,
-    })
-    assert.deepEqual(await bureau_a.identify(user_request(`${user_token.user_token}invalid`)), {
-      registered: false,
-    })
-
-    await root.bureaus.revoke(token_a.token_id)
     await assert.rejects(
-      bureau_a.identify(user_request(user_token.user_token)),
-      (error) => error?.status === 401,
+      bureau_b.identify(user_request(user_token.user_token)),
+      (error) => error?.statusCode === 403,
+    )
+    await assert.rejects(
+      bureau_a.identify(user_request(`${user_token.user_token}invalid`)),
+      (error) => error?.statusCode === 401,
     )
   } finally {
     process.chdir(cwd)
@@ -546,6 +545,22 @@ function create_bureau(base, bureau_token) {
   return new Bureau({
     federation_url: "http://localhost",
     bureau_token,
+    fetch: (input, init) => base.fetch(new Request(input, init)),
+  })
+}
+
+function create_admin(base, admin_secret_key) {
+  return new FederationAdmin({
+    federation_url: "http://localhost",
+    admin_secret_key,
+    fetch: (input, init) => base.fetch(new Request(input, init)),
+  })
+}
+
+function create_city(base, user_token) {
+  return new City({
+    federation_url: "http://localhost",
+    user_token,
     fetch: (input, init) => base.fetch(new Request(input, init)),
   })
 }

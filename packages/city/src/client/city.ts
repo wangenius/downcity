@@ -35,6 +35,11 @@ export class City {
     return this.user_access.payment;
   }
 
+  /** Federation 当前用户数据入口。 */
+  user(): UserPactAccess["user"] {
+    return this.user_access.user;
+  }
+
   /** 获取普通 Service 调用器。 */
   service(name: string): ServiceClient {
     return this.user_access.service(name);

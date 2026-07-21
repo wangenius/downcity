@@ -17,7 +17,6 @@ import type { RuntimeBureau } from "../types/Bureau.js";
 import type { Authenticator } from "../federation/auth/authenticator.js";
 import type { EnvProvider } from "../federation/runtime.js";
 import type { CityStore } from "./cities/city-store.js";
-import type { BureauTokenStore } from "../federation/auth/bureau-token-store.js";
 import type { InstructionActionDefinition, InstructionCapable, InstructionDefinition } from "./instruction.js";
 import type { RuntimeMetering } from "../types/Metering.js";
 import type { FederationQueue } from "../federation/queue.js";
@@ -188,7 +187,6 @@ export class Service {
   _env?: EnvProvider;
   _cityStore?: CityStore;
   /** Federation Bureau Token Store。 */
-  _bureauTokenStore?: BureauTokenStore;
 
   /** 原始数据库实例（better-sqlite3 / D1 等） */
   _raw?: unknown;

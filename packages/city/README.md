@@ -6,7 +6,7 @@
 
 - 挂载 `Service` / `AIService`
 - 初始化内置 `cities` / `env` 表
-- 校验 `user_token` 和 `bureau_token`
+- 校验 `user_token`、`bureau_token` 和控制面凭证
 - 暴露统一的 `/v1/*` HTTP 路由
 - 提供 env、数据库、hook 和鉴权上下文
 
@@ -226,11 +226,22 @@ const city = new City({
   federation_url: "https://fed.example.com",
   user_token,
 });
+
+const profile = await city.user().profile();
 ```
 
 `city_id` 由 Federation 验签后从 token 中读取，客户端不再重复传入。
 
-独立产品后端通过 `Bureau` 在线识别请求身份：
+City 直接访问 Federation，不依赖 Bureau。只有产品需要自己的后端能力时，才显式创建并部署 Bureau：
+
+```ts
+const issued = await federation.bureaus.create({
+  name: "Product Backend",
+  city_id: "city_product",
+});
+```
+
+Bureau 获取绑定的 City 上下文与 JWKS，并在本地识别请求身份：
 
 ```ts
 const bureau = new Bureau({
@@ -239,14 +250,15 @@ const bureau = new Bureau({
 });
 
 const identity = await bureau.identify(request);
+const profile = await (await bureau.user(request)).profile();
 ```
 
-Federation 管理控制面也使用 `Bureau`，管理型 Token 需要 `federation:admin` capability：
+Federation 管理控制面使用独立的 `FederationAdmin`：
 
 ```ts
-const admin = new Bureau({
+const admin = new FederationAdmin({
   federation_url: "https://fed.example.com",
-  bureau_token: admin_bureau_token,
+  admin_secret_key,
 });
 ```
 
@@ -261,6 +273,7 @@ const admin = new Bureau({
 - `CityModel`
 - `CityModelDescriptor`
 - `Bureau`
+- `FederationAdmin`
 - `EnvService`
 - `CitiesService`
 

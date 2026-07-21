@@ -1,60 +1,153 @@
-# Federation、City 与 Bureau 身份鉴权 PRD
+# Federation、City 与 Bureau 鉴权 PRD
 
 ## 1. 文档状态
 
 - 状态：已确认并实现
-- 范围：`@downcity/city`、`@downcity/services` Accounts、CLI 调用方
-- 核心变化：`FedBureau` 与 `FederationAdmin` 合并为 `Bureau`
+- 范围：`@downcity/city`、Federation Accounts、CLI 与用户文档
+- 核心模型：City 直连 Federation；Bureau 是可选产品后端
 
 ## 2. 目标
 
-建立一套职责清晰、默认在线验证的身份模型：
+- Federation 是统一账户、Profile、余额和用户 Token 的事实源。
+- City 是终端产品客户端，直接访问 Federation，不依赖 Bureau。
+- Bureau 是某个 City 部署在独立服务器上的可选后端。
+- Federation 使用 Ed25519 私钥签发 `user_token`。
+- Bureau 使用 Federation 公钥在本地验证 `user_token`。
+- Bureau 只在需要当前 Federation 数据时发起在线请求。
+- Bureau 不承载 Federation 管理能力。
+- Federation 启动时不默认创建 Bureau Token。
 
-- `Federation` 是用户身份和 Bureau 权限的唯一事实源。
-- `City` 是用户侧客户端，只持有 `user_token`。
-- `Bureau` 是可信后端客户端，必须持有 `bureau_token`。
-- 产品后端不传 `city_id`；Federation 根据 Bureau Token 的注册记录确定产品归属。
-- `Bureau.identify()` 每次在线查询 Federation，返回 Accounts 当前用户记录。
-- Federation 管理能力也由 `Bureau` 承载，不再存在独立 `FederationAdmin`。
+## 3. 系统关系
 
-## 3. 非目标
+```mermaid
+flowchart LR
+    C["City<br/>浏览器 / App"]
+    B["Bureau<br/>可选产品后端"]
+    F["Federation<br/>Accounts / Balance / Services"]
+    P["产品自有能力"]
 
-- 不提供 `UserTokenVerifier` 或离线产品后端验签 SDK。
-- 不允许产品后端根据未验证 token 自行选择 Federation。
-- 不让用户前端持有 `bureau_token`。
-- 不在 `new City()` 中加入管理能力。
-- 不要求创建 `Federation` 时传入用户签名私钥。
+    C -->|"直接调用标准能力"| F
+    C -->|"调用产品自有能力"| B
+    B --> P
+    B -->|"按需读取 Federation 数据"| F
+```
 
-## 4. 角色与凭证
+City 与 Bureau 是 Federation 的两个独立调用方，不是上下游依赖关系。
 
-| 角色 | SDK | 持有凭证 | 职责 |
+## 4. 角色定义
+
+### 4.1 Federation
+
+Federation 负责：
+
+- 用户注册与登录。
+- Accounts 与 Profile。
+- Balance、Usage、Payment。
+- 使用 Ed25519 私钥签发 `user_token`。
+- 发布 discovery 与 JWKS 公钥。
+- 保存 Bureau 注册表。
+- 为运维控制面提供独立的 admin 鉴权。
+
+业务侧保持最简初始化：
+
+```ts
+const federation = new Federation({ db });
+federation.use(new AccountsService());
+```
+
+Federation 首次启动会自动创建用户签名 Key Ring，但不会创建任何 Bureau Token。
+
+### 4.2 City
+
+City 是终端用户客户端：
+
+```ts
+const city = new City({
+  federation_url: "https://fed.example.com",
+  user_token,
+});
+```
+
+City 直接访问 Federation：
+
+```ts
+const profile = await city.user().profile();
+const models = await city.ai.catalog();
+const methods = await city.payment.methods();
+```
+
+即使产品没有部署 Bureau，City 仍可使用 Federation 的全部标准用户能力。
+
+### 4.3 Bureau
+
+Bureau 是某个 City 的可选产品后端：
+
+```ts
+const bureau = new Bureau({
+  federation_url: "https://fed.example.com",
+  bureau_token: process.env.DOWNCITY_BUREAU_TOKEN!,
+});
+```
+
+Bureau 负责：
+
+- 获取自己绑定的 City 上下文。
+- 获取并缓存 Federation JWKS。
+- 本地验证产品请求携带的 `user_token`。
+- 检查用户 Token 是否属于当前 City。
+- 执行产品自己的业务策略。
+- 按需携带同一个 `user_token` 查询 Federation 当前数据。
+
+Bureau 不负责：
+
+- 创建或管理 City。
+- 管理 Federation env。
+- 创建或撤销其他 Bureau。
+- 使用 Federation admin 权限。
+- 每次请求在线 introspection 用户 Token。
+
+### 4.4 FederationAdmin
+
+FederationAdmin 只属于控制面和 CLI：
+
+```ts
+const admin = new FederationAdmin({
+  federation_url,
+  admin_secret_key,
+});
+```
+
+它与 City 用户请求、Bureau 产品后端请求完全分离。
+
+## 5. 凭证模型
+
+| 凭证 | 主体 | 用途 | 是否参与用户本地验签 |
 | --- | --- | --- | --- |
-| Federation | `new Federation({ db })` | 内部 Ed25519 私钥、Bureau Token hash | 签发用户凭证、验证身份、保存 Accounts 和权限记录 |
-| 用户前端 | `new City(...)` | `user_token` | 以用户身份调用 Federation |
-| 产品后端 | `new Bureau(...)` | `bureau_token` | 在线识别用户、读取被授权的信息 |
-| 运维后端 | `new Bureau(...)` | 管理型 `bureau_token` | 管理 City、环境变量和 Bureau Token |
+| `user_token` | Federation 用户 | 用户身份与 City 归属 | 是 |
+| `bureau_token` | 产品后端 | 获取 Bureau 注册上下文和后端专属权限 | 否 |
+| `admin_secret_key` | Federation 控制面 | 运维管理 | 否 |
 
-### 4.1 user_token
+### 5.1 user_token
 
-`user_token` 是 Federation 使用 Ed25519 私钥签发的短期用户 JWT，至少包含：
+`user_token` 是 Ed25519 JWT，至少包含：
 
-- `iss`：Federation 身份。
+- `iss`。
 - `aud = downcity:user`。
 - `user_id`。
 - `city_id`。
 - `iat`、`exp`、`jti`。
 
-它只证明“某个用户获得了访问某个 City 的凭证”，不代表该用户当前仍存在于 Accounts。
+Federation 持有私钥；Bureau 只获得公钥，因此 Bureau 能验证但不能伪造用户 Token。
 
-### 4.2 bureau_token
+### 5.2 bureau_token
 
-`bureau_token` 是 Federation 为可信后端签发的高熵不透明凭证：
+Bureau Token 是高熵不透明凭证：
 
 ```text
 fb_<token_id>.<secret>
 ```
 
-Federation 数据库只保存完整 Token 的 SHA-256 hash，并在 Token 记录中保存：
+数据库只保存完整 Token 的 SHA-256 hash，以及：
 
 - `token_id`。
 - `name`。
@@ -63,196 +156,154 @@ Federation 数据库只保存完整 Token 的 SHA-256 hash，并在 Token 记录
 - `status`。
 - 创建和更新时间。
 
-因此，调用端不需要也不能再传入可信 `city_id`。Token 字符串只负责定位凭证，真正的 City 归属由 Federation 数据库记录决定。
+`bureau_token` 只负责回答“这个后端代表哪个 City”，不用于回答“当前用户是谁”。
 
-## 5. Bureau 能力
+## 6. Bureau 注册生命周期
 
-第一版能力集合：
-
-| capability | 用途 |
-| --- | --- |
-| `accounts:read` | 在线识别本 Token 所绑定 City 的用户 |
-| `federation:admin` | 使用 Federation 管理能力；该 Token 不绑定单个 City |
-
-普通产品 Bureau Token 必须绑定一个 active City。管理型 Bureau Token 不允许绑定 City。
-
-## 6. 最终调用模型
-
-### 6.1 Federation 服务端
+Federation 启动后注册表为空：
 
 ```ts
-import { Federation } from "@downcity/city";
-import { AccountsService } from "@downcity/services";
-
 const federation = new Federation({ db });
-federation.use(new AccountsService());
 
-export default {
-  fetch: federation.fetch,
-};
+await federation.health();
+console.log(await federation.bureaus.list()); // []
 ```
 
-Federation 首次初始化时自动生成并持久化 Ed25519 Key Ring，不要求业务代码传入 signing key。
-
-### 6.2 用户前端
+只有服务端显式调用时才创建：
 
 ```ts
-import { City } from "@downcity/city";
-
-const city = new City({
-  federation_url: "https://fed.example.com",
-  user_token,
-});
-
-const profile = await city.service("accounts").action("me").invoke();
-```
-
-用户前端不知道 `bureau_token`，也不承担后端授权。
-
-### 6.3 产品后端
-
-```ts
-import { Bureau } from "@downcity/city";
-
-const bureau = new Bureau({
-  federation_url: "https://fed.example.com",
-  bureau_token: process.env.DOWNCITY_BUREAU_TOKEN!,
-});
-
-export async function handle_request(request: Request): Promise<Response> {
-  const identity = await bureau.identify(request);
-  if (!identity.registered) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
-  return Response.json({
-    user: identity.user,
-    profile: identity.profile,
-  });
-}
-```
-
-`identify(request)` 从请求中读取 `Authorization: Bearer <user_token>`，然后调用：
-
-```text
-POST /v1/accounts/identify
-Authorization: Bearer <bureau_token>
-Content-Type: application/json
-
-{ "user_token": "..." }
-```
-
-### 6.4 Federation 管理后端
-
-管理端也使用 `Bureau`，区别仅在 Token capability：
-
-```ts
-const bureau = new Bureau({
-  federation_url: "https://fed.example.com",
-  bureau_token: process.env.DOWNCITY_ADMIN_BUREAU_TOKEN!,
-});
-
-const city = await bureau.cities.create({ name: "Product A" });
-const issued = await bureau.bureaus.create({
+const issued = await federation.bureaus.create({
   name: "Product A Backend",
-  city_id: city.city_id,
+  city_id: "city_product_a",
   capabilities: ["accounts:read"],
 });
 ```
 
-`issued.bureau_token` 明文只返回一次，之后数据库中只保留 hash。
+撤销也只通过 Federation 服务端实例执行：
 
-## 7. 在线识别流程
+```ts
+await federation.bureaus.revoke(issued.token_id);
+```
+
+不存在以下调用：
+
+```ts
+root.bureaus.create(...);
+bureau.bureaus.create(...);
+```
+
+HTTP `/v1/bureaus/context` 只允许 Bureau 读取自己的上下文，不提供 Token 管理能力。
+
+## 7. 用户登录与 City 调用
 
 ```mermaid
 sequenceDiagram
-    participant U as "用户前端 / City"
-    participant B as "产品后端 / Bureau"
-    participant F as "Federation Auth"
-    participant A as "Accounts"
+    participant C as "City"
+    participant F as "Federation"
 
-    U->>B: "Authorization: Bearer user_token"
-    B->>F: "bureau_token + user_token"
-    F->>F: "验证 Bureau Token 状态与 capability"
-    F->>F: "读取 Bureau 绑定的 city_id"
-    F->>F: "验证 user_token 签名、过期时间与 city_id"
-    F->>A: "按 user_id 查询当前用户与 profile"
-    A-->>F: "当前 Accounts 记录"
-    F-->>B: "registered + user + profile + city_id"
+    C->>F: "注册或登录"
+    F->>F: "私钥签发 user_token"
+    F-->>C: "user_token"
+    C->>F: "user_token 请求 Profile / Balance / Service"
+    F->>F: "验证 user_token"
+    F-->>C: "用户数据"
 ```
 
-Federation 必须按顺序验证：
+City 不经过 Bureau。
 
-1. `bureau_token` 存在、hash 匹配且状态为 active。
-2. Token 拥有 `accounts:read` 或管理能力。
-3. Token 绑定的 City 存在且为 active。
-4. `user_token` 签名、issuer、audience 和有效期正确。
-5. `user_token.city_id` 等于 Bureau Token 记录的 `city_id`。
-6. `user_token.user_id` 当前仍存在于 Accounts。
+## 8. Bureau 本地鉴权
 
-任一步失败都不能返回其他 City 的用户信息。
+首次需要验签时，Bureau 获取：
 
-## 8. 返回语义
+- `/.well-known/downcity.json`。
+- `/.well-known/jwks.json`。
+- `/v1/bureaus/context`。
+
+之后在缓存期内本地执行：
+
+```ts
+const identity = await bureau.identify(request);
+```
+
+验证项目：
+
+1. Token 使用 EdDSA。
+2. `kid` 存在于 Federation JWKS。
+3. Ed25519 签名正确。
+4. `iss` 等于可信 Federation issuer。
+5. `aud` 等于 `downcity:user`。
+6. Token 未过期。
+7. `user_token.city_id` 等于 Bureau Context 的 `city_id`。
+
+`identify()` 返回：
 
 ```ts
 interface BureauIdentity {
-  registered: boolean;
-  user_id?: string;
-  city_id?: string;
-  user?: BureauUserInfo;
-  profile?: BureauUserProfile | null;
+  user_id: string;
+  city_id: string;
+  metadata: Record<string, unknown>;
+  token_id: string;
+  expires_at: number;
 }
 ```
 
-- Token 无效、跨 City 或用户不存在时，返回 `registered: false`，不泄漏其他产品的用户状态。
-- Bureau Token 缺失、无效或已撤销时，请求返回 `401`。
-- Bureau Token 已认证但 capability 不足时，请求返回 `403`。
-- `registered: true` 时，`user` 和 `profile` 来自 Federation 当前数据库，不来自用户 JWT 自报字段。
+它不请求 `/accounts/identify`，也不承诺用户当前仍存在于 Accounts。
 
-## 9. 安全边界
+## 9. Bureau 按需读取 Federation 数据
 
-### 9.1 为什么仅泄漏 user_token 不够
-
-产品后端查询用户信息还必须持有对应的 `bureau_token`。攻击者只拿到用户 token，不能直接调用受保护的 Accounts identify 接口。
-
-### 9.2 为什么仅泄漏 bureau_token 不够
-
-产品 Bureau Token 只允许读取其绑定 City 的用户，并且仍需要一个有效的用户 token。它不能签发用户 token，也不能访问其他 City。
-
-### 9.3 为什么采用在线验证
-
-在线验证使以下状态立即生效：
-
-- Bureau Token 撤销。
-- City 暂停。
-- 用户从 Accounts 删除或禁用。
-- 用户 profile 更新。
-
-代价是产品后端依赖 Federation 可用性和一次网络往返。第一版优先保证统一权限与实时状态，不提供离线降级。
-
-## 10. 废弃 API
-
-以下公共 API 直接移除，不提供兼容层：
-
-- `FedBureau`。
-- `FederationAdmin`。
-- `FedBureauOptions.city_id`。
-- 产品后端 JWKS 本地识别流程。
-
-统一替换为：
+产品只需要 JWT 身份时：
 
 ```ts
-new Bureau({ federation_url, bureau_token });
+const identity = await bureau.identify(request);
 ```
+
+产品需要当前 Profile 时：
+
+```ts
+const user = await bureau.user(request);
+const profile = await user.profile();
+```
+
+完整流程：
+
+```mermaid
+sequenceDiagram
+    participant C as "City"
+    participant B as "Bureau"
+    participant F as "Federation Accounts"
+
+    C->>B: "产品请求 + user_token"
+    B->>B: "公钥本地验签并执行产品策略"
+    opt "需要当前 Profile"
+        B->>F: "同一个 user_token 请求 /accounts/me"
+        F->>F: "验证 user_token 并查询当前记录"
+        F-->>B: "Profile"
+    end
+    B-->>C: "产品结果"
+```
+
+Federation 再次验证同一个 `user_token`，是跨服务器信任边界，不是双 Token 用户鉴权。
+
+## 10. 用户删除与撤销语义
+
+公钥本地验签不能立即感知用户删除，这是离线验证的固有边界。
+
+- 普通产品操作依赖较短的 `user_token` TTL。
+- Profile、余额、支付等当前状态由 Federation 在线接口返回。
+- 高风险操作可以显式查询 Federation 当前状态。
+- 不把所有产品请求强制改成在线 introspection。
+
+Bureau Token 被撤销后，新的 Bureau Context 请求会失败；已经加载的用户公钥本身仍然是公开信息，不赋予签发用户 Token 的能力。
 
 ## 11. 验收标准
 
-- `Bureau` 构造时缺少 `bureau_token` 会立即失败。
-- 普通 Bureau Token 必须绑定 active City。
-- 管理型 Bureau Token 可以管理 City、env 和 Bureau Token。
-- 普通 Bureau Token 不能调用管理接口。
-- Bureau Token 明文只在签发时返回，数据库不存明文。
-- 撤销 Bureau Token 后，下一个请求立即失败。
-- 同一用户 token 不能被其他 City 的 Bureau 识别。
-- `identify()` 能返回 Accounts 当前 user 和 profile。
-- 无效签名、过期 token 和未注册用户返回 `registered: false`。
+- `new Federation({ db })` 不默认创建 Bureau Token。
+- `federation.bureaus.create()` 是 Bureau Token 的服务端创建入口。
+- Bureau Token 必须绑定 active City。
+- Bureau HTTP 接口不能创建、列表或撤销 Token。
+- `Bureau` 不暴露 City、env、余额管理能力。
+- `Bureau.identify()` 在缓存期内不访问 Federation Accounts。
+- Bureau 拒绝错误签名、过期和跨 City 用户 Token。
+- `City.user().profile()` 直接访问 Federation。
+- `bureau.user(request).profile()` 按需访问同一 Federation Profile。
+- FederationAdmin 与 Bureau 类型和权限完全分离。

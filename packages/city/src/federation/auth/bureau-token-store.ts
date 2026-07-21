@@ -11,6 +11,7 @@ import type {
   BureauCapability,
   BureauTokenIssueResult,
   BureauTokenRecord,
+  BureauTokenSummary,
   CreateBureauTokenInput,
   RuntimeBureau,
 } from "../../types/Bureau.js";
@@ -24,14 +25,8 @@ export class BureauTokenStore {
   /** 创建 Bureau Token，并只在本次调用返回明文。 */
   async create(input: CreateBureauTokenInput): Promise<BureauTokenIssueResult> {
     const name = read_required_string(input.name, "name");
-    const city_id = String(input.city_id ?? "").trim();
+    const city_id = read_required_string(input.city_id, "city_id");
     const capabilities = normalize_capabilities(input.capabilities);
-    if (capabilities.includes("federation:admin") && city_id) {
-      throw new TypeError("federation:admin Bureau Token cannot bind a City");
-    }
-    if (!capabilities.includes("federation:admin") && !city_id) {
-      throw new TypeError("city_id is required for a non-admin Bureau Token");
-    }
 
     const token_id = `br_${randomSecret(12)}`;
     const bureau_token = `fb_${token_id}.${randomSecret(32)}`;
@@ -65,10 +60,15 @@ export class BureauTokenStore {
   }
 
   /** 列出 Bureau Token 元数据，不返回 token hash。 */
-  async list(): Promise<Array<Omit<BureauTokenRecord, "token_hash"> & { capabilities: BureauCapability[] }>> {
-    return (await this.table.select()).map(({ token_hash: _token_hash, ...record }) => ({
-      ...record,
+  async list(): Promise<BureauTokenSummary[]> {
+    return (await this.table.select()).map((record) => ({
+      token_id: record.token_id,
+      name: record.name,
+      city_id: record.city_id,
       capabilities: normalize_capabilities(JSON.parse(record.capabilities) as BureauCapability[]),
+      status: record.status,
+      created_at: record.created_at,
+      updated_at: record.updated_at,
     }));
   }
 
@@ -94,7 +94,7 @@ async function hash_token(token: string): Promise<string> {
 
 function normalize_capabilities(input?: BureauCapability[]): BureauCapability[] {
   const values = input ?? DEFAULT_CAPABILITIES;
-  const allowed = new Set<BureauCapability>(["accounts:read", "federation:admin"]);
+  const allowed = new Set<BureauCapability>(["accounts:read"]);
   const result = [...new Set(values)];
   if (result.length === 0) throw new TypeError("Bureau Token requires at least one capability");
   for (const capability of result) {

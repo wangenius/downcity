@@ -63,9 +63,6 @@ export class Authenticator {
 
     const bureau = await this.bureau_token_store.resolve(token);
     if (bureau) {
-      if (bureau.capabilities.includes("federation:admin")) {
-        return { level: "admin", bureau };
-      }
       const store = await this.store();
       const city = await store.city.get(bureau.city_id);
       if (!city || city.status !== "active") return { level: "guest" };

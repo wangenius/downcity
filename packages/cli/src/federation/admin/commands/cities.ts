@@ -2,12 +2,12 @@
  * Admin Cities 管理命令。
  */
 
-import { Bureau } from "@downcity/city";
+import { FederationAdmin } from "@downcity/city";
 import { t } from "@/shared/CliLocale.js";
 import { adminErrorMessage, rethrowAdminAuthError } from "@/federation/admin/auth-error.js";
 import type { admin_tui_runtime } from "@/federation/types/AdminTui.js";
 
-export async function manageCities(city: Bureau, _baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
+export async function manageCities(city: FederationAdmin, _baseUrl: string, runtime: admin_tui_runtime): Promise<void> {
   while (true) {
     const act = await runtime.select(t({ zh: "产品管理", en: "Products" }), [
         {

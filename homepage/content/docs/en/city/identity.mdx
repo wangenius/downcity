@@ -6,13 +6,14 @@ description: How City manages user identity, authentication, and permissions
 
 # City User Identity
 
-Federation issues user identities, while the City client uses a `user_token` to access Federation or a product backend. Trusted product backends use a `bureau_token` to identify users online. One Federation can serve multiple products, isolated by `city_id`.
+Federation owns user identity and account data, and the City client connects to Federation directly. A product only deploys a Bureau when it needs its own backend capabilities. One Federation can serve multiple products, isolated by `city_id`.
 
 ## Identity boundaries
 
 - **Federation** — stores the Ed25519 private key and issues `user_token` values
 - **City** — stores `federation_url + user_token` and makes user requests
-- **Bureau** — stores `federation_url + bureau_token` and identifies users or performs authorized management operations
+- **Bureau** — an optional product backend for a City that verifies users locally with Federation's public key
+- **FederationAdmin** — the separate Federation control-plane client used by CLI and operations
 
 ## Authentication flow
 
@@ -20,17 +21,20 @@ Federation issues user identities, while the City client uses a `user_token` to 
 2. Federation signs a `user_token` bound to that `city_id`
 3. The user calls Federation through `new City({ federation_url, user_token })`
 4. The user sends the same Bearer Token to the product backend
-5. The backend's `Bureau` sends `bureau_token + user_token` to Federation
-6. Federation reads `city_id` from the Bureau Token record, validates the user token, and queries the current Accounts record
+5. City sends `user_token` directly to Federation for Profile, balance, and standard Services
+6. If the product has its own backend, City sends product requests to Bureau
+7. Bureau verifies `user_token` locally with Federation's public key and only calls Federation when it needs current data
 
 ```ts
 const city = new City({
   federation_url: "https://fed.example.com",
   user_token,
 });
+
+const profile = await city.user().profile();
 ```
 
-Product backend:
+Optional product backend:
 
 ```ts
 const bureau = new Bureau({
@@ -39,9 +43,10 @@ const bureau = new Bureau({
 });
 
 const identity = await bureau.identify(request);
+const profile = await (await bureau.user(request)).profile();
 ```
 
-`Bureau` requires a `bureau_token` and does not accept `city_id`. Federation binds the Token to a City when it is issued and stores only its hash. `identify()` always queries Federation online, so Token revocation, City suspension, and Accounts state changes take effect immediately.
+`Bureau` is optional. It uses `bureau_token` to obtain its registered City context, then verifies `user_token` locally with Federation's public key. `identify()` does not call online introspection; Bureau only requests Federation when it needs current Profile, balance, or other shared data.
 
 Federation still publishes Ed25519 public keys for its own token validation and other protocols:
 
@@ -50,7 +55,7 @@ Federation still publishes Ed25519 public keys for its own token validation and 
 /.well-known/jwks.json
 ```
 
-Management backends use the same `Bureau` class. The only difference is whether the `bureau_token` has the `federation:admin` capability.
+Federation management uses the separate `FederationAdmin` control-plane client, never Bureau.
 
 ## Channel accounts
 

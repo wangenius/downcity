@@ -19,9 +19,6 @@ export interface BureauTokenRecord extends Record<string, unknown> {
   /** Bureau Token 的公开查找 ID。 */
   token_id: string;
 
-  /** 便于部署者识别用途的名称。 */
-  name: string;
-
   /** Bureau 所属的唯一 City ID。 */
   city_id: string;
 
@@ -46,9 +43,6 @@ export interface RuntimeBureau {
   /** Bureau Token ID。 */
   token_id: string;
 
-  /** Bureau 展示名称。 */
-  name: string;
-
   /** Bureau 所属的唯一 City ID。 */
   city_id: string;
 
@@ -64,9 +58,6 @@ export interface RegisterBureauTokenInput {
   /** CLI 对完整 Bureau Token 计算的 SHA-256 Base64URL hash。 */
   token_hash: string;
 
-  /** 便于部署者识别用途的名称。 */
-  name: string;
-
   /** Bureau 所属的唯一 City ID。 */
   city_id: string;
 
@@ -78,9 +69,6 @@ export interface RegisterBureauTokenInput {
 export interface BureauTokenSummary {
   /** Bureau Token 的公开查找 ID。 */
   token_id: string;
-
-  /** 便于部署者识别用途的名称。 */
-  name: string;
 
   /** Bureau 所属的唯一 City ID。 */
   city_id: string;
@@ -102,9 +90,6 @@ export interface BureauTokenSummary {
 export interface BureauContext {
   /** Bureau Token ID。 */
   token_id: string;
-
-  /** Bureau 展示名称。 */
-  name: string;
 
   /** Bureau 所属的唯一 City ID。 */
   city_id: string;

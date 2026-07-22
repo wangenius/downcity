@@ -100,14 +100,8 @@ test("City 直读 Profile，Bureau 本地验签后按需读取同一 Federation 
     const admin = create_admin(base, adminSecret)
     const city_a = await admin.cities.create({ name: "Product A" })
     const city_b = await admin.cities.create({ name: "Product B" })
-    const token_a = await register_bureau(admin, {
-      name: "Product A Backend",
-      city_id: city_a.city_id,
-    })
-    const token_b = await register_bureau(admin, {
-      name: "Product B Backend",
-      city_id: city_b.city_id,
-    })
+    const token_a = await register_bureau(admin, { city_id: city_a.city_id })
+    const token_b = await register_bureau(admin, { city_id: city_b.city_id })
 
     const registered = await (await base.fetch(jsonRequest("/v1/accounts/register", {
       email: "bureau@example.com",

@@ -29,7 +29,7 @@ import { open_federation_server_workspace } from "@/federation/server/Federation
 import { CliError } from "@/shared/CliError.js";
 import { helpText, langOptionText, resolveCliLocale, setCliLocale, t } from "@/shared/CliLocale.js";
 import {
-  add_federation_bureau,
+  create_federation_bureau_token,
   list_federation_bureaus,
   revoke_federation_bureau,
 } from "@/federation/bureau/commands/bureau.js";
@@ -215,18 +215,16 @@ function register_bureau_commands(program: Command): void {
     .helpOption("--help", helpText());
 
   bureau_program
-    .command("add")
+    .command("token")
     .description(t({
-      zh: "生成 Bureau 部署凭证并登记 token hash",
-      en: "generate a Bureau deployment credential and register its token hash",
+      zh: "生成并登记 Bureau Token",
+      en: "generate and register a Bureau token",
     }))
-    .requiredOption("--name <name>", t({ zh: "Bureau 部署名称", en: "Bureau deployment name" }))
-    .requiredOption("--city-id <city_id>", t({ zh: "所属 City ID", en: "owning City ID" }))
+    .requiredOption("--city <city_id>", t({ zh: "所属 City ID", en: "owning City ID" }))
     .helpOption("--help", helpText())
     .action(createVersionBanner(packageJson.version, async (raw_options: Record<string, unknown>) => {
-      await add_federation_bureau({
-        name: String(raw_options.name ?? ""),
-        city_id: String(raw_options.cityId ?? ""),
+      await create_federation_bureau_token({
+        city_id: String(raw_options.city ?? ""),
       });
     }));
 

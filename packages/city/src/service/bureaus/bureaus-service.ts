@@ -25,7 +25,6 @@ export class BureausService extends Service {
 
     this.action("context", async (ctx) => ({
       token_id: ctx.bureau!.token_id,
-      name: ctx.bureau!.name,
       city_id: ctx.bureau!.city_id,
       capabilities: ctx.bureau!.capabilities,
     }), {
@@ -41,7 +40,6 @@ export class BureausService extends Service {
       return await this.store.register({
         token_id: String(ctx.input.token_id ?? ""),
         token_hash: String(ctx.input.token_hash ?? ""),
-        name: String(ctx.input.name ?? ""),
         city_id,
         capabilities: ctx.input.capabilities as BureauCapability[] | undefined,
       });

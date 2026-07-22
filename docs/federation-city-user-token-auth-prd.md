@@ -150,7 +150,6 @@ fb_<token_id>.<secret>
 数据库只保存完整 Token 的 SHA-256 hash，以及：
 
 - `token_id`。
-- `name`。
 - `city_id`。
 - `capabilities`。
 - `status`。
@@ -158,13 +157,39 @@ fb_<token_id>.<secret>
 
 `bureau_token` 只负责回答“这个后端代表哪个 City”，不用于回答“当前用户是谁”。
 
+### 5.3 两种 Token 的实现差异
+
+| 项目 | `user_token` | `bureau_token` |
+| --- | --- | --- |
+| 主体 | 终端用户 | 某个产品后端 |
+| 格式 | `ub_<JWT>` | `fb_<token_id>.<secret>` |
+| 验证方式 | Ed25519 公钥验证签名 | Federation 计算 SHA-256 后与数据库 hash 比较 |
+| 是否携带用户身份 | 是，包含 `user_id`、`city_id`、`exp` 等 claims | 否，只映射到数据库中的 `city_id` |
+| 是否可以本地验证 | 可以，Bureau 使用 JWKS 公钥本地验证 | 不可以，需要请求 Federation Context |
+| 撤销方式 | 依赖过期时间和当前 Federation 状态 | 将数据库记录标记为 `revoked` |
+
+`user_token` 的签发私钥只在 Federation 内部；Bureau 获取的是公开公钥，
+因此可以验证用户 Token，但不能伪造用户 Token。
+
+`bureau_token` 不是 JWT，也没有公钥私钥关系。它是 Bureau 与 Federation 之间的
+高熵共享凭证。泄露它只能冒充该 Bureau 获取已注册的 City 上下文，不能直接冒充用户。
+
+```mermaid
+flowchart LR
+    FPK["Federation 私钥"] -->|"Ed25519 签名"| UT["user_token JWT"]
+    JWKS["Federation JWKS 公钥"] -->|"验签"| UT
+    CLI["fed bureau token"] -->|"生成明文 + hash"| BT["bureau_token"]
+    BT -->|"只提交 hash"| DB[("Federation 数据库")]
+    B["Bureau"] -->|"Bearer bureau_token"| DB
+```
+
 ## 6. Bureau 注册生命周期
 
 Federation 启动后注册表为空。Bureau Token 不是 Federation 在线签发的对象，
 而是由 `fed` CLI 在运维侧生成的部署凭证：
 
 ```bash
-fed bureau add --name "Product A Backend" --city-id city_product_a
+fed bureau token --city city_product_a
 ```
 
 CLI 在本地生成明文和 hash，通过 Federation Admin 控制面登记。Federation
@@ -198,7 +223,6 @@ Admin SDK 的注册接口只接收 CLI 生成的 hash：
 await admin.bureaus.register({
   token_id,
   token_hash,
-  name: "Product A Backend",
   city_id: "city_product_a",
 });
 ```
@@ -317,7 +341,7 @@ Bureau Token 被撤销后，新的 Bureau Context 请求会失败；已经加载
 ## 11. 验收标准
 
 - `new Federation({ db })` 不默认创建 Bureau Token。
-- `fed bureau add` 是 Bureau Token 的部署登记入口。
+- `fed bureau token --city <city_id>` 是 Bureau Token 的部署登记入口。
 - Federation 数据库只保存 Bureau Token hash，不保存明文。
 - `FederationAdmin.bureaus.register/list/revoke()` 只属于控制面。
 - Bureau Token 必须绑定 active City。

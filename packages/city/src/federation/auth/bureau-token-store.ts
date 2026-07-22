@@ -2,7 +2,7 @@
  * Federation Bureau Token Store。
  *
  * Token 使用 `fb_<token_id>.<secret>` 格式。数据库只保存完整 token 的 SHA-256 hash，
- * 通过 token_id 定位记录后再比较 hash，从而支持即时撤销与 capability 更新。
+ * 通过 token_id 定位记录后再比较 hash，从而支持注册表状态校验和撤销。
  */
 
 import { base64UrlEncodeBytes } from "../../utils/helpers.js";
@@ -25,7 +25,6 @@ export class BureauTokenStore {
   async register(input: RegisterBureauTokenInput): Promise<BureauTokenSummary> {
     const token_id = read_token_id_value(input.token_id);
     const token_hash = read_token_hash(input.token_hash);
-    const name = read_required_string(input.name, "name");
     const city_id = read_required_string(input.city_id, "city_id");
     const capabilities = normalize_capabilities(input.capabilities);
     if ((await this.table.select({ token_id }))[0]) {
@@ -34,7 +33,6 @@ export class BureauTokenStore {
     const now = new Date().toISOString();
     await this.table.insert({
       token_id,
-      name,
       city_id,
       token_hash,
       capabilities: JSON.stringify(capabilities),
@@ -44,7 +42,6 @@ export class BureauTokenStore {
     });
     return {
       token_id,
-      name,
       city_id,
       capabilities,
       status: "active",
@@ -62,7 +59,6 @@ export class BureauTokenStore {
     if (record.token_hash !== await hash_token(bureau_token)) return undefined;
     return {
       token_id: record.token_id,
-      name: record.name,
       city_id: record.city_id,
       capabilities: normalize_capabilities(JSON.parse(record.capabilities) as BureauCapability[]),
     };
@@ -72,7 +68,6 @@ export class BureauTokenStore {
   async list(): Promise<BureauTokenSummary[]> {
     return (await this.table.select()).map((record) => ({
       token_id: record.token_id,
-      name: record.name,
       city_id: record.city_id,
       capabilities: normalize_capabilities(JSON.parse(record.capabilities) as BureauCapability[]),
       status: record.status,

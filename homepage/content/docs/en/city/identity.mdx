@@ -39,7 +39,7 @@ Optional product backend:
 Register the Bureau from the Federation control plane first:
 
 ```bash
-fed bureau add --name "Product Backend" --city-id city_product
+fed bureau token --city city_product
 ```
 
 The CLI displays the plaintext `DOWNCITY_BUREAU_TOKEN` once. Federation stores
@@ -56,6 +56,61 @@ const profile = await (await bureau.user(request)).profile();
 ```
 
 `Bureau` is optional. It uses `bureau_token` to obtain its registered City context, then verifies `user_token` locally with Federation's public key. `identify()` does not call online introspection; Bureau only requests Federation when it needs current Profile, balance, or other shared data.
+
+## User Token and Bureau Token
+
+Both tokens use the Bearer header, but they represent different principals and use different verification mechanisms:
+
+| Property | `user_token` | `bureau_token` |
+| --- | --- | --- |
+| Principal | Federation user | Product backend for one City |
+| Format | `ub_<JWT>` | `fb_<token_id>.<secret>` |
+| Implementation | Ed25519 asymmetric signature | Random opaque credential and SHA-256 hash |
+| Verification | Verify with Federation's JWKS public key | Federation hashes the token and queries its registry |
+| Identity data | Contains `user_id`, `city_id`, `iss`, `aud`, `exp`, and `jti` | Contains no user identity; maps to a database `city_id` |
+| Local verification | Bureau can verify it locally | Requires a Federation Context request |
+| Revocation | Primarily bounded by expiry and current Federation state | Federation marks the registration as `revoked` |
+
+### User Token
+
+Federation signs the user JWT with its private key and publishes only public verification keys
+through JWKS. Bureau can verify the signature, issuer, audience, expiry, and `city_id`, but a
+public key cannot sign or modify user tokens.
+
+```mermaid
+flowchart LR
+    F["Federation private key"] -->|"Ed25519 signature"| U["user_token"]
+    U --> C["City calls Federation"]
+    U --> B["Bureau verifies locally"]
+    J["Federation JWKS public key"] --> B
+```
+
+Anyone who obtains a valid `user_token` can act as that user until the token expires. User
+tokens must therefore have a finite lifetime and only travel over HTTPS.
+
+### Bureau Token
+
+`bureau_token` is not a JWT and has no public/private key pair. `fed bureau token` generates
+the plaintext and hash locally, then registers only `token_id + token_hash + city_id` with Federation.
+
+```mermaid
+flowchart LR
+    CLI["fed bureau token"] -->|"generate plaintext"| T["bureau_token"]
+    CLI -->|"submit SHA-256 hash"| F["Federation registry"]
+    T -->|"environment variable"| B["Bureau server"]
+    B -->|"Bearer bureau_token"| F
+    F -->|"compare hash"| X["return bound city_id"]
+```
+
+At runtime, Bureau sends the plaintext token to Federation over HTTPS. Federation extracts
+`token_id`, computes SHA-256, and compares it with the database record. The database never
+stores the plaintext token.
+
+A leaked `bureau_token` lets an attacker impersonate that Bureau to obtain its City Context,
+but cannot create or forge a `user_token`. Revoke a leaked credential with
+`fed bureau revoke <token_id>`.
+An already cached Context remains usable until `jwks_cache_ttl` expires; the default cache
+lifetime is five minutes.
 
 Federation still publishes Ed25519 public keys for its own token validation and other protocols:
 

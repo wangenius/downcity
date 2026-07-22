@@ -2,7 +2,7 @@
  * Federation Bureau 注册表管理调用器。
  *
  * 该调用器只服务于 FederationAdmin。Bureau Token 明文由调用方生成，
- * Federation 仅接收 hash 和绑定元数据。
+ * Federation 仅接收 hash 和 City 绑定关系。
  */
 
 import type { RequestInitLike } from "../../http.js";

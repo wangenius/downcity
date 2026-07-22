@@ -17,11 +17,8 @@ export interface BureauDeploymentCredential {
   token_hash: string;
 }
 
-/** `fed bureau add` 的标准化输入。 */
-export interface AddFederationBureauInput {
-  /** 便于运维识别 Bureau 部署用途的名称。 */
-  name: string;
-
+/** `fed bureau token` 的标准化输入。 */
+export interface CreateFederationBureauTokenInput {
   /** Bureau 后端所属的 Federation City ID。 */
   city_id: string;
 }

@@ -38,7 +38,7 @@ const profile = await city.user().profile();
 先在 Federation 管理侧登记 Bureau：
 
 ```bash
-fed bureau add --name "Product Backend" --city-id city_product
+fed bureau token --city city_product
 ```
 
 CLI 只显示一次明文 `DOWNCITY_BUREAU_TOKEN`。Federation 数据库只保存 hash，
@@ -55,6 +55,57 @@ const profile = await (await bureau.user(request)).profile();
 ```
 
 `Bureau` 是可选后端。它使用 `bureau_token` 获取自己绑定的 City 上下文，之后在本地使用 Federation 公钥验证 `user_token`。`identify()` 不调用在线 introspection；只有需要当前 Profile、余额等数据时，Bureau 才请求 Federation。
+
+## User Token 与 Bureau Token
+
+两种 Token 都放在 Bearer Header 中，但底层实现和信任对象不同：
+
+| 项目 | `user_token` | `bureau_token` |
+| --- | --- | --- |
+| 服务对象 | Federation 用户 | 某个 City 的产品后端 |
+| 格式 | `ub_<JWT>` | `fb_<token_id>.<secret>` |
+| 实现 | Ed25519 非对称签名 | 随机不透明凭证与 SHA-256 hash |
+| 验证 | 使用 Federation JWKS 公钥验签 | Federation 计算 hash 并查询注册表 |
+| 携带身份 | `user_id`、`city_id`、`iss`、`aud`、`exp`、`jti` | 不携带用户身份，只映射到数据库中的 `city_id` |
+| 本地验证 | Bureau 可以本地验证 | 必须请求 Federation Context |
+| 撤销 | 主要依赖有效期和 Federation 当前状态 | Federation 将注册记录设为 `revoked` |
+
+### User Token
+
+Federation 使用私钥签发用户 JWT，只通过 JWKS 发布公钥。Bureau 可以验证签名、
+issuer、audience、过期时间以及 `city_id`，但公钥不能用于签发或篡改用户 Token。
+
+```mermaid
+flowchart LR
+    F["Federation 私钥"] -->|"Ed25519 签名"| U["user_token"]
+    U --> C["City 请求 Federation"]
+    U --> B["Bureau 本地验签"]
+    J["Federation JWKS 公钥"] --> B
+```
+
+`user_token` 泄露后，持有者可以在 Token 有效期内冒充该用户，因此用户 Token
+必须设置有限有效期，并只通过 HTTPS 传输。
+
+### Bureau Token
+
+`bureau_token` 不是 JWT，也没有公钥私钥关系。`fed bureau token` 在 CLI 本地
+生成明文和 hash，只将 `token_id + token_hash + city_id` 登记到 Federation。
+
+```mermaid
+flowchart LR
+    CLI["fed bureau token"] -->|"生成明文"| T["bureau_token"]
+    CLI -->|"提交 SHA-256 hash"| F["Federation 注册表"]
+    T -->|"环境变量"| B["Bureau 服务器"]
+    B -->|"Bearer bureau_token"| F
+    F -->|"hash 比较"| X["返回绑定的 city_id"]
+```
+
+运行时 Bureau 会通过 HTTPS 把明文 Token 发给 Federation。Federation 从中提取
+`token_id`、计算 SHA-256，并与数据库记录比较。数据库不保存明文。
+
+泄露 `bureau_token` 会让攻击者冒充该 Bureau 获取对应 City Context，但不能生成
+或伪造 `user_token`。发生泄露时使用 `fed bureau revoke <token_id>` 立即撤销注册记录。
+已经缓存的 Context 最多会继续使用到 `jwks_cache_ttl` 到期，默认缓存时间为 5 分钟。
 
 Federation 仍会发布 Ed25519 公钥，供 Federation 自身和其他协议验证用户 Token：
 

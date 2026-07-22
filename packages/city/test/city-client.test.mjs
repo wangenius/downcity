@@ -511,7 +511,6 @@ test("FederationAdmin bureaus register / list / revoke", async () => {
   const requests = []
   const bureau = {
     token_id: "br_1234567890abcdef",
-    name: "Product Backend",
     city_id: "city_product",
     capabilities: ["accounts:read"],
     status: "active",
@@ -531,7 +530,6 @@ test("FederationAdmin bureaus register / list / revoke", async () => {
   const input = {
     token_id: bureau.token_id,
     token_hash: "1234567890123456789012345678901234567890123",
-    name: bureau.name,
     city_id: bureau.city_id,
   }
   assert.deepEqual(await admin.bureaus.register(input), bureau)

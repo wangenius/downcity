@@ -160,39 +160,58 @@ fb_<token_id>.<secret>
 
 ## 6. Bureau 注册生命周期
 
-Federation 启动后注册表为空：
+Federation 启动后注册表为空。Bureau Token 不是 Federation 在线签发的对象，
+而是由 `fed` CLI 在运维侧生成的部署凭证：
 
-```ts
-const federation = new Federation({ db });
-
-await federation.health();
-console.log(await federation.bureaus.list()); // []
+```bash
+fed bureau add --name "Product A Backend" --city-id city_product_a
 ```
 
-只有服务端显式调用时才创建：
+CLI 在本地生成明文和 hash，通过 Federation Admin 控制面登记。Federation
+数据库只保存 `token_id`、`token_hash`、`city_id` 和权限元数据，明文只显示一次：
+
+```env
+DOWNCITY_FEDERATION_URL=https://fed.example.com
+DOWNCITY_BUREAU_TOKEN=fb_br_xxx.secret
+```
+
+CLI 也提供注册表管理：
+
+```bash
+fed bureau list
+fed bureau revoke br_xxx
+```
+
+Federation 和 Bureau 可以在不同服务器。Bureau 不调用注册接口，也不需要访问
+Federation 数据库，只使用环境变量中的凭证请求自己的上下文：
 
 ```ts
-const issued = await federation.bureaus.create({
-  name: "Product A Backend",
-  city_id: "city_product_a",
-  capabilities: ["accounts:read"],
+const bureau = new Bureau({
+  federation_url: process.env.DOWNCITY_FEDERATION_URL!,
+  bureau_token: process.env.DOWNCITY_BUREAU_TOKEN!,
 });
 ```
 
-撤销也只通过 Federation 服务端实例执行：
+Admin SDK 的注册接口只接收 CLI 生成的 hash：
 
 ```ts
-await federation.bureaus.revoke(issued.token_id);
+await admin.bureaus.register({
+  token_id,
+  token_hash,
+  name: "Product A Backend",
+  city_id: "city_product_a",
+});
 ```
 
-不存在以下调用：
+撤销通过 Admin 控制面执行：
 
 ```ts
-root.bureaus.create(...);
-bureau.bureaus.create(...);
+await admin.bureaus.revoke(token_id);
 ```
 
-HTTP `/v1/bureaus/context` 只允许 Bureau 读取自己的上下文，不提供 Token 管理能力。
+不存在 `federation.bureaus.create()` 或 `bureau.bureaus.create()` 这类运行时签发调用。
+HTTP `/v1/bureaus/context` 只允许 Bureau 读取自己的上下文；`register/list/revoke`
+只允许 Federation Admin 控制面调用。
 
 ## 7. 用户登录与 City 调用
 
@@ -298,9 +317,11 @@ Bureau Token 被撤销后，新的 Bureau Context 请求会失败；已经加载
 ## 11. 验收标准
 
 - `new Federation({ db })` 不默认创建 Bureau Token。
-- `federation.bureaus.create()` 是 Bureau Token 的服务端创建入口。
+- `fed bureau add` 是 Bureau Token 的部署登记入口。
+- Federation 数据库只保存 Bureau Token hash，不保存明文。
+- `FederationAdmin.bureaus.register/list/revoke()` 只属于控制面。
 - Bureau Token 必须绑定 active City。
-- Bureau HTTP 接口不能创建、列表或撤销 Token。
+- Bureau 运行时接口不能创建、列表或撤销 Token。
 - `Bureau` 不暴露 City、env、余额管理能力。
 - `Bureau.identify()` 在缓存期内不访问 Federation Accounts。
 - Bureau 拒绝错误签名、过期和跨 City 用户 Token。

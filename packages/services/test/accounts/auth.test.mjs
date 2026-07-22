@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { createHash, randomBytes } from "node:crypto"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -99,11 +100,11 @@ test("City 直读 Profile，Bureau 本地验签后按需读取同一 Federation 
     const admin = create_admin(base, adminSecret)
     const city_a = await admin.cities.create({ name: "Product A" })
     const city_b = await admin.cities.create({ name: "Product B" })
-    const token_a = await base.bureaus.create({
+    const token_a = await register_bureau(admin, {
       name: "Product A Backend",
       city_id: city_a.city_id,
     })
-    const token_b = await base.bureaus.create({
+    const token_b = await register_bureau(admin, {
       name: "Product B Backend",
       city_id: city_b.city_id,
     })
@@ -555,6 +556,14 @@ function create_admin(base, admin_secret_key) {
     admin_secret_key,
     fetch: (input, init) => base.fetch(new Request(input, init)),
   })
+}
+
+async function register_bureau(admin, input) {
+  const token_id = `br_${randomBytes(12).toString("base64url")}`
+  const bureau_token = `fb_${token_id}.${randomBytes(32).toString("base64url")}`
+  const token_hash = createHash("sha256").update(bureau_token, "utf8").digest("base64url")
+  await admin.bureaus.register({ token_id, token_hash, ...input })
+  return { token_id, bureau_token }
 }
 
 function create_city(base, user_token) {

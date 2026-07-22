@@ -35,6 +35,11 @@ export class FederationAdmin {
     return this.admin_access.cities;
   }
 
+  /** Federation Bureau 注册表管理入口。 */
+  get bureaus(): AdminPactAccess["bureaus"] {
+    return this.admin_access.bureaus;
+  }
+
   /** Federation 环境变量管理入口。 */
   get env(): AdminPactAccess["env"] {
     return this.admin_access.env;

@@ -35,6 +35,15 @@ const profile = await city.user().profile();
 
 可选的产品后端：
 
+先在 Federation 管理侧登记 Bureau：
+
+```bash
+fed bureau add --name "Product Backend" --city-id city_product
+```
+
+CLI 只显示一次明文 `DOWNCITY_BUREAU_TOKEN`。Federation 数据库只保存 hash，
+因此 Federation 和 Bureau 可以部署在不同服务器。
+
 ```ts
 const bureau = new Bureau({
   federation_url: "https://fed.example.com",
@@ -55,6 +64,8 @@ Federation 仍会发布 Ed25519 公钥，供 Federation 自身和其他协议验
 ```
 
 Federation 管理使用独立的 `FederationAdmin`，不通过 Bureau 管理 Federation。
+Admin SDK 的 `bureaus.register/list/revoke` 只属于 Federation 控制面；Bureau
+自身不会创建或管理 Token。
 
 ## 渠道账号
 

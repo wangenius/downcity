@@ -114,7 +114,7 @@ console.log(text);
 GET /v1/federation/instruction
 ```
 
-这个接口只允许具备管理能力的 `bureau_token` 访问，返回 `text/plain`。
+这个接口只允许携带 Federation `admin_secret_key` 的控制面请求访问，返回 `text/plain`。
 
 ## Service
 
@@ -208,7 +208,7 @@ base.use(usageService());
 ## 鉴权语义
 
 - 默认 action 需要 `user_token`
-- `auth: ["admin"]` 只允许具备管理能力的 `bureau_token`
+- `auth: ["admin"]` 只允许携带 Federation `admin_secret_key` 的控制面请求
 - `auth: []` 表示免登录
 
 Federation 首次启动会自动生成并持久化 Ed25519 Key Ring。私钥只用于 Federation
@@ -232,13 +232,19 @@ const profile = await city.user().profile();
 
 `city_id` 由 Federation 验签后从 token 中读取，客户端不再重复传入。
 
-City 直接访问 Federation，不依赖 Bureau。只有产品需要自己的后端能力时，才显式创建并部署 Bureau：
+City 直接访问 Federation，不依赖 Bureau。只有产品需要自己的后端能力时，才通过
+`fed bureau add` 登记并部署 Bureau：
 
-```ts
-const issued = await federation.bureaus.create({
-  name: "Product Backend",
-  city_id: "city_product",
-});
+```bash
+fed bureau add --name "Product Backend" --city-id city_product
+```
+
+命令生成的高熵 `bureau_token` 只显示一次，Federation 数据库只保存 hash。将明文
+配置到 Bureau 所在服务器：
+
+```env
+DOWNCITY_FEDERATION_URL=https://fed.example.com
+DOWNCITY_BUREAU_TOKEN=fb_br_xxx.secret
 ```
 
 Bureau 获取绑定的 City 上下文与 JWKS，并在本地识别请求身份：
@@ -260,6 +266,8 @@ const admin = new FederationAdmin({
   federation_url: "https://fed.example.com",
   admin_secret_key,
 });
+
+await admin.bureaus.list();
 ```
 
 ## 主要导出

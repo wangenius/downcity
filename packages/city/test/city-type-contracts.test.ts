@@ -28,7 +28,7 @@ import type {
   CityModelDescriptor,
   City,
   Bureau,
-  BureauTokenIssueResult,
+  BureauTokenSummary,
   Federation,
   FederationAdmin,
   ModelCatalog,
@@ -39,6 +39,7 @@ import type {
   UserPaymentMethod,
   UserProfile,
   UserServiceSummary,
+  RegisterBureauTokenInput,
 } from "../src/index.js";
 
 // @ts-expect-error 旧计费类型不再从公共入口导出
@@ -124,12 +125,19 @@ const adminModelsContract: Promise<CityModelDescriptor[]> = adminModels;
 const adminInstruction = admin.instruction();
 const adminInstructionContract: Promise<string> = adminInstruction;
 
-const bureau_token = federation.bureaus.create({
+const bureau_registration_input: RegisterBureauTokenInput = {
+  token_id: "br_1234567890abcdef",
+  token_hash: "1234567890123456789012345678901234567890123",
   name: "Product Backend",
   city_id: "city_product",
-});
-const bureau_token_contract: Promise<BureauTokenIssueResult> = bureau_token;
-void bureau_token_contract;
+};
+const bureau_registration: Promise<BureauTokenSummary> = admin.bureaus.register(
+  bureau_registration_input,
+);
+void bureau_registration;
+
+// @ts-expect-error Federation 运行时不提供 Bureau 注册管理入口
+federation.bureaus;
 
 const bureau_identity = bureau.identify("ub_header.payload.signature");
 void bureau_identity;

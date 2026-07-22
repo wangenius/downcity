@@ -125,7 +125,6 @@ export type {
 
 export { Bureau, BureauUser } from "./client/bureau.js";
 export { FederationAdmin } from "./client/federation-admin.js";
-export { FederationBureaus } from "./federation/federation-bureaus.js";
 
 export type {
   RuntimeUser,
@@ -143,9 +142,8 @@ export type {
   BureauCapability,
   BureauContext,
   BureauFetch,
-  BureauTokenIssueResult,
   BureauTokenSummary,
-  CreateBureauTokenInput,
+  RegisterBureauTokenInput,
   RuntimeBureau,
 } from "./types/Bureau.js";
 

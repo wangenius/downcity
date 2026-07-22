@@ -5,14 +5,13 @@
  * 通过 token_id 定位记录后再比较 hash，从而支持即时撤销与 capability 更新。
  */
 
-import { base64UrlEncodeBytes, randomSecret } from "../../utils/helpers.js";
+import { base64UrlEncodeBytes } from "../../utils/helpers.js";
 import type { CityTableApi } from "../../store/table-api.js";
 import type {
   BureauCapability,
-  BureauTokenIssueResult,
   BureauTokenRecord,
   BureauTokenSummary,
-  CreateBureauTokenInput,
+  RegisterBureauTokenInput,
   RuntimeBureau,
 } from "../../types/Bureau.js";
 
@@ -22,26 +21,36 @@ const DEFAULT_CAPABILITIES: BureauCapability[] = ["accounts:read"];
 export class BureauTokenStore {
   constructor(private readonly table: CityTableApi<BureauTokenRecord>) {}
 
-  /** 创建 Bureau Token，并只在本次调用返回明文。 */
-  async create(input: CreateBureauTokenInput): Promise<BureauTokenIssueResult> {
+  /** 登记 CLI 生成的 Bureau Token hash，不接触 Token 明文。 */
+  async register(input: RegisterBureauTokenInput): Promise<BureauTokenSummary> {
+    const token_id = read_token_id_value(input.token_id);
+    const token_hash = read_token_hash(input.token_hash);
     const name = read_required_string(input.name, "name");
     const city_id = read_required_string(input.city_id, "city_id");
     const capabilities = normalize_capabilities(input.capabilities);
-
-    const token_id = `br_${randomSecret(12)}`;
-    const bureau_token = `fb_${token_id}.${randomSecret(32)}`;
+    if ((await this.table.select({ token_id }))[0]) {
+      throw new TypeError(`Bureau token already registered: ${token_id}`);
+    }
     const now = new Date().toISOString();
     await this.table.insert({
       token_id,
       name,
       city_id,
-      token_hash: await hash_token(bureau_token),
+      token_hash,
       capabilities: JSON.stringify(capabilities),
       status: "active",
       created_at: now,
       updated_at: now,
     });
-    return { bureau_token, token_id, city_id, capabilities };
+    return {
+      token_id,
+      name,
+      city_id,
+      capabilities,
+      status: "active",
+      created_at: now,
+      updated_at: now,
+    };
   }
 
   /** 验证 Bureau Token 并返回绑定身份。 */
@@ -75,11 +84,30 @@ export class BureauTokenStore {
   /** 立即撤销 Bureau Token。 */
   async revoke(token_id: string): Promise<void> {
     const id = read_required_string(token_id, "token_id");
+    if (!(await this.table.select({ token_id: id }))[0]) {
+      throw new TypeError(`Unknown Bureau token: ${id}`);
+    }
     await this.table.update({
       where: { token_id: id },
       values: { status: "revoked", updated_at: new Date().toISOString() },
     });
   }
+}
+
+function read_token_id_value(value: unknown): string {
+  const token_id = read_required_string(value, "token_id");
+  if (!/^br_[A-Za-z0-9_-]{16,}$/u.test(token_id)) {
+    throw new TypeError("token_id must use the br_<random> format");
+  }
+  return token_id;
+}
+
+function read_token_hash(value: unknown): string {
+  const token_hash = read_required_string(value, "token_hash");
+  if (!/^[A-Za-z0-9_-]{43}$/u.test(token_hash)) {
+    throw new TypeError("token_hash must be a SHA-256 Base64URL value");
+  }
+  return token_hash;
 }
 
 function read_token_id(token: string): string | undefined {

@@ -56,8 +56,14 @@ export interface RuntimeBureau {
   capabilities: BureauCapability[];
 }
 
-/** Federation 服务端创建 Bureau Token 的输入。 */
-export interface CreateBureauTokenInput {
+/** Federation 管理端登记 Bureau Token 的输入。 */
+export interface RegisterBureauTokenInput {
+  /** CLI 生成的 Bureau Token 查找 ID。 */
+  token_id: string;
+
+  /** CLI 对完整 Bureau Token 计算的 SHA-256 Base64URL hash。 */
+  token_hash: string;
+
   /** 便于部署者识别用途的名称。 */
   name: string;
 
@@ -66,21 +72,6 @@ export interface CreateBureauTokenInput {
 
   /** Bureau capability；默认允许读取用户账户数据。 */
   capabilities?: BureauCapability[];
-}
-
-/** Federation 服务端创建 Bureau Token 的结果。 */
-export interface BureauTokenIssueResult {
-  /** 只返回一次的 Bureau Token 明文。 */
-  bureau_token: string;
-
-  /** Bureau Token 的公开查找 ID。 */
-  token_id: string;
-
-  /** Bureau 所属的唯一 City ID。 */
-  city_id: string;
-
-  /** Bureau capability。 */
-  capabilities: BureauCapability[];
 }
 
 /** Federation 服务端列出的 Bureau Token 元数据。 */

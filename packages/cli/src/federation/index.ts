@@ -28,6 +28,11 @@ import {
 import { open_federation_server_workspace } from "@/federation/server/FederationServerWorkspace.js";
 import { CliError } from "@/shared/CliError.js";
 import { helpText, langOptionText, resolveCliLocale, setCliLocale, t } from "@/shared/CliLocale.js";
+import {
+  add_federation_bureau,
+  list_federation_bureaus,
+  revoke_federation_bureau,
+} from "@/federation/bureau/commands/bureau.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -99,6 +104,8 @@ export async function runDownfedCli(): Promise<void> {
     .action(createVersionBanner(packageJson.version, async () => {
       await manage_federation_server();
     }));
+
+  register_bureau_commands(program);
 
   server_program
     .command("add")
@@ -195,6 +202,45 @@ export async function runDownfedCli(): Promise<void> {
   }
 
   await program.parseAsync(process.argv);
+}
+
+/** 注册 Federation Bureau 注册表命令。 */
+function register_bureau_commands(program: Command): void {
+  const bureau_program = program
+    .command("bureau")
+    .description(t({
+      zh: "管理当前 Federation 的 Bureau 注册表",
+      en: "manage the active Federation Bureau registry",
+    }))
+    .helpOption("--help", helpText());
+
+  bureau_program
+    .command("add")
+    .description(t({
+      zh: "生成 Bureau 部署凭证并登记 token hash",
+      en: "generate a Bureau deployment credential and register its token hash",
+    }))
+    .requiredOption("--name <name>", t({ zh: "Bureau 部署名称", en: "Bureau deployment name" }))
+    .requiredOption("--city-id <city_id>", t({ zh: "所属 City ID", en: "owning City ID" }))
+    .helpOption("--help", helpText())
+    .action(createVersionBanner(packageJson.version, async (raw_options: Record<string, unknown>) => {
+      await add_federation_bureau({
+        name: String(raw_options.name ?? ""),
+        city_id: String(raw_options.cityId ?? ""),
+      });
+    }));
+
+  bureau_program
+    .command("list")
+    .description(t({ zh: "列出 Bureau 注册记录", en: "list Bureau registrations" }))
+    .helpOption("--help", helpText())
+    .action(createVersionBanner(packageJson.version, list_federation_bureaus));
+
+  bureau_program
+    .command("revoke <token_id>")
+    .description(t({ zh: "撤销 Bureau Token", en: "revoke a Bureau token" }))
+    .helpOption("--help", helpText())
+    .action(createVersionBanner(packageJson.version, revoke_federation_bureau));
 }
 
 /** 打开当前或交互选择后的 Federation 管理工作区。 */

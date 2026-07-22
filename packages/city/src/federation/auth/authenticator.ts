@@ -1,7 +1,8 @@
 /**
  * 统一鉴权模块。
  *
- * Authenticator 统一处理 admin（secret key）和 user（Ed25519 JWT）两种鉴权方式。
+ * Authenticator 统一处理 admin（secret key）、bureau（不透明部署凭证）和
+ * user（Ed25519 JWT）三种鉴权方式。
  * 所有鉴权失败统一抛出 httpError（ErrorWithStatus）。
  */
 

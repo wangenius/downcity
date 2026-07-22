@@ -16,7 +16,6 @@ import { asInstallableService, type ServiceDefinition } from "../service/install
 import { EnvService } from "../service/env/env-service.js";
 import { CitiesService } from "../service/cities/cities-service.js";
 import { BureausService } from "../service/bureaus/bureaus-service.js";
-import { FederationBureaus } from "./federation-bureaus.js";
 import { build_federation_instruction } from "./federation-instruction.js";
 import { initialize_federation } from "./federation-init.js";
 import { build_federation_router } from "./federation-router.js";
@@ -29,15 +28,12 @@ import type { Authenticator } from "./auth/authenticator.js";
 import type { Runtime } from "./runtime.js";
 import type { CityTableApi } from "../store/table-api.js";
 import type { CityStore } from "../service/cities/city-store.js";
-import type { BureauTokenStore } from "./auth/bureau-token-store.js";
 import type { Database, DbClient } from "../store/db.js";
 import type { FederationMiddleware, FederationMiddlewareContext } from "../types/FederationMiddleware.js";
 
 export class Federation {
   private readonly runtime: Runtime;
   readonly queue: FederationQueue;
-  /** 仅服务端进程可用的 Bureau 注册管理入口。 */
-  readonly bureaus: FederationBureaus;
   private readonly services = new Map<string, Service>();
   private readonly middlewares: FederationMiddleware[] = [];
 
@@ -48,7 +44,6 @@ export class Federation {
   private hono?: Hono;
   private authenticator?: Authenticator;
   private city_store?: CityStore;
-  private bureau_token_store?: BureauTokenStore;
 
   constructor(options: FederationOptions) {
     this.runtime = create_federation_runtime(options);
@@ -62,16 +57,6 @@ export class Federation {
       get_env: () => this.runtime.env,
       get_queue: () => this.queue,
       get_storage: () => this.runtime.storage,
-    });
-    this.bureaus = new FederationBureaus({
-      get_store: async () => {
-        await this.ensure_ready();
-        return this.bureau_token_store!;
-      },
-      get_city: async (city_id) => {
-        await this.ensure_ready();
-        return this.city_store!.get(city_id);
-      },
     });
     this.use(new EnvService());
     this.use(new CitiesService());
@@ -209,7 +194,6 @@ export class Federation {
     this.table_map = state.table_map;
     this.city_store = state.city_store;
     this.authenticator = state.authenticator;
-    this.bureau_token_store = state.bureau_token_store;
     this.hono = build_federation_router({
       runtime: this.runtime,
       services: this.getServices(),

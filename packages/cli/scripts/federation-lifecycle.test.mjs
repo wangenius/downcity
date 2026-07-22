@@ -33,6 +33,23 @@ function is_process_alive(pid) {
   }
 }
 
+test("Bureau 部署凭证由 CLI 本地生成且 hash 可复算", async () => {
+  const { createHash } = await import("node:crypto");
+  const credential_module = await import("../bin/federation/bureau/BureauCredential.js");
+  const credential = credential_module.create_bureau_deployment_credential();
+
+  assert.match(credential.token_id, /^br_[A-Za-z0-9_-]{16}$/u);
+  assert.match(
+    credential.bureau_token,
+    new RegExp(`^fb_${credential.token_id}\\.[A-Za-z0-9_-]{43}$`, "u"),
+  );
+  assert.equal(
+    credential.token_hash,
+    createHash("sha256").update(credential.bureau_token, "utf8").digest("base64url"),
+  );
+  assert.notEqual(credential.token_hash, credential.bureau_token);
+});
+
 test("内置模板生成严格的新 Federation 配置", async () => {
   const project_dir = create_temp_dir("downcity-fed-template-");
   try {

@@ -36,6 +36,15 @@ const profile = await city.user().profile();
 
 Optional product backend:
 
+Register the Bureau from the Federation control plane first:
+
+```bash
+fed bureau add --name "Product Backend" --city-id city_product
+```
+
+The CLI displays the plaintext `DOWNCITY_BUREAU_TOKEN` once. Federation stores
+only its hash, so Federation and Bureau can run on different servers.
+
 ```ts
 const bureau = new Bureau({
   federation_url: "https://fed.example.com",
@@ -56,6 +65,8 @@ Federation still publishes Ed25519 public keys for its own token validation and 
 ```
 
 Federation management uses the separate `FederationAdmin` control-plane client, never Bureau.
+The Admin SDK's `bureaus.register/list/revoke` methods belong only to the Federation
+control plane; a Bureau never creates or manages tokens.
 
 ## Channel accounts
 

@@ -507,6 +507,41 @@ test("FederationAdmin cities CRUD + tokens.apply", async () => {
   })
 })
 
+test("FederationAdmin bureaus register / list / revoke", async () => {
+  const requests = []
+  const bureau = {
+    token_id: "br_1234567890abcdef",
+    name: "Product Backend",
+    city_id: "city_product",
+    capabilities: ["accounts:read"],
+    status: "active",
+    created_at: "t",
+    updated_at: "t",
+  }
+  const admin = new FederationAdmin({
+    federation_url: "http://localhost:3001/",
+    admin_secret_key: "sk",
+    fetch: async (url, init) => {
+      requests.push({ url, init })
+      if (url.endsWith("/v1/bureaus/register")) return json(bureau)
+      if (url.endsWith("/v1/bureaus/list")) return json({ items: [bureau] })
+      return json({ success: true })
+    },
+  })
+  const input = {
+    token_id: bureau.token_id,
+    token_hash: "1234567890123456789012345678901234567890123",
+    name: bureau.name,
+    city_id: bureau.city_id,
+  }
+  assert.deepEqual(await admin.bureaus.register(input), bureau)
+  assert.deepEqual(await admin.bureaus.list(), [bureau])
+  await admin.bureaus.revoke(bureau.token_id)
+  assert.equal(requests[0].url, "http://localhost:3001/v1/bureaus/register")
+  assert.equal(requests[1].url, "http://localhost:3001/v1/bureaus/list")
+  assert.equal(requests[2].url, "http://localhost:3001/v1/bureaus/revoke")
+})
+
 test("FederationAdmin listServices() / listModels() / instruction()", async () => {
   const requests = []
   const admin = new FederationAdmin({

@@ -21,3 +21,11 @@ fed
 ```
 
 `fed create` 默认生成 Local Node.js + SQLite 项目。Local deploy 会自动注入并保存 admin key。无参数执行 `fed` 会进入系统级 Federation 管理面板，已部署实例不依赖当前工作目录。
+
+为独立产品后端登记 Bureau：
+
+```bash
+fed bureau add --name "Product Backend" --city-id city_product
+```
+
+命令在 CLI 本地生成 `bureau_token`，Federation 只保存 hash，并将明文输出一次。把明文写入 Bureau 服务器的 `DOWNCITY_BUREAU_TOKEN` 环境变量；Federation 与 Bureau 不需要部署在同一台服务器。注册记录可用 `fed bureau list` 查看，使用 `fed bureau revoke <token_id>` 撤销。

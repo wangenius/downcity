@@ -8,6 +8,7 @@ import { ServiceClient } from "../invoker/invoker.js";
 import { BalanceInvoker } from "../invoker/balance/index.js";
 import { EnvInvoker } from "../invoker/env/index.js";
 import { CitiesInvoker } from "../invoker/cities/index.js";
+import { BureausInvoker } from "../invoker/bureaus/index.js";
 import {
   requiredString,
   type RequestInitLike,
@@ -25,6 +26,7 @@ import type {
 export class AdminPactAccess {
   readonly balance: BalanceInvoker;
   readonly cities: CitiesInvoker;
+  readonly bureaus: BureausInvoker;
   readonly env: EnvInvoker;
 
   private readonly base_url: string;
@@ -47,6 +49,7 @@ export class AdminPactAccess {
     const req = <T>(path: string, init: RequestInitLike) => this.json<T>(path, init);
     this.balance = new BalanceInvoker({ requestJSON: req });
     this.cities = new CitiesInvoker({ requestJSON: req });
+    this.bureaus = new BureausInvoker({ requestJSON: req });
     this.env = new EnvInvoker({ requestJSON: req });
   }
 

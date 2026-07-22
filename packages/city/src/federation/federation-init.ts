@@ -37,8 +37,6 @@ export interface FederationInitState {
   city_store: CityStore;
   /** 鉴权器 */
   authenticator: Authenticator;
-  /** Bureau Token 服务端存储入口。 */
-  bureau_token_store: BureauTokenStore;
 }
 
 /**
@@ -124,6 +122,7 @@ export async function initialize_federation(params: {
     service._authenticator = authenticator;
     service._env = env;
     service._cityStore = city_store;
+    service._bureauTokenStore = bureau_token_store;
     service._raw = runtime.raw;
     service._baseURL = configured_base_url ?? runtime.baseURL;
     service._queue = params.queue as never;
@@ -137,7 +136,6 @@ export async function initialize_federation(params: {
     table_map,
     city_store,
     authenticator,
-    bureau_token_store,
   };
 }
 

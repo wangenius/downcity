@@ -22,6 +22,7 @@ import type { RuntimeMetering } from "../types/Metering.js";
 import type { FederationQueue } from "../federation/queue.js";
 import type { FederationStorage } from "../federation/storage.js";
 import type { FederationRequestTransport } from "../federation/types.js";
+import type { BureauTokenStore } from "../federation/auth/bureau-token-store.js";
 
 // ===========================================================================
 // 鉴权级别
@@ -186,7 +187,8 @@ export class Service {
   _authenticator?: Authenticator;
   _env?: EnvProvider;
   _cityStore?: CityStore;
-  /** Federation Bureau Token Store。 */
+  /** Federation Bureau Token 持久化与校验入口。 */
+  _bureauTokenStore?: BureauTokenStore;
 
   /** 原始数据库实例（better-sqlite3 / D1 等） */
   _raw?: unknown;

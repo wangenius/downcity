@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { City, FederationAdmin } from "../bin/index.js"
+import { City, Bureau } from "../bin/index.js"
 
 test("City rejects Federation rpc URLs", async () => {
   assert.throws(
@@ -290,6 +290,25 @@ test("User City service() → ServiceInvoker", async () => {
   assert.deepEqual(JSON.parse(requests[0].init.body), { title: "hello" })
 })
 
+test("City.connect() forwards the current user_token to a Bureau service", async () => {
+  const requests = []
+  const city = new City({
+    federation_url: "https://fed.example.com",
+    user_token: "ub_user_token",
+    fetch: async (url, init) => {
+      requests.push({ url, init })
+      return json({ ok: true })
+    },
+  })
+  const result = await city.connect("https://bureau.example.com/")
+    .service("reports")
+    .action("summary")
+    .invoke({ range: "today" })
+  assert.deepEqual(result, { ok: true })
+  assert.equal(requests[0].url, "https://bureau.example.com/v1/reports/summary")
+  assert.equal(requests[0].init.headers.authorization, "Bearer ub_user_token")
+})
+
 test("ServiceClient.get() appends query params for GET actions", async () => {
   const requests = []
   const city = new City({
@@ -433,11 +452,11 @@ test("User City payment.method(id).invoke() rejects disabled or user-required me
   )
 })
 
-test("FederationAdmin service() uses the shared /v1 route prefix", async () => {
+test("Bureau service() uses the shared /v1 route prefix", async () => {
   const requests = []
-  const admin = new FederationAdmin({
+  const admin = new Bureau({
     federation_url: "http://localhost:3001/",
-    admin_secret_key: "sk",
+    bureau_token: "sk",
     fetch: async (url, init) => { requests.push({ url, init }); return json({ ok: true }) },
   })
   const result = await admin.service("usage").action("report").invoke({ range: "today" })
@@ -446,11 +465,11 @@ test("FederationAdmin service() uses the shared /v1 route prefix", async () => {
   assert.equal(requests[0].init.headers.authorization, "Bearer sk")
 })
 
-test("FederationAdmin env list / catalog / upsert / remove", async () => {
+test("Bureau env list / catalog / upsert / remove", async () => {
   const requests = []
-  const admin = new FederationAdmin({
+  const admin = new Bureau({
     federation_url: "http://localhost:3001/",
-    admin_secret_key: "sk",
+    bureau_token: "sk",
     fetch: async (url, init) => {
     requests.push({ url, init })
     if (url.endsWith("/v1/env/list")) return json({ items: [{ key: "K", value: "V", source: "database" }] })
@@ -483,11 +502,11 @@ test("FederationAdmin env list / catalog / upsert / remove", async () => {
   assert.equal(requests[3].url, "http://localhost:3001/v1/env/remove")
 })
 
-test("FederationAdmin cities CRUD + tokens.apply", async () => {
+test("Bureau cities CRUD + tokens.apply", async () => {
   const requests = []; const p = { city_id: "p1", name: "Demo", status: "active", created_at: "t", updated_at: "t" }
-  const admin = new FederationAdmin({
+  const admin = new Bureau({
     federation_url: "http://localhost:3001/",
-    admin_secret_key: "sk",
+    bureau_token: "sk",
     fetch: async (url, init) => {
     requests.push({ url, init })
     if (url.endsWith("/v1/cities/list")) return json({ items: [p] })
@@ -507,19 +526,17 @@ test("FederationAdmin cities CRUD + tokens.apply", async () => {
   })
 })
 
-test("FederationAdmin bureaus register / list / revoke", async () => {
+test("Bureau bureaus register / list / revoke", async () => {
   const requests = []
   const bureau = {
     token_id: "br_1234567890abcdef",
-    city_id: "city_product",
-    capabilities: ["accounts:read"],
     status: "active",
     created_at: "t",
     updated_at: "t",
   }
-  const admin = new FederationAdmin({
+  const admin = new Bureau({
     federation_url: "http://localhost:3001/",
-    admin_secret_key: "sk",
+    bureau_token: "sk",
     fetch: async (url, init) => {
       requests.push({ url, init })
       if (url.endsWith("/v1/bureaus/register")) return json(bureau)
@@ -530,7 +547,6 @@ test("FederationAdmin bureaus register / list / revoke", async () => {
   const input = {
     token_id: bureau.token_id,
     token_hash: "1234567890123456789012345678901234567890123",
-    city_id: bureau.city_id,
   }
   assert.deepEqual(await admin.bureaus.register(input), bureau)
   assert.deepEqual(await admin.bureaus.list(), [bureau])
@@ -540,11 +556,11 @@ test("FederationAdmin bureaus register / list / revoke", async () => {
   assert.equal(requests[2].url, "http://localhost:3001/v1/bureaus/revoke")
 })
 
-test("FederationAdmin listServices() / listModels() / instruction()", async () => {
+test("Bureau listServices() / listModels() / instruction()", async () => {
   const requests = []
-  const admin = new FederationAdmin({
+  const admin = new Bureau({
     federation_url: "http://localhost:3001/",
-    admin_secret_key: "sk",
+    bureau_token: "sk",
     fetch: async (url, init) => {
       requests.push({ url, init })
       if (url.endsWith("/v1/services")) {

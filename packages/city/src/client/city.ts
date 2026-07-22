@@ -9,10 +9,14 @@ import { UserPactAccess } from "../pact/user/index.js";
 import type { ServiceClient } from "../pact/invoker/invoker.js";
 import type { CityOptions } from "./types.js";
 import type { UserServiceSummary } from "../pact/user/types.js";
+import type { FetchLike } from "../pact/http.js";
+import { CityConnection } from "./city-connection.js";
 
 /** Downcity City 用户客户端。 */
 export class City {
   private readonly user_access: UserPactAccess;
+  private readonly user_token?: string;
+  private readonly fetcher?: FetchLike;
 
   constructor(options: CityOptions) {
     if (!options || typeof options !== "object") {
@@ -23,6 +27,8 @@ export class City {
       user_token: options.user_token,
       fetch: options.fetch,
     });
+    this.user_token = options.user_token;
+    this.fetcher = options.fetch;
   }
 
   /** 用户侧 AI 调用入口。 */
@@ -48,5 +54,14 @@ export class City {
   /** 列出 Federation 暴露的 Service。 */
   listServices(): Promise<UserServiceSummary[]> {
     return this.user_access.listServices();
+  }
+
+  /** 连接某个 Bureau 的独立服务，并自动携带当前 user_token。 */
+  connect(bureau_url: string): CityConnection {
+    return new CityConnection({
+      bureau_url,
+      user_token: this.user_token,
+      fetch: this.fetcher,
+    });
   }
 }

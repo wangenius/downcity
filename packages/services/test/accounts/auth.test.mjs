@@ -4,7 +4,7 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
-import { Bureau, City, Federation, FederationAdmin } from "@downcity/city"
+import { Bureau, City, Federation } from "@downcity/city"
 import { createSqliteDb } from "./sqlite-db.mjs"
 import {
   AccountsService,
@@ -100,8 +100,8 @@ test("City 直读 Profile，Bureau 本地验签后按需读取同一 Federation 
     const admin = create_admin(base, adminSecret)
     const city_a = await admin.cities.create({ name: "Product A" })
     const city_b = await admin.cities.create({ name: "Product B" })
-    const token_a = await register_bureau(admin, { city_id: city_a.city_id })
-    const token_b = await register_bureau(admin, { city_id: city_b.city_id })
+    const token_a = await register_bureau(admin)
+    const token_b = await register_bureau(admin)
 
     const registered = await (await base.fetch(jsonRequest("/v1/accounts/register", {
       email: "bureau@example.com",
@@ -125,10 +125,8 @@ test("City 直读 Profile，Bureau 本地验签后按需读取同一 Federation 
     assert.deepEqual(bureau_profile, city_profile)
 
     const bureau_b = create_bureau(base, token_b.bureau_token)
-    await assert.rejects(
-      bureau_b.identify(user_request(user_token.user_token)),
-      (error) => error?.statusCode === 403,
-    )
+    const bureau_b_identity = await bureau_b.identify(user_request(user_token.user_token))
+    assert.equal(bureau_b_identity.city_id, city_a.city_id)
     await assert.rejects(
       bureau_a.identify(user_request(`${user_token.user_token}invalid`)),
       (error) => error?.statusCode === 401,
@@ -545,18 +543,18 @@ function create_bureau(base, bureau_token) {
 }
 
 function create_admin(base, admin_secret_key) {
-  return new FederationAdmin({
+  return new Bureau({
     federation_url: "http://localhost",
-    admin_secret_key,
+    bureau_token: admin_secret_key,
     fetch: (input, init) => base.fetch(new Request(input, init)),
   })
 }
 
-async function register_bureau(admin, input) {
+async function register_bureau(admin) {
   const token_id = `br_${randomBytes(12).toString("base64url")}`
   const bureau_token = `fb_${token_id}.${randomBytes(32).toString("base64url")}`
   const token_hash = createHash("sha256").update(bureau_token, "utf8").digest("base64url")
-  await admin.bureaus.register({ token_id, token_hash, ...input })
+  await admin.bureaus.register({ token_id, token_hash })
   return { token_id, bureau_token }
 }
 

@@ -124,7 +124,6 @@ export type {
 // ===========================================================================
 
 export { Bureau, BureauUser } from "./client/bureau.js";
-export { FederationAdmin } from "./client/federation-admin.js";
 
 export type {
   RuntimeUser,
@@ -139,17 +138,12 @@ export type {
 export type {
   BureauIdentity,
   BureauOptions,
-  BureauCapability,
-  BureauContext,
   BureauFetch,
   BureauTokenSummary,
   RegisterBureauTokenInput,
-  RuntimeBureau,
 } from "./types/Bureau.js";
 
 export type { UserProfile } from "./types/User.js";
-
-export type { FederationAdminOptions } from "./types/FederationAdmin.js";
 
 // ===========================================================================
 // 场景 4：管理环境变量（内置 Service）
@@ -193,6 +187,7 @@ export type {
 } from "@downcity/type";
 
 export { City } from "./client/city.js";
+export { CityConnection } from "./client/city-connection.js";
 export type { CityOptions } from "./client/types.js";
 
 export { AIInvoker, ModelCatalog } from "./pact/invoker/ai/index.js";

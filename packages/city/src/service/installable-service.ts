@@ -11,7 +11,6 @@ import { Hook } from "./hook.js";
 import { TableApi } from "../store/table-api.js";
 import type { CityTableApi } from "../store/table-api.js";
 import type { CreateUserTokenInput, UserTokenIssueResult, RuntimeUser } from "../federation/auth/types.js";
-import type { RuntimeBureau } from "../types/Bureau.js";
 import type { InstructionDefinition } from "./instruction.js";
 import type { FederationRequestTransport } from "../federation/types.js";
 
@@ -38,7 +37,7 @@ export interface ServiceInstallContext {
 export interface ServiceActionRouteConfig {
   method: "GET" | "POST";
   path: string;
-  auth?: Array<"user" | "bureau" | "admin">;
+  auth?: Array<"user" | "admin">;
   /**
    * 是否公开访问。
    *
@@ -61,7 +60,7 @@ export interface ServiceNativeRouteConfig {
    * - native HTTP route 不进入 action/hook 管线，但仍可声明 route 级鉴权
    */
   public?: boolean;
-  auth?: Array<"user" | "bureau" | "admin">;
+  auth?: Array<"user" | "admin">;
   handler: {
     /**
      * 原生 HTTP 请求处理器。
@@ -76,8 +75,6 @@ export interface ServiceNativeRouteConfig {
 export interface ServiceRouteContext {
   /** 当前 user_token 解析出的用户；免登录或 admin 请求时可能为空 */
   user?: RuntimeUser;
-  /** 当前 bureau_token 解析出的 Bureau。 */
-  bureau?: RuntimeBureau;
   /** 当前 user_token 对应的 city；免登录或 admin 请求时可能为空 */
   city?: { city_id: string; status: string };
   /** 原始 HTTP 请求 */
@@ -99,8 +96,8 @@ function is_native_route_config(
 }
 
 function resolve_route_auth(
-  config: { auth?: Array<"user" | "bureau" | "admin">; public?: boolean },
-): Array<"user" | "bureau" | "admin"> | undefined {
+  config: { auth?: Array<"user" | "admin">; public?: boolean },
+): Array<"user" | "admin"> | undefined {
   if (config.public === true) return [];
   return config.auth;
 }
@@ -149,7 +146,6 @@ export abstract class InstallableService extends Service {
       return self.action(actionId, async (svcCtx: Context) => {
         return await config.handler({
           user: svcCtx.user,
-          bureau: svcCtx.bureau,
           city: svcCtx.city,
           request: svcCtx.request ?? new Request("http://local"),
           transport: svcCtx.transport,

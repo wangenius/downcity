@@ -16,9 +16,3 @@ export interface BureauDeploymentCredential {
   /** 提交给 Federation 保存的 SHA-256 Base64URL hash。 */
   token_hash: string;
 }
-
-/** `fed bureau token` 的标准化输入。 */
-export interface CreateFederationBureauTokenInput {
-  /** Bureau 后端所属的 Federation City ID。 */
-  city_id: string;
-}

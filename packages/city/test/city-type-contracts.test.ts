@@ -27,10 +27,10 @@ import type {
   LanguageModelV3StreamResult,
   CityModelDescriptor,
   City,
+  CityConnection,
   Bureau,
   BureauTokenSummary,
   Federation,
-  FederationAdmin,
   ModelCatalog,
   PaymentMethodHandle,
   UserImageJobCreateResult,
@@ -83,11 +83,11 @@ void provider_stream_call;
 void provider_stream_result;
 
 declare const city: City;
-declare const admin: FederationAdmin;
+declare const admin: Bureau;
 declare const bureau: Bureau;
 declare const federation: Federation;
 declare const user_city: City;
-declare const admin_city: FederationAdmin;
+declare const admin_city: Bureau;
 
 const ai: AIInvoker = city.ai;
 
@@ -128,25 +128,30 @@ const adminInstructionContract: Promise<string> = adminInstruction;
 const bureau_registration_input: RegisterBureauTokenInput = {
   token_id: "br_1234567890abcdef",
   token_hash: "1234567890123456789012345678901234567890123",
-  city_id: "city_product",
 };
 const bureau_registration: Promise<BureauTokenSummary> = admin.bureaus.register(
   bureau_registration_input,
 );
 void bureau_registration;
 
-// @ts-expect-error Federation 运行时不提供 Bureau 注册管理入口
-federation.bureaus;
+const federation_bureaus = admin.bureaus.list();
+void federation_bureaus;
 
 const bureau_identity = bureau.identify("ub_header.payload.signature");
 void bureau_identity;
 
-// @ts-expect-error Bureau 不属于 Federation City 控制面
-bureau.cities;
-// @ts-expect-error Bureau 不管理 Federation env
-bureau.env;
-// @ts-expect-error Bureau 不能创建或撤销其他 Bureau
-bureau.bureaus;
+const bureau_cities = bureau.cities.list();
+const bureau_env = bureau.env.list();
+const bureau_tokens = bureau.bureaus.list();
+void bureau_cities;
+void bureau_env;
+void bureau_tokens;
+
+declare const connection: CityConnection;
+const bureau_services = connection.listServices();
+void bureau_services;
+const bureau_service_result = connection.service("reports").action("summary").invoke({});
+void bureau_service_result;
 
 const user_profile: Promise<UserProfile | null> = city.user().profile();
 void user_profile;

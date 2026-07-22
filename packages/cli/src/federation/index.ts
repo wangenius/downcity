@@ -220,12 +220,9 @@ function register_bureau_commands(program: Command): void {
       zh: "生成并登记 Bureau Token",
       en: "generate and register a Bureau token",
     }))
-    .requiredOption("--city <city_id>", t({ zh: "所属 City ID", en: "owning City ID" }))
     .helpOption("--help", helpText())
-    .action(createVersionBanner(packageJson.version, async (raw_options: Record<string, unknown>) => {
-      await create_federation_bureau_token({
-        city_id: String(raw_options.city ?? ""),
-      });
+    .action(createVersionBanner(packageJson.version, async () => {
+      await create_federation_bureau_token();
     }));
 
   bureau_program

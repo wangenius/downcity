@@ -1,8 +1,8 @@
 /**
  * 统一鉴权模块。
  *
- * Authenticator 统一处理 admin（secret key）、bureau（不透明部署凭证）和
- * user（Ed25519 JWT）三种鉴权方式。
+ * Authenticator 统一处理管理凭证（root secret 或 Bureau Token）和
+ * user_token（Ed25519 JWT）两类鉴权方式。
  * 所有鉴权失败统一抛出 httpError（ErrorWithStatus）。
  */
 
@@ -21,7 +21,6 @@ import type {
   UserTokenIssueResult,
   RuntimeUser,
 } from "./types.js";
-import type { RuntimeBureau } from "../../types/Bureau.js";
 import type { FederationTrustedIdentity } from "../types.js";
 
 /** 鉴权级别 */
@@ -33,8 +32,6 @@ export interface AuthResult {
   user?: RuntimeUser;
   /** 解析出的 City 信息（user 级别时可用） */
   city?: { city_id: string; status: string };
-  /** 解析出的 Bureau 信息（bureau token 时可用）。 */
-  bureau?: RuntimeBureau;
 }
 
 /** 统一鉴权器 */
@@ -62,12 +59,8 @@ export class Authenticator {
       return { level: "admin" };
     }
 
-    const bureau = await this.bureau_token_store.resolve(token);
-    if (bureau) {
-      const store = await this.store();
-      const city = await store.city.get(bureau.city_id);
-      if (!city || city.status !== "active") return { level: "guest" };
-      return { level: "bureau", bureau, city };
+    if (await this.bureau_token_store.resolve(token)) {
+      return { level: "admin" };
     }
 
     try {

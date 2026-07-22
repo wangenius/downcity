@@ -12,8 +12,8 @@ Federation owns user identity and account data, and the City client connects to 
 
 - **Federation** — stores the Ed25519 private key and issues `user_token` values
 - **City** — stores `federation_url + user_token` and makes user requests
-- **Bureau** — an optional product backend for a City that verifies users locally with Federation's public key
-- **FederationAdmin** — the separate Federation control-plane client used by CLI and operations
+- **Bureau** — a trusted server node that uses `bureau_token` for Federation management and
+  Federation's public key to verify users for independent services
 
 ## Authentication flow
 
@@ -22,7 +22,7 @@ Federation owns user identity and account data, and the City client connects to 
 3. The user calls Federation through `new City({ federation_url, user_token })`
 4. The user sends the same Bearer Token to the product backend
 5. City sends `user_token` directly to Federation for Profile, balance, and standard Services
-6. If the product has its own backend, City sends product requests to Bureau
+6. If the product has its own backend, City uses `city.connect(bureau_url)` to call Bureau services
 7. Bureau verifies `user_token` locally with Federation's public key and only calls Federation when it needs current data
 
 ```ts
@@ -39,7 +39,7 @@ Optional product backend:
 Register the Bureau from the Federation control plane first:
 
 ```bash
-fed bureau token --city city_product
+fed bureau token
 ```
 
 The CLI displays the plaintext `DOWNCITY_BUREAU_TOKEN` once. Federation stores
@@ -55,7 +55,17 @@ const identity = await bureau.identify(request);
 const profile = await (await bureau.user(request)).profile();
 ```
 
-`Bureau` is optional. It uses `bureau_token` to obtain its registered City context, then verifies `user_token` locally with Federation's public key. `identify()` does not call online introspection; Bureau only requests Federation when it needs current Profile, balance, or other shared data.
+`Bureau` is optional and is also the trusted server entry point for Federation management. It is
+not bound to a `city_id`: `identify()` returns the `city_id` from `user_token`, and each Bureau
+service applies its own product authorization policy. `identify()` only reads discovery and JWKS;
+Bureau requests Federation only when it needs current Profile, balance, or other shared data.
+
+City does not need the Bureau SDK to call an independent Bureau service:
+
+```ts
+const reports = city.connect("https://bureau.example.com").service("reports");
+await reports.action("summary").invoke({});
+```
 
 ## User Token and Bureau Token
 
@@ -63,12 +73,12 @@ Both tokens use the Bearer header, but they represent different principals and u
 
 | Property | `user_token` | `bureau_token` |
 | --- | --- | --- |
-| Principal | Federation user | Product backend for one City |
+| Principal | Federation user | Federation management and Bureau server |
 | Format | `ub_<JWT>` | `fb_<token_id>.<secret>` |
 | Implementation | Ed25519 asymmetric signature | Random opaque credential and SHA-256 hash |
 | Verification | Verify with Federation's JWKS public key | Federation hashes the token and queries its registry |
-| Identity data | Contains `user_id`, `city_id`, `iss`, `aud`, `exp`, and `jti` | Contains no user identity; maps to a database `city_id` |
-| Local verification | Bureau can verify it locally | Requires a Federation Context request |
+| Identity data | Contains `user_id`, `city_id`, `iss`, `aud`, `exp`, and `jti` | Contains no user identity; maps to a Federation registry record |
+| Local verification | Bureau verifies with Federation JWKS | Federation checks the registry for management requests |
 | Revocation | Primarily bounded by expiry and current Federation state | Federation marks the registration as `revoked` |
 
 ### User Token
@@ -91,7 +101,7 @@ tokens must therefore have a finite lifetime and only travel over HTTPS.
 ### Bureau Token
 
 `bureau_token` is not a JWT and has no public/private key pair. `fed bureau token` generates
-the plaintext and hash locally, then registers only `token_id + token_hash + city_id` with Federation.
+the plaintext and hash locally, then registers only `token_id + token_hash` with Federation.
 
 ```mermaid
 flowchart LR
@@ -99,18 +109,17 @@ flowchart LR
     CLI -->|"submit SHA-256 hash"| F["Federation registry"]
     T -->|"environment variable"| B["Bureau server"]
     B -->|"Bearer bureau_token"| F
-    F -->|"compare hash"| X["return bound city_id"]
+    F -->|"compare hash"| X["allow management request"]
 ```
 
-At runtime, Bureau sends the plaintext token to Federation over HTTPS. Federation extracts
+At runtime, Bureau sends the plaintext token to Federation management APIs over HTTPS. Federation extracts
 `token_id`, computes SHA-256, and compares it with the database record. The database never
 stores the plaintext token.
 
-A leaked `bureau_token` lets an attacker impersonate that Bureau to obtain its City Context,
-but cannot create or forge a `user_token`. Revoke a leaked credential with
-`fed bureau revoke <token_id>`.
-An already cached Context remains usable until `jwks_cache_ttl` expires; the default cache
-lifetime is five minutes.
+A leaked `bureau_token` lets an attacker impersonate that Bureau to call Federation management
+APIs, but cannot create or forge a `user_token`. Revoke a leaked credential with
+`fed bureau revoke <token_id>`. Revocation does not retroactively revoke issued `user_token`
+values; user tokens remain controlled by expiry and Federation key policy.
 
 Federation still publishes Ed25519 public keys for its own token validation and other protocols:
 
@@ -119,9 +128,9 @@ Federation still publishes Ed25519 public keys for its own token validation and 
 /.well-known/jwks.json
 ```
 
-Federation management uses the separate `FederationAdmin` control-plane client, never Bureau.
-The Admin SDK's `bureaus.register/list/revoke` methods belong only to the Federation
-control plane; a Bureau never creates or manages tokens.
+`Bureau` includes the Federation control-plane API. `bureau.cities`, `bureau.env`, and
+`bureau.bureaus` use `bureau_token` to call Federation; `fed bureau token` still generates the
+plaintext locally and writes only the registry hash.
 
 ## Channel accounts
 

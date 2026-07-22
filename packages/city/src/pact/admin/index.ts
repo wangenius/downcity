@@ -1,7 +1,7 @@
 /**
  * Federation 控制面 HTTP 访问层。
  *
- * 统一使用 admin_secret_key 调用 Federation 管理接口。
+ * 统一使用 Federation Root Secret 或 Bureau Token 调用管理接口。
  */
 
 import { ServiceClient } from "../invoker/invoker.js";
@@ -35,11 +35,11 @@ export class AdminPactAccess {
 
   constructor(options: AdminPactAccessOptions) {
     if (!options || typeof options !== "object") {
-      throw new TypeError("Federation admin options are required");
+      throw new TypeError("Bureau options are required");
     }
 
     this.base_url = requiredString(options.base_url, "base_url").replace(/\/+$/, "");
-    this.secret = requiredString(options.admin_secret_key, "admin_secret_key");
+    this.secret = requiredString(options.credential, "credential");
     this.requester = create_http_requester({
       base_url: this.base_url,
       fetch: options.fetch,
@@ -96,7 +96,7 @@ export class AdminPactAccess {
    * 为 Federation 管理请求统一补齐鉴权头。
    *
    * 关键说明（中文）
-   * - 所有控制面请求都必须带上 admin_secret_key
+   * - 所有控制面请求都必须带上管理凭证
    * - 默认仍然补 `content-type: application/json`，便于 POST action 统一行为
    */
   private withAuth(init: RequestInitLike): RequestInitLike {

@@ -1,19 +1,21 @@
 /**
- * Bureau 产品后端客户端。
+ * Bureau 管理与独立服务节点客户端。
  *
- * Bureau 是某个 City 的可选后端入口：启动时使用 Bureau Token 获取自身
- * City 上下文，运行时使用 Federation 公钥在本地验证 user_token。它不承载
- * Federation 管理能力，也不会把 user_token 发送到在线 identify 接口。
+ * Bureau 使用 Bureau Token 管理 Federation，并使用 Federation JWKS 在本地
+ * 验证独立服务收到的 user_token。Bureau 不绑定 City，一个实例可以服务同一
+ * Federation 下的多个 City。
  */
 
 import { decodeProtectedHeader, importJWK, jwtVerify } from "jose";
 import { httpError } from "../utils/helpers.js";
 import type {
-  BureauContext,
   BureauFetch,
   BureauIdentity,
   BureauOptions,
 } from "../types/Bureau.js";
+import { AdminPactAccess } from "../pact/admin/index.js";
+import type { ServiceClient } from "../pact/invoker/invoker.js";
+import type { AdminModelRecord, AdminServiceSummary } from "../pact/admin/types.js";
 import type { UserProfile } from "../types/User.js";
 import type {
   FederationDiscovery,
@@ -30,8 +32,6 @@ interface BureauCache {
   discovery: FederationDiscovery;
   /** Federation 公钥集合。 */
   jwks: FederationJwks;
-  /** Bureau 当前注册上下文。 */
-  context: BureauContext;
   /** 缓存失效时间。 */
   expires_at: number;
 }
@@ -64,17 +64,12 @@ export class BureauUser {
   }
 }
 
-/** Bureau 产品后端客户端。 */
+/** Bureau 管理与独立服务节点客户端。 */
 export class Bureau {
-  /** 当前 Bureau 绑定的 City ID；首次读取上下文后可用。 */
-  get city_id(): string | undefined {
-    return this.cache?.context.city_id;
-  }
-
   private readonly federation_url: string;
-  private readonly bureau_token: string;
   private readonly fetcher: BureauFetch;
   private readonly cache_ttl: number;
+  private readonly admin_access: AdminPactAccess;
   private cache?: BureauCache;
   private refresh_promise?: Promise<BureauCache>;
 
@@ -83,15 +78,54 @@ export class Bureau {
       throw new TypeError("Bureau options are required");
     }
     this.federation_url = normalize_federation_url(options.federation_url);
-    this.bureau_token = read_required_string(options.bureau_token, "bureau_token");
+    const bureau_token = read_required_string(options.bureau_token, "bureau_token");
     this.fetcher = options.fetch ?? globalThis.fetch.bind(globalThis);
     this.cache_ttl = read_cache_ttl(options.jwks_cache_ttl);
+    this.admin_access = new AdminPactAccess({
+      base_url: this.federation_url,
+      credential: bureau_token,
+      fetch: options.fetch,
+    });
   }
 
-  /** 获取当前 Bureau 在 Federation 中注册的可信 City 上下文。 */
-  async context(): Promise<BureauContext> {
-    const context = (await this.get_cache(false)).context;
-    return { ...context, capabilities: [...context.capabilities] };
+  /** Federation 余额管理入口。 */
+  get balance(): AdminPactAccess["balance"] {
+    return this.admin_access.balance;
+  }
+
+  /** Federation City 管理入口。 */
+  get cities(): AdminPactAccess["cities"] {
+    return this.admin_access.cities;
+  }
+
+  /** Federation Bureau Token 注册表管理入口。 */
+  get bureaus(): AdminPactAccess["bureaus"] {
+    return this.admin_access.bureaus;
+  }
+
+  /** Federation 环境变量管理入口。 */
+  get env(): AdminPactAccess["env"] {
+    return this.admin_access.env;
+  }
+
+  /** 获取 Federation 管理身份下的 Service 调用器。 */
+  service(name: string): ServiceClient {
+    return this.admin_access.service(name);
+  }
+
+  /** 列出 Federation 暴露的 Service。 */
+  listServices(): Promise<AdminServiceSummary[]> {
+    return this.admin_access.listServices();
+  }
+
+  /** 列出 Federation 模型目录及管理状态。 */
+  listModels(): Promise<AdminModelRecord[]> {
+    return this.admin_access.listModels();
+  }
+
+  /** 读取 Federation 聚合说明文档。 */
+  instruction(): Promise<string> {
+    return this.admin_access.instruction();
   }
 
   /** 从 HTTP Request 或 user_token 中本地识别 Federation 用户。 */
@@ -114,9 +148,6 @@ export class Bureau {
         issuer: cache.discovery.issuer,
       });
       const payload = read_user_token_payload(result.payload);
-      if (payload.city_id !== cache.context.city_id) {
-        throw httpError(403, "Token does not belong to this City");
-      }
       return {
         user_id: payload.user_id,
         city_id: payload.city_id,
@@ -155,25 +186,15 @@ export class Bureau {
     );
     validate_discovery(discovery, this.federation_url);
 
-    const [jwks, context] = await Promise.all([
-      read_json<FederationJwks>(
-        this.fetcher,
-        discovery.jwks_uri,
-        "Federation signing keys unavailable",
-      ),
-      read_json<BureauContext>(
-        this.fetcher,
-        `${this.federation_url}/v1/bureaus/context`,
-        "Bureau context unavailable",
-        { authorization: `Bearer ${this.bureau_token}` },
-      ),
-    ]);
+    const jwks = await read_json<FederationJwks>(
+      this.fetcher,
+      discovery.jwks_uri,
+      "Federation signing keys unavailable",
+    );
     validate_jwks(jwks);
-    validate_context(context);
     const cache: BureauCache = {
       discovery,
       jwks,
-      context,
       expires_at: Date.now() + this.cache_ttl,
     };
     this.cache = cache;
@@ -232,22 +253,14 @@ function validate_jwks(jwks: FederationJwks): void {
   }
 }
 
-function validate_context(context: BureauContext): void {
-  if (!context || typeof context !== "object") throw httpError(503, "Bureau context unavailable");
-  read_required_string(context.token_id, "Bureau token_id");
-  read_required_string(context.city_id, "Bureau city_id");
-  if (!Array.isArray(context.capabilities)) throw httpError(503, "Invalid Bureau capabilities");
-}
-
 async function read_json<T>(
   fetcher: BureauFetch,
   url: string,
   error_message: string,
-  extra_headers: Record<string, string> = {},
 ): Promise<T> {
   let response: Response;
   try {
-    response = await fetcher(url, { headers: { accept: "application/json", ...extra_headers } });
+    response = await fetcher(url, { headers: { accept: "application/json" } });
   } catch {
     throw httpError(503, error_message);
   }

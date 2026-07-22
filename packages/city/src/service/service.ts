@@ -13,7 +13,6 @@ import { Action, type ActionFn } from "./action.js";
 import type { CityTableApi } from "../store/table-api.js";
 import type { Database, DbClient } from "../store/db.js";
 import type { RuntimeUser } from "../federation/auth/types.js";
-import type { RuntimeBureau } from "../types/Bureau.js";
 import type { Authenticator } from "../federation/auth/authenticator.js";
 import type { EnvProvider } from "../federation/runtime.js";
 import type { CityStore } from "./cities/city-store.js";
@@ -29,7 +28,7 @@ import type { BureauTokenStore } from "../federation/auth/bureau-token-store.js"
 // ===========================================================================
 
 /** 当前请求最终解析出的身份。 */
-export type RouteIdentity = "guest" | "user" | "bureau" | "admin";
+export type RouteIdentity = "guest" | "user" | "admin";
 /** Action 可声明的可访问身份。空数组表示免登录。 */
 export type RouteAuth = Array<Exclude<RouteIdentity, "guest">>;
 
@@ -52,8 +51,6 @@ export interface Context {
   output?: unknown;
   /** 当前用户（user_token 解析成功时可用） */
   user?: RuntimeUser;
-  /** 当前 Bureau（bureau_token 解析成功时可用）。 */
-  bureau?: RuntimeBureau;
   /** 当前请求身份 */
   identity?: { kind: RouteIdentity };
   /** 所属 city */

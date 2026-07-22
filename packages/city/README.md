@@ -236,7 +236,7 @@ City 直接访问 Federation，不依赖 Bureau。只有产品需要自己的后
 `fed bureau token` 登记并部署 Bureau：
 
 ```bash
-fed bureau token --city city_product
+fed bureau token
 ```
 
 命令生成的高熵 `bureau_token` 只显示一次，Federation 数据库只保存 hash。将明文
@@ -247,7 +247,8 @@ DOWNCITY_FEDERATION_URL=https://fed.example.com
 DOWNCITY_BUREAU_TOKEN=fb_br_xxx.secret
 ```
 
-Bureau 获取绑定的 City 上下文与 JWKS，并在本地识别请求身份：
+Bureau 使用 Federation JWKS 在本地识别请求身份，并通过 `bureau_token` 调用 Federation
+管理 API：
 
 ```ts
 const bureau = new Bureau({
@@ -257,18 +258,24 @@ const bureau = new Bureau({
 
 const identity = await bureau.identify(request);
 const profile = await (await bureau.user(request)).profile();
+
+await bureau.cities.list();
 ```
 
-Federation 管理控制面使用独立的 `FederationAdmin`：
+City 访问 Bureau 的独立服务时，直接复用当前 `user_token`：
 
 ```ts
-const admin = new FederationAdmin({
+const city = new City({
   federation_url: "https://fed.example.com",
-  admin_secret_key,
+  user_token,
 });
 
-await admin.bureaus.list();
+const reports = city.connect("https://bureau.example.com").service("reports");
+const result = await reports.action("summary").invoke({ range: "today" });
 ```
+
+`Bureau` 不绑定 `city_id`。`identify()` 返回 `user_token` 中的 `city_id`，由 Bureau 自己
+决定是否允许该产品访问某个独立服务。
 
 ## 主要导出
 
@@ -281,7 +288,7 @@ await admin.bureaus.list();
 - `CityModel`
 - `CityModelDescriptor`
 - `Bureau`
-- `FederationAdmin`
+- `CityConnection`
 - `EnvService`
 - `CitiesService`
 

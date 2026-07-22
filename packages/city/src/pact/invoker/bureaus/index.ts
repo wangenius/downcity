@@ -1,8 +1,8 @@
 /**
  * Federation Bureau 注册表管理调用器。
  *
- * 该调用器只服务于 FederationAdmin。Bureau Token 明文由调用方生成，
- * Federation 仅接收 hash 和 City 绑定关系。
+ * 该调用器服务于 Bureau 管理面。Bureau Token 明文由调用方生成，
+ * Federation 仅接收 hash 和生命周期管理信息。
  */
 
 import type { RequestInitLike } from "../../http.js";
@@ -24,7 +24,7 @@ export class BureausInvoker {
     this.req = options.requestJSON;
   }
 
-  /** 登记 Bureau Token hash 与所属 City。 */
+  /** 登记 Bureau Token hash。 */
   register(input: RegisterBureauTokenInput): Promise<BureauTokenSummary> {
     return this.req(`${PREFIX}/register`, {
       method: "POST",

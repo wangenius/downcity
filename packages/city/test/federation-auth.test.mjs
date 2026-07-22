@@ -9,10 +9,10 @@ import os from "node:os"
 import path from "node:path"
 import test from "node:test"
 
-import { Bureau, Federation, FederationAdmin } from "../bin/index.js"
+import { Bureau, Federation } from "../bin/index.js"
 import { createSqliteDb } from "./sqlite-db.mjs"
 
-test("Federation 不默认创建 Bureau Token，Bureau 使用显式注册上下文本地验签", async () => {
+test("Federation 不默认创建 Bureau Token，Bureau 使用 JWKS 本地验签", async () => {
   const temp_dir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-bureau-local-"))
   try {
     const federation = new Federation({
@@ -28,12 +28,11 @@ test("Federation 不默认创建 Bureau Token，Bureau 使用显式注册上下�
       body: JSON.stringify({
         token_id: "br_1234567890abcdef",
         token_hash: "1234567890123456789012345678901234567890123",
-        city_id: "city_downcity",
       }),
     }))
     assert.equal(unauthorized.status, 401)
 
-    const credential = await register_bureau(admin, { city_id: "city_downcity" })
+    const credential = await register_bureau(admin)
     const user_token = await (await federation.getAuthenticator()).createToken({
       city_id: "city_downcity",
       user_id: "user_1",
@@ -59,34 +58,28 @@ test("Federation 不默认创建 Bureau Token，Bureau 使用显式注册上下�
     assert.equal(first.user_id, "user_1")
     assert.equal(first.city_id, "city_downcity")
     assert.deepEqual(first.metadata, { plan: "pro" })
-    assert.equal(bureau.city_id, "city_downcity")
     assert.deepEqual(requested_paths, [
       "/.well-known/downcity.json",
       "/.well-known/jwks.json",
-      "/v1/bureaus/context",
     ])
     assert.equal(requested_paths.includes("/v1/accounts/identify"), false)
 
     const items = await admin.bureaus.list()
     assert.equal(items.length, 1)
-    assert.equal(items[0].city_id, "city_downcity")
     assert.equal("name" in items[0], false)
     assert.equal("token_hash" in items[0], false)
     assert.equal("bureau_token" in items[0], false)
-    assert.equal("name" in await bureau.context(), false)
 
     await admin.bureaus.revoke(credential.token_id)
     const revoked = create_bureau(federation, credential.bureau_token)
-    await assert.rejects(
-      revoked.identify(request),
-      (error) => error?.statusCode === 401,
-    )
+    assert.equal((await revoked.identify(request)).user_id, "user_1")
+    await assert.rejects(revoked.bureaus.list(), (error) => error?.message.includes("401"))
   } finally {
     await fs.rm(temp_dir, { recursive: true, force: true })
   }
 })
 
-test("Bureau 拒绝另一个 City 的有效 user_token", async () => {
+test("Bureau 接受同一 Federation 下不同 City 的有效 user_token", async () => {
   const temp_dir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-bureau-city-"))
   try {
     const federation = new Federation({
@@ -95,18 +88,16 @@ test("Bureau 拒绝另一个 City 的有效 user_token", async () => {
     await federation.health()
     const admin = await create_admin(federation)
     const other_city = await admin.cities.create({ name: "Other Product" })
-    const credential = await register_bureau(admin, { city_id: other_city.city_id })
+    const credential = await register_bureau(admin)
     const user_token = await (await federation.getAuthenticator()).createToken({
       city_id: "city_downcity",
       user_id: "user_1",
       ttl: "1h",
     })
 
-    await assert.rejects(
-      create_bureau(federation, credential.bureau_token).identify(user_token.user_token),
-      (error) => error?.statusCode === 403
-        && error.message === "Token does not belong to this City",
-    )
+    const identity = await create_bureau(federation, credential.bureau_token).identify(user_token.user_token)
+    assert.equal(identity.city_id, "city_downcity")
+    assert.notEqual(identity.city_id, other_city.city_id)
   } finally {
     await fs.rm(temp_dir, { recursive: true, force: true })
   }
@@ -120,7 +111,7 @@ test("Bureau 拒绝被修改签名的 user_token", async () => {
     })
     await federation.health()
     const admin = await create_admin(federation)
-    const credential = await register_bureau(admin, { city_id: "city_downcity" })
+    const credential = await register_bureau(admin)
     const user_token = await (await federation.getAuthenticator()).createToken({
       city_id: "city_downcity",
       user_id: "user_1",
@@ -181,21 +172,20 @@ async function create_admin(federation) {
   const rows = await (await federation.table("env")).select({
     key: "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY",
   })
-  return new FederationAdmin({
+  return new Bureau({
     federation_url: "http://localhost",
-    admin_secret_key: rows[0]?.value ?? "",
+    bureau_token: rows[0]?.value ?? "",
     fetch: (input, init) => federation.fetch(new Request(input, init)),
   })
 }
 
-async function register_bureau(admin, input) {
+async function register_bureau(admin) {
   const token_id = `br_${randomBytes(12).toString("base64url")}`
   const bureau_token = `fb_${token_id}.${randomBytes(32).toString("base64url")}`
   const token_hash = createHash("sha256").update(bureau_token, "utf8").digest("base64url")
   const registered = await admin.bureaus.register({
     token_id,
     token_hash,
-    ...input,
   })
   assert.equal(registered.token_id, token_id)
   assert.equal("token_hash" in registered, false)

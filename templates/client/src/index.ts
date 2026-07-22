@@ -14,7 +14,7 @@ import { stdin as input, stdout as output } from "node:process";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { Agent } from "@downcity/agent";
-import { City, FederationAdmin, type CityModel } from "@downcity/city";
+import { Bureau, City, type CityModel } from "@downcity/city";
 
 const DEFAULT_FEDERATION_URL = "http://127.0.0.1:43127";
 const DEFAULT_CITY_ID = "city_downcity";
@@ -115,9 +115,9 @@ async function resolve_user_token(config: ClientConfig): Promise<string> {
     );
   }
 
-  const admin = new FederationAdmin({
+  const admin = new Bureau({
     federation_url: config.federation_url,
-    admin_secret_key: config.admin_secret_key,
+    bureau_token: config.admin_secret_key,
   });
   const issued = await admin.cities.tokens.apply({
     city_id: config.city_id,

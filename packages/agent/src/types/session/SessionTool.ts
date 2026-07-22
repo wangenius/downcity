@@ -23,3 +23,13 @@ export interface SessionToolInputReady {
   /** 已完成解析的 Tool 输入。 */
   input: unknown;
 }
+
+/** 等待单个 canonical Tool Part 到达的异步句柄。 */
+export interface SessionToolPartWaiter {
+  /** Tool Part 成功持久化后完成，异常结束时拒绝。 */
+  promise: Promise<void>;
+  /** Tool Part 已按 canonical 顺序持久化时释放等待。 */
+  resolve: () => void;
+  /** 当前 step 或 Gate 异常结束时拒绝等待。 */
+  reject: (error: Error) => void;
+}

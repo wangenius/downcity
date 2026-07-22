@@ -49,6 +49,24 @@ class PausingAssistantMessageStore extends JsonlSessionMessageStore {
   }
 }
 
+/** 可让下一次 Assistant 草稿更新失败，用于验证持久化失败边界。 */
+class FailingAssistantMessageStore extends JsonlSessionMessageStore {
+  next_assistant_error = null;
+
+  fail_next_assistant_write(message) {
+    this.next_assistant_error = new Error(message);
+  }
+
+  async write_assistant_message(message) {
+    const error = this.next_assistant_error;
+    if (error) {
+      this.next_assistant_error = null;
+      throw error;
+    }
+    await super.write_assistant_message(message);
+  }
+}
+
 async function create_recorder(
   session_id = "session-recorder-test",
   create_store = (options) => new JsonlSessionMessageStore(options),
@@ -703,7 +721,7 @@ test("Approval Broker 只接受已经准备完整输入的 Tool", async () => {
   );
   assert.equal(approval_broker.list().length, 0);
 
-  await writer.prepare_tool_input({
+  const tool_input_ready = writer.prepare_tool_input({
     tool_call_id: "call-ready-barrier",
     tool_name: "shell_exec",
     input: {
@@ -712,6 +730,14 @@ test("Approval Broker 只接受已经准备完整输入的 Tool", async () => {
       reason: "Inspect requested desktop files",
     },
   });
+  await writer.flush();
+  assert.deepEqual(recorder.get_message(writer.message_id).parts, []);
+  await writer.apply_chunk({
+    type: "tool-input-start",
+    toolCallId: "call-ready-barrier",
+    toolName: "shell_exec",
+  });
+  await tool_input_ready;
   const approval_handle = await approval_broker.request(approval_input);
 
   const tool = recorder.get_message(writer.message_id).parts[0];
@@ -734,7 +760,7 @@ test("Approval Broker 只接受已经准备完整输入的 Tool", async () => {
     events
       .filter((event) => event.variant === "part" && event.type === "tool")
       .map((event) => event.part.state),
-    ["ready", "approval-required", "failed"],
+    ["input-streaming", "ready", "approval-required", "failed"],
   );
 });
 
@@ -748,6 +774,11 @@ test("流式更新与 Approval 共享 Assistant revision 写队列", async () =>
   const writer = await recorder.open_assistant_message({
     turn_id: "turn-approval-race",
     segment_index: 1,
+  });
+  await writer.apply_chunk({
+    type: "tool-input-start",
+    toolCallId: "call-approval-race",
+    toolName: "shell_exec",
   });
   await writer.prepare_tool_input({
     tool_call_id: "call-approval-race",
@@ -789,7 +820,7 @@ test("流式更新与 Approval 共享 Assistant revision 写队列", async () =>
   const assistant = recorder.get_message(writer.message_id);
   const tool = assistant.parts.find((part) => part.type === "tool");
   const text_part = assistant.parts.find((part) => part.type === "text");
-  assert.equal(assistant.revision, 6);
+  assert.equal(assistant.revision, 7);
   assert.equal(tool.state, "approval-required");
   assert.equal(tool.approval.approval_id, approval_handle.approval_id);
   assert.equal(tool.input.cmd, "ls -la ~");
@@ -798,7 +829,7 @@ test("流式更新与 Approval 共享 Assistant revision 写队列", async () =>
     events
       .filter((event) => event.message_id === writer.message_id)
       .map((event) => event.revision),
-    [1, 2, 3, 4, 5, 6],
+    [1, 2, 3, 4, 5, 6, 7],
   );
   assert.equal(
     events.some(
@@ -1015,6 +1046,151 @@ test("空 Text Start 不会抢占后续 Tool 的真实顺序", async () => {
       ["text", 3],
     ],
   );
+});
+
+test("Tool 执行先到时等待 stream 固定 canonical Part 顺序", async () => {
+  const { recorder, file_path } = await create_recorder("pending-tool-input-order-test");
+  const writer = await recorder.open_assistant_message({
+    turn_id: "turn-pending-tool-input",
+    segment_index: 1,
+  });
+
+  await writer.begin_step();
+  const tool_input_ready = writer.prepare_tool_input({
+    tool_call_id: "call-pending",
+    tool_name: "search",
+    input: { query: "downcity" },
+  });
+  await writer.flush();
+  assert.deepEqual(recorder.get_message(writer.message_id).parts, []);
+
+  await writer.apply_chunk({ type: "text-start", id: "text-0" });
+  await writer.apply_chunk({ type: "text-delta", id: "text-0", delta: "第一段" });
+  await writer.apply_chunk({ type: "text-end", id: "text-0" });
+  await writer.apply_chunk({ type: "text-start", id: "text-1" });
+  await writer.apply_chunk({ type: "text-delta", id: "text-1", delta: "第二段" });
+  await writer.apply_chunk({ type: "text-end", id: "text-1" });
+  await writer.apply_chunk({
+    type: "tool-input-start",
+    toolCallId: "call-pending",
+    toolName: "search",
+  });
+  await tool_input_ready;
+  await writer.apply_chunk({
+    type: "tool-input-available",
+    toolCallId: "call-pending",
+    toolName: "search",
+    input: { query: "downcity" },
+  });
+  await writer.apply_chunk({
+    type: "tool-output-available",
+    toolCallId: "call-pending",
+    output: "result",
+  });
+  await writer.finish_step([
+    {
+      part_id: "text-final-0",
+      sequence: 1,
+      type: "text",
+      text: "第一段",
+      state: "done",
+    },
+    {
+      part_id: "text-final-1",
+      sequence: 2,
+      type: "text",
+      text: "第二段",
+      state: "done",
+    },
+    {
+      part_id: "call-pending",
+      sequence: 3,
+      type: "tool",
+      tool_call_id: "call-pending",
+      tool_name: "search",
+      state: "completed",
+      input: { query: "downcity" },
+      output: "result",
+    },
+  ]);
+  await writer.complete();
+
+  const assistant = (await read_jsonl(file_path))[0];
+  assert.deepEqual(assistant.parts.map((part) => part.type), ["text", "text", "tool"]);
+  assert.deepEqual(assistant.parts.map((part) => part.sequence), [1, 2, 3]);
+  assert.deepEqual(assistant.parts[2].input, { query: "downcity" });
+});
+
+test("step abort 与 writer close 会拒绝未释放的 Tool 输入屏障", async () => {
+  const { recorder } = await create_recorder("pending-tool-input-cleanup-test");
+  const aborted_writer = await recorder.open_assistant_message({
+    turn_id: "turn-aborted-tool-input",
+    segment_index: 1,
+  });
+  await aborted_writer.begin_step();
+  const aborted_input = assert.rejects(
+    aborted_writer.prepare_tool_input({
+      tool_call_id: "call-aborted",
+      tool_name: "search",
+      input: { query: "aborted" },
+    }),
+    /canonical step was aborted: call-aborted/,
+  );
+  await aborted_writer.flush();
+  await aborted_writer.abort_step();
+  await aborted_input;
+  await aborted_writer.fail("aborted");
+
+  const closed_writer = await recorder.open_assistant_message({
+    turn_id: "turn-closed-tool-input",
+    segment_index: 2,
+  });
+  const closed_input = assert.rejects(
+    closed_writer.prepare_tool_input({
+      tool_call_id: "call-closed",
+      tool_name: "search",
+      input: { query: "closed" },
+    }),
+    /writer closed with status stopped: call-closed/,
+  );
+  await closed_writer.flush();
+  await closed_writer.stop();
+  await closed_input;
+});
+
+test("Tool Part 持久化失败时不会释放对应执行等待", async () => {
+  const { recorder, store } = await create_recorder(
+    "tool-part-persistence-gate-test",
+    (options) => new FailingAssistantMessageStore(options),
+  );
+  const writer = await recorder.open_assistant_message({
+    turn_id: "turn-tool-part-persistence",
+    segment_index: 1,
+  });
+  await writer.begin_step();
+  const tool_input = assert.rejects(
+    writer.prepare_tool_input({
+      tool_call_id: "call-persistence-failed",
+      tool_name: "search",
+      input: { query: "downcity" },
+    }),
+    /canonical step was aborted: call-persistence-failed/,
+  );
+
+  store.fail_next_assistant_write("disk full");
+  await assert.rejects(
+    writer.apply_chunk({
+      type: "tool-input-start",
+      toolCallId: "call-persistence-failed",
+      toolName: "search",
+    }),
+    /disk full/,
+  );
+  assert.deepEqual(recorder.get_message(writer.message_id).parts, []);
+
+  await writer.abort_step();
+  await tool_input;
+  await writer.fail("disk full");
 });
 
 test("step 最终快照缺少 canonical Tool chunk 时拒绝猜测顺序", async () => {

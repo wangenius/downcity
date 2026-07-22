@@ -12,6 +12,7 @@ import {
   to_session_json_value,
   to_session_provider_metadata,
 } from "@/session/messages/SessionJsonValue.js";
+import { SessionToolPartGate } from "@/session/messages/SessionToolPartGate.js";
 import type {
   SessionAssistantFilePart,
   SessionAssistantMessage,
@@ -32,6 +33,7 @@ export class SessionAssistantMessageWriter {
   >();
   private readonly active_text_part_ids = new Map<string, string>();
   private readonly current_step_part_ids = new Set<string>();
+  private readonly tool_part_gate = new SessionToolPartGate();
   private write_chain: Promise<void> = Promise.resolve();
   private step_index = 0;
   private step_active = false;
@@ -108,8 +110,8 @@ export class SessionAssistantMessageWriter {
   /** 释放异常结束的 step 作用域并保留已经写入的 canonical Parts。 */
   async abort_step(): Promise<void> {
     await this.enqueue_write(async () => {
-      if (!this.step_active) return;
-      this.reset_step_state();
+      this.tool_part_gate.reject_pending("Assistant canonical step was aborted");
+      if (this.step_active) this.reset_step_state();
     });
   }
 
@@ -196,7 +198,7 @@ export class SessionAssistantMessageWriter {
           });
           return;
         }
-        await this.upsert_tool(chunk.toolCallId, {
+        await this.create_tool(chunk.toolCallId, {
           tool_name: chunk.toolName,
           state: "input-streaming",
           input_text: "",
@@ -210,6 +212,7 @@ export class SessionAssistantMessageWriter {
           ...(tool_metadata !== undefined ? { tool_metadata } : {}),
           ...(chunk.dynamic !== undefined ? { dynamic: chunk.dynamic } : {}),
         });
+        this.tool_part_gate.mark_available(chunk.toolCallId);
         return;
       }
       case "tool-input-delta": {
@@ -251,7 +254,7 @@ export class SessionAssistantMessageWriter {
           });
           return;
         }
-        await this.upsert_tool(chunk.toolCallId, {
+        const changes = {
           tool_name: chunk.toolName,
           state: "ready",
           input: to_session_json_value(chunk.input),
@@ -264,7 +267,13 @@ export class SessionAssistantMessageWriter {
           ...(chunk.title !== undefined ? { title: chunk.title } : {}),
           ...(tool_metadata !== undefined ? { tool_metadata } : {}),
           ...(chunk.dynamic !== undefined ? { dynamic: chunk.dynamic } : {}),
-        });
+        } as const;
+        if (tool) {
+          await this.upsert_tool(chunk.toolCallId, changes);
+        } else {
+          await this.create_tool(chunk.toolCallId, changes);
+          this.tool_part_gate.mark_available(chunk.toolCallId);
+        }
         return;
       }
       case "tool-input-error": {
@@ -449,18 +458,21 @@ export class SessionAssistantMessageWriter {
 
   /** Executor 在调用 Tool 实现前写入完整输入。 */
   async prepare_tool_input(input: SessionToolInputReady): Promise<void> {
+    await this.tool_part_gate.wait_until_available(input.tool_call_id);
     await this.enqueue_write(async () => {
+      if (this.closed) throw new Error("Assistant Message writer is closed");
       const current = this.find_tool(input.tool_call_id);
-      if (current && current.state !== "input-streaming" && current.state !== "ready") {
+      if (!current) {
+        throw new Error(
+          `Assistant canonical Tool Part not found: ${input.tool_call_id}`,
+        );
+      }
+      if (current.state !== "input-streaming" && current.state !== "ready") {
         throw new Error(
           `Tool input cannot be prepared from ${current.state}: ${input.tool_call_id}`,
         );
       }
-      await this.upsert_tool(input.tool_call_id, {
-        tool_name: input.tool_name,
-        state: "ready",
-        input: to_session_json_value(input.input),
-      });
+      await this.write_prepared_tool_input(input);
     });
   }
 
@@ -692,20 +704,56 @@ export class SessionAssistantMessageWriter {
     this.pending_text_parts.delete(part_id);
   }
 
-  /** 创建或更新 Tool Part 完整快照。 */
+  /** 更新已经由 canonical stream 创建的 Tool Part。 */
   private async upsert_tool(
     tool_call_id: string,
     changes: Pick<SessionAssistantToolPart, "tool_name" | "state"> &
       Partial<Omit<SessionAssistantToolPart, "part_id" | "type" | "tool_call_id" | "tool_name" | "state">>,
   ): Promise<void> {
     const current = this.find_tool(tool_call_id);
+    if (!current) {
+      throw new Error(
+        `Assistant canonical Tool Part not found: ${tool_call_id}`,
+      );
+    }
     await this.upsert_part({
-      ...(current || {}),
+      ...current,
       part_id: `tool:${tool_call_id}`,
-      sequence: current?.sequence || this.next_part_sequence(),
+      sequence: current.sequence,
       type: "tool",
       tool_call_id,
       ...changes,
+    });
+  }
+
+  /** 仅由 Tool 输入 stream chunk 创建 canonical Tool Part。 */
+  private async create_tool(
+    tool_call_id: string,
+    changes: Pick<SessionAssistantToolPart, "tool_name" | "state"> &
+      Partial<Omit<SessionAssistantToolPart, "part_id" | "type" | "tool_call_id" | "tool_name" | "state">>,
+  ): Promise<void> {
+    if (this.find_tool(tool_call_id)) {
+      throw new Error(
+        `Assistant canonical Tool Part already exists: ${tool_call_id}`,
+      );
+    }
+    await this.upsert_part({
+      part_id: `tool:${tool_call_id}`,
+      sequence: this.next_part_sequence(),
+      type: "tool",
+      tool_call_id,
+      ...changes,
+    });
+  }
+
+  /** 将 Executor 完整输入写入已经由 stream 创建的 Tool Part。 */
+  private async write_prepared_tool_input(
+    input: SessionToolInputReady,
+  ): Promise<void> {
+    await this.upsert_tool(input.tool_call_id, {
+      tool_name: input.tool_name,
+      state: "ready",
+      input: to_session_json_value(input.input),
     });
   }
 
@@ -721,6 +769,9 @@ export class SessionAssistantMessageWriter {
     status: "completed" | "stopped" | "failed",
   ): Promise<void> {
     if (this.closed) return;
+    this.tool_part_gate.close(
+      `Assistant Message writer closed with status ${status}`,
+    );
     this.reset_step_state();
     await this.recorder.complete_assistant_message(this.message_id, status);
     this.closed = true;

@@ -42,6 +42,8 @@ const unsubscribe = session.subscribe((mutation) => {
 
 Tool 生命周期统一使用 `variant: "part"`、`type: "tool"`。等待用户决定的 unrestricted 请求会在 `mutation.part.approval` 中携带完整审批信息；审批决定通过独立的 Session 命令提交，不通过事件回调回复：
 
+同一 Assistant step 内的 Part 顺序始终与模型流一致。即使 Tool 已提前进入执行准备，它也会等待对应的 Tool Part 出现在流中，不会越过尚未写入的前置文本。等待按 `tool_call_id` 相互隔离，多个 Tool 仍可并发执行；客户端应按 Mutation 与历史快照中的顺序直接渲染，无需自行重排。
+
 ```ts
 const unsubscribe = session.subscribe((mutation) => {
   if (

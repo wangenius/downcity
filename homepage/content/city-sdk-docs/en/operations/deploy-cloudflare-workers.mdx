@@ -165,10 +165,14 @@ fed deploy ./my-city --dry-run
 - if `deployment.resources.storage` is declared, prepares the corresponding R2 bucket and creates it automatically when missing
 - generates Wrangler config temporarily instead of writing it into the project directory
 - runs `wrangler deploy --config <generated-wrangler.toml>`
-- automatically registers the deployed Worker URL as the current Federation
+- requests Worker `/health` to initialize Federation system tables and default keys
+- reads the actual admin key from remote D1 and encrypts it in the local Federation registry
+- registers the Worker URL, deploy state, and admin key in the local Federation registry without changing the active Federation
 - requests Worker `/health` when `--verify` is passed
 
-Deploy output is grouped by stage: `Project`, `Version`, `Build`, `Typecheck`, `D1 Database`, `Queue`, `Storage`, `Wrangler`, `Deployment`, and `Active Server`.
+Deploy output is grouped by stage: `Project`, `Version`, `Build`, `Typecheck`, `D1 Database`, `Queue`, `Storage`, `Admin Key`, `Wrangler`, `Deployment`, and `Federation Registry`.
+
+downfed has no default Federation. A deployed instance appears in the downfed list, but `active_server_url` is written only when the user explicitly opens that Federation.
 
 `federation.json` stays as the commit-safe project declaration. Business secrets, provider keys, and service env should be written into Federation's own env table instead of `federation.json`.
 
@@ -201,16 +205,11 @@ Expected shape:
 }
 ```
 
-## 8. Retrieve the admin key
+## 8. Admin key
 
-On first boot, Federation stores `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` in its own `env` table. For Workers + D1, retrieve it from the remote D1 database:
+Federation generates an admin key on first boot and stores it in the D1 `env` table. `fed deploy` waits for `/health` initialization, reads the actual key from remote D1, and encrypts it in the local Federation registry. The key is never written to `federation.json`.
 
-```bash
-npx wrangler d1 execute my-city-db --remote \
-  --command "SELECT value FROM env WHERE key='DOWNCITY_FEDERATION_ADMIN_SECRET_KEY'"
-```
-
-Keep this key in a trusted place. It is the credential used by `Admin City`, fed CLI, or direct admin HTTP calls.
+After the user opens that Federation in downfed, the admin workspace and `fed query` use the locally saved key automatically. No manual D1 query is required.
 
 ## 9. Write provider and service env
 

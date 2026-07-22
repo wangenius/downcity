@@ -103,6 +103,20 @@ test("Cloudflare 模板通过统一 deployment 配置生成 Wrangler binding", a
   }
 });
 
+test("Cloudflare D1 JSON 输出可以解析 admin key", async () => {
+  const output_parser = await import("../bin/federation/deploy/runtime/CloudflareAdminKeyOutput.js");
+  const output = JSON.stringify([{
+    results: [{ value: "admin_cloudflare_test" }],
+    success: true,
+  }]);
+  assert.equal(
+    output_parser.extract_cloudflare_admin_key(output),
+    "admin_cloudflare_test",
+  );
+  assert.equal(output_parser.extract_cloudflare_admin_key("invalid"), undefined);
+  assert.equal(output_parser.extract_cloudflare_admin_key('[{"results":[]}]'), undefined);
+});
+
 test("默认 Local 模板自动注入可用的 admin key", async () => {
   const platform_root = create_temp_dir("downcity-fed-admin-state-");
   const project_dir = create_temp_dir("downcity-fed-admin-project-");
@@ -135,6 +149,7 @@ test("默认 Local 模板自动注入可用的 admin key", async () => {
     server = session.read_server_by_fed_id(config_file.config.id, "local");
     assert.ok(server);
     assert.match(server.admin_secret_key, /^admin_[0-9a-f]{64}$/u);
+    assert.equal(session.readActiveServer(), undefined);
 
     const unauthorized = await fetch(`${server.base_url}/v1/federation/instruction`);
     assert.equal(unauthorized.status, 401);
@@ -146,6 +161,47 @@ test("默认 Local 模板自动注入可用的 admin key", async () => {
     if (server) await deployer.stop_managed_local_server(server);
     fs.rmSync(platform_root, { recursive: true, force: true });
     fs.rmSync(project_dir, { recursive: true, force: true });
+    delete process.env.DC_PLATFORM_ROOT;
+  }
+});
+
+test("部署 URL 变化时只更新 registry，不自动迁移 active server", async () => {
+  const platform_root = create_temp_dir("downcity-fed-registry-state-");
+  process.env.DC_PLATFORM_ROOT = platform_root;
+  try {
+    const session = await import("../bin/federation/core/session.js");
+    const config = {
+      schema: 1,
+      type: "federation",
+      id: "fed_registry_test",
+      name: "registry-test",
+      entry: "src/index.ts",
+      deployment: {
+        target: "cloudflare-workers",
+        resources: {},
+      },
+    };
+    const first = session.register_deployed_server({
+      config,
+      project_dir: platform_root,
+      base_url: "https://first.example.workers.dev",
+      status: "deployed",
+      admin_secret_key: "admin_test_key",
+    });
+    assert.equal(session.readActiveServer(), undefined);
+
+    session.setActiveServer(first.base_url);
+    const second = session.register_deployed_server({
+      config,
+      project_dir: platform_root,
+      base_url: "https://second.example.workers.dev",
+      status: "deployed",
+    });
+    assert.equal(session.readActiveServer(), undefined);
+    assert.equal(session.readConfig().servers.length, 1);
+    assert.equal(second.admin_secret_key, "admin_test_key");
+  } finally {
+    fs.rmSync(platform_root, { recursive: true, force: true });
     delete process.env.DC_PLATFORM_ROOT;
   }
 });
@@ -210,11 +266,18 @@ http.createServer((request, response) => {
     const previous_cwd = process.cwd();
     process.chdir(outside_dir);
     try {
-      assert.equal(session.readActiveServer().fed_id, config.id);
+      assert.equal(session.readActiveServer(), undefined);
+      assert.equal(session.read_server_by_fed_id(config.id, "local").fed_id, config.id);
     } finally {
       process.chdir(previous_cwd);
       fs.rmSync(outside_dir, { recursive: true, force: true });
     }
+
+    const selected_server = session.addServer({
+      base_url: "https://selected.example.com",
+      name: "selected",
+    });
+    assert.equal(session.readActiveServer().base_url, selected_server.base_url);
 
     await deployer.deploy_local_federation(config_file, options);
     latest_server = session.read_server_by_fed_id(config.id, "local");
@@ -224,6 +287,11 @@ http.createServer((request, response) => {
     assert.equal(latest_server.admin_secret_key, first_server.admin_secret_key);
     assert.equal(is_process_alive(first_server.pid), false);
     assert.equal((await fetch(`${latest_server.base_url}/health`)).status, 200);
+    assert.equal(session.readActiveServer().base_url, selected_server.base_url);
+
+    session.removeServer(selected_server.base_url);
+    assert.equal(session.readActiveServer(), undefined);
+    assert.equal(session.read_server_by_fed_id(config.id, "local").base_url, latest_server.base_url);
   } finally {
     if (latest_server) await deployer.stop_managed_local_server(latest_server);
     fs.rmSync(platform_root, { recursive: true, force: true });

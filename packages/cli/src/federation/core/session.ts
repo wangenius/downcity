@@ -71,7 +71,7 @@ export function writeConfig(config: ClientConfig): void {
   const normalizedServers = normalizeServers(config.servers);
   const active = normalizedServers.find((server) => server.base_url === config.active_server_url)
     ? config.active_server_url
-    : normalizedServers[0]?.base_url;
+    : undefined;
 
   writeStoredConfig({
     active_server_url: active,
@@ -237,13 +237,16 @@ export function updateServer(
 
 /**
  * 删除 server。
+ *
+ * 关键说明（中文）
+ * - 删除当前 active server 后只清空选择，不隐式切换到其他 server。
  */
 export function removeServer(baseUrl: string): void {
   const config = readConfig();
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
   const nextServers = config.servers.filter((server) => server.base_url !== normalizedBaseUrl);
   const nextActive = config.active_server_url === normalizedBaseUrl
-    ? nextServers[0]?.base_url
+    ? undefined
     : config.active_server_url;
 
   writeConfig({
@@ -273,7 +276,13 @@ export function read_server_by_fed_id(
   ));
 }
 
-/** 登记一次由 `fed deploy` 创建的实例，并将它设为 active。 */
+/**
+ * 登记一次由 `fed deploy` 创建的实例。
+ *
+ * 关键说明（中文）
+ * - deploy 只更新实例元数据与 admin key，不修改用户显式选择的 active server。
+ * - 同一 Fed 的部署 URL 变化时会替换旧记录；若旧记录原本为 active，写入时会清空失效选择。
+ */
 export function register_deployed_server(input: {
   /** 部署项目配置。 */
   config: FederationProjectConfig;
@@ -294,18 +303,20 @@ export function register_deployed_server(input: {
   /** 部署器明确注入的 admin key。 */
   admin_secret_key?: string;
 }): ServerProfile {
-  const existing = read_server_by_fed_id(input.config.id, input.config.deployment.target);
-  const existing_by_url = readServer(input.base_url);
+  const config = readConfig();
+  const normalized_base_url = normalizeBaseUrl(input.base_url);
+  const existing = config.servers.find((server) => (
+    server.fed_id === input.config.id
+    && server.target === input.config.deployment.target
+  ));
+  const existing_by_url = config.servers.find((server) => server.base_url === normalized_base_url);
   const preserved_key = input.admin_secret_key?.trim()
     || existing?.admin_secret_key
     || existing_by_url?.admin_secret_key
     || "";
-  if (existing && existing.base_url !== normalizeBaseUrl(input.base_url)) {
-    removeServer(existing.base_url);
-  }
-  return addServer({
+  const normalized = normalizeServer({
     name: input.config.name,
-    base_url: input.base_url,
+    base_url: normalized_base_url,
     admin_secret_key: preserved_key,
     fed_id: input.config.id,
     target: input.config.deployment.target,
@@ -318,6 +329,19 @@ export function register_deployed_server(input: {
     status: input.status,
     config_snapshot: input.config,
   });
+  const next_servers = config.servers.filter((server) => (
+    server.base_url !== normalized.base_url
+    && !(
+      server.fed_id === input.config.id
+      && server.target === input.config.deployment.target
+    )
+  ));
+  next_servers.push(normalized);
+  writeConfig({
+    ...config,
+    servers: next_servers,
+  });
+  return normalized;
 }
 
 // ============================================================
@@ -331,11 +355,7 @@ function readServersFromConfig(raw: Record<string, unknown>): ServerProfile[] {
   for (const item of input) {
     if (!item || typeof item !== "object") continue;
     const record = item as Record<string, unknown>;
-    const rawBaseUrl = typeof record.base_url === "string"
-      ? record.base_url
-      : typeof record.url === "string"
-        ? record.url
-        : "";
+    const rawBaseUrl = typeof record.base_url === "string" ? record.base_url : "";
 
     if (!rawBaseUrl.trim()) continue;
 
@@ -364,15 +384,6 @@ function readServersFromConfig(raw: Record<string, unknown>): ServerProfile[] {
     });
   }
 
-  if (servers.length === 0 && typeof raw.base_url === "string" && raw.base_url.trim()) {
-    const normalizedBaseUrl = normalizeBaseUrl(raw.base_url);
-    servers.push({
-      name: deriveServerName(normalizedBaseUrl),
-      base_url: normalizedBaseUrl,
-      admin_secret_key: "",
-    });
-  }
-
   return servers;
 }
 
@@ -386,9 +397,7 @@ function normalizeCliLocale(value: unknown): CliLocale | undefined {
 function readActiveServerURL(raw: Record<string, unknown>, servers: ServerProfile[]): string | undefined {
   const rawActive = typeof raw.active_server_url === "string"
     ? raw.active_server_url
-    : typeof raw.base_url === "string"
-      ? raw.base_url
-      : "";
+    : "";
 
   if (rawActive.trim()) {
     const normalized = normalizeBaseUrl(rawActive);
@@ -397,7 +406,7 @@ function readActiveServerURL(raw: Record<string, unknown>, servers: ServerProfil
     }
   }
 
-  return servers[0]?.base_url;
+  return undefined;
 }
 
 function normalizeServers(servers: ServerProfile[]): ServerProfile[] {

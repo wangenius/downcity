@@ -28,8 +28,12 @@ import { resolveQueue } from "@/federation/deploy/runtime/QueueResolver.js";
 import { resolveR2Bucket } from "@/federation/deploy/runtime/R2BucketResolver.js";
 import { writeWranglerConfig } from "@/federation/deploy/runtime/WranglerConfigWriter.js";
 import { runCommand } from "@/federation/deploy/runtime/CommandRunner.js";
+import { extract_cloudflare_admin_key } from "@/federation/deploy/runtime/CloudflareAdminKeyOutput.js";
 import { bumpProjectPatchVersion } from "@/federation/deploy/runtime/ProjectVersionManager.js";
 import { runPackageDeployScripts } from "@/federation/deploy/runtime/PackageScriptRunner.js";
+
+const WORKER_INITIALIZATION_TIMEOUT_MS = 30_000;
+const WORKER_HEALTH_RETRY_MS = 500;
 
 /**
  * 部署 Cloudflare Workers City 项目。
@@ -38,6 +42,7 @@ export async function deploy_cloudflare_workers(
   config_file: FederationProjectConfigFile,
   options: FederationDeployOptions,
 ): Promise<void> {
+  const registered = read_server_by_fed_id(config_file.config.id, "cloudflare-workers");
   emitCliBlock({
     tone: "accent",
     title: "Project",
@@ -49,7 +54,6 @@ export async function deploy_cloudflare_workers(
   });
 
   if (options.verify_only) {
-    const registered = read_server_by_fed_id(config_file.config.id, "cloudflare-workers");
     await verifyWorker(registered?.base_url);
     return;
   }
@@ -129,17 +133,34 @@ export async function deploy_cloudflare_workers(
   });
 
   let output = "";
+  let worker_url: string | undefined;
+  let admin_secret_key: string | undefined;
   try {
     output = await runWranglerDeploy(config_file, {
       account_id,
       config_path: wrangler_result.config_path,
       dry_run: options.dry_run,
     });
+    worker_url = config_file.config.deployment.url ?? extractWorkerUrl(output);
+    if (worker_url && !options.dry_run) {
+      await wait_for_worker_health(worker_url, WORKER_INITIALIZATION_TIMEOUT_MS);
+      admin_secret_key = await read_cloudflare_admin_key(config_file, {
+        account_id,
+        config_path: wrangler_result.config_path,
+        database_name: d1_result.summary.name,
+      });
+    }
   } finally {
     rmSync(dirname(wrangler_result.config_path), { recursive: true, force: true });
   }
 
-  const worker_url = config_file.config.deployment.url ?? extractWorkerUrl(output);
+  if (!worker_url && !options.dry_run) {
+    throw new CliError({
+      title: "Unable to read deployed Worker URL",
+      note: "Wrangler completed without a detectable workers.dev URL.",
+      fix: "Set deployment.url in federation.json and rerun `fed deploy`.",
+    });
+  }
 
   emitCliBlock({
     tone: "success",
@@ -161,25 +182,27 @@ export async function deploy_cloudflare_workers(
   });
 
   if (worker_url && !options.dry_run) {
-    const active_server = register_deployed_server({
+    const registered_server = register_deployed_server({
       config: config_file.config,
       project_dir: config_file.project_dir,
       base_url: worker_url,
       status: "deployed",
+      admin_secret_key,
     });
     emitCliBlock({
       tone: "success",
-      title: "Active Server",
+      title: "Federation Registry",
       facts: [
-        { label: "name", value: active_server.name },
-        { label: "url", value: active_server.base_url },
-        { label: "status", value: "connected" },
+        { label: "name", value: registered_server.name },
+        { label: "url", value: registered_server.base_url },
+        { label: "admin", value: registered_server.admin_secret_key ? "configured" : "missing" },
+        { label: "status", value: "registered" },
       ],
     });
   } else {
     emitCliBlock({
       tone: "info",
-      title: "Active Server",
+      title: "Federation Registry",
       facts: [
         { label: "name", value: config_file.config.name },
         ...(worker_url ? [{ label: "url", value: worker_url }] : []),
@@ -263,6 +286,83 @@ async function run_custom_cloudflare_deploy(
     note: deployed_url ? undefined : "Set deployment.url to register this deployment in fed.",
   });
   if (options.verify && deployed_url) await verifyWorker(deployed_url);
+}
+
+/**
+ * 从远程 D1 读取 Federation 初始化后生成的 admin key。
+ *
+ * 关键说明（中文）
+ * - 查询语句只包含固定 env key，admin key 本身不会进入命令参数。
+ * - 读取成功后由部署登记流程写入本地加密 registry。
+ */
+async function read_cloudflare_admin_key(
+  config_file: FederationProjectConfigFile,
+  params: {
+    account_id?: string;
+    config_path: string;
+    database_name?: string;
+  },
+): Promise<string> {
+  if (!params.database_name) {
+    throw new CliError({
+      title: "Unable to resolve Federation admin key",
+      note: "The Cloudflare deployment has no D1 database.",
+      fix: "Declare deployment.resources.d1 and rerun `fed deploy`.",
+    });
+  }
+  const sql = "SELECT value FROM env WHERE key = 'DOWNCITY_FEDERATION_ADMIN_SECRET_KEY' LIMIT 1";
+  const output = await runCommand({
+    label: "Read Federation admin key",
+    command: [
+      "pnpm exec wrangler d1 execute",
+      shellQuote(params.database_name),
+      "--remote --json --yes",
+      `--command ${shellQuote(sql)}`,
+      `--config ${shellQuote(params.config_path)}`,
+    ].join(" "),
+    cwd: config_file.project_dir,
+    env: { CLOUDFLARE_ACCOUNT_ID: params.account_id },
+    capture: true,
+  });
+  const admin_secret_key = extract_cloudflare_admin_key(output);
+  if (!admin_secret_key) {
+    throw new CliError({
+      title: "Unable to resolve Federation admin key",
+      note: "The Federation env table did not return DOWNCITY_FEDERATION_ADMIN_SECRET_KEY.",
+      fix: "Check Worker initialization and the remote D1 env table, then rerun `fed deploy`.",
+    });
+  }
+  emitCliBlock({
+    tone: "success",
+    title: "Admin Key",
+    facts: [
+      { label: "source", value: "Cloudflare D1" },
+      { label: "status", value: "saved locally" },
+    ],
+  });
+  return admin_secret_key;
+}
+
+/** 等待 Worker 完成 Federation 初始化并创建系统表。 */
+async function wait_for_worker_health(base_url: string, timeout_ms: number): Promise<void> {
+  const health_url = `${base_url.replace(/\/+$/u, "")}/health`;
+  const deadline = Date.now() + timeout_ms;
+  let last_error = "health endpoint did not respond";
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(health_url);
+      if (response.ok) return;
+      last_error = `${health_url} returned HTTP ${response.status}`;
+    } catch (error) {
+      last_error = error instanceof Error ? error.message : String(error);
+    }
+    await new Promise((resolve) => setTimeout(resolve, WORKER_HEALTH_RETRY_MS));
+  }
+  throw new CliError({
+    title: "Worker initialization failed",
+    note: last_error,
+    fix: "Check the deployed Worker logs and /health endpoint, then rerun `fed deploy`.",
+  });
 }
 
 /**

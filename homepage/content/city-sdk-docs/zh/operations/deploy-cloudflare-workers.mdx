@@ -165,10 +165,14 @@ fed deploy ./my-city --dry-run
 - 如果声明了 `deployment.resources.storage`，按对应名称查找 R2 bucket；不存在时自动创建
 - 临时生成 Wrangler 配置，不写入项目目录
 - 执行 `wrangler deploy --config <generated-wrangler.toml>`
-- 自动把部署出来的 Worker URL 注册成当前 Federation
+- 请求 Worker `/health` 完成 Federation 系统表和默认 key 初始化
+- 从远程 D1 读取实际 admin key，并加密保存到本地 Federation registry
+- 把 Worker URL、部署状态和 admin key 登记到本地 Federation registry，但不修改当前 active Federation
 - 在传入 `--verify` 时请求 Worker `/health`
 
-部署输出会按阶段汇总显示：`Project`、`Version`、`Build`、`Typecheck`、`D1 Database`、`Queue`、`Storage`、`Wrangler`、`Deployment` 和 `Active Server`。
+部署输出会按阶段汇总显示：`Project`、`Version`、`Build`、`Typecheck`、`D1 Database`、`Queue`、`Storage`、`Admin Key`、`Wrangler`、`Deployment` 和 `Federation Registry`。
+
+downfed 没有默认 Federation。部署完成后，新实例会出现在 downfed 列表中，但只有用户明确打开它时才会写入 `active_server_url`。
 
 `federation.json` 只保留可提交的项目声明。业务密钥、provider keys 和 service env 应该写入 Federation 自己的 env 表，不写入 `federation.json`。
 
@@ -201,16 +205,11 @@ curl https://my-city.<your-subdomain>.workers.dev/health
 }
 ```
 
-## 8. 取回 admin key
+## 8. Admin key
 
-Federation 首次启动时会把 `DOWNCITY_FEDERATION_ADMIN_SECRET_KEY` 写入自己的 `env` 表。Workers + D1 部署下，可以从远程 D1 查询：
+Federation 首次启动时会生成 admin key 并写入 D1 `env` 表。`fed deploy` 会等待 `/health` 初始化完成，再从远程 D1 读取实际 key，加密保存到本地 Federation registry；key 不会写入 `federation.json`。
 
-```bash
-npx wrangler d1 execute my-city-db --remote \
-  --command "SELECT value FROM env WHERE key='DOWNCITY_FEDERATION_ADMIN_SECRET_KEY'"
-```
-
-请把这个 key 存在可信位置。它是 `Admin City`、fed CLI 或直接调用 admin HTTP 接口时使用的管理凭证。
+用户在 downfed 中打开该 Federation 后，admin 工作区和 `fed query` 会自动使用本地保存的 key，不再需要手动执行 D1 查询。
 
 ## 9. 写入 provider 和 service env
 

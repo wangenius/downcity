@@ -11,6 +11,7 @@ import { EnvStore } from "../service/env/env-store.js";
 import { CityStore } from "../service/cities/city-store.js";
 import { Authenticator } from "./auth/authenticator.js";
 import { FederationKeyStore } from "./auth/federation-key-store.js";
+import { CREATE_FEDERATION_ACTIVE_AUTH_KEY_INDEX_SQL } from "./auth/key-schema.js";
 import { UserTokenAuthority } from "./auth/user-token-authority.js";
 import { BureauTokenStore } from "./auth/bureau-token-store.js";
 import { randomSecret } from "../utils/helpers.js";
@@ -98,7 +99,7 @@ export async function initialize_federation(params: {
   const key_store = new FederationKeyStore(
     auth_key_table as CityTableApi<FederationAuthKeyRecord>,
   );
-  await key_store.ensure_active_key();
+  await initialize_federation_auth_keys(key_store, db_client);
   const token_authority = new UserTokenAuthority(
     key_store,
     `urn:downcity:federation:${federation_id}`,
@@ -166,20 +167,50 @@ function collect_service_schemas(services: Service[]): CityUserSchemaInput {
  * - 缺失时自动生成，避免宿主环境额外配置负担
  */
 async function bootstrap_default_keys(
-  env: { get(key: string): string | undefined; upsert(input: { key: string; value: string }): Promise<unknown> },
+  env: {
+    get(key: string): string | undefined;
+    ensure(input: { key: string; value: string }): Promise<unknown>;
+  },
 ): Promise<void> {
   const admin_key = env.get("DOWNCITY_FEDERATION_ADMIN_SECRET_KEY") || `admin_${randomSecret()}`;
   if (!env.get("DOWNCITY_FEDERATION_ADMIN_SECRET_KEY")) {
-    await env.upsert({ key: "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY", value: admin_key });
+    await env.ensure({ key: "DOWNCITY_FEDERATION_ADMIN_SECRET_KEY", value: admin_key });
   }
 
   const federation_id = env.get("DOWNCITY_FEDERATION_ID") || `fed_${randomSecret(16)}`;
   if (!env.get("DOWNCITY_FEDERATION_ID")) {
-    await env.upsert({ key: "DOWNCITY_FEDERATION_ID", value: federation_id });
+    await env.ensure({ key: "DOWNCITY_FEDERATION_ID", value: federation_id });
   }
 
   const better_auth_secret = env.get("BETTER_AUTH_SECRET") || `better_auth_${randomSecret()}${randomSecret()}`;
   if (!env.get("BETTER_AUTH_SECRET")) {
-    await env.upsert({ key: "BETTER_AUTH_SECRET", value: better_auth_secret });
+    await env.ensure({ key: "BETTER_AUTH_SECRET", value: better_auth_secret });
   }
+}
+
+/**
+ * 初始化 Federation user token Key Ring 的数据库不变量。
+ *
+ * 关键说明（中文）
+ * - 先收敛旧版本可能留下的多 active 数据，再建立 partial unique index。
+ * - 新数据库建立索引后才生成首把 key，所有 Worker isolate 通过数据库约束竞争唯一胜者。
+ * - 重试覆盖滚动发布期间旧实例恰好插入 active key 的极短窗口。
+ */
+async function initialize_federation_auth_keys(
+  key_store: FederationKeyStore,
+  db_client: { $client: DbClient },
+): Promise<void> {
+  const max_attempts = 3;
+  let last_error: unknown;
+  for (let attempt = 1; attempt <= max_attempts; attempt += 1) {
+    await key_store.reconcile_active_keys();
+    try {
+      await executeDDL(db_client, CREATE_FEDERATION_ACTIVE_AUTH_KEY_INDEX_SQL);
+      await key_store.ensure_active_key();
+      return;
+    } catch (error) {
+      last_error = error;
+    }
+  }
+  throw last_error;
 }

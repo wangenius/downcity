@@ -140,6 +140,13 @@ class DatabaseEnvProvider implements EnvProvider {
     return entry;
   }
 
+  async ensure(input: EnvUpsertInput): Promise<EnvEntry> {
+    if (!this.store) throw new Error("Env store is not ready");
+    const entry = await this.store.ensure(input);
+    this.cache.set(entry.key, entry.value);
+    return entry;
+  }
+
   async remove(key: string): Promise<void> {
     if (!this.store) throw new Error("Env store is not ready");
     const normalized_key = normalizeEnvKey(key);

@@ -160,6 +160,84 @@ test("Federation issuer 和签名公钥在 runtime 重启后保持不变", async
   }
 })
 
+test("多个 Federation 实例并发首次启动时共享唯一 issuer 和 active signing key", async () => {
+  const temp_dir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-fed-concurrent-init-"))
+  try {
+    const db = createSqliteDb(path.join(temp_dir, "test.sqlite"))
+    const federations = Array.from({ length: 8 }, () => new Federation({ db }))
+
+    await Promise.all(federations.map((federation) => federation.health()))
+
+    const key_rows = await (await federations[0].table("federation_auth_keys")).select()
+    assert.equal(key_rows.filter((row) => row.status === "active").length, 1)
+    assert.equal(key_rows.length, 1)
+
+    const env_rows = await (await federations[0].table("env")).select()
+    assert.equal(env_rows.length, 3)
+    assert.equal(new Set(env_rows.map((row) => row.key)).size, 3)
+
+    const discoveries = await Promise.all(federations.map(async (federation) => (
+      await (await federation.fetch(new Request(
+        "https://fed.example.com/.well-known/downcity.json",
+      ))).json()
+    )))
+    assert.equal(new Set(discoveries.map((item) => item.issuer)).size, 1)
+  } finally {
+    await fs.rm(temp_dir, { recursive: true, force: true })
+  }
+})
+
+test("Federation 启动时将历史多 active signing key 自动收敛为最早的一把", async () => {
+  const temp_dir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-fed-key-reconcile-"))
+  try {
+    const db = createSqliteDb(path.join(temp_dir, "test.sqlite"))
+    const first = new Federation({ db })
+    await first.health()
+
+    const key_table = await first.table("federation_auth_keys")
+    const [original_key] = await key_table.select()
+    assert.ok(original_key)
+
+    db.raw.exec('DROP INDEX "federation_auth_keys_one_active"')
+    await key_table.update({
+      where: { key_id: original_key.key_id },
+      values: { created_at: "2026-01-03T00:00:00.000Z" },
+    })
+    await key_table.insert([
+      clone_auth_key(original_key, "key_legacy_oldest", "2026-01-01T00:00:00.000Z"),
+      clone_auth_key(original_key, "key_legacy_middle", "2026-01-02T00:00:00.000Z"),
+    ])
+
+    const recovered = new Federation({ db })
+    await recovered.health()
+
+    const recovered_rows = await (await recovered.table("federation_auth_keys")).select()
+    const active_rows = recovered_rows.filter((row) => row.status === "active")
+    const retired_rows = recovered_rows.filter((row) => row.status === "retired")
+    assert.equal(active_rows.length, 1)
+    assert.equal(active_rows[0].key_id, "key_legacy_oldest")
+    assert.equal(retired_rows.length, 2)
+    assert.ok(retired_rows.every((row) => typeof row.retired_at === "string" && row.retired_at.length > 0))
+
+    const authenticator = await recovered.getAuthenticator()
+    const issued = await authenticator.createToken({
+      city_id: "city_downcity",
+      user_id: "user_recovered",
+      ttl: "1h",
+    })
+    const payload = await authenticator.verifyToken(issued.user_token)
+    assert.equal(payload.user_id, "user_recovered")
+    assert.equal((await authenticator.get_public_jwks()).keys.length, 3)
+
+    await assert.rejects(
+      key_table.insert(clone_auth_key(original_key, "key_forbidden_active", "2026-01-04T00:00:00.000Z")),
+      (error) => String(error?.message).includes("UNIQUE constraint failed"),
+    )
+  } finally {
+    await fs.rm(temp_dir, { recursive: true, force: true })
+  }
+})
+
 function create_bureau(federation, bureau_token) {
   return new Bureau({
     federation_url: "http://localhost",
@@ -191,4 +269,17 @@ async function register_bureau(admin) {
   assert.equal("token_hash" in registered, false)
   assert.equal("bureau_token" in registered, false)
   return { token_id, bureau_token }
+}
+
+/** 创建用于模拟旧版本并发脏数据的签名密钥记录。 */
+function clone_auth_key(source, key_id, created_at) {
+  return {
+    ...source,
+    key_id,
+    public_jwk: JSON.stringify({ ...JSON.parse(source.public_jwk), kid: key_id }),
+    private_jwk: JSON.stringify({ ...JSON.parse(source.private_jwk), kid: key_id }),
+    status: "active",
+    created_at,
+    retired_at: "",
+  }
 }

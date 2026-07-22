@@ -10,6 +10,19 @@ import { sqliteTable, text as sqliteText } from "drizzle-orm/sqlite-core";
 
 const FEDERATION_AUTH_KEY_TABLE = "federation_auth_keys";
 
+/** active user token signing key 的数据库唯一索引名称。 */
+export const FEDERATION_ACTIVE_AUTH_KEY_INDEX = "federation_auth_keys_one_active";
+
+/**
+ * 建立 active signing key 全局唯一约束。
+ *
+ * SQLite、Cloudflare D1 与 Postgres 都支持 partial unique index。以 status 作为索引列，
+ * 只索引 active 记录，从而允许任意数量的 retired/revoked key 继续承担历史 token 验签。
+ */
+export const CREATE_FEDERATION_ACTIVE_AUTH_KEY_INDEX_SQL =
+  `CREATE UNIQUE INDEX IF NOT EXISTS "${FEDERATION_ACTIVE_AUTH_KEY_INDEX}" `
+  + `ON "${FEDERATION_AUTH_KEY_TABLE}" ("status") WHERE "status" = 'active'`;
+
 /** Federation SQLite 签名密钥表。 */
 export const sqlite_federation_auth_keys = sqliteTable(FEDERATION_AUTH_KEY_TABLE, {
   /** JWT protected header 使用的密钥 ID。 */

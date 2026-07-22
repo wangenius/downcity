@@ -103,6 +103,12 @@ export default {
 };
 ```
 
+### Concurrent Cloudflare Worker cold starts
+
+A single Worker deployment can start multiple isolates at the same time. Each isolate has independent memory while sharing the same D1 database, so a module-level Promise only prevents duplicate initialization inside one isolate and is not a global lock.
+
+Federation atomically initializes its system env and Ed25519 user token signing key in the shared database, with a unique constraint that allows only one active signing key. If an older SDK left multiple active keys behind, startup keeps the earliest key and changes the others to retired. Retired keys remain in JWKS so existing tokens can still be verified.
+
 ## Scenario 3: Local HTTP
 
 When Federation only needs to be called by trusted processes on the same machine, expose its standard `fetch` handler through your local HTTP server:

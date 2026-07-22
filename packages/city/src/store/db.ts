@@ -38,6 +38,17 @@ interface Query extends Promise<Record<string, unknown>[]> {
   limit(n: number): Promise<Record<string, unknown>[]>;
 }
 
+/**
+ * 支持冲突忽略语义的 Drizzle insert query。
+ *
+ * SQLite、D1 与 Postgres 的 insert builder 都实现该公共子集，供系统初始化执行
+ * 原子的“仅在不存在时插入”，避免跨 Worker isolate 的查询后写入竞态。
+ */
+interface InsertQuery extends PromiseLike<unknown> {
+  /** 唯一约束冲突时不写入，也不抛出冲突错误。 */
+  onConflictDoNothing(): PromiseLike<unknown>;
+}
+
 // ===========================================================================
 // Database — Drizzle 查询方法子集（SQLite / PG / D1 通用）
 // ===========================================================================
@@ -51,7 +62,7 @@ interface Query extends Promise<Record<string, unknown>[]> {
  */
 export interface Database {
   select(): { from(t: unknown): Promise<Record<string, unknown>[]> | { where(c: SQL | undefined): Promise<Record<string, unknown>[]> } };
-  insert(t: unknown): { values(v: Record<string, unknown> | Record<string, unknown>[]): Promise<unknown> };
+  insert(t: unknown): { values(v: Record<string, unknown> | Record<string, unknown>[]): InsertQuery };
   update(t: unknown): { set(v: Record<string, unknown>): { where(c: SQL | undefined): Promise<unknown> } };
   delete(t: unknown): { where(c: SQL | undefined): Promise<unknown> };
 }

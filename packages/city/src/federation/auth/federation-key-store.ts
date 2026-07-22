@@ -27,6 +27,27 @@ export class FederationKeyStore {
     return active_key ?? this.create_active_key();
   }
 
+  /**
+   * 将历史遗留的多把 active key 确定性收敛为一把。
+   *
+   * 保留创建时间最早的 key；时间相同时按 key_id 排序。其余 key 转为 retired，继续
+   * 出现在 JWKS 中并可验证已签发 token，不会因自动修复导致存量会话失效。
+   */
+  async reconcile_active_keys(): Promise<FederationAuthKeyRecord | undefined> {
+    const rows = await this.table.select({ status: "active" });
+    if (rows.length <= 1) return rows[0];
+
+    const [winner, ...duplicates] = [...rows].sort((left, right) =>
+      left.created_at.localeCompare(right.created_at) || left.key_id.localeCompare(right.key_id)
+    );
+    const retired_at = new Date().toISOString();
+    await Promise.all(duplicates.map((key) => this.table.update({
+      where: { key_id: key.key_id, status: "active" },
+      values: { status: "retired", retired_at },
+    })));
+    return winner;
+  }
+
   /** 读取当前唯一 active signing key。 */
   async get_active_key(): Promise<FederationAuthKeyRecord | undefined> {
     const rows = await this.table.select({ status: "active" });
@@ -55,9 +76,6 @@ export class FederationKeyStore {
 
   /** 生成并保存新的 active Ed25519 signing key。 */
   private async create_active_key(): Promise<FederationAuthKeyRecord> {
-    const existing = await this.get_active_key();
-    if (existing) return existing;
-
     const key_id = `key_${randomSecret(16)}`;
     const key_pair = await generateKeyPair(USER_TOKEN_ALGORITHM, {
       crv: "Ed25519",
@@ -84,8 +102,12 @@ export class FederationKeyStore {
       created_at: new Date().toISOString(),
       retired_at: "",
     };
-    await this.table.insert(record);
-    return record;
+    await this.table.insert_if_absent(record);
+    const active_key = await this.get_active_key();
+    if (!active_key) {
+      throw new Error("Federation failed to initialize an active user token signing key");
+    }
+    return active_key;
   }
 }
 

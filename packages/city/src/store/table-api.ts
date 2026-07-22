@@ -30,6 +30,8 @@ export interface CityTableApi<TRow = Record<string, unknown>> {
   select(where?: Partial<TRow>): Promise<TRow[]>;
   /** 插入一行或多行数据 */
   insert(values: Partial<TRow> | Partial<TRow>[]): Promise<void>;
+  /** 原子插入一行；命中任意唯一约束时保留数据库现有记录。 */
+  insert_if_absent(value: Partial<TRow>): Promise<void>;
   /** 按 where 等值条件更新数据 */
   update(input: { where: Partial<TRow>; values: Partial<TRow> }): Promise<number>;
   /** 按 where 等值条件删除数据 */
@@ -65,6 +67,16 @@ export class TableApi implements CityTableApi {
     const rows = Array.isArray(values) ? values : [values];
     if (rows.length === 0) throw new TypeError("insert() values cannot be empty");
     await this.db.insert(this.schema as unknown).values(rows);
+  }
+
+  async insert_if_absent(value: Record<string, unknown>): Promise<void> {
+    if (Object.keys(value).length === 0) {
+      throw new TypeError("insert_if_absent() value cannot be empty");
+    }
+    await this.db
+      .insert(this.schema as unknown)
+      .values(value)
+      .onConflictDoNothing();
   }
 
   async update(input: {

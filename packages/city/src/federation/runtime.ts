@@ -59,6 +59,13 @@ export interface EnvProvider {
   upsert(input: EnvUpsertInput): Promise<EnvEntry>;
 
   /**
+   * 仅在数据库不存在对应 key 时写入，并返回并发竞争后的数据库值。
+   *
+   * @param input - 环境变量默认键值
+   */
+  ensure(input: EnvUpsertInput): Promise<EnvEntry>;
+
+  /**
    * 删除环境变量。
    *
    * @param key - 环境变量名

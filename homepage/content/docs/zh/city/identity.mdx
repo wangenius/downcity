@@ -21,7 +21,7 @@ Federation 统一签发用户身份和账户数据，City 客户端直接访问 
 3. 用户通过 `new City({ federation_url, user_token })` 调用 Federation
 4. 用户携带同一个 Bearer Token 调用产品后端
 5. City 直接携带 `user_token` 调用 Federation 的 Profile、余额和标准 Service
-6. 如果产品有自己的后端，City 使用 `city.connect(bureau_url)` 请求 Bureau 独立服务
+6. 如果产品有自己的后端，City 使用 `city.get()` / `city.post()` 请求 Bureau 独立服务
 7. Bureau 使用 Federation 公钥本地验证 `user_token`，需要当前数据时再携带同一个 Token 请求 Federation
 
 ```ts
@@ -59,11 +59,13 @@ const profile = await (await bureau.user(request)).profile();
 `identify()` 只读取 Federation discovery 和 JWKS，不调用在线 introspection；只有需要当前
 Profile、余额等数据时，Bureau 才请求 Federation。
 
-City 请求 Bureau 独立服务时不需要安装 Bureau SDK：
+City 请求 Bureau 独立服务时不需要理解 Bureau 的 Service 目录，只需发送普通 HTTP 请求：
 
 ```ts
-const reports = city.connect("https://bureau.example.com").service("reports");
-await reports.action("summary").invoke({});
+const result = await city.post(
+  "https://bureau.example.com/reports/summary",
+  { range: "today" },
+);
 ```
 
 ## User Token 与 Bureau Token

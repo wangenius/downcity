@@ -27,7 +27,6 @@ import type {
   LanguageModelV3StreamResult,
   CityModelDescriptor,
   City,
-  CityConnection,
   Bureau,
   BureauTokenSummary,
   Federation,
@@ -147,11 +146,13 @@ void bureau_cities;
 void bureau_env;
 void bureau_tokens;
 
-declare const connection: CityConnection;
-const bureau_services = connection.listServices();
-void bureau_services;
-const bureau_service_result = connection.service("reports").action("summary").invoke({});
-void bureau_service_result;
+const bureau_get_result: Promise<{ status: string }> = city.get("https://bureau.example.com/reports/status");
+const bureau_post_result: Promise<{ report_id: string }> = city.post(
+  "https://bureau.example.com/reports/summary",
+  { range: "today" },
+);
+void bureau_get_result;
+void bureau_post_result;
 
 const user_profile: Promise<UserProfile | null> = city.user().profile();
 void user_profile;

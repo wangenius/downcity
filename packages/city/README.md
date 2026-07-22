@@ -262,7 +262,7 @@ const profile = await (await bureau.user(request)).profile();
 await bureau.cities.list();
 ```
 
-City 访问 Bureau 的独立服务时，直接复用当前 `user_token`：
+City 访问 Bureau 的独立服务时，使用 JSON `get()` / `post()` 自动注入当前 `user_token`：
 
 ```ts
 const city = new City({
@@ -270,8 +270,10 @@ const city = new City({
   user_token,
 });
 
-const reports = city.connect("https://bureau.example.com").service("reports");
-const result = await reports.action("summary").invoke({ range: "today" });
+const result = await city.post(
+  "https://bureau.example.com/reports/summary",
+  { range: "today" },
+);
 ```
 
 `Bureau` 不绑定 `city_id`。`identify()` 返回 `user_token` 中的 `city_id`，由 Bureau 自己
@@ -288,7 +290,6 @@ const result = await reports.action("summary").invoke({ range: "today" });
 - `CityModel`
 - `CityModelDescriptor`
 - `Bureau`
-- `CityConnection`
 - `EnvService`
 - `CitiesService`
 

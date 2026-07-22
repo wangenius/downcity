@@ -187,7 +187,6 @@ export type {
 } from "@downcity/type";
 
 export { City } from "./client/city.js";
-export { CityConnection } from "./client/city-connection.js";
 export type { CityOptions } from "./client/types.js";
 
 export { AIInvoker, ModelCatalog } from "./pact/invoker/ai/index.js";

@@ -290,7 +290,7 @@ test("User City service() → ServiceInvoker", async () => {
   assert.deepEqual(JSON.parse(requests[0].init.body), { title: "hello" })
 })
 
-test("City.connect() forwards the current user_token to a Bureau service", async () => {
+test("City get() / post() use JSON and forward the current user_token", async () => {
   const requests = []
   const city = new City({
     federation_url: "https://fed.example.com",
@@ -300,13 +300,19 @@ test("City.connect() forwards the current user_token to a Bureau service", async
       return json({ ok: true })
     },
   })
-  const result = await city.connect("https://bureau.example.com/")
-    .service("reports")
-    .action("summary")
-    .invoke({ range: "today" })
+  const result = await city.post("https://bureau.example.com/reports/summary", {
+    range: "today",
+  })
   assert.deepEqual(result, { ok: true })
-  assert.equal(requests[0].url, "https://bureau.example.com/v1/reports/summary")
+  await city.get("https://bureau.example.com/reports/status")
+  assert.equal(requests[0].url, "https://bureau.example.com/reports/summary")
+  assert.equal(requests[0].init.method, "POST")
+  assert.equal(requests[0].init.body, JSON.stringify({ range: "today" }))
+  assert.equal(requests[0].init.headers.accept, "application/json")
+  assert.equal(requests[0].init.headers["content-type"], "application/json")
   assert.equal(requests[0].init.headers.authorization, "Bearer ub_user_token")
+  assert.equal(requests[1].url, "https://bureau.example.com/reports/status")
+  assert.equal(requests[1].init.method, "GET")
 })
 
 test("ServiceClient.get() appends query params for GET actions", async () => {

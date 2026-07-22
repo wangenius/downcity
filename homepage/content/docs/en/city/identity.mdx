@@ -22,7 +22,7 @@ Federation owns user identity and account data, and the City client connects to 
 3. The user calls Federation through `new City({ federation_url, user_token })`
 4. The user sends the same Bearer Token to the product backend
 5. City sends `user_token` directly to Federation for Profile, balance, and standard Services
-6. If the product has its own backend, City uses `city.connect(bureau_url)` to call Bureau services
+6. If the product has its own backend, City uses `city.get()` / `city.post()` to call Bureau services
 7. Bureau verifies `user_token` locally with Federation's public key and only calls Federation when it needs current data
 
 ```ts
@@ -60,11 +60,13 @@ not bound to a `city_id`: `identify()` returns the `city_id` from `user_token`, 
 service applies its own product authorization policy. `identify()` only reads discovery and JWKS;
 Bureau requests Federation only when it needs current Profile, balance, or other shared data.
 
-City does not need the Bureau SDK to call an independent Bureau service:
+City does not need to understand Bureau's Service directory. It sends a normal HTTP request:
 
 ```ts
-const reports = city.connect("https://bureau.example.com").service("reports");
-await reports.action("summary").invoke({});
+const result = await city.post(
+  "https://bureau.example.com/reports/summary",
+  { range: "today" },
+);
 ```
 
 ## User Token and Bureau Token

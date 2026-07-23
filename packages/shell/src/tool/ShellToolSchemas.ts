@@ -98,8 +98,8 @@ export const shellExecInputSchema = z.object({
   timeout_ms: z
     .number()
     .optional()
-    .default(120000)
-    .describe("Total timeout for one-shot execution. Defaults to 120s; shell_session is preferred for long-running commands."),
+    .default(600000)
+    .describe("Total timeout for one-shot execution. Defaults to 10 minutes; shell_session is preferred for long-running commands."),
   max_output_tokens: z
     .number()
     .optional()

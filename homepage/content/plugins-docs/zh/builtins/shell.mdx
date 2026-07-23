@@ -27,7 +27,7 @@ const agent = new Agent({
 
 `shell_exec` 用于一次性非交互命令；`shell_session` 用于 PTY 交互式会话，支持 `start`、`send`、`read`、`list`、`stop` action。
 
-`shell_exec` 的 `timeout_ms` 是命令总执行时长。显式传入较短值会按该值超时并终止进程；长任务应改用 `shell_session`，不要依赖 `shell_exec` 持续等待。
+`shell_exec` 的 `timeout_ms` 是命令总执行时长，默认 10 分钟。显式传入较短值会按该值超时并终止进程；长任务应改用 `shell_session`，不要依赖 `shell_exec` 持续等待。
 
 ## Sandbox 模式
 

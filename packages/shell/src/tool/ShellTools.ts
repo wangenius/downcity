@@ -248,7 +248,7 @@ export function createShellTools(runner: ShellToolRunner): ShellToolSet {
         workdir,
         shell,
         login = true,
-        timeout_ms = 120000,
+        timeout_ms = 600000,
         max_output_tokens,
         sandbox = "safe",
         reason,

@@ -50,6 +50,10 @@ test("Shell exposes command, file, and search tools", () => {
   ]);
 });
 
+test("shell_exec defaults to a ten-minute total timeout", () => {
+  assert.equal(createShellRuntimeState().options.defaultExecTimeoutMs, 600_000);
+});
+
 test("shell_session uses PTY while shell_exec stays non-interactive", async () => {
   const fixture = await create_context();
   const state = createShellRuntimeState({

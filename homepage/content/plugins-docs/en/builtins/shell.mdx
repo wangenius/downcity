@@ -27,7 +27,7 @@ Mounting `shell: new Shell()` adds these model tools:
 
 `shell_exec` is for one-shot non-interactive commands. `shell_session` is for interactive PTY sessions and supports `start`, `send`, `read`, `list`, and `stop` actions.
 
-`timeout_ms` on `shell_exec` is the total command runtime. An explicitly short value is honored and terminates the process at that deadline. Use `shell_session` for long-running work instead of keeping `shell_exec` open.
+`timeout_ms` on `shell_exec` is the total command runtime and defaults to 10 minutes. An explicitly short value is honored and terminates the process at that deadline. Use `shell_session` for long-running work instead of keeping `shell_exec` open.
 
 ## Sandbox Modes
 

@@ -25,10 +25,7 @@ import { closeShellSession } from "./ShellQueryActions.js";
 import { startShellSession } from "./ShellStartActions.js";
 
 async function sleep(ms: number): Promise<void> {
-  await new Promise<void>((resolve) => {
-    const timer = setTimeout(resolve, ms);
-    if (typeof timer.unref === "function") timer.unref();
-  });
+  await new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
 function require_shell_snapshot(response: ShellActionResponse): ShellSessionSnapshot {

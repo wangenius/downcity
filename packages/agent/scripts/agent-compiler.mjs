@@ -2,6 +2,7 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 /**
@@ -15,8 +16,11 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const module_require = createRequire(import.meta.url);
 const packageRoot = path.resolve(__dirname, "..");
 const srcRoot = path.join(packageRoot, "src");
+const tsc_entry = module_require.resolve("typescript/bin/tsc");
+const tsc_alias_entry = module_require.resolve("tsc-alias/dist/bin/index.js");
 const generatedHeader = [
   "/**",
   " * 自动生成文件，请勿手改。",
@@ -118,13 +122,13 @@ async function runBuild() {
     fsp.rm(path.join(packageRoot, "bin"), { recursive: true, force: true }),
     fsp.rm(path.join(packageRoot, "tsconfig.tsbuildinfo"), { force: true }),
   ]);
-  await spawnCommand("tsc", []);
-  await spawnCommand("tsc-alias", ["-f"]);
+  await spawnCommand(process.execPath, [tsc_entry]);
+  await spawnCommand(process.execPath, [tsc_alias_entry, "-f"]);
 }
 
 async function runTypecheck() {
   await generateTextModules();
-  await spawnCommand("tsc", ["--noEmit"]);
+  await spawnCommand(process.execPath, [tsc_entry, "--noEmit"]);
 }
 
 async function runDev() {
@@ -204,7 +208,7 @@ async function runDev() {
   }
 
   await attachWatchers();
-  const tscWatch = spawn("tsc", ["--watch"], {
+  const tscWatch = spawn(process.execPath, [tsc_entry, "--watch"], {
     cwd: packageRoot,
     stdio: "inherit",
     env: process.env,

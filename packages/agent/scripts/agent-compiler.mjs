@@ -114,7 +114,10 @@ function spawnCommand(command, args, options = {}) {
 
 async function runBuild() {
   await generateTextModules();
-  await spawnCommand("rm", ["-rf", "bin", "tsconfig.tsbuildinfo"]);
+  await Promise.all([
+    fsp.rm(path.join(packageRoot, "bin"), { recursive: true, force: true }),
+    fsp.rm(path.join(packageRoot, "tsconfig.tsbuildinfo"), { force: true }),
+  ]);
   await spawnCommand("tsc", []);
   await spawnCommand("tsc-alias", ["-f"]);
 }

@@ -55,7 +55,8 @@ jobs:
         run: node --test packages/shell/scripts/shell-command-model.test.mjs packages/shell/scripts/windows-mxc-policy.test.mjs packages/shell/scripts/windows-mxc-support.test.mjs packages/agent/scripts/shell-sandbox-preflight.test.mjs packages/cli/scripts/windows-platform.test.mjs
 
       - name: Verify CLI platform storage
-        run: node --test packages/cli/scripts/config-storage.test.mjs
+        working-directory: packages/cli
+        run: node --test scripts/config-storage.test.mjs
 
       - name: Verify native MXC isolation
         run: node --test packages/shell/scripts/windows-mxc.integration.test.mjs

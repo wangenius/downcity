@@ -74,6 +74,10 @@ import { nanoid } from "nanoid";
 import { buildSessionInfo } from "@/session/browse/Browse.js";
 import { ensureSessionTitle } from "@/session/SessionTitle.js";
 import { readSessionMetadata } from "@/session/storage/Metadata.js";
+import {
+  read_session_instruction,
+  write_session_instruction,
+} from "@/session/storage/Instruction.js";
 import { to_executor_history } from "@/session/messages/SessionMessageCodec.js";
 import type { SessionMessage } from "@/types/session/SessionMessage.js";
 import type {
@@ -91,7 +95,6 @@ export class Session implements AgentSession {
   private readonly project_root: string;
   private readonly tools: Record<string, Tool>;
   private readonly logger: SessionOptions["logger"];
-  private readonly get_instruction_system_blocks: SessionOptions["getInstructionSystemBlocks"];
   private readonly get_managed_plugin_system_blocks: SessionOptions["getManagedPluginSystemBlocks"];
   private readonly ensure_configured_hook?: SessionOptions["ensureConfigured"];
   private readonly composer: SessionComposer;
@@ -105,6 +108,7 @@ export class Session implements AgentSession {
   private readonly get_agent_model: SessionOptions["getAgentModel"];
   private readonly get_agent_plugins: SessionOptions["get_agent_plugins"];
   private effective_instruction_system_blocks: AgentSessionSystemBlock[];
+  private instruction_initialize_promise: Promise<void> | null = null;
   private effective_agent_env: Record<string, string>;
   private effective_agent_plugins: AgentPluginExecutionRuntime;
   private readonly state: SessionState;
@@ -117,12 +121,11 @@ export class Session implements AgentSession {
     this.project_root = String(options.projectRoot || "").trim();
     this.tools = options.tools;
     this.logger = options.logger;
-    this.get_instruction_system_blocks = options.getInstructionSystemBlocks;
     this.get_agent_env = options.getAgentEnv;
     this.get_agent_model = options.getAgentModel;
     this.get_agent_plugins = options.get_agent_plugins;
     this.effective_instruction_system_blocks = options
-      .getInstructionSystemBlocks()
+      .instruction_system_blocks
       .map((block) => ({ ...block }));
     this.effective_agent_env = { ...options.getAgentEnv() };
     this.effective_agent_plugins = options.get_agent_plugins();
@@ -188,9 +191,33 @@ export class Session implements AgentSession {
    * 初始化当前 session。
    */
   async initialize(): Promise<this> {
-    await this.session_messages.initialize();
-    await this.state.initialize();
+    await Promise.all([
+      this.initialize_instruction(),
+      this.session_messages.initialize(),
+      this.state.initialize(),
+    ]);
     return this;
+  }
+
+  /**
+   * 把当前 Session 生效的自定义 instruction 显式固化到 instruction.md。
+   *
+   * 关键点（中文）
+   * - 只写入 `instruction` 来源的 block，不包含 SDK core 与 plugin system。
+   * - 多个 instruction block 按原顺序合并为一个 Markdown 文档。
+   */
+  async snapshot(): Promise<void> {
+    await this.initialize_instruction();
+    const instruction = this.effective_instruction_system_blocks
+      .filter((block) => block.source === "instruction")
+      .map((block) => block.content)
+      .join("\n\n");
+    await write_session_instruction({
+      project_root: this.project_root,
+      agent_id: this.agentId,
+      session_id: this.id,
+      instruction,
+    });
   }
 
   /**
@@ -214,6 +241,7 @@ export class Session implements AgentSession {
    * 追加一条新的 Session prompt。
    */
   async prompt(input: AgentSessionPromptInput): Promise<AgentSessionTurnHandle> {
+    await this.initialize_instruction();
     return await this.session_turn.prompt(input);
   }
 
@@ -236,14 +264,6 @@ export class Session implements AgentSession {
    * 把 Agent configured state command 加入当前 Session 的统一输入队列。
    */
   enqueue_agent_command(command: AgentSessionCommand): void {
-    if (command.type === "instruction") {
-      this.session_turn.enqueue_command({
-        type: "agent_instruction",
-        command_id: command.command_id,
-        instruction_blocks: command.instruction_blocks,
-      });
-      return;
-    }
     if (command.type === "env") {
       this.session_turn.enqueue_command({
         type: "agent_env",
@@ -275,18 +295,6 @@ export class Session implements AgentSession {
           turnId: turn_id,
         });
       }
-      return;
-    }
-    if (command.type === "agent_instruction") {
-      this.effective_instruction_system_blocks = command.instruction_blocks.map(
-        (block) => ({ ...block }),
-      );
-      await this.emit_config_action_event({
-        id: `agent-instruction:${this.id}:${command.command_id}`,
-        title: "Agent instruction updated",
-        state: "completed",
-        turnId: turn_id,
-      });
       return;
     }
     if (command.type === "agent_env") {
@@ -406,6 +414,7 @@ export class Session implements AgentSession {
    * 读取当前 session 生效的 system 快照。
    */
   async system(): Promise<AgentSessionSystemSnapshot> {
+    await this.initialize_instruction();
     const composed = await this.compose_for_view();
     const blocks = resolve_composed_system_blocks(composed);
     return {
@@ -533,6 +542,7 @@ export class Session implements AgentSession {
    * 在执行前确保 session 已完成初始化与宿主装配。
    */
   async ensureReadyForExecution(): Promise<void> {
+    await this.initialize_instruction();
     await this.state.ensure_ready_for_execution();
   }
 
@@ -543,7 +553,9 @@ export class Session implements AgentSession {
       sessionId: session_id,
       tools: this.tools,
       logger: this.logger,
-      getInstructionSystemBlocks: this.get_instruction_system_blocks,
+      instruction_system_blocks: this.effective_instruction_system_blocks.map(
+        (block) => ({ ...block }),
+      ),
       getAgentEnv: this.get_agent_env,
       get_agent_plugins: this.get_agent_plugins,
       getManagedPluginSystemBlocks: this.get_managed_plugin_system_blocks,
@@ -565,6 +577,36 @@ export class Session implements AgentSession {
       options: SessionOptions,
     ) => Session;
     return new SessionClass(options) as this;
+  }
+
+  /** 恢复显式固化的 instruction.md；文件不存在时保留创建时 instruction。 */
+  private async initialize_instruction(): Promise<void> {
+    if (!this.instruction_initialize_promise) {
+      this.instruction_initialize_promise = (async () => {
+        const persisted_instruction = await read_session_instruction({
+          project_root: this.project_root,
+          agent_id: this.agentId,
+          session_id: this.id,
+        });
+        if (persisted_instruction === null) return;
+
+        const instruction = persisted_instruction.trim();
+        const stable_system_blocks = this.effective_instruction_system_blocks
+          .filter((block) => block.source !== "instruction")
+          .map((block) => ({ ...block }));
+        this.effective_instruction_system_blocks = [
+          ...(instruction
+            ? [{
+                source: "instruction" as const,
+                name: "agent",
+                content: instruction,
+              }]
+            : []),
+          ...stable_system_blocks,
+        ];
+      })();
+    }
+    await this.instruction_initialize_promise;
   }
 
   private create_message_store(): JsonlSessionMessageStore {

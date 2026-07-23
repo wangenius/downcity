@@ -147,23 +147,6 @@ export class AgentSessions implements AgentSessionsContract<AgentSession> {
   }
 
   /**
-   * 把 Agent instruction 修改广播到已有 Session 的统一输入队列。
-   */
-  broadcast_instruction(instruction: string[], command_id: string): void {
-    const instruction_blocks = createInstructionSystemBlocks(
-      instruction,
-      this.project_root,
-    );
-    for (const session of this.sessions_by_id.values()) {
-      session.enqueue_agent_command({
-        type: "instruction",
-        command_id,
-        instruction_blocks,
-      });
-    }
-  }
-
-  /**
    * 把 Agent env 修改广播到已有 Session 的统一输入队列。
    */
   broadcast_env(env: Record<string, string>, command_id: string): void {
@@ -198,9 +181,7 @@ export class AgentSessions implements AgentSessionsContract<AgentSession> {
    * 获取或创建一个 session runtime port。
    */
   runtime(session_id: string): SessionPort {
-    return this.get_or_create_session({
-      session_id,
-    }).getRuntimePort();
+    return this.get_or_create_session({ session_id }).getRuntimePort();
   }
 
   /**
@@ -436,7 +417,7 @@ export class AgentSessions implements AgentSessionsContract<AgentSession> {
       sessionId: resolved_session_id,
       tools: this.tools,
       logger: this.logger,
-      getInstructionSystemBlocks: () => this.load_instruction_system_blocks(),
+      instruction_system_blocks: this.load_instruction_system_blocks(),
       getAgentEnv: () => this.get_agent_env(),
       getAgentModel: () => this.get_agent_model(),
       get_agent_plugins: () => this.get_agent_plugins(),

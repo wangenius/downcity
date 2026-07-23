@@ -159,7 +159,6 @@ export class Agent {
   setInstruction(input: string | string[]): void {
     const next_instruction = normalizeInstructionInput(input);
     this.instruction.splice(0, this.instruction.length, ...next_instruction);
-    this.sessions.broadcast_instruction(this.instruction, generateId());
   }
 
   /**

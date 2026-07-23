@@ -74,9 +74,13 @@ export interface SessionOptions {
   logger: Logger;
 
   /**
-   * 读取当前 SDK 调用方传入的 instruction system blocks。
+   * 当前 Session 创建时绑定的 instruction system blocks。
+   *
+   * 关键点（中文）
+   * - Session 创建后不再动态读取 Agent instruction。
+   * - `session.snapshot()` 只会把其中 `instruction` 来源的内容显式写入本地文件。
    */
-  getInstructionSystemBlocks: () => AgentSessionSystemBlock[];
+  instruction_system_blocks: AgentSessionSystemBlock[];
 
   /**
    * 读取当前 Agent configured env。

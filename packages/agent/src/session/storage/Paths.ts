@@ -130,6 +130,24 @@ export function getSdkAgentSessionDirPath(
 }
 
 /**
+ * 单个 session 显式固化的 instruction.md 路径。
+ *
+ * 关键点（中文）
+ * - 文件不存在表示 Session 恢复时继续采用 Agent 当前 instruction。
+ * - 空文件表示调用方显式固化了空 instruction。
+ */
+export function getSdkAgentSessionInstructionPath(
+  projectRoot: string,
+  agentId: string,
+  sessionId: string,
+): string {
+  return path.join(
+    getSdkAgentSessionDirPath(projectRoot, agentId, sessionId),
+    "instruction.md",
+  );
+}
+
+/**
  * 单个 session 的消息目录路径。
  */
 export function getSdkAgentSessionMessagesDirPath(

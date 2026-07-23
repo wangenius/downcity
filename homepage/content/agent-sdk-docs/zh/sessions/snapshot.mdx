@@ -1,0 +1,24 @@
+---
+title: session.snapshot()
+description: 显式固化本地 Session 当前生效的自定义 instruction
+---
+
+# `session.snapshot()`
+
+本地 Session 默认只在内存中保留创建时生效的 instruction。调用 `snapshot()` 可以显式把它固化到当前 Session 的 `instruction.md`：
+
+```ts
+await session.snapshot();
+```
+
+文件位置：
+
+```text
+<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/instruction.md
+```
+
+恢复 Session 时，SDK 优先读取这个文件；文件不存在时使用 Agent 当前 instruction。删除 `instruction.md` 即可取消固化，后续恢复会重新采用 Agent 当前值。
+
+`snapshot()` 只保存来源为 `instruction` 的自定义内容，不包含 SDK core、plugin system、Session context、消息历史、模型或环境变量。多个 instruction block 会按原顺序合并为一个 Markdown 文档；再次调用会原子覆盖现有文件。
+
+该方法只属于本地 `AgentSession`。远程 Session 的 instruction 持久化策略由服务端宿主管理。

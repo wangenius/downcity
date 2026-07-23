@@ -72,7 +72,7 @@ Do not treat Messages and Mutations as interchangeable. Messages are recoverable
 
 ## Local versus remote
 
-Both expose `prompt()`, `stop()`, `compact()`, `subscribe()`, `messages()`, `approvals()`, and `fork()`. Model configuration is the important difference:
+Both expose `prompt()`, `stop()`, `compact()`, `subscribe()`, `messages()`, `approvals()`, and `fork()`. Local Sessions additionally provide `snapshot()` to explicitly persist their effective custom instruction; remote persistence policy belongs to the server host.
 
 | Context | Configure a model |
 | --- | --- |
@@ -88,6 +88,7 @@ Remote clients do not participate in model selection. IDs, defaults, and recover
 - Input and completion: `session.prompt()` and `turn.finished`
 - Read and stream: `session.messages()`, `session.get_info()`, and `session.subscribe()`
 - Control execution: `session.stop()`, `session.set()`, [`session.compact()`](/en/agent-sdk-docs/sessions/compact), and `session.fork()`
+- Persist instruction: [`session.snapshot()`](/en/agent-sdk-docs/sessions/snapshot)
 - Tool approval: `session.approvals()`, `session.resolve_approval()`, and `session.approval_mode()`
 - Inspect context: `session.system()` and [metadata and storage](/en/agent-sdk-docs/sessions/metadata-and-storage)
 

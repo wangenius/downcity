@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 第一次 provider 请求保持阻塞，用来制造真实的运行中配置修改窗口。
- * - instruction、env 与 plugin registry 修改不能改变已经开始的请求。
+ * - Agent instruction 修改不能改变已有 Session；env 与 plugin registry 修改在 step 检查点生效。
  * - config 与 steer 在同一个 Session step 检查点提交，并继续使用同一个 turn id。
  */
 
@@ -58,7 +58,7 @@ function create_stream_text_result(text) {
   };
 }
 
-test("running Agent config changes and steer apply at the same Session step checkpoint", async () => {
+test("Agent instruction changes only affect newly created Sessions", async () => {
   const agent_path = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-agent-config-turn-boundary-"),
   );
@@ -133,8 +133,8 @@ test("running Agent config changes and steer apply at the same Session step chec
     assert.equal((await steer_turn.finished).success, true);
     assert.equal(plugin_stop_count, 1);
     assert.equal(provider_prompts.length, 2);
-    assert.match(provider_prompts[1], /instruction:new/);
-    assert.doesNotMatch(provider_prompts[1], /instruction:old/);
+    assert.match(provider_prompts[1], /instruction:old/);
+    assert.doesNotMatch(provider_prompts[1], /instruction:new/);
     assert.doesNotMatch(provider_prompts[1], /plugin-env:old/);
 
     const messages = await session.messages();
@@ -142,13 +142,164 @@ test("running Agent config changes and steer apply at the same Session step chec
       .filter((message) => message.type === "action" && message.status === "completed")
       .map((message) => message.title);
     assert.deepEqual(completed_actions, [
-      "Agent instruction updated",
       "Agent environment updated",
       "Agent plugin runtime-config unregistered",
     ]);
+
+    // 未显式 snapshot 的 Session 重新装载时使用 Agent 当前 instruction。
+    await agent.sessions.clear_messages(session.id);
+    const restored_session = await agent.sessions.get(session.id);
+    const restored_system = await restored_session.system();
+    const restored_system_text = restored_system.blocks
+      .map((block) => block.content)
+      .join("\n");
+    assert.match(restored_system_text, /instruction:new/);
+    assert.doesNotMatch(restored_system_text, /instruction:old/);
+
+    const new_session = await agent.sessions.create({
+      sessionId: "config_turn_boundary_new_session",
+    });
+    const new_system = await new_session.system();
+    const new_system_text = new_system.blocks
+      .map((block) => block.content)
+      .join("\n");
+    assert.match(new_system_text, /instruction:new/);
+    assert.doesNotMatch(new_system_text, /instruction:old/);
   } finally {
     release_first_provider_request.resolve();
     await agent.dispose();
+  }
+});
+
+test("Session snapshot explicitly persists instruction.md", async () => {
+  const agent_path = await fs.mkdtemp(
+    path.join(os.tmpdir(), "downcity-agent-instruction-restart-"),
+  );
+  const model = new MockLanguageModelV3({ modelId: "instruction-restart-model" });
+  const first_agent = new Agent({
+    id: "instruction_restart_agent",
+    path: agent_path,
+    model,
+    instruction: ["instruction:old"],
+  });
+
+  try {
+    const session = await first_agent.sessions.create({
+      sessionId: "instruction_restart_session",
+    });
+    const first_system = await session.system();
+    assert.match(
+      first_system.blocks.map((block) => block.content).join("\n"),
+      /instruction:old/,
+    );
+    await session.snapshot();
+
+    const instruction_path = path.join(
+      agent_path,
+      ".downcity",
+      "agents",
+      "instruction_restart_agent",
+      "sessions",
+      "instruction_restart_session",
+      "instruction.md",
+    );
+    assert.equal(await fs.readFile(instruction_path, "utf8"), "instruction:old");
+
+    await fs.writeFile(instruction_path, "instruction:manual", "utf8");
+    await session.snapshot();
+    assert.equal(await fs.readFile(instruction_path, "utf8"), "instruction:old");
+  } finally {
+    await first_agent.dispose();
+  }
+
+  const restarted_agent = new Agent({
+    id: "instruction_restart_agent",
+    path: agent_path,
+    model,
+    instruction: ["instruction:new"],
+  });
+  try {
+    const restored_session = await restarted_agent.sessions.get(
+      "instruction_restart_session",
+    );
+    const restored_system = await restored_session.system();
+    const restored_system_text = restored_system.blocks
+      .map((block) => block.content)
+      .join("\n");
+    assert.match(restored_system_text, /instruction:old/);
+    assert.doesNotMatch(restored_system_text, /instruction:new/);
+  } finally {
+    await restarted_agent.dispose();
+  }
+
+  const instruction_path = path.join(
+    agent_path,
+    ".downcity",
+    "agents",
+    "instruction_restart_agent",
+    "sessions",
+    "instruction_restart_session",
+    "instruction.md",
+  );
+  await fs.rm(instruction_path);
+
+  const fallback_agent = new Agent({
+    id: "instruction_restart_agent",
+    path: agent_path,
+    model,
+    instruction: ["instruction:new"],
+  });
+  try {
+    const fallback_session = await fallback_agent.sessions.get(
+      "instruction_restart_session",
+    );
+    const fallback_system = await fallback_session.system();
+    const fallback_system_text = fallback_system.blocks
+      .map((block) => block.content)
+      .join("\n");
+    assert.match(fallback_system_text, /instruction:new/);
+    assert.doesNotMatch(fallback_system_text, /instruction:old/);
+  } finally {
+    await fallback_agent.dispose();
+    await fs.rm(agent_path, { recursive: true, force: true });
+  }
+});
+
+test("empty Session snapshot suppresses Agent instruction after restart", async () => {
+  const agent_path = await fs.mkdtemp(
+    path.join(os.tmpdir(), "downcity-agent-empty-instruction-snapshot-"),
+  );
+  const model = new MockLanguageModelV3({ modelId: "empty-snapshot-model" });
+  const first_agent = new Agent({
+    id: "empty_snapshot_agent",
+    path: agent_path,
+    model,
+  });
+  try {
+    const session = await first_agent.sessions.create({
+      sessionId: "empty_snapshot_session",
+    });
+    await session.snapshot();
+  } finally {
+    await first_agent.dispose();
+  }
+
+  const restarted_agent = new Agent({
+    id: "empty_snapshot_agent",
+    path: agent_path,
+    model,
+    instruction: ["instruction:must-not-appear"],
+  });
+  try {
+    const session = await restarted_agent.sessions.get("empty_snapshot_session");
+    const system = await session.system();
+    assert.doesNotMatch(
+      system.blocks.map((block) => block.content).join("\n"),
+      /instruction:must-not-appear/,
+    );
+  } finally {
+    await restarted_agent.dispose();
+    await fs.rm(agent_path, { recursive: true, force: true });
   }
 });
 

@@ -1,0 +1,24 @@
+---
+title: session.snapshot()
+description: Explicitly persist the effective custom instruction of a local Session
+---
+
+# `session.snapshot()`
+
+A local Session keeps the instruction effective at creation time in memory by default. Call `snapshot()` to explicitly persist it as the Session's `instruction.md`:
+
+```ts
+await session.snapshot();
+```
+
+The file is stored at:
+
+```text
+<projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/instruction.md
+```
+
+When restoring the Session, the SDK reads this file first. If it does not exist, the Session uses the Agent's current instruction. Deleting `instruction.md` cancels persistence and restores that default behavior.
+
+`snapshot()` writes only custom blocks whose source is `instruction`. It does not persist SDK core, plugin system, Session context, message history, model, or environment variables. Multiple instruction blocks are merged in order into one Markdown document, and later calls atomically replace the existing file.
+
+This method is available only on local `AgentSession` instances. A remote Session's instruction persistence policy belongs to its server host.

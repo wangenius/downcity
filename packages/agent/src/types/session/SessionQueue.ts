@@ -4,7 +4,7 @@
  * 队列只保存明确的输入事实，不保存可执行闭包。SessionTurn 是这些输入的唯一解释者。
  */
 
-import type { AgentSessionConfigSnapshot, AgentSessionSystemBlock } from "@/types/agent/SessionTypes.js";
+import type { AgentSessionConfigSnapshot } from "@/types/agent/SessionTypes.js";
 import type { AgentPluginExecutionRuntime } from "@/types/plugin/PluginRuntime.js";
 import type { AgentSessionPromptInput } from "@/types/sdk/AgentSessionPrompt.js";
 import type { AgentSessionTurnHandle } from "@/types/sdk/AgentSessionTurn.js";
@@ -21,16 +21,6 @@ export interface SessionModelQueueCommand {
   action_id?: string;
   /** 配置生效后需要写入的可选 Action 标题。 */
   action_title?: string;
-}
-
-/** Agent instruction 在 Session Step 检查点生效的命令。 */
-export interface SessionInstructionQueueCommand {
-  /** 命令种类固定为 Agent instruction 更新。 */
-  type: "agent_instruction";
-  /** 当前命令的稳定唯一标识。 */
-  command_id: string;
-  /** 下一 Step 使用的完整 instruction blocks。 */
-  instruction_blocks: AgentSessionSystemBlock[];
 }
 
 /** Agent env 在 Session Step 检查点生效的命令。 */
@@ -66,29 +56,19 @@ export interface SessionCompactQueueCommand {
 /** Session FIFO 中允许出现的领域命令。 */
 export type SessionQueueCommand =
   | SessionModelQueueCommand
-  | SessionInstructionQueueCommand
   | SessionEnvQueueCommand
   | SessionPluginsQueueCommand
   | SessionCompactQueueCommand;
 
 /** Agent configured state 广播给既有 Session 的输入。 */
-export type AgentSessionCommand =
-  | {
-      /** 当前修改固定为 instruction。 */
-      type: "instruction";
-      /** 当前命令唯一标识。 */
-      command_id: string;
-      /** 下一 Session Step 使用的 instruction blocks。 */
-      instruction_blocks: AgentSessionSystemBlock[];
-    }
-  | {
-      /** 当前修改固定为 env。 */
-      type: "env";
-      /** 当前命令唯一标识。 */
-      command_id: string;
-      /** 下一 Session Step 使用的完整 Agent env。 */
-      env: Record<string, string>;
-    }
+export type AgentSessionCommand = {
+    /** 当前修改固定为 env。 */
+    type: "env";
+    /** 当前命令唯一标识。 */
+    command_id: string;
+    /** 下一 Session Step 使用的完整 Agent env。 */
+    env: Record<string, string>;
+  }
   | {
       /** 当前修改固定为 plugins。 */
       type: "plugins";

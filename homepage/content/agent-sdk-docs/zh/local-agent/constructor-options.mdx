@@ -185,7 +185,8 @@ const agent = new Agent({
 
 ```ts
 import { Agent } from "@downcity/agent";
-import { SkillPlugin, WebPlugin } from "@downcity/plugins";
+import { WebPlugin } from "@downcity/plugins/web";
+import { SkillPlugin } from "@downcity/plugins/skill";
 
 const agent = new Agent({
   id: "repo-helper",
@@ -204,7 +205,7 @@ SDK 会为当前 `Agent` 创建独立的 plugin registry。
 - 它不会复用全局 runtime 的 plugin manager
 - 同名 plugin 被重复注册时会直接报错
 - `agent.plugins` 与 `AgentContext.plugins` 会使用这份 registry
-- 如果你想一次性注入整套内建 plugin，可以从 `@downcity/plugins` 传入 `plugins: createBuiltinPlugins()`
+- 按 Agent 的实际需要实例化对应 plugin，并将这些实例显式传入 `plugins`
 
 ## `Session`
 

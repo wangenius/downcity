@@ -48,7 +48,7 @@ downcity task delete daily-summary
 `TaskPlugin` 只需要可选时区配置。agent task 直接使用任务绑定 Session 的有效模型（Session 优先、Agent 兜底）。cron 默认采用当前运行机器的本机时区：
 
 ```ts
-import { TaskPlugin } from "@downcity/plugins";
+import { TaskPlugin } from "@downcity/plugins/task";
 
 const plugin = new TaskPlugin({
   timezone: "Asia/Shanghai",

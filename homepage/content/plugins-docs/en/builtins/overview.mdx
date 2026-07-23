@@ -18,6 +18,24 @@ The current built-in plugin capabilities in code include:
 - `memory`
 - `shell`
 
+## Package imports
+
+Each SDK-facing built-in has an isolated package subpath:
+
+| Plugin | Import path |
+| --- | --- |
+| `chat` | `@downcity/plugins/chat` |
+| `contact` | `@downcity/plugins/contact` |
+| `image` | `@downcity/plugins/image` |
+| `memory` | `@downcity/plugins/memory` |
+| `skill` | `@downcity/plugins/skill` |
+| `sound` | `@downcity/plugins/sound` |
+| `task` | `@downcity/plugins/task` |
+| `web` | `@downcity/plugins/web` |
+| `workboard` | `@downcity/plugins/workboard` |
+
+There is no default built-in collection factory. Import and instantiate the exact plugins required by each Agent.
+
 ## Two groups matter
 
 ### Public SDK-facing built-ins
@@ -30,7 +48,7 @@ These are the ones most developers are likely to read first:
 - `workboard`
 - `chat`
 
-`sound` requires the FED model catalog plus ASR and TTS functions through its constructor, so it is a built-in class but is not part of the default no-argument creation set.
+`sound` requires the FED model catalog plus ASR and TTS functions through its constructor. Built-in plugins are assembled explicitly from their individual package subpaths.
 
 These are the clearest examples for:
 

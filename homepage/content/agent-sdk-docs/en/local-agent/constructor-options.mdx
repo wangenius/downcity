@@ -183,7 +183,8 @@ For example:
 
 ```ts
 import { Agent } from "@downcity/agent";
-import { SkillPlugin, WebPlugin } from "@downcity/plugins";
+import { WebPlugin } from "@downcity/plugins/web";
+import { SkillPlugin } from "@downcity/plugins/skill";
 
 const agent = new Agent({
   id: "repo-helper",
@@ -202,7 +203,7 @@ Key points:
 - it does not reuse the global plugin manager
 - duplicate plugin names throw immediately
 - `agent.plugins` and `AgentContext.plugins` use this registry
-- if you want the full built-in set, pass `plugins: createBuiltinPlugins()` from `@downcity/plugins`
+- instantiate the exact plugin set the Agent needs and pass those instances in `plugins`
 
 ## `Session`
 

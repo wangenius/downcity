@@ -49,7 +49,7 @@ Plugin "skill" is not ready
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
-  plugins: createBuiltinPlugins(),
+  plugins: [new SkillPlugin(), new WebPlugin()],
   model,
 });
 
@@ -261,7 +261,7 @@ Session 入口内部已经隐式等待后台启动
 const agent = new Agent({
   id: "repo-helper",
   path: "/path/to/project",
-  plugins: createBuiltinPlugins(),
+  plugins: [new SkillPlugin(), new WebPlugin()],
   model,
 });
 
@@ -908,4 +908,3 @@ Vibecape 是多 Agent 宿主，所以更容易触发这个设计缺陷。
 - SDK 必须从根上移除全局 plugin runtime。
 - SDK 必须让 `plugin_call` 绑定当前 Agent 自己的 plugin registry。
 - SDK 必须区分 action 业务失败和 plugin lifecycle 失败。
-

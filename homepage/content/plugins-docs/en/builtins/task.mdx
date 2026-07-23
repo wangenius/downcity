@@ -48,7 +48,7 @@ Use `downcity chat send --delay/--time` or another plugin action with `--delay/-
 `TaskPlugin` only needs the optional timezone setting. Agent tasks use the effective model of the bound Session, preferring its model and falling back to the Agent model. By default, cron uses the current machine timezone:
 
 ```ts
-import { TaskPlugin } from "@downcity/plugins";
+import { TaskPlugin } from "@downcity/plugins/task";
 
 const plugin = new TaskPlugin({
   timezone: "Asia/Shanghai",

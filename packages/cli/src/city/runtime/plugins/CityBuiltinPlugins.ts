@@ -10,25 +10,27 @@
 import type { BasePlugin, DowncityConfig } from "@downcity/agent";
 import {
   ChatPlugin,
-  ContactPlugin,
   FeishuChannel,
-  ImagePlugin,
-  MemoryPlugin,
   QqChannel,
-  SkillPlugin,
-  SoundPlugin,
-  TaskPlugin,
   TelegramChannel,
-  WebPlugin,
-  WorkboardPlugin,
-} from "@downcity/plugins";
+} from "@downcity/plugins/chat";
+import { ContactPlugin } from "@downcity/plugins/contact";
+import { ImagePlugin } from "@downcity/plugins/image";
+import { MemoryPlugin } from "@downcity/plugins/memory";
+import { SkillPlugin } from "@downcity/plugins/skill";
+import { SoundPlugin } from "@downcity/plugins/sound";
+import { TaskPlugin } from "@downcity/plugins/task";
+import { WebPlugin } from "@downcity/plugins/web";
+import { WorkboardPlugin } from "@downcity/plugins/workboard";
 import type {
   ImagePluginModel,
   ImagePluginResolvedInput,
+} from "@downcity/plugins/image";
+import type {
   SoundPluginAsrInput,
   SoundPluginModel,
   SoundPluginTtsInput,
-} from "@downcity/plugins";
+} from "@downcity/plugins/sound";
 import { CityUserManager } from "@/city/shared/CityUserManager.js";
 
 const city_user_manager = new CityUserManager();

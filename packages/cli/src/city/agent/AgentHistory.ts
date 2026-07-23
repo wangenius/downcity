@@ -9,7 +9,7 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import { clean_chat_storage } from "@downcity/plugins";
+import { clean_chat_storage } from "@downcity/plugins/chat";
 import { getDowncitySessionDirPath } from "@/city/config/Paths.js";
 import { CliError } from "@/shared/CliError.js";
 import type {

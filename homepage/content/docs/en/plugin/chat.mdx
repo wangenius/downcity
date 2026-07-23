@@ -67,10 +67,10 @@ Identity combines the channel, current Chat account, and platform user ID. Appro
 npm install @larksuiteoapi/node-sdk@^1.66.0
 ```
 
-Existing SDK imports can stay the same:
+Use the isolated Chat plugin subpath:
 
 ```ts
-import { ChatPlugin, FeishuChannel } from "@downcity/plugins";
+import { ChatPlugin, FeishuChannel } from "@downcity/plugins/chat";
 ```
 
 Apps that do not enable Feishu do not need the Feishu SDK.

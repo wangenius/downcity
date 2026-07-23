@@ -14,7 +14,7 @@ import {
   ChatAccessService,
   type ChatAccessEffect,
   type ChatAccessRequestStatus,
-} from "@downcity/plugins";
+} from "@downcity/plugins/chat";
 import { listAgentConfigs } from "@/city/process/registry/AgentConfigStore.js";
 import type { StoredAgentConfig } from "@/city/types/AgentConfig.js";
 import type {

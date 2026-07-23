@@ -8,7 +8,7 @@
 
 import type { Hono } from "hono";
 import type { AgentContext, AuthPrincipal, JsonValue } from "@downcity/agent";
-import { CHAT_ACCESS_ACTIONS } from "@downcity/plugins";
+import { CHAT_ACCESS_ACTIONS } from "@downcity/plugins/chat";
 import { buildControlRouteAliases } from "@/city/agent/control/CommonHelpers.js";
 import type {
   ChatAccessResolveRequestBody,

@@ -12,7 +12,7 @@ import prompts, { type PromptObject } from "@/city/tui/Prompts.js";
 import {
   ChatChannelAccountManager,
   type ChatChannelAccountListItem,
-} from "@downcity/plugins";
+} from "@downcity/plugins/chat";
 import { emitCliBlock } from "@/shared/CliReporter.js";
 import type { StoredChannelAccountChannel } from "@downcity/agent";
 import type {

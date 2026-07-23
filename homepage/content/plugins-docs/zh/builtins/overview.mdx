@@ -18,6 +18,24 @@ description: Downcity 当前全部内建插件的完整地图，包括公开 SDK
 - `memory`
 - `shell`
 
+## 包导入路径
+
+每个面向 SDK 的内建 plugin 都有独立包子路径：
+
+| Plugin | 导入路径 |
+| --- | --- |
+| `chat` | `@downcity/plugins/chat` |
+| `contact` | `@downcity/plugins/contact` |
+| `image` | `@downcity/plugins/image` |
+| `memory` | `@downcity/plugins/memory` |
+| `skill` | `@downcity/plugins/skill` |
+| `sound` | `@downcity/plugins/sound` |
+| `task` | `@downcity/plugins/task` |
+| `web` | `@downcity/plugins/web` |
+| `workboard` | `@downcity/plugins/workboard` |
+
+包不再提供默认内建集合工厂。每个 Agent 应按实际需要导入并实例化对应 plugin。
+
 ## 这里有两个重要分组
 
 ### 面向 SDK 用户的公开能力型 built-ins
@@ -30,7 +48,7 @@ description: Downcity 当前全部内建插件的完整地图，包括公开 SDK
 - `workboard`
 - `chat`
 
-其中 `sound` 需要通过 constructor 注入 FED 模型目录、ASR 与 TTS 能力，因此它是内建可用 class，但不在默认无参创建集合里。
+其中 `sound` 需要通过 constructor 注入 FED 模型目录、ASR 与 TTS 能力。内建 plugin 统一从各自包子路径导入并显式装配。
 
 它们最适合理解这些 plugin 形状：
 

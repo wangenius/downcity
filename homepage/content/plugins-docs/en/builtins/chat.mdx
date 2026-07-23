@@ -62,7 +62,7 @@ import {
   FeishuChannel,
   QqChannel,
   TelegramChannel,
-} from "@downcity/plugins";
+} from "@downcity/plugins/chat";
 
 const plugin = new ChatPlugin({
   channels: [
@@ -101,10 +101,10 @@ If your host enables `FeishuChannel`, install the SDK in that host:
 npm install @larksuiteoapi/node-sdk@^1.66.0
 ```
 
-The import path does not change:
+Use the isolated Chat plugin subpath:
 
 ```ts
-import { ChatPlugin, FeishuChannel } from "@downcity/plugins";
+import { ChatPlugin, FeishuChannel } from "@downcity/plugins/chat";
 ```
 
 When Feishu is enabled without the SDK installed, the runtime error tells you which package to install before enabling channel `"feishu"`.

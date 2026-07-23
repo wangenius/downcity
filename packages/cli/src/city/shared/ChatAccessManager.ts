@@ -7,7 +7,7 @@
  */
 
 import prompts from "@/city/tui/Prompts.js";
-import type { ChatAccessPrincipalView, ChatAccessRequestView } from "@downcity/plugins";
+import type { ChatAccessPrincipalView, ChatAccessRequestView } from "@downcity/plugins/chat";
 import {
   choose_chat_access_target,
   create_chat_access_service_for_target,

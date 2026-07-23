@@ -59,7 +59,8 @@ plugin 是 Downcity 里“一个能力边界”的统一承载单元。
 
 ```ts
 import { Agent } from "@downcity/agent";
-import { SkillPlugin, WebPlugin } from "@downcity/plugins";
+import { WebPlugin } from "@downcity/plugins/web";
+import { SkillPlugin } from "@downcity/plugins/skill";
 
 const agent = new Agent({
   id: "repo-helper",

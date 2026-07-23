@@ -87,7 +87,8 @@ Local Agents can also receive explicit plugin instances:
 
 ```ts
 import { Agent } from "@downcity/agent";
-import { SkillPlugin, WebPlugin } from "@downcity/plugins";
+import { WebPlugin } from "@downcity/plugins/web";
+import { SkillPlugin } from "@downcity/plugins/skill";
 
 const agent = new Agent({
   id: "repo-helper",
@@ -171,7 +172,7 @@ Use `ChatPlugin` when you want the SDK runtime to own long-lived chat channels:
 
 ```ts
 import { Agent } from "@downcity/agent";
-import { ChatPlugin, TelegramChannel } from "@downcity/plugins";
+import { ChatPlugin, TelegramChannel } from "@downcity/plugins/chat";
 
 const agent = new Agent({
   id: "repo-helper",
@@ -198,7 +199,7 @@ Use `ImagePlugin` when you want an Agent to generate images during a conversatio
 
 ```ts
 import { Agent } from "@downcity/agent";
-import { ImagePlugin } from "@downcity/plugins";
+import { ImagePlugin } from "@downcity/plugins/image";
 
 const agent = new Agent({
   id: "creative-agent",

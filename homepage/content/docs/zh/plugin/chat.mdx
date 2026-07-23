@@ -67,10 +67,10 @@ downcity chat access approve <requestId> --agent <agentId>
 npm install @larksuiteoapi/node-sdk@^1.66.0
 ```
 
-现有 SDK import 可以保持不变：
+使用 Chat plugin 的独立子路径：
 
 ```ts
-import { ChatPlugin, FeishuChannel } from "@downcity/plugins";
+import { ChatPlugin, FeishuChannel } from "@downcity/plugins/chat";
 ```
 
 不启用飞书的应用不需要安装飞书 SDK。

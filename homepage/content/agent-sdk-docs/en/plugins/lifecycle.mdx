@@ -12,7 +12,7 @@ The lifecycle can be simplified to two operations:
 - register: the plugin successfully enters `agent.plugins`
 - unregister: the plugin is successfully removed from `agent.plugins`
 
-Direct host calls through `agent.plugins` immediately observe the configured registry. Existing Sessions switch their execution view at the next Session step checkpoint. An in-flight provider request keeps the action metadata and system view captured for its current step. Its execution lease also keeps the old plugin lifecycle active until that step and its tool calls finish. If the current Session turn has no later step, the queued view change is applied when the next Session turn starts.
+Direct host calls through `agent.plugins` immediately observe the configured registry. Existing Sessions switch their plugin action and metadata execution view at the next Session step checkpoint. An execution lease keeps the old plugin lifecycle active until the current step and its tool calls finish. If the current Session turn has no later step, the queued view change is applied when the next Session turn starts. A Session fixes its system the first time it is generated, so registry changes do not alter it; newly created Sessions collect plugin system text from the latest registry.
 
 You no longer need a separate start, stop, restart, or project-level enabled switch.
 
@@ -48,7 +48,7 @@ After unregistering:
 
 - `agent.plugins.get("skill")` returns `null`
 - `agent.plugins.runAction({ plugin: "skill", ... })` returns unknown plugin
-- that plugin's system text, hooks, and resolves no longer participate in future runs
+- that plugin's hooks, resolves, and actions no longer participate in future runs; system text already fixed by existing Sessions is not removed retroactively
 
 ## lifecycle.start / lifecycle.stop
 

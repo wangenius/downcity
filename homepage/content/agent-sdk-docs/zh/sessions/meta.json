@@ -13,6 +13,7 @@
     "reconnect-and-sync",
     "approvals",
     "system",
+    "syncshot",
     "fork",
     "metadata-and-storage",
     "build-a-chat-ui"

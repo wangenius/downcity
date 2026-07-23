@@ -77,7 +77,7 @@ Important points:
 - `plugins` is a registry owned by this specific `Agent`
 - the SDK does not auto-register every built-in plugin
 - you can use `agent.plugins.list()`, `availability()`, and `runAction()` directly
-- prompt-time plugin system text comes only from plugins registered on that SDK `Agent`
+- a Session collects plugin system text from plugins registered on that SDK `Agent` when its system is first generated, then keeps it fixed
 
 ## What a plugin may contain
 

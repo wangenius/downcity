@@ -42,6 +42,9 @@ type ExecutorOptions = {
     retry_count: number,
   ) => Promise<SessionComposeInput>;
 
+  /** 应用 Session 级固定 system snapshot。 */
+  apply_system_snapshot?: (input: SessionStepInput) => SessionStepInput;
+
   /** 提交 Composer 生成的持久化压缩计划。 */
   commit_compaction: (
     plan: SessionCompactionPlan,
@@ -73,6 +76,7 @@ export class Executor implements SessionExecutor {
 
   private readonly composer: SessionComposer;
   private readonly get_compose_input: ExecutorOptions["get_compose_input"];
+  private readonly apply_system_snapshot?: ExecutorOptions["apply_system_snapshot"];
   private readonly commit_compaction: ExecutorOptions["commit_compaction"];
   private readonly getModel: ExecutorOptions["getModel"];
   private readonly get_plugins: ExecutorOptions["get_plugins"];
@@ -92,6 +96,7 @@ export class Executor implements SessionExecutor {
     this.sessionId = sessionId;
     this.composer = options.composer;
     this.get_compose_input = options.get_compose_input;
+    this.apply_system_snapshot = options.apply_system_snapshot;
     this.commit_compaction = options.commit_compaction;
     this.getModel = options.getModel;
     this.get_plugins = options.get_plugins;
@@ -340,9 +345,12 @@ export class Executor implements SessionExecutor {
     run_context.agentSystems = Object.freeze([
       ...compose_input.state.systems,
     ]);
+    const raw_input = await this.composer.compose(compose_input);
     return {
       compose_input,
-      input: await this.composer.compose(compose_input),
+      input: this.apply_system_snapshot
+        ? this.apply_system_snapshot(raw_input)
+        : raw_input,
       model,
     };
   }

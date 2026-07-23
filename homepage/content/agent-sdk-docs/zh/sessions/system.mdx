@@ -40,7 +40,9 @@ const system = await session.system();
 - 已注册并启用的 plugin system 文本
 - 稳定的 session 上下文，包括 `agentId`、`sessionId`、`projectRoot`、创建时间与时区
 
-返回内容和 `session.prompt()` 使用的是同一套稳定 system blocks。
+返回内容和 `session.prompt()` 使用的是同一套稳定 system blocks。system 第一次生成后会固定在当前 Session 内存中；后续 Agent instruction 或 plugin registry 变化不会修改它。新 Session 才会使用最新配置生成 system。
+
+需要让已有本地 Session 显式采用 Agent 当前配置时，调用 [`session.syncshot()`](/zh/agent-sdk-docs/sessions/syncshot)。
 
 session 创建时间和时区是当前会话的参考时间上下文。当前时间等动态值应放入 user message，不应放进 `instruction`。
 

@@ -134,7 +134,7 @@ Key points:
 - `patchEnv()` treats `null` / `undefined` as delete; other values are coerced to string
 - `setEnv()` clears the current env first and then writes the new values, keeping the same underlying reference
 - `agent.setInstruction()` affects only Sessions created afterwards and does not retroactively change existing in-memory Sessions
-- restored Sessions use the Agent's current instruction by default; call `session.snapshot()` to persist the Session's effective instruction to `instruction.md`
+- restored Sessions regenerate from the Agent's current instruction and plugins when `instruction.md` is absent; use `session.syncshot()` to refresh an existing Session and `session.snapshot()` to persist it
 - Agent env and plugin changes commit in existing Sessions at the next Session step checkpoint
 - an in-flight provider request and its tool calls keep the env that was effective for the current step
 - if the current Session turn has no later step, the queued change is committed when the next Session turn starts

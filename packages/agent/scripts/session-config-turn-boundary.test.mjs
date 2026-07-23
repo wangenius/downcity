@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 第一次 provider 请求保持阻塞，用来制造真实的运行中配置修改窗口。
- * - Agent instruction 修改不能改变已有 Session；env 与 plugin registry 修改在 step 检查点生效。
+ * - Agent instruction 与 plugin system 修改不能改变已有 Session；plugin action 视图在 step 检查点生效。
  * - config 与 steer 在同一个 Session step 检查点提交，并继续使用同一个 turn id。
  */
 
@@ -135,7 +135,7 @@ test("Agent instruction changes only affect newly created Sessions", async () =>
     assert.equal(provider_prompts.length, 2);
     assert.match(provider_prompts[1], /instruction:old/);
     assert.doesNotMatch(provider_prompts[1], /instruction:new/);
-    assert.doesNotMatch(provider_prompts[1], /plugin-env:old/);
+    assert.match(provider_prompts[1], /plugin-env:old/);
 
     const messages = await session.messages();
     const completed_actions = messages.items
@@ -171,7 +171,132 @@ test("Agent instruction changes only affect newly created Sessions", async () =>
   }
 });
 
-test("Session snapshot explicitly persists instruction.md", async () => {
+test("Plugin registry changes do not rewrite an existing Session system", async () => {
+  const agent_path = await fs.mkdtemp(
+    path.join(os.tmpdir(), "downcity-session-fixed-plugin-system-"),
+  );
+  const agent = new Agent({
+    id: "fixed_plugin_system_agent",
+    path: agent_path,
+    model: new MockLanguageModelV3({ modelId: "fixed-plugin-system-model" }),
+  });
+  const runtime_plugin = createPlugin({
+    name: "runtime-system",
+    title: "Runtime System",
+    description: "Provides a fixed Session system test block",
+    system: () => "plugin-system:registered",
+  });
+
+  try {
+    const existing_session = await agent.sessions.create({
+      sessionId: "existing_session",
+    });
+    const existing_before = await existing_session.system();
+
+    await agent.plugins.register(runtime_plugin);
+    const existing_after_register = await existing_session.system();
+    assert.deepEqual(existing_after_register, existing_before);
+
+    const registered_session = await agent.sessions.create({
+      sessionId: "registered_session",
+    });
+    const registered_before = await registered_session.system();
+    assert.match(
+      registered_before.blocks.map((block) => block.content).join("\n"),
+      /plugin-system:registered/,
+    );
+
+    await agent.plugins.unregister("runtime-system");
+    const registered_after_unregister = await registered_session.system();
+    assert.deepEqual(registered_after_unregister, registered_before);
+
+    const unregistered_session = await agent.sessions.create({
+      sessionId: "unregistered_session",
+    });
+    assert.doesNotMatch(
+      (await unregistered_session.system()).blocks
+        .map((block) => block.content)
+        .join("\n"),
+      /plugin-system:registered/,
+    );
+  } finally {
+    await agent.dispose();
+    await fs.rm(agent_path, { recursive: true, force: true });
+  }
+});
+
+test("Session syncshot refreshes system and only rewrites an existing instruction.md", async () => {
+  const agent_path = await fs.mkdtemp(
+    path.join(os.tmpdir(), "downcity-session-syncshot-"),
+  );
+  const session_id = "syncshot_session";
+  const instruction_path = path.join(
+    agent_path,
+    ".downcity",
+    "agents",
+    "syncshot_agent",
+    "sessions",
+    session_id,
+    "instruction.md",
+  );
+  const create_system_plugin = (content) => createPlugin({
+    name: "syncshot-system",
+    title: "Syncshot System",
+    description: "Provides system text refreshed by session.syncshot()",
+    system: () => content,
+  });
+  const model = new MockLanguageModelV3({ modelId: "syncshot-model" });
+  const agent = new Agent({
+    id: "syncshot_agent",
+    path: agent_path,
+    model,
+    instruction: ["instruction:initial"],
+    plugins: [create_system_plugin("plugin-system:initial")],
+  });
+
+  try {
+    const session = await agent.sessions.create({ sessionId: session_id });
+    const initial_text = (await session.system()).blocks
+      .map((block) => block.content)
+      .join("\n");
+    assert.match(initial_text, /instruction:initial/);
+    assert.match(initial_text, /plugin-system:initial/);
+
+    agent.setInstruction(["instruction:refreshed"]);
+    await agent.plugins.register(create_system_plugin("plugin-system:refreshed"));
+    await session.syncshot();
+
+    const refreshed_text = (await session.system()).blocks
+      .map((block) => block.content)
+      .join("\n");
+    assert.match(refreshed_text, /instruction:refreshed/);
+    assert.match(refreshed_text, /plugin-system:refreshed/);
+    assert.doesNotMatch(refreshed_text, /instruction:initial/);
+    await assert.rejects(fs.access(instruction_path));
+
+    await session.snapshot();
+    agent.setInstruction(["instruction:latest"]);
+    await agent.plugins.register(create_system_plugin("plugin-system:latest"));
+    await Promise.all([session.snapshot(), session.syncshot()]);
+
+    const latest_system = await session.system();
+    const latest_text = latest_system.blocks
+      .map((block) => block.content)
+      .join("\n");
+    const persisted_text = await fs.readFile(instruction_path, "utf8");
+    assert.match(latest_text, /instruction:latest/);
+    assert.match(latest_text, /plugin-system:latest/);
+    assert.equal(
+      persisted_text,
+      latest_system.blocks.map((block) => block.content).join("\n\n"),
+    );
+  } finally {
+    await agent.dispose();
+    await fs.rm(agent_path, { recursive: true, force: true });
+  }
+});
+
+test("Session snapshot explicitly persists the complete system to instruction.md", async () => {
   const agent_path = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-agent-instruction-restart-"),
   );
@@ -181,6 +306,12 @@ test("Session snapshot explicitly persists instruction.md", async () => {
     path: agent_path,
     model,
     instruction: ["instruction:old"],
+    plugins: [createPlugin({
+      name: "snapshot-system",
+      title: "Snapshot System",
+      description: "Provides system text persisted by session.snapshot()",
+      system: () => "plugin-system:persisted",
+    })],
   });
 
   try {
@@ -203,11 +334,15 @@ test("Session snapshot explicitly persists instruction.md", async () => {
       "instruction_restart_session",
       "instruction.md",
     );
-    assert.equal(await fs.readFile(instruction_path, "utf8"), "instruction:old");
+    const persisted_system = await fs.readFile(instruction_path, "utf8");
+    assert.match(persisted_system, /instruction:old/);
+    assert.match(persisted_system, /# Downcity Agent/);
+    assert.match(persisted_system, /plugin-system:persisted/);
+    assert.match(persisted_system, /Current session context:/);
 
     await fs.writeFile(instruction_path, "instruction:manual", "utf8");
     await session.snapshot();
-    assert.equal(await fs.readFile(instruction_path, "utf8"), "instruction:old");
+    assert.equal(await fs.readFile(instruction_path, "utf8"), persisted_system);
   } finally {
     await first_agent.dispose();
   }
@@ -227,6 +362,7 @@ test("Session snapshot explicitly persists instruction.md", async () => {
       .map((block) => block.content)
       .join("\n");
     assert.match(restored_system_text, /instruction:old/);
+    assert.match(restored_system_text, /plugin-system:persisted/);
     assert.doesNotMatch(restored_system_text, /instruction:new/);
   } finally {
     await restarted_agent.dispose();

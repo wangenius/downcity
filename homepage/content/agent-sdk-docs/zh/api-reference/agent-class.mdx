@@ -70,7 +70,7 @@ description: 本地 Agent SDK 的核心公开接口
 - `agent.setEnv(next)`：整体替换当前 env
 - `agent.patchEnv(patch)`：增量更新当前 env，字段值为 `null` 或 `undefined` 时删除该 key
 
-`agent.setInstruction()` 只更新当前 Agent 的默认 instruction：之后通过 `sessions.create()` 创建的新 Session 会使用新 instruction，当前内存中的已有 Session 不会被回溯修改。Session 恢复时默认使用 Agent 当前 instruction；本地 Session 可调用 `session.snapshot()`，把当前生效的自定义 instruction 显式固化到自己的 `instruction.md`。
+`agent.setInstruction()` 只更新当前 Agent 的默认 instruction：之后通过 `sessions.create()` 创建的新 Session 会使用新 instruction，当前内存中的已有 Session 不会被回溯修改。本地 Session 可调用 `session.syncshot()` 显式采用 Agent 当前 instruction 和 plugin；调用 `session.snapshot()` 可以把固定后的完整 system 持久化到 `instruction.md`。
 
 `setEnv()`、`patchEnv()` 以及 plugin 注册表修改采用 Session step 边界：配置方法成功后，已有 Session 会把修改加入自己的统一输入队列，并在下一个 step 检查点生效。当前流式响应和工具执行继续使用本 step 已经提交的 env 与 plugin 视图；如果本轮没有后续 step，则在下一个 Session turn 开始时生效。
 

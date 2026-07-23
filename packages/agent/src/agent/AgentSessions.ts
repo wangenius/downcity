@@ -418,6 +418,7 @@ export class AgentSessions implements AgentSessionsContract<AgentSession> {
       tools: this.tools,
       logger: this.logger,
       instruction_system_blocks: this.load_instruction_system_blocks(),
+      get_instruction_system_blocks: () => this.load_instruction_system_blocks(),
       getAgentEnv: () => this.get_agent_env(),
       getAgentModel: () => this.get_agent_model(),
       get_agent_plugins: () => this.get_agent_plugins(),

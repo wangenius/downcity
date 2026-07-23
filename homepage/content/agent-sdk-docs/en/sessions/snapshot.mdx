@@ -1,11 +1,13 @@
 ---
 title: session.snapshot()
-description: Explicitly persist the effective custom instruction of a local Session
+description: Explicitly persist the complete system fixed by a local Session
 ---
 
 # `session.snapshot()`
 
-A local Session keeps the instruction effective at creation time in memory by default. Call `snapshot()` to explicitly persist it as the Session's `instruction.md`:
+A local Session fixes its system in memory the first time it is generated. Later Agent instruction or plugin registry changes do not alter an existing Session's system; newly created Sessions use the latest configuration.
+
+Call `snapshot()` to explicitly persist the complete system as the Session's `instruction.md`:
 
 ```ts
 await session.snapshot();
@@ -17,8 +19,10 @@ The file is stored at:
 <projectRoot>/.downcity/agents/<agentId>/sessions/<sessionId>/instruction.md
 ```
 
-When restoring the Session, the SDK reads this file first. If it does not exist, the Session uses the Agent's current instruction. Deleting `instruction.md` cancels persistence and restores that default behavior.
+When restoring the Session, the SDK reads this file first. If it does not exist, the Session regenerates its system from the Agent's current instruction and plugins. Deleting `instruction.md` cancels persistence and restores that behavior.
 
-`snapshot()` writes only custom blocks whose source is `instruction`. It does not persist SDK core, plugin system, Session context, message history, model, or environment variables. Multiple instruction blocks are merged in order into one Markdown document, and later calls atomically replace the existing file.
+`snapshot()` writes the complete system, including custom instruction, SDK core, plugin system, and Session context. It does not persist message history, model, or environment variables. Multiple system blocks are merged in order into one Markdown document, and later calls atomically replace the existing file.
+
+To regenerate from the Agent's current configuration before persisting, call `await session.syncshot()` followed by `await session.snapshot()`. If `instruction.md` already exists, `syncshot()` also overwrites it directly.
 
 This method is available only on local `AgentSession` instances. A remote Session's instruction persistence policy belongs to its server host.

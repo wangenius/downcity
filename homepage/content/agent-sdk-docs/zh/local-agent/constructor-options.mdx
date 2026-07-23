@@ -134,7 +134,7 @@ agent.setEnv({ ONLY: "ok" });  // 整体覆盖
 - `patchEnv()` 中 `null` / `undefined` 表示删除该 key，其余值会强制转字符串
 - `setEnv()` 会先清空当前 env，再写入新值，仍然保持原引用不变
 - `agent.setInstruction()` 只影响之后新建的 Session，不会回溯修改当前内存中的已有 Session
-- Session 恢复时默认使用 Agent 当前 instruction；调用 `session.snapshot()` 可把该 Session 的生效 instruction 固化到 `instruction.md`
+- Session 恢复时若没有 `instruction.md`，会从 Agent 当前 instruction 和 plugin 重新生成 system；已有 Session 可用 `session.syncshot()` 手动刷新，并用 `session.snapshot()` 持久化
 - Agent env 与 plugin 修改会在已有 Session 的下一个 Session step 检查点提交
 - 正在进行的 provider 请求及其工具调用继续使用当前 step 已生效的 env
 - 如果当前 Session turn 没有后续 step，排队中的修改会在下一个 Session turn 开始时提交

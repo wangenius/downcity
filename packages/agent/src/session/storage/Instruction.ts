@@ -1,9 +1,9 @@
 /**
- * Session instruction 显式快照存储。
+ * Session system 显式快照存储。
  *
  * 关键点（中文）
- * - instruction.md 是可选文件，不存在时由 Session 使用 Agent 当前 instruction。
- * - 空文件也是有效快照，用于显式固化没有自定义 instruction 的状态。
+ * - instruction.md 是可选文件，不存在时由 Session 在内存中重新生成完整 system。
+ * - 空文件也是有效的完整 system 快照。
  * - 写入使用同目录临时文件替换，避免进程中断留下半份内容。
  */
 
@@ -16,7 +16,7 @@ import type {
   WriteSessionInstructionInput,
 } from "@/types/session/SessionInstruction.js";
 
-/** 读取 Session 显式固化的 instruction；文件不存在时返回 null。 */
+/** 读取 Session 显式固化的完整 system；文件不存在时返回 null。 */
 export async function read_session_instruction(
   input: SessionInstructionStorageLocation,
 ): Promise<string | null> {
@@ -33,7 +33,20 @@ export async function read_session_instruction(
   }
 }
 
-/** 原子覆盖当前 Session 的 instruction.md。 */
+/** 判断当前 Session 是否已经显式持久化 instruction.md。 */
+export async function has_session_instruction(
+  input: SessionInstructionStorageLocation,
+): Promise<boolean> {
+  return await fs.pathExists(
+    getSdkAgentSessionInstructionPath(
+      input.project_root,
+      input.agent_id,
+      input.session_id,
+    ),
+  );
+}
+
+/** 使用完整 system Markdown 原子覆盖当前 Session 的 instruction.md。 */
 export async function write_session_instruction(
   input: WriteSessionInstructionInput,
 ): Promise<void> {

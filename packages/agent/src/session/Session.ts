@@ -75,6 +75,7 @@ import { buildSessionInfo } from "@/session/browse/Browse.js";
 import { ensureSessionTitle } from "@/session/SessionTitle.js";
 import { readSessionMetadata } from "@/session/storage/Metadata.js";
 import {
+  has_session_instruction,
   read_session_instruction,
   write_session_instruction,
 } from "@/session/storage/Instruction.js";
@@ -107,10 +108,16 @@ export class Session implements AgentSession {
   private readonly get_agent_env: SessionOptions["getAgentEnv"];
   private readonly get_agent_model: SessionOptions["getAgentModel"];
   private readonly get_agent_plugins: SessionOptions["get_agent_plugins"];
+  private readonly get_instruction_system_blocks:
+    SessionOptions["get_instruction_system_blocks"];
   private effective_instruction_system_blocks: AgentSessionSystemBlock[];
   private instruction_initialize_promise: Promise<void> | null = null;
   private effective_agent_env: Record<string, string>;
   private effective_agent_plugins: AgentPluginExecutionRuntime;
+  /** 当前 Session 首次生成后固定的完整 system snapshot。 */
+  private system_snapshot_blocks: AgentSessionSystemBlock[] | null = null;
+  /** 串行化 snapshot / syncshot 对 system 与 instruction.md 的修改。 */
+  private system_mutation_chain: Promise<void> = Promise.resolve();
   private readonly state: SessionState;
   private readonly session_turn: SessionTurn;
   private runtime_port: SessionPort | null = null;
@@ -124,6 +131,7 @@ export class Session implements AgentSession {
     this.get_agent_env = options.getAgentEnv;
     this.get_agent_model = options.getAgentModel;
     this.get_agent_plugins = options.get_agent_plugins;
+    this.get_instruction_system_blocks = options.get_instruction_system_blocks;
     this.effective_instruction_system_blocks = options
       .instruction_system_blocks
       .map((block) => ({ ...block }));
@@ -200,23 +208,52 @@ export class Session implements AgentSession {
   }
 
   /**
-   * 把当前 Session 生效的自定义 instruction 显式固化到 instruction.md。
+   * 把当前 Session 首次生成后固定的完整 system 显式固化到 instruction.md。
    *
    * 关键点（中文）
-   * - 只写入 `instruction` 来源的 block，不包含 SDK core 与 plugin system。
-   * - 多个 instruction block 按原顺序合并为一个 Markdown 文档。
+   * - 包含 instruction、SDK core、plugin system 与 Session context。
+   * - 多个 system block 按原顺序合并为一个 Markdown 文档。
    */
   async snapshot(): Promise<void> {
-    await this.initialize_instruction();
-    const instruction = this.effective_instruction_system_blocks
-      .filter((block) => block.source === "instruction")
-      .map((block) => block.content)
-      .join("\n\n");
-    await write_session_instruction({
-      project_root: this.project_root,
-      agent_id: this.agentId,
-      session_id: this.id,
-      instruction,
+    await this.run_system_mutation(async () => {
+      const system_snapshot = await this.system();
+      await this.write_system_snapshot(system_snapshot.blocks);
+    });
+  }
+
+  /**
+   * 使用 Agent 当前 instruction 与 plugin 重新生成一次完整 system。
+   *
+   * 关键点（中文）
+   * - 只替换内存 snapshot，不改变 plugin execution view。
+   * - instruction.md 已存在时同步覆盖；不存在时不自动创建。
+   * - 当前已经发出的 provider 请求不受影响，后续 step 使用新 snapshot。
+   */
+  async syncshot(): Promise<void> {
+    await this.run_system_mutation(async () => {
+      await this.initialize_instruction();
+      const should_persist = await has_session_instruction({
+        project_root: this.project_root,
+        agent_id: this.agentId,
+        session_id: this.id,
+      });
+      const run_context: SessionRunContext = {
+        sessionId: this.id,
+        injectedUserMessages: [],
+        deferredPersistedUserMessages: [],
+        pendingAssistantFileParts: [],
+      };
+      const composed = await this.composer.compose(
+        await this.create_compose_input(run_context, 0, true),
+      );
+      const next_blocks = resolve_composed_system_blocks(composed);
+
+      if (should_persist) {
+        await this.write_system_snapshot(next_blocks);
+      }
+      this.effective_instruction_system_blocks =
+        this.get_instruction_system_blocks().map((block) => ({ ...block }));
+      this.system_snapshot_blocks = next_blocks;
     });
   }
 
@@ -556,6 +593,7 @@ export class Session implements AgentSession {
       instruction_system_blocks: this.effective_instruction_system_blocks.map(
         (block) => ({ ...block }),
       ),
+      get_instruction_system_blocks: this.get_instruction_system_blocks,
       getAgentEnv: this.get_agent_env,
       get_agent_plugins: this.get_agent_plugins,
       getManagedPluginSystemBlocks: this.get_managed_plugin_system_blocks,
@@ -579,7 +617,7 @@ export class Session implements AgentSession {
     return new SessionClass(options) as this;
   }
 
-  /** 恢复显式固化的 instruction.md；文件不存在时保留创建时 instruction。 */
+  /** 恢复显式固化的完整 system snapshot；文件不存在时等待首次生成。 */
   private async initialize_instruction(): Promise<void> {
     if (!this.instruction_initialize_promise) {
       this.instruction_initialize_promise = (async () => {
@@ -591,6 +629,13 @@ export class Session implements AgentSession {
         if (persisted_instruction === null) return;
 
         const instruction = persisted_instruction.trim();
+        this.system_snapshot_blocks = instruction
+          ? [{
+              source: "instruction" as const,
+              name: "snapshot",
+              content: instruction,
+            }]
+          : [];
         const stable_system_blocks = this.effective_instruction_system_blocks
           .filter((block) => block.source !== "instruction")
           .map((block) => ({ ...block }));
@@ -650,6 +695,7 @@ export class Session implements AgentSession {
       getModel: () => this.get_model(),
       logger: this.logger,
       get_plugins: () => this.effective_agent_plugins,
+      apply_system_snapshot: (input) => this.apply_system_snapshot(input),
     });
   }
 
@@ -657,10 +703,18 @@ export class Session implements AgentSession {
   private async create_compose_input(
     run_context: SessionRunContext,
     retry_count: number,
+    refresh_system = false,
   ): Promise<SessionComposeInput> {
-    const plugin_system_blocks = run_context.agentPlugins
-      ? await run_context.agentPlugins.systemBlocks(run_context)
-      : await this.effective_agent_plugins.systemBlocks(run_context);
+    const instruction_system_blocks = refresh_system
+      ? this.get_instruction_system_blocks().map((block) => ({ ...block }))
+      : this.effective_instruction_system_blocks.map((block) => ({ ...block }));
+    const plugin_system_blocks = this.system_snapshot_blocks && !refresh_system
+      ? []
+      : refresh_system
+        ? await this.get_agent_plugins().systemBlocks(run_context)
+        : run_context.agentPlugins
+          ? await run_context.agentPlugins.systemBlocks(run_context)
+          : await this.effective_agent_plugins.systemBlocks(run_context);
     return {
       session: {
         agent_id: this.agentId,
@@ -674,17 +728,14 @@ export class Session implements AgentSession {
         model_context_window: this.get_model_context_window(),
         env: Object.freeze({ ...this.effective_agent_env }),
         systems: Object.freeze(
-          this.effective_instruction_system_blocks.map(
-            (block) => block.content,
-          ),
+          instruction_system_blocks.map((block) => block.content),
         ),
         tools: Object.freeze({ ...this.tools }),
-        instruction_system_blocks:
-          this.effective_instruction_system_blocks.map(
-            (block) => ({ ...block }),
-          ),
+        instruction_system_blocks,
         managed_plugin_system_blocks:
-          await this.get_managed_plugin_system_blocks(),
+          this.system_snapshot_blocks && !refresh_system
+            ? []
+            : await this.get_managed_plugin_system_blocks(),
         plugin_system_blocks,
       },
       history: await this.session_messages.context_snapshot(),
@@ -703,9 +754,47 @@ export class Session implements AgentSession {
       deferredPersistedUserMessages: [],
       pendingAssistantFileParts: [],
     };
-    return await this.composer.compose(
+    const composed = await this.composer.compose(
       await this.create_compose_input(run_context, 0),
     );
+    return this.apply_system_snapshot(composed);
+  }
+
+  /** 固定或应用当前 Session 的 system snapshot。 */
+  private apply_system_snapshot(input: SessionStepInput): SessionStepInput {
+    if (!this.system_snapshot_blocks) {
+      this.system_snapshot_blocks = resolve_composed_system_blocks(input);
+    }
+
+    return {
+      ...input,
+      system: this.system_snapshot_blocks.map((block) => ({
+        role: "system" as const,
+        content: block.content,
+      })),
+      system_blocks: this.system_snapshot_blocks.map((block) => ({ ...block })),
+    };
+  }
+
+  /** 串行执行一次 Session system 修改。 */
+  private async run_system_mutation(
+    operation: () => Promise<void>,
+  ): Promise<void> {
+    const next = this.system_mutation_chain.then(operation, operation);
+    this.system_mutation_chain = next.catch(() => undefined);
+    await next;
+  }
+
+  /** 把指定完整 system blocks 原子写入 instruction.md。 */
+  private async write_system_snapshot(
+    blocks: readonly AgentSessionSystemBlock[],
+  ): Promise<void> {
+    await write_session_instruction({
+      project_root: this.project_root,
+      agent_id: this.agentId,
+      session_id: this.id,
+      instruction: blocks.map((block) => block.content).join("\n\n"),
+    });
   }
 
   /** 提交 Composer 生成的 Segment 压缩计划。 */

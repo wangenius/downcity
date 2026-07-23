@@ -12,7 +12,7 @@ Plugin 只属于 Agent。
 - 注册：plugin 成功进入 `agent.plugins`
 - 卸载：plugin 成功从 `agent.plugins` 移除
 
-宿主直接调用 `agent.plugins` 时会立即看到新的 configured registry。已有 Session 的执行视图则在下一个 Session step 检查点切换；当前 provider 请求继续使用本 step 已捕获的 action、metadata 与 system 视图，execution lease 也会保证旧 plugin lifecycle 持续到本 step 及其工具调用结束。如果当前 Session turn 没有后续 step，则在下一个 Session turn 开始时切换。
+宿主直接调用 `agent.plugins` 时会立即看到新的 configured registry。已有 Session 的 plugin action 与 metadata 执行视图在下一个 Session step 检查点切换；execution lease 会保证旧 plugin lifecycle 持续到当前 step 及其工具调用结束。如果当前 Session turn 没有后续 step，则在下一个 Session turn 开始时切换。Session 的 system 在第一次生成后固定，不会随 plugin registry 变化；新 Session 才会从最新 registry 收集 plugin system。
 
 不再需要单独理解 start、stop、restart 或项目级 enabled 开关。
 
@@ -48,7 +48,7 @@ await agent.plugins.unregister("skill");
 
 - `agent.plugins.get("skill")` 返回 `null`
 - `agent.plugins.runAction({ plugin: "skill", ... })` 会返回 unknown plugin
-- 这个 plugin 的 system、hooks、resolves 都不会再参与后续运行
+- 这个 plugin 的 hooks、resolves 和 action 不会再参与后续运行；已有 Session 已固定的 system 不会被回溯删除
 
 ## lifecycle.start / lifecycle.stop
 

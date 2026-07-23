@@ -21,7 +21,7 @@ SDK Sessions are persisted under the project directory. Applications should read
 
 `agentId` is part of the storage partition. Multiple Agents in one project can use the same `sessionId` without conflict.
 
-`instruction.md` is optional. Sessions do not persist instruction by default and use the Agent's current instruction when restored. The local `session.snapshot()` method atomically writes only the Session's effective custom instruction. Deleting the file restores the default behavior; SDK core, plugin, and Session context blocks are never written to it.
+`instruction.md` is an optional complete system snapshot. A Session fixes its first generated system in memory by default. Local `session.snapshot()` creates or overwrites the file. `session.syncshot()` regenerates the in-memory system and also overwrites the file when it already exists. If the file is absent when restored, the Session regenerates from the Agent's current instruction and plugins; deleting the file restores that behavior.
 
 ## Active and Segments
 

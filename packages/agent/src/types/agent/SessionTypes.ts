@@ -203,7 +203,7 @@ export interface AgentSessionSystemSessionInfo {
 }
 
 /**
- * 当前 session 生效的完整 system prompt 快照。
+ * 当前 session 首次生成后固定的完整 system prompt 快照。
  */
 export interface AgentSessionSystemSnapshot {
   /** 当前 sessionId。 */
@@ -217,7 +217,7 @@ export interface AgentSessionSystemSnapshot {
    * - 每轮动态信息应由调用方放入 user message，避免破坏 instruction 缓存命中。
    */
   session: AgentSessionSystemSessionInfo;
-  /** 当前生效的 system blocks，按进入模型的顺序排列。 */
+  /** 首次生成后固定的 system blocks，按进入模型的顺序排列。 */
   blocks: AgentSessionSystemBlock[];
 }
 

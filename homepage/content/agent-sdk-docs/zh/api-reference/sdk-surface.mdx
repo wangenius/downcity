@@ -131,6 +131,7 @@ await turn.finished;
 - `session.subscribe(subscriber)`
 - `session.messages(input?)`
 - `session.system()`
+- `session.syncshot()`
 - `session.snapshot()`
 - `session.approvals()`
 - `session.approval_mode()`
@@ -168,7 +169,8 @@ await turn.finished;
 一个关键差异：
 
 - 本地 `AgentSession` 支持 `set({ model })`
-- 本地 `AgentSession` 支持 `snapshot()` 显式固化当前自定义 instruction
+- 本地 `AgentSession` 支持 `snapshot()` 显式持久化当前固定的完整 system
+- 本地 `AgentSession` 支持 `syncshot()` 使用 Agent 当前配置重新生成 system
 - 远程 `RemoteAgentSession` 不提供模型配置方法
 
 ## Agent 项目和 Federation AIService 的关系

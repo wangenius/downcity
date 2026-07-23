@@ -328,7 +328,7 @@ export function createFederationPlatformStore(): PlatformStore {
  */
 export function withPlatformStore<T>(callback: (context: PlatformStoreContext) => T): T {
   const dbPath = getPlatformStoreDbPath();
-  fs.ensureDirSync(dbPath.replace(/\/[^/]+$/, ""));
+  fs.ensureDirSync(getPlatformRootDirPath());
   const sqlite = new Database(dbPath);
   sqlite.pragma("busy_timeout = 5000");
   sqlite.pragma("journal_mode = WAL");

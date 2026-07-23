@@ -42,6 +42,16 @@ Downcity gives creators, indie builders, and teams one reusable runtime layer fo
 - Built-in agent capabilities: `chat`, `task`, `memory`, `shell`, `contact`, `skill`, `web`, `sound`, and `workboard`.
 - Product surfaces: Downcity CLI, Agent SDK, City SDK, and UI SDK.
 
+## Platform Support
+
+| Platform | Local Agent and Safe Sandbox |
+| --- | --- |
+| macOS | Supported with Seatbelt |
+| Linux | Supported with Bubblewrap |
+| Windows 11 24H2+ | Development / unstable with Microsoft MXC and native `cmd.exe` execution |
+
+Native Windows uses `cmd.exe /d /s /c` inside the Microsoft MXC `processcontainer` backend. Preflight requires Windows build 26100 or newer and a successful MXC isolation-tier probe; failures never fall back to unrestricted execution. MXC is currently Public Preview and is not presented as a production security boundary. See the Agent SDK Shell documentation for current limitations.
+
 ## Quick Start
 
 ### 1. Install the CLI

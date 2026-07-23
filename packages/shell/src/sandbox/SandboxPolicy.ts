@@ -30,6 +30,12 @@ const DEFAULT_ENV_ALLOWLIST = [
   "SHELL",
   "USER",
   "LOGNAME",
+  "ComSpec",
+  "COMSPEC",
+  "PATHEXT",
+  "SystemDrive",
+  "SystemRoot",
+  "WINDIR",
 ];
 
 const MACOS_READ_ONLY_PATHS = [
@@ -74,9 +80,23 @@ function dedupe_paths(values: string[]): string[] {
   return result.sort((left, right) => left.localeCompare(right));
 }
 
+function resolve_windows_read_only_paths(base_env: NodeJS.ProcessEnv): string[] {
+  const path_entries = String(base_env.PATH || "")
+    .split(path.delimiter)
+    .map((value) => value.trim().replace(/^"|"$/gu, ""))
+    .filter((value) => path.isAbsolute(value) && fs.existsSync(value));
+  const comspec = String(base_env.ComSpec || base_env.COMSPEC || "").trim();
+  return dedupe_paths([
+    ...path_entries,
+    path.dirname(process.execPath),
+    ...(path.isAbsolute(comspec) ? [path.dirname(comspec)] : []),
+  ]);
+}
+
 function resolve_backend(): Exclude<SandboxBackend, "unrestricted-host"> {
   if (process.platform === "darwin") return "macos-seatbelt";
   if (process.platform === "linux") return "linux-bubblewrap";
+  if (process.platform === "win32") return "windows-mxc-dev";
   throw new Error(
     `sandbox backend is required for shell execution, but current platform is unsupported: ${process.platform}`,
   );
@@ -108,7 +128,7 @@ async function normalize_host_read_only_paths(
     if (!stat.isDirectory()) {
       throw new Error(`safe sandbox read-only path must be a directory: ${raw_path}`);
     }
-    if ((stat.mode & 0o022) !== 0) {
+    if (process.platform !== "win32" && (stat.mode & 0o022) !== 0) {
       throw new Error(`safe sandbox read-only path must not be group/world writable: ${raw_path}`);
     }
     const overlaps_write_path = read_write_paths.some((write_path) =>
@@ -180,7 +200,9 @@ export async function resolve_sandbox_policy(
   );
   const platform_paths = backend === "macos-seatbelt"
     ? MACOS_READ_ONLY_PATHS
-    : LINUX_READ_ONLY_PATHS;
+    : backend === "linux-bubblewrap"
+      ? LINUX_READ_ONLY_PATHS
+      : resolve_windows_read_only_paths(base_env);
   const developer_path = backend === "macos-seatbelt"
     ? await resolve_macos_developer_path(base_env)
     : null;

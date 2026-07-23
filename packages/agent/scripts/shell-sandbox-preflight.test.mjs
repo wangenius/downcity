@@ -32,6 +32,12 @@ function createProbe(params) {
   return {
     commandExists: async (command) => params.commands?.has(command) === true,
     readProcInt: async (filePath) => params.proc?.get(filePath) ?? null,
+    inspectWindowsMxcSupport: async () => params.windows_support || {
+      supported: true,
+      windows_build: 26100,
+      isolation_tier: "appcontainer-dacl",
+      warnings: [],
+    },
   };
 }
 
@@ -72,7 +78,20 @@ test("Linux shell sandbox preflight accepts bwrap with enabled userns", async ()
   });
 });
 
-test("Unsupported platforms fail shell sandbox preflight", async () => {
+test("Windows MXC development sandbox accepts a supported runtime", async () => {
+  await withPlatform("win32", async () => {
+    const result = await checkShellSandboxPreflightWithProbe(createProbe({
+      commands: new Set(["cmd.exe"]),
+      proc: new Map(),
+    }));
+
+    assert.equal(result.ok, true);
+    assert.equal(result.backend, "windows-mxc-dev");
+    assert.deepEqual(result.issues, []);
+  });
+});
+
+test("Windows MXC development sandbox reports a missing cmd.exe", async () => {
   await withPlatform("win32", async () => {
     const result = await checkShellSandboxPreflightWithProbe(createProbe({
       commands: new Set(),
@@ -80,9 +99,59 @@ test("Unsupported platforms fail shell sandbox preflight", async () => {
     }));
 
     assert.equal(result.ok, false);
-    assert.deepEqual(
-      result.issues.map((issue) => issue.code),
-      ["unsupported-platform"],
-    );
+    assert.equal(result.backend, "windows-mxc-dev");
+    assert.deepEqual(result.issues.map((issue) => issue.code), ["missing-command"]);
+  });
+});
+
+test("Windows MXC development sandbox rejects hosts older than 24H2", async () => {
+  await withPlatform("win32", async () => {
+    const result = await checkShellSandboxPreflightWithProbe(createProbe({
+      commands: new Set(["cmd.exe"]),
+      proc: new Map(),
+      windows_support: {
+        supported: false,
+        windows_build: 22631,
+        warnings: [],
+        reason: "Windows 11 24H2 is required.",
+      },
+    }));
+
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.issues.map((issue) => issue.code), [
+      "unsupported-windows-version",
+    ]);
+  });
+});
+
+test("Windows MXC development sandbox rejects an unavailable runtime", async () => {
+  await withPlatform("win32", async () => {
+    const result = await checkShellSandboxPreflightWithProbe(createProbe({
+      commands: new Set(["cmd.exe"]),
+      proc: new Map(),
+      windows_support: {
+        supported: false,
+        windows_build: 26100,
+        warnings: [],
+        reason: "MXC probe failed.",
+      },
+    }));
+
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.issues.map((issue) => issue.code), [
+      "sandbox-runtime-unavailable",
+    ]);
+  });
+});
+
+test("Other unsupported platforms still fail shell sandbox preflight", async () => {
+  await withPlatform("freebsd", async () => {
+    const result = await checkShellSandboxPreflightWithProbe(createProbe({
+      commands: new Set(),
+      proc: new Map(),
+    }));
+
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.issues.map((issue) => issue.code), ["unsupported-platform"]);
   });
 });

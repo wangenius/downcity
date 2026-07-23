@@ -6,8 +6,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
 
-import { build_macos_sandbox_env } from "@downcity/shell/sandbox/MacOsSeatbelt.js";
-import { build_linux_sandbox_env } from "@downcity/shell/sandbox/LinuxBubblewrap.js";
+import { build_macos_sandbox_env } from "@downcity/shell/sandbox/backends/MacOsSeatbelt.js";
+import { build_linux_sandbox_env } from "@downcity/shell/sandbox/backends/LinuxBubblewrap.js";
 import { resolve_sandbox_policy } from "@downcity/shell/sandbox/SandboxPolicy.js";
 
 function create_request() {

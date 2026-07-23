@@ -1,6 +1,6 @@
 {
   "name": "@downcity/services",
-  "version": "0.1.205",
+  "version": "0.1.206",
   "description": "Downcity public services package for accounts, balance, usage, Stripe, Creem, Dodo, and Waffo payment flows.",
   "type": "module",
   "main": "./bin/index.js",
@@ -42,7 +42,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "build": "rm -rf bin tsconfig.tsbuildinfo && tsc",
+    "build": "node ../../scripts/clean-package.mjs && tsc",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "test": "tsc && tsc -p tsconfig.test.json && node --test $(find test -name \"*.test.mjs\")",

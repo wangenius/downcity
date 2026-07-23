@@ -1,0 +1,68 @@
+name: Windows development support
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/windows-development.yml"
+      - "packages/agent/**"
+      - "packages/cli/**"
+      - "packages/shell/**"
+      - "packages/type/**"
+      - "scripts/clean-package.mjs"
+      - "pnpm-lock.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/windows-development.yml"
+      - "packages/agent/**"
+      - "packages/cli/**"
+      - "packages/shell/**"
+      - "packages/type/**"
+      - "scripts/clean-package.mjs"
+      - "pnpm-lock.yaml"
+  workflow_dispatch:
+
+jobs:
+  windows-development:
+    name: Native Windows SDK and MXC
+    runs-on: windows-2025
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.22.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.1"
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build CLI dependency closure
+        run: pnpm -r --filter "downcity..." build
+
+      - name: Verify Windows command and sandbox preflight models
+        run: node --test packages/shell/scripts/shell-command-model.test.mjs packages/shell/scripts/windows-mxc-policy.test.mjs packages/shell/scripts/windows-mxc-support.test.mjs packages/agent/scripts/shell-sandbox-preflight.test.mjs packages/cli/scripts/windows-platform.test.mjs
+
+      - name: Verify native MXC isolation
+        run: node --test packages/shell/scripts/windows-mxc.integration.test.mjs
+
+      - name: Typecheck affected packages
+        shell: pwsh
+        run: |
+          pnpm -C packages/shell typecheck
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          pnpm -C packages/agent typecheck
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          pnpm -C packages/cli typecheck
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }

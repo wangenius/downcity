@@ -35,12 +35,12 @@ export const shellSessionInputSchema = z.object({
   shell: z
     .string()
     .optional()
-    .describe("Optional shell executable path. Example: /bin/zsh"),
+    .describe("Optional shell executable path. Example: /bin/zsh or C:\\Windows\\System32\\cmd.exe"),
   login: z
     .boolean()
     .optional()
     .default(true)
-    .describe("Whether to run shell as login shell (-lc). false uses -c."),
+    .describe("Whether POSIX shells use -lc instead of -c. Ignored by the Windows cmd model."),
   inline_wait_ms: z
     .number()
     .optional()
@@ -89,12 +89,12 @@ export const shellExecInputSchema = z.object({
   shell: z
     .string()
     .optional()
-    .describe("Optional shell executable path. Example: /bin/zsh"),
+    .describe("Optional shell executable path. Example: /bin/zsh or C:\\Windows\\System32\\cmd.exe"),
   login: z
     .boolean()
     .optional()
     .default(true)
-    .describe("Whether to run shell as login shell (-lc). false uses -c."),
+    .describe("Whether POSIX shells use -lc instead of -c. Ignored by the Windows cmd model."),
   timeout_ms: z
     .number()
     .optional()

@@ -67,19 +67,20 @@ export function detectInstalledPackageName(): string {
 export function buildGlobalUpdateInvocation(
   manager: UpdateManager,
   packageName: string,
+  platform: NodeJS.Platform = process.platform,
 ): {
   command: string;
   args: string[];
 } {
   if (manager === "pnpm") {
     return {
-      command: "pnpm",
+      command: platform === "win32" ? "pnpm.cmd" : "pnpm",
       args: ["add", "-g", `${packageName}@latest`],
     };
   }
 
   return {
-    command: "npm",
+    command: platform === "win32" ? "npm.cmd" : "npm",
     args: ["install", "-g", `${packageName}@latest`],
   };
 }
@@ -118,7 +119,8 @@ function isSubPath(targetPath: string, rootPath: string): boolean {
 
 function readGlobalRoot(manager: UpdateManager): string | null {
   try {
-    const output = execFileSync(manager, ["root", "-g"], {
+    const command = process.platform === "win32" ? `${manager}.cmd` : manager;
+    const output = execFileSync(command, ["root", "-g"], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     });

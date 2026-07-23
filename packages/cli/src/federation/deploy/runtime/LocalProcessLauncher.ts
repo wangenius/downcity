@@ -38,6 +38,10 @@ child.once("error", (error) => {
 
 child.once("exit", (code, signal) => {
   if (signal) {
+    if (process.platform === "win32") {
+      process.exitCode = 1;
+      return;
+    }
     process.kill(process.pid, signal);
     return;
   }

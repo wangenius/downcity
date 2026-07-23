@@ -522,6 +522,9 @@ importers:
 
   packages/shell:
     dependencies:
+      '@microsoft/mxc-sdk':
+        specifier: 0.7.0
+        version: 0.7.0
       ai:
         specifier: ^6.0.193
         version: 6.0.193(zod@4.4.3)
@@ -2133,6 +2136,10 @@ packages:
 
   '@mermaid-js/parser@1.1.1':
     resolution: {integrity: sha512-VuHdsYMK1bT6X2JbcAaWAhugTRvRBRyuZgd+c22swUeI9g/ntaxF7CY7dYarhZovofCbUNO0G7JesfmNtjYOCw==}
+
+  '@microsoft/mxc-sdk@0.7.0':
+    resolution: {integrity: sha512-EWhz2pKkcPluZHAOI1yneV+JK0NO/3hdh7nABBb0x4PjyUWMeSWPTBAjtIu+BhtMYOqlaijSPZMZ0Hs/J4ZL4A==}
+    engines: {node: '>=18.0.0'}
 
   '@mjackson/node-fetch-server@0.2.0':
     resolution: {integrity: sha512-EMlH1e30yzmTpGLQjlFmaDAjyOeZhng1/XCd7DExR8PNAnG/G1tyruZxEoUe11ClnwGhGrtsdnyyUx1frSzjng==}
@@ -7442,6 +7449,11 @@ snapshots:
   '@mermaid-js/parser@1.1.1':
     dependencies:
       '@chevrotain/types': 11.1.2
+
+  '@microsoft/mxc-sdk@0.7.0':
+    dependencies:
+      node-pty: 1.2.0-beta.14
+      semver: 7.8.1
 
   '@mjackson/node-fetch-server@0.2.0': {}
 

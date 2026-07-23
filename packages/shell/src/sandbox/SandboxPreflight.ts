@@ -4,13 +4,18 @@
  * 关键点（中文）
  * - shell 命令必须进入 sandbox；这里提前检查 backend 依赖，避免启动后首次 shell 执行才失败。
  * - Linux backend 基于 bubblewrap，本质使用 Linux namespaces / bind mount 等内核能力。
+ * - Windows backend 依赖 Microsoft MXC，并要求 Windows 11 24H2+ 与有效 isolation tier。
  * - 本模块只诊断并给出修复建议，不自动安装软件，也不修改宿主机 sysctl。
  */
 
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import { delimiter } from "node:path";
-import type { SandboxBackend } from "@/types/Sandbox.js";
+import { inspect_windows_mxc_support } from "@/sandbox/WindowsMxcSupport.js";
+import type {
+  SandboxBackend,
+  WindowsMxcSupport,
+} from "@/types/Sandbox.js";
 
 /**
  * sandbox 预检失败原因。
@@ -18,7 +23,9 @@ import type { SandboxBackend } from "@/types/Sandbox.js";
 export type SandboxPreflightIssueCode =
   | "unsupported-platform"
   | "missing-command"
-  | "userns-disabled";
+  | "userns-disabled"
+  | "unsupported-windows-version"
+  | "sandbox-runtime-unavailable";
 
 /**
  * 单条 sandbox 预检失败。
@@ -78,6 +85,11 @@ export interface ShellSandboxPreflightProbe {
    * 读取 `/proc` 下整数配置。
    */
   readProcInt(filePath: string): Promise<number | null>;
+
+  /**
+   * 探测 Windows MXC runtime 与实际隔离层级。
+   */
+  inspectWindowsMxcSupport(): Promise<WindowsMxcSupport>;
 }
 
 async function commandExists(command: string): Promise<boolean> {
@@ -126,6 +138,7 @@ export async function checkShellSandboxPreflight(): Promise<SandboxPreflightResu
   return await checkShellSandboxPreflightWithProbe({
     commandExists,
     readProcInt,
+    inspectWindowsMxcSupport: async () => inspect_windows_mxc_support(),
   });
 }
 
@@ -185,6 +198,46 @@ export async function checkShellSandboxPreflightWithProbe(
       ok: issues.length === 0,
       platform,
       backend: "linux-bubblewrap",
+      issues,
+    };
+  }
+
+  if (platform === "win32") {
+    if (!(await probe.commandExists("cmd.exe"))) {
+      issues.push({
+        code: "missing-command",
+        message: "Windows MXC development sandbox requires cmd.exe, but it was not found.",
+        fixes: [
+          "Restore cmd.exe to the Windows system PATH.",
+        ],
+      });
+    }
+    const support = await probe.inspectWindowsMxcSupport().catch((error: unknown) => ({
+      supported: false,
+      windows_build: null,
+      warnings: [],
+      reason: error instanceof Error ? error.message : String(error),
+    } satisfies WindowsMxcSupport));
+    if (!support.supported) {
+      const unsupported_version = support.windows_build !== null
+        && support.windows_build < 26_100;
+      issues.push({
+        code: unsupported_version
+          ? "unsupported-windows-version"
+          : "sandbox-runtime-unavailable",
+        message: support.reason || "Microsoft MXC Windows sandbox is unavailable.",
+        fixes: unsupported_version
+          ? ["Upgrade the host to Windows 11 24H2 build 26100 or newer."]
+          : [
+              "Reinstall @downcity/shell so the bundled MXC native binaries are present.",
+              "Run the MXC platform probe on the target Windows host.",
+            ],
+      });
+    }
+    return {
+      ok: issues.length === 0,
+      platform,
+      backend: "windows-mxc-dev",
       issues,
     };
   }

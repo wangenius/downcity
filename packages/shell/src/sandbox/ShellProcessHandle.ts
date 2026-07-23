@@ -7,7 +7,8 @@
  */
 
 import { spawn as spawnPty } from "node-pty";
-import type { ChildProcessWithoutNullStreams } from "node:child_process";
+import type { IPty } from "node-pty";
+import type { ChildProcess } from "node:child_process";
 import type {
   ShellProcessHandle,
 } from "@/types/Sandbox.js";
@@ -16,18 +17,24 @@ import type {
  * 把普通 pipe 子进程包装成 shell process handle。
  */
 export function createPipeProcessHandle(
-  child: ChildProcessWithoutNullStreams,
+  child: ChildProcess,
 ): ShellProcessHandle {
-  child.stdout.setEncoding("utf8");
-  child.stderr.setEncoding("utf8");
+  if (!child.stdin || !child.stdout || !child.stderr) {
+    throw new Error("Shell pipe process must expose stdin, stdout, and stderr.");
+  }
+  const stdin = child.stdin;
+  const stdout = child.stdout;
+  const stderr = child.stderr;
+  stdout.setEncoding("utf8");
+  stderr.setEncoding("utf8");
   return {
     pid: child.pid,
     get writable() {
-      return child.stdin.writable;
+      return stdin.writable;
     },
     onData(callback) {
-      child.stdout.on("data", callback);
-      child.stderr.on("data", callback);
+      stdout.on("data", callback);
+      stderr.on("data", callback);
     },
     onExit(callback) {
       child.on("close", (code) => callback(typeof code === "number" ? code : -1));
@@ -37,7 +44,7 @@ export function createPipeProcessHandle(
     },
     async write(chars) {
       await new Promise<void>((resolve, reject) => {
-        child.stdin.write(chars, (error) => {
+        stdin.write(chars, (error) => {
           if (error) {
             reject(error);
             return;
@@ -48,6 +55,38 @@ export function createPipeProcessHandle(
     },
     kill(signal) {
       child.kill(signal);
+    },
+  };
+}
+
+/**
+ * 把已经由平台 runtime 创建的 PTY 包装成 shell process handle。
+ */
+export function createPtyProcessHandle(pty: IPty): ShellProcessHandle {
+  let writable = true;
+  return {
+    pid: pty.pid,
+    get writable() {
+      return writable;
+    },
+    onData(callback) {
+      pty.onData(callback);
+    },
+    onExit(callback) {
+      pty.onExit((event) => {
+        writable = false;
+        callback(event.exitCode);
+      });
+    },
+    onError(_callback) {
+      // node-pty 将启动失败通过 spawn 抛出；运行期没有独立 error event。
+    },
+    async write(chars) {
+      pty.write(chars);
+    },
+    kill(signal) {
+      writable = false;
+      pty.kill(signal);
     },
   };
 }
@@ -79,30 +118,5 @@ export function spawnPtyProcessHandle(params: {
     cols: params.terminal?.cols || 120,
     rows: params.terminal?.rows || 40,
   });
-  let writable = true;
-  return {
-    pid: pty.pid,
-    get writable() {
-      return writable;
-    },
-    onData(callback) {
-      pty.onData(callback);
-    },
-    onExit(callback) {
-      pty.onExit((event) => {
-        writable = false;
-        callback(event.exitCode);
-      });
-    },
-    onError(_callback) {
-      // node-pty 将启动失败通过 spawn 抛出；运行期没有独立 error event。
-    },
-    async write(chars) {
-      pty.write(chars);
-    },
-    kill(signal) {
-      writable = false;
-      pty.kill(signal);
-    },
-  };
+  return createPtyProcessHandle(pty);
 }

@@ -9,7 +9,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { resolve_sandbox_policy } from "@downcity/shell/sandbox/SandboxPolicy.js";
-import { build_macos_seatbelt_profile } from "@downcity/shell/sandbox/MacOsSeatbelt.js";
+import { build_macos_seatbelt_profile } from "@downcity/shell/sandbox/backends/MacOsSeatbelt.js";
 import {
   closeAllShellSessions,
   createShellRuntimeState,

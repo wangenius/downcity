@@ -15,14 +15,13 @@ import {
   buildActionResponse,
   nowMs,
 } from "../ShellActionRuntimeSupport.js";
+import { resolve_default_shell_path } from "../ShellCommandModel.js";
 
 /**
  * 解析默认 shell 路径。
  */
 export function resolveDefaultShellPath(): string {
-  const envShell = String(process.env.SHELL || "").trim();
-  if (envShell) return envShell;
-  return process.platform === "darwin" ? "/bin/zsh" : "/bin/sh";
+  return resolve_default_shell_path();
 }
 
 /**

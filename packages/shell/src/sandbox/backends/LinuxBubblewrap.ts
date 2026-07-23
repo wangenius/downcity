@@ -1,5 +1,5 @@
 /**
- * Linux Bubblewrap Safe Sandbox。
+ * Linux Bubblewrap Safe Sandbox 平台后端。
  *
  * 关键点（中文）
  * - 已解析策略中的只读目录映射为 `--ro-bind`，写目录映射为 `--bind`。
@@ -17,6 +17,7 @@ import type {
   SandboxSpawnRequest,
   SandboxSpawnResult,
 } from "@/types/Sandbox.js";
+import { build_shell_command_invocation } from "@/session/ShellCommandModel.js";
 
 const DEFAULT_PATH_VALUE =
   "/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin";
@@ -52,6 +53,12 @@ function add_parent_dirs(
 export function build_linux_bubblewrap_args(
   request: SandboxSpawnRequest,
 ): string[] {
+  const invocation = build_shell_command_invocation({
+    shell_path: request.shell_path,
+    cmd: request.cmd,
+    login: request.login,
+    platform: "linux",
+  });
   const created_dirs = new Set<string>();
   const mounted_paths: string[] = [];
   const args = [
@@ -82,9 +89,8 @@ export function build_linux_bubblewrap_args(
   args.push(
     "--chdir",
     request.cwd,
-    request.shell_path,
-    request.login ? "-lc" : "-c",
-    request.cmd,
+    invocation.command,
+    ...invocation.args,
   );
   return args;
 }

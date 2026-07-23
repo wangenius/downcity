@@ -33,6 +33,8 @@ const agent = new Agent({
 
 Shell tools 默认进入 Safe Sandbox。
 
+macOS 使用 Seatbelt，Linux 使用 Bubblewrap。原生 Windows 11 24H2+ 通过锁定版本的 Microsoft MXC runtime 使用 `windows-mxc-dev` 和 `cmd.exe /d /s /c`，当前支持级别为 Development / unstable。预检要求 build 26100+、`cmd.exe` 和成功的 MXC 隔离层级 probe。MXC 仍是 Public Preview，不能作为生产级安全边界。
+
 只有需要宿主级能力时才使用 `sandbox: "unrestricted"`，例如 `brew install`、`npm install -g`、`pip install --user`、`gh auth login`，或初始化项目 sandbox 外的宿主服务。
 
 ```ts
@@ -63,7 +65,7 @@ const agent = new Agent({
 });
 ```
 
-只读目录必须是已存在的绝对目录，不能位于项目目录内，也不能允许 group/world 写入。macOS 将其编译为 Seatbelt `file-read*` 规则，Linux 将其映射为 Bubblewrap `--ro-bind`；两端都不会增加写权限。
+只读目录必须是已存在的绝对目录，不能位于项目目录内。macOS 将其编译为 Seatbelt `file-read*` 规则，Linux 将其映射为 Bubblewrap `--ro-bind`，Windows 则把它作为只读根目录交给 MXC；所有后端都不会增加写权限。
 
 宿主在工具安装、升级或停用后可以动态替换目录：
 

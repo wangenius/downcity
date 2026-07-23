@@ -8,7 +8,7 @@
  * - `run` 指 city runtime，`console run` 只用于清理旧 Console UI 进程。
  */
 
-import { execFile as execFileCb } from "node:child_process";
+import { execFile as execFileCb, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFileCb);
@@ -51,6 +51,16 @@ export function signalDetachedProcess(
   pid: number,
   signal: NodeJS.Signals,
 ): boolean {
+  if (process.platform === "win32") {
+    try {
+      const args = ["/pid", String(pid), "/t"];
+      if (signal === "SIGKILL") args.push("/f");
+      execFileSync("taskkill.exe", args, { stdio: "ignore", windowsHide: true });
+      return true;
+    } catch {
+      return !isProcessAlive(pid);
+    }
+  }
   for (const target of buildDetachedProcessSignalTargets(pid)) {
     try {
       process.kill(target, signal);

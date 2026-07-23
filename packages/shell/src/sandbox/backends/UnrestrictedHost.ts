@@ -1,5 +1,5 @@
 /**
- * unrestricted 宿主进程执行后端。
+ * unrestricted 宿主进程执行平台后端。
  *
  * 关键点（中文）
  * - 本模块只负责审批通过后的宿主进程启动。
@@ -16,23 +16,28 @@ import type {
   SandboxSpawnResult,
   UnrestrictedSpawnRequest,
 } from "@/types/Sandbox.js";
+import { build_shell_command_invocation } from "@/session/ShellCommandModel.js";
 
 /** 在宿主环境启动已经获得批准的 unrestricted 进程。 */
 export async function spawn_unrestricted_host(
   request: UnrestrictedSpawnRequest,
 ): Promise<SandboxSpawnResult> {
   await fs.ensureDir(request.execution_dir);
-  const args = [request.login ? "-lc" : "-c", request.cmd];
+  const invocation = build_shell_command_invocation({
+    shell_path: request.shell_path,
+    cmd: request.cmd,
+    login: request.login,
+  });
   const child = request.terminal
     ? spawnPtyProcessHandle({
-        command: request.shell_path,
-        args,
+        command: invocation.command,
+        args: invocation.args,
         cwd: request.cwd,
         env: request.base_env,
         terminal: { cols: request.cols, rows: request.rows },
       })
     : createPipeProcessHandle(
-        spawn(request.shell_path, args, {
+        spawn(invocation.command, invocation.args, {
           cwd: request.cwd,
           stdio: "pipe",
           env: request.base_env,

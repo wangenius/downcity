@@ -1,5 +1,5 @@
 /**
- * macOS Seatbelt Safe Sandbox。
+ * macOS Seatbelt Safe Sandbox 平台后端。
  *
  * 关键点（中文）
  * - 本模块只把已解析策略编译成 Seatbelt profile 并启动子进程。
@@ -18,6 +18,7 @@ import type {
   SandboxSpawnRequest,
   SandboxSpawnResult,
 } from "@/types/Sandbox.js";
+import { build_shell_command_invocation } from "@/session/ShellCommandModel.js";
 
 const DEFAULT_PATH_VALUE =
   "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
@@ -155,12 +156,17 @@ export async function spawn_macos_seatbelt(
     "utf-8",
   );
   const env = build_macos_sandbox_env(request);
+  const invocation = build_shell_command_invocation({
+    shell_path: request.shell_path,
+    cmd: build_macos_shell_command(request, env),
+    login: request.login,
+    platform: "darwin",
+  });
   const args = [
     "-f",
     profile_path,
-    request.shell_path,
-    request.login ? "-lc" : "-c",
-    build_macos_shell_command(request, env),
+    invocation.command,
+    ...invocation.args,
   ];
   const child = request.terminal
     ? spawnPtyProcessHandle({

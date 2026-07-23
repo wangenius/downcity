@@ -320,9 +320,20 @@ async function verify_local_server(base_url: string | undefined, log_path: strin
 
 /** 判断 PID 是否仍属于指定 launcher 实例。 */
 function is_expected_launcher(pid: number, fed_id: string, instance_id: string): boolean {
-  if (process.platform === "win32") return false;
   try {
-    const command = execFileSync("ps", ["-p", String(pid), "-o", "command="], { encoding: "utf8" });
+    const command = process.platform === "win32"
+      ? execFileSync(
+          "powershell.exe",
+          [
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            `(Get-CimInstance Win32_Process -Filter 'ProcessId = ${String(pid)}').CommandLine`,
+          ],
+          { encoding: "utf8", windowsHide: true },
+        )
+      : execFileSync("ps", ["-p", String(pid), "-o", "command="], { encoding: "utf8" });
     return command.includes("LocalProcessLauncher")
       && command.includes(fed_id)
       && command.includes(instance_id);

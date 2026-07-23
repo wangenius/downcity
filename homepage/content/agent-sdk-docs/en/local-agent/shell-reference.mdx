@@ -75,9 +75,24 @@ Shell commands use the safe sandbox by default. The backend is selected automati
 
 - `macos-seatbelt` — macOS sandbox
 - `linux-bubblewrap` — Linux sandbox
+- `windows-mxc-dev` — Microsoft MXC Windows process sandbox; Development / unstable
 - `unrestricted-host` — No sandboxing
 
 The internal `Sandbox` entry resolves an access policy and invokes the platform backend. Shell Session remains the only owner of process state, output, and stdin.
+
+### Windows Development support
+
+Native Windows support is currently Development / unstable and requires Windows 11 24H2 build 26100 or newer. Agent preflight checks `cmd.exe`, the bundled Microsoft MXC runtime, and its selected isolation tier. A missing dependency, unsupported build, or failed probe refuses Safe Sandbox startup and never silently falls back to unrestricted execution.
+
+Windows uses the native `cmd.exe /d /s /c` command model. Environment variables, pipes, and redirects must use cmd syntax such as `%NAME%`, `|`, and `>`. The SDK does not translate POSIX shell commands into cmd. Invoke `powershell.exe` explicitly from the command when PowerShell semantics are required.
+
+The SDK delegates Windows isolation to the pinned `@microsoft/mxc-sdk` runtime. MXC selects its available process isolation tier, owns AppContainer and Job Object lifecycle, and restores temporary filesystem policy after execution. Downcity only maps its resolved read-only and read-write roots to the MXC `0.7.0-alpha` policy schema.
+
+Current Windows considerations:
+
+- MXC host or port allowlists and Windows `deniedPaths` are not part of Downcity's current Windows policy contract.
+- PTY and pipe execution are provided by MXC; console-sensitive programs may still differ from macOS or Linux.
+- MXC is Public Preview and its upstream documentation states that current profiles may be overly permissive. This backend must not be treated as a production security boundary.
 
 ### Additional read-only directories
 
@@ -91,7 +106,7 @@ const shell = new Shell({
 });
 ```
 
-Each entry must be an existing absolute directory outside the project and must not be group/world writable. macOS emits a Seatbelt `file-read*` rule, while Linux uses Bubblewrap `--ro-bind`. This never expands project-external write access.
+Each entry must be an existing absolute directory outside the project. macOS emits a Seatbelt `file-read*` rule, Linux uses Bubblewrap `--ro-bind`, and Windows passes it to MXC as a read-only root. This never expands project-external write access.
 
 On macOS, Shell resolves `xcode-select -p`, adds the selected Xcode runtime as a system read-only path, and prepends the real `Developer/usr/bin` directory to `PATH`. Normal `git` calls use the Xcode binary directly instead of the xcrun entry that writes a host cache.
 

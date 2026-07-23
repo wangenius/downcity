@@ -1,6 +1,6 @@
 {
   "name": "@downcity/city",
-  "version": "0.2.214",
+  "version": "0.2.215",
   "description": "Downcity City runtime and City access SDK for services, actions, auth, env, and cities.",
   "type": "module",
   "main": "./bin/index.js",
@@ -35,7 +35,7 @@
     "services"
   ],
   "scripts": {
-    "build": "rm -rf bin tsconfig.tsbuildinfo && tsc",
+    "build": "node ../../scripts/clean-package.mjs && tsc",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "test": "tsc && tsc -p tsconfig.test.json && node --test test/*.test.mjs",

@@ -143,9 +143,9 @@ export type ShellStartRequest = {
   cmd: string;
   /** 可选工作目录；为空时回退项目根目录。 */
   cwd?: string;
-  /** 可选 shell 路径，例如 `/bin/zsh`。 */
+  /** 可选 shell 路径，例如 `/bin/zsh` 或 `C:\\Windows\\System32\\cmd.exe`。 */
   shell?: string;
-  /** 是否以 login shell 方式启动；默认 `true`。 */
+  /** POSIX Shell 是否以 login 模式启动；Windows cmd 会忽略该值。 */
   login?: boolean;
   /** 启动后内联等待多久再返回首批状态/输出。 */
   inlineWaitMs?: number;
@@ -190,9 +190,9 @@ export type ShellExecRequest = {
   cmd: string;
   /** 可选工作目录；为空时回退项目根目录。 */
   cwd?: string;
-  /** 可选 shell 路径，例如 `/bin/zsh`。 */
+  /** 可选 shell 路径，例如 `/bin/zsh` 或 `C:\\Windows\\System32\\cmd.exe`。 */
   shell?: string;
-  /** 是否以 login shell 方式启动；默认 `true`。 */
+  /** POSIX Shell 是否以 login 模式启动；Windows cmd 会忽略该值。 */
   login?: boolean;
   /** 整个一次性执行的总超时时间（毫秒）。 */
   timeoutMs?: number;

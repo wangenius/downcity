@@ -33,6 +33,8 @@ Mounting `shell: new Shell()` adds these model tools:
 
 Shell tools run in the Safe Sandbox by default.
 
+macOS uses Seatbelt and Linux uses Bubblewrap. Native Windows 11 24H2+ uses the pinned Microsoft MXC runtime through `windows-mxc-dev` with `cmd.exe /d /s /c`; its support level is Development / unstable. Preflight requires build 26100+, `cmd.exe`, and a successful MXC isolation-tier probe. MXC is Public Preview and is not a production security boundary.
+
 Use `sandbox: "unrestricted"` only when a command needs host-level access, such as `brew install`, `npm install -g`, `pip install --user`, `gh auth login`, or service initialization outside the project sandbox.
 
 ```ts
@@ -63,7 +65,7 @@ const agent = new Agent({
 });
 ```
 
-Each entry must be an existing absolute directory outside the project and must not be group/world writable. macOS compiles it to a Seatbelt `file-read*` rule, while Linux maps it with Bubblewrap `--ro-bind`. Neither backend grants write access.
+Each entry must be an existing absolute directory outside the project. macOS compiles it to a Seatbelt `file-read*` rule, Linux maps it with Bubblewrap `--ro-bind`, and Windows passes it to MXC as a read-only root. No backend grants write access.
 
 The host can replace the directories after a tool install, upgrade, or shutdown:
 

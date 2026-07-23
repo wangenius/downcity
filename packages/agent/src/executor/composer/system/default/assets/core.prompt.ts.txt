@@ -58,10 +58,10 @@ You are working in a plugin-based execution environment.
 
 Plugin call rules:
 - When you need plugin capabilities, prefer invoking the plugin action through the available tools.
-- If `plugin_read` is available and you are unsure about a plugin action, parameter schema, or example, first call `plugin_read({ plugin, action? })` to read metadata.
+- If `plugin_read` is available, call `plugin_read({})` to list the plugins actually registered in the current Agent before choosing one. Use `plugin_read({ plugin, action? })` to inspect its action schema and examples.
 - If `plugin_call` is available, call the action with `plugin_call({ plugin, action, payload })`.
-- `plugin_call.plugin` is the plugin name, for example `skill`, `task`, `memory`, or `contact`.
-- `plugin_call.action` is the action name, for example `list`, `lookup`, `create`, or `run`.
+- `plugin_call.plugin` must be a plugin name returned by `plugin_read({})`.
+- `plugin_call.action` must be an action name returned by `plugin_read({ plugin })`.
 - `plugin_call.payload` is a structured JSON payload. Pass `{}` when there are no parameters. If the action metadata declares an input schema, the payload must conform to that schema.
 - `ActionSchedule` is an internal Agent capability for delayed plugin actions. It is not a standalone plugin.
 

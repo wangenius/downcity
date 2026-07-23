@@ -167,6 +167,48 @@ test("invokePluginReadTool returns plugin action metadata", async () => {
   assert.equal(result.data.actions[0].examples[0].payload.prompt, "draw");
 });
 
+test("invokePluginReadTool rejects unregistered plugins", async () => {
+  const registry = create_registry(
+    createPlugin({
+      name: "skill",
+      title: "Skill",
+      description: "Manage skills",
+      actions: {},
+    }),
+  );
+
+  const result = await invokePluginReadTool({
+    plugins: registry,
+    run_context: create_run_context(process.cwd()),
+    input: { plugin: "task" },
+  });
+
+  assert.equal(result.success, false);
+  assert.match(result.message, /Unknown plugin: task/);
+  assert.match(result.data.error, /Unknown plugin: task/);
+});
+
+test("invokePluginReadTool rejects unknown plugin actions", async () => {
+  const registry = create_registry(
+    createPlugin({
+      name: "skill",
+      title: "Skill",
+      description: "Manage skills",
+      actions: {},
+    }),
+  );
+
+  const result = await invokePluginReadTool({
+    plugins: registry,
+    run_context: create_run_context(process.cwd()),
+    input: { plugin: "skill", action: "missing" },
+  });
+
+  assert.equal(result.success, false);
+  assert.match(result.message, /Unknown action: skill\.missing/);
+  assert.match(result.data.error, /Unknown action: skill\.missing/);
+});
+
 test("PluginRegistry validates action payload with metadata schema", async () => {
   const plugin = createPlugin({
     name: "demo",

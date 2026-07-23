@@ -448,14 +448,12 @@ export class PluginRegistry implements AgentPlugins {
     }
     const plugin = records.get(pluginName)?.plugin || null;
     if (!plugin) {
-      return {
-        name: pluginName,
-        title: pluginName,
-        description: "",
-        actions: [],
-      };
+      throw new Error(`Unknown plugin: ${pluginName}`);
     }
     const actionName = normalize_plugin_name(params.action || "");
+    if (actionName && !plugin.actions?.[actionName]) {
+      throw new Error(`Unknown action: ${pluginName}.${actionName}`);
+    }
     const actions = Object.entries(plugin.actions || {})
       .filter(([name]) => !actionName || name === actionName)
       .sort(([left], [right]) => left.localeCompare(right))

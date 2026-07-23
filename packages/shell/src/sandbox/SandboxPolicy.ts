@@ -13,6 +13,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import fs from "fs-extra";
 import type { ShellHostContext } from "@/types/ShellHostContext.js";
+import { read_windows_env_value } from "@/sandbox/WindowsEnvironment.js";
 import type {
   ResolvedSandboxPolicy,
   SandboxBackend,
@@ -81,11 +82,11 @@ function dedupe_paths(values: string[]): string[] {
 }
 
 function resolve_windows_read_only_paths(base_env: NodeJS.ProcessEnv): string[] {
-  const path_entries = String(base_env.PATH || "")
+  const path_entries = String(read_windows_env_value(base_env, "PATH") || "")
     .split(path.delimiter)
     .map((value) => value.trim().replace(/^"|"$/gu, ""))
     .filter((value) => path.isAbsolute(value) && fs.existsSync(value));
-  const comspec = String(base_env.ComSpec || base_env.COMSPEC || "").trim();
+  const comspec = String(read_windows_env_value(base_env, "COMSPEC") || "").trim();
   return dedupe_paths([
     ...path_entries,
     path.dirname(process.execPath),

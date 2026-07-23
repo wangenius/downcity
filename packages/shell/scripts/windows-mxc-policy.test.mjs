@@ -14,6 +14,7 @@ import {
   build_windows_mxc_env,
   build_windows_mxc_policy,
 } from "../bin/sandbox/backends/WindowsMxc.js";
+import { read_windows_env_value } from "../bin/sandbox/WindowsEnvironment.js";
 
 function with_platform(platform, callback) {
   const previous = Object.getOwnPropertyDescriptor(process, "platform");
@@ -34,7 +35,7 @@ function create_request(network_mode = "off") {
     shell_path: "C:\\Windows\\System32\\cmd.exe",
     login: false,
     base_env: {
-      PATH: "C:\\Windows\\System32",
+      Path: "C:\\Program Files\\nodejs;C:\\Windows\\System32",
       SECRET: "hidden",
       EXPLICIT: "visible",
       DC_TRACE: "enabled",
@@ -97,9 +98,17 @@ test("Windows MXC config uses process containment and native cmd invocation", ()
 
 test("Windows MXC environment excludes unapproved host variables", () => {
   const env = build_windows_mxc_env(create_request());
+  assert.equal(env.PATH, "C:\\Program Files\\nodejs;C:\\Windows\\System32");
   assert.equal(env.EXPLICIT, "visible");
   assert.equal(env.SECRET, undefined);
   assert.equal(env.DC_TRACE, "enabled");
   assert.equal(env.COMSPEC, "C:\\Windows\\System32\\cmd.exe");
   assert.equal(env.TEMP, "C:\\repo\\.downcity\\sandbox\\tmp");
+});
+
+test("Windows environment lookup is case-insensitive", () => {
+  assert.equal(
+    read_windows_env_value({ Path: "C:\\Program Files\\nodejs" }, "PATH"),
+    "C:\\Program Files\\nodejs",
+  );
 });

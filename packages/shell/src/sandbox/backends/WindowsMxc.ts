@@ -21,6 +21,7 @@ import {
   createPtyProcessHandle,
 } from "@/sandbox/ShellProcessHandle.js";
 import { inspect_windows_mxc_support } from "@/sandbox/WindowsMxcSupport.js";
+import { read_windows_env_value } from "@/sandbox/WindowsEnvironment.js";
 import { build_windows_cmd_command_line } from "@/session/ShellCommandModel.js";
 import type {
   SandboxSpawnRequest,
@@ -32,10 +33,14 @@ export function build_windows_mxc_env(
   request: SandboxSpawnRequest,
 ): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {};
+  const copied_env_keys = new Set<string>();
   for (const key of request.policy.env_allowlist) {
-    const value = request.base_env[key];
+    const normalized_key = key.toLowerCase();
+    if (copied_env_keys.has(normalized_key)) continue;
+    const value = read_windows_env_value(request.base_env, key);
     if (typeof value !== "string" || !value.trim()) continue;
     env[key] = value;
+    copied_env_keys.add(normalized_key);
   }
   for (const [key, value] of Object.entries(request.base_env)) {
     if (!key.startsWith("DC_")) continue;
@@ -43,13 +48,12 @@ export function build_windows_mxc_env(
     env[key] = value;
   }
   const system_root = String(
-    request.base_env.SystemRoot
-    || request.base_env.WINDIR
+    read_windows_env_value(request.base_env, "SystemRoot")
+    || read_windows_env_value(request.base_env, "WINDIR")
     || "C:\\Windows",
   ).trim();
   const comspec = String(
-    request.base_env.ComSpec
-    || request.base_env.COMSPEC
+    read_windows_env_value(request.base_env, "ComSpec")
     || path.win32.join(system_root, "System32", "cmd.exe"),
   ).trim();
   env.ComSpec = comspec;

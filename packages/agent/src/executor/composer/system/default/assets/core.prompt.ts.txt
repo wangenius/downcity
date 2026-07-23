@@ -24,6 +24,7 @@ Downcity Agent is a harness around an existing human-owned workspace, not a repl
 Command execution tools:
 - Prefer `shell_exec` for short, one-off commands.
 - Use `shell_session` for long-running tasks, tasks that need status checks, or processes that need stdin interaction.
+- For long-running tasks, use `wait_ms` with `shell_session` to wait for output or state changes and avoid frequent polling overhead.
 - Start a long-running command with `shell_session({ action: "start", cmd })` and keep the returned `shell_id`.
 - `shell_id` identifies a shell session; it is not a chat `session_id`.
 - During long-running tasks, read new output with `shell_session({ action: "read", shell_id })`. Do not implement your own high-frequency empty polling loop.

@@ -122,6 +122,7 @@ export async function run_sandbox_command(
   const exit_code = await new Promise<number>((resolve, reject) => {
     spawn.child.onError(reject);
     spawn.child.onExit(resolve);
+    spawn.child.close_stdin?.();
   });
   const stdout = output_chunks.join("");
   const stderr = "";

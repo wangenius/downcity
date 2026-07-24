@@ -120,6 +120,38 @@ test("shell_exec honors an explicit short total timeout", async () => {
   }
 });
 
+test("shell_exec closes stdin so commands waiting for EOF can exit", async () => {
+  const fixture = await create_context();
+  const state = createShellRuntimeState({ defaultExecTimeoutMs: 2000 });
+  fixture.context.approval_gateway = {
+    request: async () => ({
+      approval_id: "ap_stdin_eof_test",
+      requires_user_decision: false,
+      decision: Promise.resolve("approved"),
+    }),
+  };
+  try {
+    const result = await execShellCommand(state, fixture.context, {
+      cmd: "if read line; then printf input; else printf eof; fi",
+      cwd: fixture.root_path,
+      shell: "/bin/sh",
+      login: false,
+      timeoutMs: 2000,
+      sandbox: "unrestricted",
+      reason: "验证 one-shot stdin EOF",
+      ownerContextId: "session-stdin-eof",
+      turnId: "turn-stdin-eof",
+      toolCallId: "call-stdin-eof",
+    });
+    assert.equal(result.shell.status, "completed");
+    assert.equal(result.shell.stdinWritable, false);
+    assert.match(result.chunk.output, /eof$/);
+  } finally {
+    await closeAllShellSessions(state, true);
+    await fs.rm(fixture.root_path, { recursive: true, force: true });
+  }
+});
+
 test("unrestricted shell without an Approval Gateway is denied before execution", async () => {
   const fixture = await create_context();
   const state = createShellRuntimeState();

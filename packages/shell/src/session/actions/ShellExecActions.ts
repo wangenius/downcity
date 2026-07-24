@@ -64,6 +64,12 @@ export async function execShellCommand(
 
   let current = started;
   let current_shell = require_shell_snapshot(current);
+  const active_session = state.sessions.get(current_shell.shellId);
+  active_session?.child.close_stdin?.();
+  if (active_session) {
+    active_session.snapshot.stdinWritable = false;
+    current_shell = active_session.snapshot;
+  }
   let fromCursor = current.chunk?.endCursor ?? 0;
   const outputParts: string[] = [];
   if (current.chunk?.output) {

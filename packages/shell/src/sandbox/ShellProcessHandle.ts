@@ -42,6 +42,7 @@ export function createPipeProcessHandle(
   stdout.setEncoding("utf8");
   stderr.setEncoding("utf8");
 
+  let stdin_closed = false;
   let terminal_event: PipeTerminalEvent | null = null;
   const exit_callbacks = new Set<(exit_code: number) => void>();
   const error_callbacks = new Set<(error: Error) => void>();
@@ -78,7 +79,7 @@ export function createPipeProcessHandle(
   return {
     pid: child.pid,
     get writable() {
-      return stdin.writable;
+      return !stdin_closed && stdin.writable;
     },
     onData(callback) {
       stdout.on("data", callback);
@@ -110,6 +111,12 @@ export function createPipeProcessHandle(
           resolve();
         });
       });
+    },
+    close_stdin() {
+      if (stdin_closed) return;
+      stdin_closed = true;
+      if (stdin.destroyed || stdin.writableEnded) return;
+      stdin.end();
     },
     kill(signal) {
       child.kill(signal);

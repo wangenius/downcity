@@ -131,6 +131,14 @@ export interface ShellProcessHandle {
   onError(callback: (error: Error) => void): void;
   /** 向 stdin 或 PTY 写入原始字符。 */
   write(chars: string): Promise<void>;
+  /**
+   * 结束 pipe stdin 并向子进程发送 EOF。
+   *
+   * 说明（中文）
+   * - 仅 pipe 句柄提供该能力，PTY session 需要持续保持交互输入。
+   * - one-shot 调用必须主动关闭 stdin，避免平台执行器等待输入转发结束而无法退出。
+   */
+  close_stdin?(): void;
   /** 结束当前子进程。 */
   kill(signal?: NodeJS.Signals): void;
 }

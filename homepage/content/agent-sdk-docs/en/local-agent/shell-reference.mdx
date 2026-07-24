@@ -122,6 +122,8 @@ const shell = new Shell({
 
 SRT's Windows backend is currently Alpha, and one Downcity process permits only one active workspace security domain. Do not run different workspaces concurrently under the shared `downcity-sandbox` SID; use MXC, WSL/a container, or separate host security domains for that case. Per-user tools installed through nvm, Scoop, or `pip install --user` are not readable by the dedicated sandbox user unless their directories are explicitly added as read-only paths.
 
+SRT's Windows filesystem boundary relies on a dedicated user and additive NTFS ACLs. If a directory outside the workspace already grants write access to a broad principal such as `Authenticated Users`, SRT's `allowWrite` does not revoke that existing access. Do not treat the current Alpha backend as a complete default-deny boundary on arbitrary Windows hosts. Use a workspace parent with hardened host ACLs, or prefer MXC, WSL, or a container for stronger requirements.
+
 ### Additional read-only directories
 
 A host can expose a version-pinned CLI or runtime directory to the Safe Sandbox as read-only:

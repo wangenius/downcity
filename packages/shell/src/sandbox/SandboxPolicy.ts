@@ -132,6 +132,7 @@ export async function resolve_sandbox_policy(
     cache_dir: path.join(sandbox_dir, ".cache"),
     env_allowlist: resolve_env_allowlist(context),
     read_only_paths,
+    host_read_only_paths,
     read_write_paths,
     network_mode: "full",
   };

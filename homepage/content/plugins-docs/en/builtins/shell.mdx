@@ -34,7 +34,7 @@ Mounting a `Shell` configured with a platform adapter adds these model tools:
 
 Shell tools run in the Safe Sandbox by default.
 
-macOS uses Seatbelt and Linux uses Bubblewrap. Native Windows keeps the pinned Microsoft MXC runtime as `windows-mxc-dev` by default. Set `DC_WINDOWS_SANDBOX=srt` to explicitly enable `windows-srt-alpha`, which uses a dedicated Windows user, ACLs, and WFP. SRT requires `npx @downcity/sandbox-windows-srt setup` first and currently permits one active workspace security domain. Neither Windows backend falls back to unrestricted execution when unavailable.
+macOS uses Seatbelt and Linux uses Bubblewrap. Native Windows keeps the pinned Microsoft MXC runtime as `windows-mxc-dev` by default. Set `DC_WINDOWS_SANDBOX=srt` to explicitly enable `windows-srt-alpha`, which uses a dedicated Windows user, ACLs, and WFP. SRT requires `npx @downcity/sandbox-windows-srt setup` first and currently permits one active workspace security domain. Its additive ACLs do not revoke existing writes granted to broad principals such as `Authenticated Users` outside the workspace, so this Alpha backend is not a complete default-deny boundary on arbitrary Windows hosts. Neither Windows backend falls back to unrestricted execution when unavailable.
 
 Use `sandbox: "unrestricted"` only when a command needs host-level access, such as `brew install`, `npm install -g`, `pip install --user`, `gh auth login`, or service initialization outside the project sandbox.
 
@@ -67,7 +67,7 @@ const agent = new Agent({
 });
 ```
 
-Each entry must be an existing absolute directory outside the project. macOS compiles it to a Seatbelt `file-read*` rule, Linux maps it with Bubblewrap `--ro-bind`, and Windows passes it to MXC as a read-only root. No backend grants write access.
+Each entry must be an existing absolute directory outside the project. macOS compiles it to a Seatbelt `file-read*` rule, Linux maps it with Bubblewrap `--ro-bind`, and Windows passes it to MXC as a read-only root or grants an SRT READ ACL to its dedicated user. No backend grants write access.
 
 The host can replace the directories after a tool install, upgrade, or shutdown:
 

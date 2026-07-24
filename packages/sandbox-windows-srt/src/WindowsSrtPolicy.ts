@@ -24,7 +24,10 @@ export function build_windows_srt_config(
   return {
     filesystem: {
       denyRead: [],
-      allowRead: [...request.policy.read_only_paths, ...request.policy.read_write_paths],
+      // 关键点（中文）
+      // - SRT Windows 默认允许读取系统可读目录，allowWrite 已包含 workspace 读取权限。
+      // - allowRead 会直接向目标写入 NTFS ACL，只能用于宿主显式批准的私有工具目录。
+      allowRead: [...request.policy.host_read_only_paths],
       allowWrite: [...request.policy.read_write_paths],
       denyWrite: [],
     },

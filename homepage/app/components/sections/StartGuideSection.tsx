@@ -65,7 +65,11 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
             description: "可选的独立 adapter。首次 setup 会请求一次管理员权限，用于创建隔离用户和网络策略。",
             command:
               "npm install -g downcity\nnpx @downcity/sandbox-windows-srt setup\n$env:DC_WINDOWS_SANDBOX=\"srt\"\ndowncity --version",
-            notes: ["环境变量示例适用于 PowerShell。", "SRT 仍处于 Alpha 阶段，当前每个进程只运行一个活动 workspace。"],
+            notes: [
+              "环境变量示例适用于 PowerShell。",
+              "SRT 仍处于 Alpha 阶段，当前每个进程只运行一个活动 workspace。",
+              "SRT 不会撤销 workspace 外目录已经授予 Authenticated Users 的写权限；高安全场景请使用 MXC、WSL 或容器。",
+            ],
           },
         ],
       },
@@ -160,7 +164,11 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
             description: "An optional standalone adapter. The first setup requests administrator access once to create the isolated user and network policy.",
             command:
               "npm install -g downcity\nnpx @downcity/sandbox-windows-srt setup\n$env:DC_WINDOWS_SANDBOX=\"srt\"\ndowncity --version",
-            notes: ["The environment variable example targets PowerShell.", "SRT is Alpha and currently runs one active workspace per process."],
+            notes: [
+              "The environment variable example targets PowerShell.",
+              "SRT is Alpha and currently runs one active workspace per process.",
+              "SRT does not revoke writes already granted to Authenticated Users outside the workspace; prefer MXC, WSL, or a container for stronger isolation.",
+            ],
           },
         ],
       },

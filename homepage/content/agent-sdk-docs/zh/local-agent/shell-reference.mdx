@@ -122,6 +122,8 @@ const shell = new Shell({
 
 SRT Windows 当前仍是 Alpha，并且同一个 Downcity 进程只允许一个活动 workspace 安全域。不同 workspace 不能并发共享 `downcity-sandbox` SID；这种场景应继续使用 MXC、WSL/container，或拆分到不同宿主安全域。SRT 也无法默认读取当前 Windows 用户通过 nvm、Scoop 或 `pip install --user` 安装的工具，需要把相应目录作为额外只读路径显式授权。
 
+SRT Windows 的文件隔离依赖独立用户和 additive NTFS ACL。如果 workspace 外目录已经向 `Authenticated Users` 等宽泛主体开放写权限，SRT 的 `allowWrite` 不会撤销该既有权限。不要把当前 Alpha 后端视为任意 Windows 主机上的完整默认拒绝边界；请使用收紧过宿主 ACL 的工作目录，安全要求较高时继续选择 MXC、WSL 或容器。
+
 ### 额外只读目录
 
 宿主可以把固定版本 CLI 或运行时目录以只读方式加入 Safe Sandbox：

@@ -48,6 +48,14 @@ export interface ResolvedSandboxPolicy {
   env_allowlist: string[];
   /** 最终只读路径集合，所有路径均已经规范化。 */
   read_only_paths: string[];
+  /**
+   * 宿主显式批准的项目外只读路径。
+   *
+   * 说明（中文）
+   * - 本集合是 `read_only_paths` 的子集，不包含 adapter 自动发现的系统目录。
+   * - 需要修改宿主 ACL 的 adapter 只能授权本集合，禁止触碰系统目录。
+   */
+  host_read_only_paths: string[];
   /** 最终可读写路径集合，固定收敛在 workspace 内。 */
   read_write_paths: string[];
   /** 当前网络访问模式。 */

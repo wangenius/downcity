@@ -11,6 +11,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
 import {
   closeAllShellSessions,
@@ -19,7 +21,34 @@ import {
 } from "@downcity/shell/session/ShellActionRuntime.js";
 import { WindowsSrtSandbox } from "../bin/index.js";
 
-test("Windows SRT runs cmd and confines writes to the workspace", {
+const exec_file = promisify(execFile);
+
+/** 返回当前 Windows Runner 用户的稳定 SID。 */
+async function read_current_user_sid() {
+  const { stdout } = await exec_file("whoami.exe", ["/user", "/fo", "csv", "/nh"]);
+  const match = stdout.match(/"(S-1-[^"]+)"/iu);
+  if (!match) throw new Error(`Unable to resolve current Windows user SID: ${stdout}`);
+  return match[1];
+}
+
+/**
+ * 移除临时测试根目录继承的宽松 ACL。
+ *
+ * GitHub Runner 的临时目录可能授予 Authenticated Users 写权限，而 SRT 当前采用独立用户和
+ * additive ALLOW ACL。先收紧 fixture 根目录，才能验证 workspace grant 而不把 Runner ACL
+ * 误判为 SRT 的隔离能力。
+ */
+async function harden_fixture_acl(fixture_root) {
+  const current_user_sid = await read_current_user_sid();
+  await exec_file("icacls.exe", [
+    fixture_root,
+    "/grant:r",
+    `*${current_user_sid}:(OI)(CI)F`,
+  ]);
+  await exec_file("icacls.exe", [fixture_root, "/inheritance:r"]);
+}
+
+test("Windows SRT confines writes inside an ACL-hardened fixture", {
   skip: process.platform !== "win32" || process.env.DC_WINDOWS_SRT_INTEGRATION !== "1",
   timeout: 180_000,
 }, async () => {
@@ -28,8 +57,9 @@ test("Windows SRT runs cmd and confines writes to the workspace", {
   const outside_path = path.join(fixture_root, "outside.txt");
   const state = createShellRuntimeState();
   const sandbox = new WindowsSrtSandbox();
-  await fs.mkdir(project_root, { recursive: true });
   try {
+    await fs.mkdir(project_root, { recursive: true });
+    await harden_fixture_acl(fixture_root);
     const escaped_path = outside_path.replaceAll("%", "%%");
     const command = [
       "echo %WINDOWS_TEST_VALUE%",

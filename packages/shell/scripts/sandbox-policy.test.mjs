@@ -28,6 +28,7 @@ test("host tool directory enters read-only policy only", async () => {
     }, {});
     const real_tool_root = await fs.realpath(fixture.tool_root);
     assert.equal(policy.read_only_paths.includes(real_tool_root), true);
+    assert.deepEqual(policy.host_read_only_paths, [real_tool_root]);
     assert.equal(policy.read_write_paths.includes(real_tool_root), false);
     assert.equal(policy.backend, "test-sandbox");
   } finally {

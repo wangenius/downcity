@@ -31,7 +31,8 @@ function create_request(network_mode = "off") {
       tmp_dir: "C:\\repo\\.downcity\\sandbox\\tmp",
       cache_dir: "C:\\repo\\.downcity\\sandbox\\.cache",
       env_allowlist: [],
-      read_only_paths: ["C:\\Windows\\System32"],
+      read_only_paths: ["C:\\Windows\\System32", "C:\\private-tools"],
+      host_read_only_paths: ["C:\\private-tools"],
       read_write_paths: ["C:\\repo"],
       network_mode,
       fingerprint: "policy-1",
@@ -39,11 +40,11 @@ function create_request(network_mode = "off") {
   };
 }
 
-test("Windows SRT policy keeps writes inside resolved read-write paths", () => {
+test("Windows SRT writes ACL only for host-approved private paths", () => {
   const config = build_windows_srt_config(create_request());
   assert.deepEqual(config.filesystem, {
     denyRead: [],
-    allowRead: ["C:\\Windows\\System32", "C:\\repo"],
+    allowRead: ["C:\\private-tools"],
     allowWrite: ["C:\\repo"],
     denyWrite: [],
   });

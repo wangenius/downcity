@@ -34,7 +34,7 @@ const agent = new Agent({
 
 Shell tools 默认进入 Safe Sandbox。
 
-macOS 使用 Seatbelt，Linux 使用 Bubblewrap。原生 Windows 默认通过锁定版本的 Microsoft MXC runtime 使用 `windows-mxc-dev`；设置 `DC_WINDOWS_SANDBOX=srt` 后可显式启用基于独立 Windows 用户、ACL 与 WFP 的 `windows-srt-alpha`。SRT 需要先运行 `npx @downcity/sandbox-windows-srt setup`，且当前只允许一个活动 workspace 安全域。两个 Windows 后端都不会在不可用时降级成 unrestricted。
+macOS 使用 Seatbelt，Linux 使用 Bubblewrap。原生 Windows 默认通过锁定版本的 Microsoft MXC runtime 使用 `windows-mxc-dev`；设置 `DC_WINDOWS_SANDBOX=srt` 后可显式启用基于独立 Windows 用户、ACL 与 WFP 的 `windows-srt-alpha`。SRT 需要先运行 `npx @downcity/sandbox-windows-srt setup`，且当前只允许一个活动 workspace 安全域。SRT 的 additive ACL 不会撤销 workspace 外目录授予 `Authenticated Users` 的既有写权限，因此仍属于 Alpha，不能视为任意 Windows 主机上的完整默认拒绝边界。两个 Windows 后端都不会在不可用时降级成 unrestricted。
 
 只有需要宿主级能力时才使用 `sandbox: "unrestricted"`，例如 `brew install`、`npm install -g`、`pip install --user`、`gh auth login`，或初始化项目 sandbox 外的宿主服务。
 
@@ -67,7 +67,7 @@ const agent = new Agent({
 });
 ```
 
-只读目录必须是已存在的绝对目录，不能位于项目目录内。macOS 将其编译为 Seatbelt `file-read*` 规则，Linux 将其映射为 Bubblewrap `--ro-bind`，Windows 则把它作为只读根目录交给 MXC；所有后端都不会增加写权限。
+只读目录必须是已存在的绝对目录，不能位于项目目录内。macOS 将其编译为 Seatbelt `file-read*` 规则，Linux 将其映射为 Bubblewrap `--ro-bind`，Windows 则把它作为只读根目录交给 MXC，或为 SRT 的独立用户添加 READ ACL；所有后端都不会增加写权限。
 
 宿主在工具安装、升级或停用后可以动态替换目录：
 

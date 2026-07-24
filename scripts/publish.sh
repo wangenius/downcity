@@ -51,6 +51,7 @@ const files = [
   'packages/sandbox-macos/package.json',
   'packages/sandbox-linux/package.json',
   'packages/sandbox-windows-mxc/package.json',
+  'packages/sandbox-windows-srt/package.json',
   'packages/agent/package.json',
   'packages/city/package.json',
   'packages/services/package.json',
@@ -181,6 +182,7 @@ main() {
     packages/sandbox-macos/package.json \
     packages/sandbox-linux/package.json \
     packages/sandbox-windows-mxc/package.json \
+    packages/sandbox-windows-srt/package.json \
     packages/agent/package.json \
     packages/city/package.json \
     packages/services/package.json \

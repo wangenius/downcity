@@ -34,7 +34,7 @@ Mounting a `Shell` configured with a platform adapter adds these model tools:
 
 Shell tools run in the Safe Sandbox by default.
 
-macOS uses Seatbelt and Linux uses Bubblewrap. Native Windows 11 24H2+ uses the pinned Microsoft MXC runtime through `windows-mxc-dev` with `cmd.exe /d /s /c`; its support level is Development / unstable. Preflight requires build 26100+, `cmd.exe`, and a successful MXC isolation-tier probe. MXC is Public Preview and is not a production security boundary.
+macOS uses Seatbelt and Linux uses Bubblewrap. Native Windows keeps the pinned Microsoft MXC runtime as `windows-mxc-dev` by default. Set `DC_WINDOWS_SANDBOX=srt` to explicitly enable `windows-srt-alpha`, which uses a dedicated Windows user, ACLs, and WFP. SRT requires `npx @downcity/sandbox-windows-srt setup` first and currently permits one active workspace security domain. Neither Windows backend falls back to unrestricted execution when unavailable.
 
 Use `sandbox: "unrestricted"` only when a command needs host-level access, such as `brew install`, `npm install -g`, `pip install --user`, `gh auth login`, or service initialization outside the project sandbox.
 

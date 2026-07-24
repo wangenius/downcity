@@ -110,6 +110,15 @@ export interface ShellSandboxAdapter {
   resolve_system_read_only_paths(input: ShellSandboxHostInput): Promise<string[]>;
   /** 使用已经校验完成的统一策略启动受限进程。 */
   spawn(request: SandboxSpawnRequest): Promise<SandboxSpawnResult>;
+  /**
+   * 释放 adapter 持有的平台资源。
+   *
+   * 说明（中文）
+   * - 无状态 adapter 可以不实现本方法。
+   * - 持有代理、临时 ACL 或平台 broker 的 adapter 必须在这里完成清理。
+   * - Shell 会先关闭全部活动 session，再调用本方法。
+   */
+  dispose?(): Promise<void>;
 }
 
 /**

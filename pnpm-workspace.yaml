@@ -9,6 +9,7 @@ packages:
   - packages/sandbox-macos
   - packages/sandbox-linux
   - packages/sandbox-windows-mxc
+  - packages/sandbox-windows-srt
   - packages/type
   - packages/cli
   - packages/ui

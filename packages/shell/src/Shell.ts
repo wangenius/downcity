@@ -129,6 +129,7 @@ export class Shell {
     }
     this.state.sessions.clear();
     this.state.context = null;
+    await this.sandbox.dispose?.();
   }
 
   /**

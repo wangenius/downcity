@@ -1,9 +1,7 @@
 import type { FC } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import { IconPlayerPlayFilled, IconBrandGithub, IconCopy, IconCheck } from "@tabler/icons-react";
-import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { IconPlayerPlayFilled, IconBrandGithub } from "@tabler/icons-react";
 
 const GITHUB_URL = "https://github.com/wangenius/downcity";
 
@@ -11,21 +9,13 @@ const GITHUB_URL = "https://github.com/wangenius/downcity";
  * 首页收尾 CTA 模块。
  * 说明：
  * 1. 居中大标题 + 副标题。
- * 2. 可复制安装命令 + Quick Start 按钮 + GitHub 按钮。
+ * 2. 平台安装入口 + GitHub 按钮。
  * 3. 使用 home 命名空间文案。
  */
 export const HomeCTASection: FC = () => {
   const { i18n, t } = useTranslation("home");
-  const [copied, setCopied] = useState(false);
   const isZh = i18n.language.toLowerCase().startsWith("zh");
   const startPath = isZh ? "/zh/start" : "/start";
-  const installCommand = t("cta.install");
-
-  const copy = () => {
-    navigator.clipboard.writeText(installCommand);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1600);
-  };
 
   return (
     <section className="border-t border-line bg-background py-20 md:py-28">
@@ -38,33 +28,12 @@ export const HomeCTASection: FC = () => {
         </p>
 
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <button
-            type="button"
-            onClick={copy}
-            className={cn(
-              "group inline-flex w-full items-center justify-between gap-4 rounded-lg border border-line bg-surface px-4 py-3",
-              "font-mono text-[0.82rem] text-foreground transition-colors hover:border-line-strong hover:bg-surface-hover sm:w-auto"
-            )}
-          >
-            <span className="flex items-center gap-3">
-              <span>{installCommand}</span>
-            </span>
-            <span
-              className={cn(
-                "inline-flex size-7 items-center justify-center rounded-md border border-line bg-card transition-colors",
-                copied ? "text-success" : "text-text-subtle group-hover:text-foreground"
-              )}
-            >
-              {copied ? <IconCheck className="size-3.5" /> : <IconCopy className="size-3.5" />}
-            </span>
-          </button>
-
           <Link
             to={startPath}
             className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-76"
           >
             <IconPlayerPlayFilled className="size-3.5" />
-            {t("cta.start")}
+            {t("cta.install")}
           </Link>
 
           <a

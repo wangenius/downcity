@@ -43,7 +43,7 @@ sync_downcity_workspace_packages_globally() {
   local package_dir="$2"
   local package_name
 
-  for package_name in type shell sandbox-macos sandbox-linux sandbox-windows-mxc agent city services plugins ui; do
+  for package_name in type shell sandbox-macos sandbox-linux sandbox-windows-mxc sandbox-windows-srt agent city services plugins ui; do
     sync_downcity_workspace_package_globally "$workspace_root" "$package_dir" "$package_name"
   done
 }
@@ -72,7 +72,9 @@ const platform_sandbox = process.platform === "darwin"
   : process.platform === "linux"
     ? "@downcity/sandbox-linux"
     : process.platform === "win32"
-      ? "@downcity/sandbox-windows-mxc"
+      ? process.env.DC_WINDOWS_SANDBOX === "srt"
+        ? "@downcity/sandbox-windows-srt"
+        : "@downcity/sandbox-windows-mxc"
       : "";
 const dependencies = [
   ...Object.keys(manifest.dependencies || {}),

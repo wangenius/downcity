@@ -68,6 +68,7 @@ jobs:
           pnpm -C packages/sandbox-macos build
           pnpm -C packages/sandbox-linux build
           pnpm -C packages/sandbox-windows-mxc build
+          pnpm -C packages/sandbox-windows-srt build
           pnpm -C packages/agent build
           pnpm -C packages/server build
           pnpm -C packages/city build

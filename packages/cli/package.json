@@ -1,6 +1,6 @@
 {
   "name": "downcity",
-  "version": "1.1.362",
+  "version": "1.1.363",
   "type": "module",
   "description": "Downcity CLI — unified City and Agent host management",
   "bin": {
@@ -66,7 +66,8 @@
   "optionalDependencies": {
     "@downcity/sandbox-linux": "workspace:^",
     "@downcity/sandbox-macos": "workspace:^",
-    "@downcity/sandbox-windows-mxc": "workspace:^"
+    "@downcity/sandbox-windows-mxc": "workspace:^",
+    "@downcity/sandbox-windows-srt": "workspace:^"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

@@ -158,7 +158,7 @@
   "cta": {
     "title": "开始使用 Downcity",
     "description": "安装 CLI、创建第一个 Agent 项目、连接 City，只需几分钟。",
-    "install": "npm i -g downcity",
+    "install": "选择你的系统",
     "start": "快速开始",
     "github": "在 GitHub 上 Star"
   },

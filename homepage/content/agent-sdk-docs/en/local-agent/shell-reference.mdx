@@ -20,6 +20,10 @@ pnpm add @downcity/shell @downcity/sandbox-linux
 
 # Windows (MXC Development)
 pnpm add @downcity/shell @downcity/sandbox-windows-mxc
+
+# Windows (Anthropic SRT Alpha)
+pnpm add @downcity/shell @downcity/sandbox-windows-srt
+npx @downcity/sandbox-windows-srt setup
 ```
 
 ## Shell
@@ -86,11 +90,12 @@ Shell commands use the safe sandbox by default. The SDK does not select or insta
 - `macos-seatbelt` — macOS sandbox
 - `linux-bubblewrap` — Linux sandbox
 - `windows-mxc-dev` — Microsoft MXC Windows process sandbox; Development / unstable
+- `windows-srt-alpha` — Anthropic Sandbox Runtime native Windows sandbox; Alpha
 - `unrestricted-host` — No sandboxing
 
-`@downcity/shell` owns the workspace write boundary, path validation, environment convergence, and policy fingerprint. Independent adapters own system paths, host preflight, policy compilation, and process startup. `@microsoft/mxc-sdk` belongs only to `@downcity/sandbox-windows-mxc`, so macOS and Linux installs do not download its Windows binaries. The Downcity CLI selects the current adapter through optional dependencies; SDK applications install and inject it explicitly.
+`@downcity/shell` owns the workspace write boundary, path validation, environment convergence, and policy fingerprint. Independent adapters own system paths, host preflight, policy compilation, and process startup. MXC and Anthropic SRT belong only to their Windows packages, so installing `@downcity/shell` does not download a Windows runtime on macOS or Linux. The Downcity CLI keeps MXC as its default and enables SRT only when `DC_WINDOWS_SANDBOX=srt` is set. SDK applications install and inject their selected adapter explicitly.
 
-### Windows Development support
+### Windows adapters
 
 Native Windows support is currently Development / unstable and requires Windows 11 24H2 build 26100 or newer. Agent preflight checks `cmd.exe`, the bundled Microsoft MXC runtime, and its selected isolation tier. A missing dependency, unsupported build, or failed probe refuses Safe Sandbox startup and never silently falls back to unrestricted execution.
 
@@ -103,6 +108,19 @@ Current Windows considerations:
 - MXC host or port allowlists and Windows `deniedPaths` are not part of Downcity's current Windows policy contract.
 - PTY and pipe execution are provided by MXC; console-sensitive programs may still differ from macOS or Linux.
 - MXC is Public Preview and its upstream documentation states that current profiles may be overly permissive. This backend must not be treated as a production security boundary.
+
+The SRT adapter directly uses Anthropic's open-source `@anthropic-ai/sandbox-runtime`. It protects the host with a dedicated `downcity-sandbox` Windows user, Restricted Token, Job Object, NTFS ACLs, and WFP network filters. Run `npx @downcity/sandbox-windows-srt setup` once and approve UAC before use. Normal command execution never installs or elevates automatically.
+
+```ts
+import { Shell } from "@downcity/shell";
+import { WindowsSrtSandbox } from "@downcity/sandbox-windows-srt";
+
+const shell = new Shell({
+  sandbox: new WindowsSrtSandbox(),
+});
+```
+
+SRT's Windows backend is currently Alpha, and one Downcity process permits only one active workspace security domain. Do not run different workspaces concurrently under the shared `downcity-sandbox` SID; use MXC, WSL/a container, or separate host security domains for that case. Per-user tools installed through nvm, Scoop, or `pip install --user` are not readable by the dedicated sandbox user unless their directories are explicitly added as read-only paths.
 
 ### Additional read-only directories
 
@@ -117,7 +135,7 @@ const shell = new Shell({
 });
 ```
 
-Each entry must be an existing absolute directory outside the project. macOS emits a Seatbelt `file-read*` rule, Linux uses Bubblewrap `--ro-bind`, and Windows passes it to MXC as a read-only root. This never expands project-external write access.
+Each entry must be an existing absolute directory outside the project. macOS emits a Seatbelt `file-read*` rule, Linux uses Bubblewrap `--ro-bind`, and Windows maps it to either an MXC read-only root or an SRT READ ACL. This never expands project-external write access.
 
 On macOS, Shell resolves `xcode-select -p`, adds the selected Xcode runtime as a system read-only path, and prepends the real `Developer/usr/bin` directory to `PATH`. Normal `git` calls use the Xcode binary directly instead of the xcrun entry that writes a host cache.
 

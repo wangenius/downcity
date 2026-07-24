@@ -3,7 +3,7 @@ set -euo pipefail
 
 # 关键点（中文）：
 # 1) 这个脚本负责"packages 级 patch bump + build"，不承担 homepage / console 的全仓交付链路。
-# 2) 统一入口支持核心包与三个独立平台 sandbox adapter；默认构建 agent + plugins + cli。
+# 2) 统一入口支持核心包与独立平台 sandbox adapter；默认构建 agent + plugins + cli。
 # 3) bump 只作用于本次显式选中的 package，避免误改无关包版本号。
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -11,13 +11,13 @@ cd "$ROOT_DIR"
 source "$ROOT_DIR/scripts/lib/build-common.sh"
 
 PACKAGES=()
-ALL_PACKAGES=("type" "shell" "sandbox-macos" "sandbox-linux" "sandbox-windows-mxc" "agent" "server" "city" "services" "plugins" "ui" "cli")
+ALL_PACKAGES=("type" "shell" "sandbox-macos" "sandbox-linux" "sandbox-windows-mxc" "sandbox-windows-srt" "agent" "server" "city" "services" "plugins" "ui" "cli")
 BUILD_PACKAGES=()
 BUMP=true
 SYNC_GLOBAL_CLI=true
 
 usage() {
-  echo "Usage: npm run patch:build -- [--type] [--shell] [--sandbox-macos] [--sandbox-linux] [--sandbox-windows-mxc] [--agent] [--server] [--city] [--services] [--plugins] [--cli] [--ui] [--all] [--no-bump] [--no-global-install]"
+  echo "Usage: npm run patch:build -- [--type] [--shell] [--sandbox-macos] [--sandbox-linux] [--sandbox-windows-mxc] [--sandbox-windows-srt] [--agent] [--server] [--city] [--services] [--plugins] [--cli] [--ui] [--all] [--no-bump] [--no-global-install]"
   echo ""
   echo "  默认构建 agent + plugins + cli，并自增对应 package 的 patch 版本号"
   echo "  --type     构建 @downcity/type"
@@ -25,6 +25,7 @@ usage() {
   echo "  --sandbox-macos 构建 @downcity/sandbox-macos"
   echo "  --sandbox-linux 构建 @downcity/sandbox-linux"
   echo "  --sandbox-windows-mxc 构建 @downcity/sandbox-windows-mxc"
+  echo "  --sandbox-windows-srt 构建 @downcity/sandbox-windows-srt"
   echo "  --agent    构建 @downcity/agent"
   echo "  --server   构建 @downcity/server"
   echo "  --city     构建 @downcity/city"
@@ -74,7 +75,8 @@ resolve_build_packages() {
       local has_agent=false
       local has_sandbox_macos=false
       local has_sandbox_linux=false
-      local has_sandbox_windows_mxc=false
+        local has_sandbox_windows_mxc=false
+        local has_sandbox_windows_srt=false
       local has_plugins=false
       local has_ui=false
       local has_server=false
@@ -89,6 +91,7 @@ resolve_build_packages() {
         if [[ "$item" == "sandbox-macos" ]]; then has_sandbox_macos=true; fi
         if [[ "$item" == "sandbox-linux" ]]; then has_sandbox_linux=true; fi
         if [[ "$item" == "sandbox-windows-mxc" ]]; then has_sandbox_windows_mxc=true; fi
+        if [[ "$item" == "sandbox-windows-srt" ]]; then has_sandbox_windows_srt=true; fi
         if [[ "$item" == "shell" ]]; then
           has_shell=true
         fi
@@ -114,6 +117,7 @@ resolve_build_packages() {
       if [[ "$has_sandbox_macos" == false ]]; then resolved+=("sandbox-macos"); fi
       if [[ "$has_sandbox_linux" == false ]]; then resolved+=("sandbox-linux"); fi
       if [[ "$has_sandbox_windows_mxc" == false ]]; then resolved+=("sandbox-windows-mxc"); fi
+      if [[ "$has_sandbox_windows_srt" == false ]]; then resolved+=("sandbox-windows-srt"); fi
       if [[ "$has_server" == false ]]; then
         resolved+=("server")
       fi
@@ -284,6 +288,7 @@ while [[ $# -gt 0 ]]; do
     --sandbox-macos) add_package "sandbox-macos" ;;
     --sandbox-linux) add_package "sandbox-linux" ;;
     --sandbox-windows-mxc) add_package "sandbox-windows-mxc" ;;
+    --sandbox-windows-srt) add_package "sandbox-windows-srt" ;;
     --agent)    add_package "agent" ;;
     --server)   add_package "server" ;;
     --city)     add_package "city" ;;
@@ -291,7 +296,7 @@ while [[ $# -gt 0 ]]; do
     --plugins)  add_package "plugins" ;;
     --cli)      add_package "cli" ;;
     --ui)       add_package "ui" ;;
-    --all)      PACKAGES=("type" "shell" "sandbox-macos" "sandbox-linux" "sandbox-windows-mxc" "agent" "server" "city" "services" "plugins" "ui" "cli") ; shift ; continue ;;
+    --all)      PACKAGES=("type" "shell" "sandbox-macos" "sandbox-linux" "sandbox-windows-mxc" "sandbox-windows-srt" "agent" "server" "city" "services" "plugins" "ui" "cli") ; shift ; continue ;;
     --no-bump)  BUMP=false ;;
     --no-global-install) SYNC_GLOBAL_CLI=false ;;
     -h|--help)  usage ;;

@@ -11,6 +11,7 @@ import assert from "node:assert/strict";
 
 import { buildGlobalUpdateInvocation } from "../bin/city/shared/Update.js";
 import { buildDetachedProcessSignalTargets } from "../bin/city/process/registry/ProcessSweep.js";
+import { resolve_windows_sandbox_selection } from "../bin/city/sandbox/PlatformSandbox.js";
 
 async function with_platform(platform, callback) {
   const previous = Object.getOwnPropertyDescriptor(process, "platform");
@@ -37,4 +38,13 @@ test("Windows detached processes use one positive PID target", async () => {
   await with_platform("win32", async () => {
     assert.deepEqual(buildDetachedProcessSignalTargets(4321), [4321]);
   });
+});
+
+test("Windows sandbox keeps MXC by default and enables SRT explicitly", () => {
+  assert.equal(resolve_windows_sandbox_selection({}), "mxc");
+  assert.equal(resolve_windows_sandbox_selection({ DC_WINDOWS_SANDBOX: "srt" }), "srt");
+  assert.throws(
+    () => resolve_windows_sandbox_selection({ DC_WINDOWS_SANDBOX: "unknown" }),
+    /Expected mxc or srt/,
+  );
 });

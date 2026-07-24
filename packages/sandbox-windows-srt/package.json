@@ -1,10 +1,13 @@
 {
-  "name": "@downcity/sandbox-windows-mxc",
-  "version": "0.1.2",
+  "name": "@downcity/sandbox-windows-srt",
+  "version": "0.1.1",
   "type": "module",
-  "description": "Downcity experimental Microsoft MXC Windows sandbox adapter",
+  "description": "Downcity Anthropic Sandbox Runtime adapter for native Windows",
   "main": "./bin/index.js",
   "types": "./bin/index.d.ts",
+  "bin": {
+    "downcity-sandbox-windows-srt": "./bin/cli.js"
+  },
   "files": [
     "bin"
   ],
@@ -34,8 +37,8 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@anthropic-ai/sandbox-runtime": "0.0.67",
     "@downcity/shell": "workspace:^",
-    "@microsoft/mxc-sdk": "0.7.0",
     "fs-extra": "^11.3.5"
   },
   "devDependencies": {

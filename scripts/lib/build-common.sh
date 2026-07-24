@@ -43,7 +43,7 @@ sync_downcity_workspace_packages_globally() {
   local package_dir="$2"
   local package_name
 
-  for package_name in type shell agent city services plugins ui; do
+  for package_name in type shell sandbox-macos sandbox-linux sandbox-windows-mxc agent city services plugins ui; do
     sync_downcity_workspace_package_globally "$workspace_root" "$package_dir" "$package_name"
   done
 }
@@ -67,7 +67,17 @@ import path from "node:path";
 
 const [, , package_dir, manifest_path] = process.argv;
 const manifest = JSON.parse(fs.readFileSync(manifest_path, "utf8"));
-const dependencies = Object.keys(manifest.dependencies || {});
+const platform_sandbox = process.platform === "darwin"
+  ? "@downcity/sandbox-macos"
+  : process.platform === "linux"
+    ? "@downcity/sandbox-linux"
+    : process.platform === "win32"
+      ? "@downcity/sandbox-windows-mxc"
+      : "";
+const dependencies = [
+  ...Object.keys(manifest.dependencies || {}),
+  ...(platform_sandbox ? [platform_sandbox] : []),
+];
 
 for (const dependency_name of dependencies) {
   const dependency_path = path.join(

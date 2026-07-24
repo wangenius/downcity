@@ -13,6 +13,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { Shell } from "@downcity/shell";
+import { test_sandbox } from "./TestSandbox.mjs";
 import {
   closeAllShellSessions,
   createShellRuntimeState,
@@ -26,6 +27,7 @@ async function create_context() {
   return {
     root_path,
     context: {
+      sandbox: test_sandbox,
       rootPath: root_path,
       env: {},
       config: { id: "test-agent" },
@@ -38,7 +40,7 @@ async function create_context() {
 }
 
 test("Shell exposes command, file, and search tools", () => {
-  const shell = new Shell({ root_path: process.cwd() });
+  const shell = new Shell({ root_path: process.cwd(), sandbox: test_sandbox });
   assert.deepEqual(Object.keys(shell.tools).sort(), [
     "edit",
     "find",

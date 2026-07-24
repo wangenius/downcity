@@ -19,14 +19,14 @@ import {
 import {
   createPipeProcessHandle,
   createPtyProcessHandle,
-} from "@/sandbox/ShellProcessHandle.js";
-import { inspect_windows_mxc_support } from "@/sandbox/WindowsMxcSupport.js";
-import { read_windows_env_value } from "@/sandbox/WindowsEnvironment.js";
-import { build_windows_cmd_command_line } from "@/session/ShellCommandModel.js";
+} from "@downcity/shell/sandbox/ShellProcessHandle.js";
+import { inspect_windows_mxc_support } from "@/WindowsMxcSupport.js";
+import { read_windows_env_value } from "@/WindowsEnvironment.js";
+import { build_windows_cmd_command_line } from "@/WindowsMxcCommandLine.js";
 import type {
   SandboxSpawnRequest,
   SandboxSpawnResult,
-} from "@/types/Sandbox.js";
+} from "@downcity/shell/types/Sandbox.js";
 
 /** 构造 Windows Safe Sandbox 子进程环境变量。 */
 export function build_windows_mxc_env(

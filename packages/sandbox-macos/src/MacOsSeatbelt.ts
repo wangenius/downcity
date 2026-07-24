@@ -13,12 +13,12 @@ import fs from "fs-extra";
 import {
   createPipeProcessHandle,
   spawnPtyProcessHandle,
-} from "@/sandbox/ShellProcessHandle.js";
+} from "@downcity/shell/sandbox/ShellProcessHandle.js";
 import type {
   SandboxSpawnRequest,
   SandboxSpawnResult,
-} from "@/types/Sandbox.js";
-import { build_shell_command_invocation } from "@/session/ShellCommandModel.js";
+} from "@downcity/shell/types/Sandbox.js";
+import { build_shell_command_invocation } from "@downcity/shell/session/ShellCommandModel.js";
 
 const DEFAULT_PATH_VALUE =
   "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";

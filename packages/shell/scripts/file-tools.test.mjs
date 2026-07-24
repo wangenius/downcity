@@ -13,6 +13,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { Shell } from "@downcity/shell";
+import { test_sandbox } from "./TestSandbox.mjs";
 
 async function create_fixture(t) {
   const root_path = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-file-tools-"));
@@ -24,7 +25,7 @@ async function create_fixture(t) {
   return {
     root_path,
     outside_path,
-    shell: new Shell({ root_path }),
+    shell: new Shell({ root_path, sandbox: test_sandbox }),
   };
 }
 

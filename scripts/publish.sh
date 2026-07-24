@@ -48,6 +48,9 @@ if (!newVersion) {
 const files = [
   'package.json',
   'packages/shell/package.json',
+  'packages/sandbox-macos/package.json',
+  'packages/sandbox-linux/package.json',
+  'packages/sandbox-windows-mxc/package.json',
   'packages/agent/package.json',
   'packages/city/package.json',
   'packages/services/package.json',
@@ -175,6 +178,9 @@ main() {
   git add \
     package.json \
     packages/shell/package.json \
+    packages/sandbox-macos/package.json \
+    packages/sandbox-linux/package.json \
+    packages/sandbox-windows-mxc/package.json \
     packages/agent/package.json \
     packages/city/package.json \
     packages/services/package.json \

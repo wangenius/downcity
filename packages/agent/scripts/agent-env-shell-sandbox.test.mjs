@@ -14,9 +14,7 @@ import path from "node:path";
 
 import { Agent } from "@downcity/agent";
 import { Shell } from "@downcity/shell";
-import {
-  checkShellSandboxPreflight,
-} from "@downcity/shell/sandbox/SandboxPreflight.js";
+import { create_platform_sandbox } from "./PlatformSandbox.mjs";
 
 async function execute_shell(agent, cmd) {
   const result = await agent.tools.shell_exec.execute(
@@ -34,7 +32,8 @@ async function execute_shell(agent, cmd) {
 }
 
 test("agent setEnv and patchEnv are visible in shell safe sandbox", async (t) => {
-  const preflight = await checkShellSandboxPreflight();
+  const sandbox = await create_platform_sandbox();
+  const preflight = await sandbox.preflight();
   if (!preflight.ok) {
     t.skip(`safe sandbox unavailable: ${preflight.issues.map((issue) => issue.message).join("; ")}`);
     return;
@@ -47,7 +46,7 @@ test("agent setEnv and patchEnv are visible in shell safe sandbox", async (t) =>
   const agent = new Agent({
     id: "agent-env-shell-sandbox-test",
     path: root_path,
-    shell: new Shell(),
+    shell: new Shell({ sandbox }),
   });
 
   try {

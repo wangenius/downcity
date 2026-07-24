@@ -6,6 +6,9 @@ packages:
   - packages/plugins
   - packages/server
   - packages/shell
+  - packages/sandbox-macos
+  - packages/sandbox-linux
+  - packages/sandbox-windows-mxc
   - packages/type
   - packages/cli
   - packages/ui

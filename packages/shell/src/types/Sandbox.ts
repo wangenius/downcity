@@ -4,40 +4,14 @@
  * 关键点（中文）
  * - Shell session 负责进程生命周期，Sandbox 只负责按策略启动进程。
  * - 宿主只能增加额外只读目录，不能扩大 workspace 之外的写权限。
- * - macOS Seatbelt、Linux Bubblewrap 与 Windows MXC 共同消费同一份已解析策略。
+ * - 具体平台 adapter 共同消费 Shell 核心生成的同一份已解析策略。
  */
 
 /** Sandbox 网络模式。 */
 export type SandboxNetworkMode = "off" | "full";
 
 /** 当前支持的 Sandbox 执行后端。 */
-export type SandboxBackend =
-  | "macos-seatbelt"
-  | "linux-bubblewrap"
-  | "windows-mxc-dev"
-  | "unrestricted-host";
-
-/** MXC 当前可能选择的 Windows 进程隔离层级。 */
-export type WindowsMxcIsolationTier =
-  | "base-container"
-  | "appcontainer-bfs"
-  | "appcontainer-dacl";
-
-/**
- * Windows MXC Development 后端宿主探测结果。
- */
-export interface WindowsMxcSupport {
-  /** 当前宿主是否满足 Downcity Windows Development 支持条件。 */
-  supported: boolean;
-  /** 当前 Windows build number；无法识别时为空。 */
-  windows_build: number | null;
-  /** MXC runtime 实际选择的隔离层级；probe 失败时为空。 */
-  isolation_tier?: WindowsMxcIsolationTier;
-  /** MXC probe 返回的降级或宿主准备警告。 */
-  warnings: string[];
-  /** 不支持时面向用户的稳定原因。 */
-  reason?: string;
-}
+export type SandboxBackend = string;
 
 /**
  * 宿主传入的 Safe Sandbox 扩展能力。
@@ -59,7 +33,7 @@ export interface ShellSafePolicy {
  */
 export interface ResolvedSandboxPolicy {
   /** 当前平台使用的 Safe Sandbox 后端。 */
-  backend: Exclude<SandboxBackend, "unrestricted-host">;
+  backend: SandboxBackend;
   /** 当前 workspace 根目录绝对路径。 */
   root_path: string;
   /** 当前 agent 级 Sandbox 持久目录。 */
@@ -80,6 +54,62 @@ export interface ResolvedSandboxPolicy {
   network_mode: SandboxNetworkMode;
   /** 当前完整策略的稳定摘要。 */
   fingerprint: string;
+}
+
+/**
+ * 平台 adapter 解析系统只读目录时使用的宿主输入。
+ */
+export interface ShellSandboxHostInput {
+  /** Sandbox 收敛前的完整基础环境变量。 */
+  base_env: NodeJS.ProcessEnv;
+}
+
+/** sandbox 预检失败原因。 */
+export type SandboxPreflightIssueCode =
+  | "unsupported-platform"
+  | "missing-command"
+  | "userns-disabled"
+  | "unsupported-windows-version"
+  | "sandbox-runtime-unavailable";
+
+/** 单条 sandbox 预检失败。 */
+export interface SandboxPreflightIssue {
+  /** 机器可读的失败原因。 */
+  code: SandboxPreflightIssueCode;
+  /** 人类可读的失败说明。 */
+  message: string;
+  /** 可复制的修复建议列表。 */
+  fixes: string[];
+}
+
+/** sandbox adapter 的宿主预检结果。 */
+export interface SandboxPreflightResult {
+  /** 当前宿主是否满足 adapter 启动要求。 */
+  ok: boolean;
+  /** 当前宿主平台。 */
+  platform: NodeJS.Platform;
+  /** 当前 adapter 的稳定后端标识。 */
+  backend: SandboxBackend;
+  /** 预检发现的问题集合。 */
+  issues: SandboxPreflightIssue[];
+}
+
+/**
+ * Shell 平台 Sandbox Adapter 契约。
+ *
+ * 关键点（中文）
+ * - adapter 只负责宿主探测、系统只读目录和受限进程启动。
+ * - workspace 写边界、宿主路径校验和策略指纹始终由 Shell 核心维护。
+ */
+export interface ShellSandboxAdapter {
+  /** 当前 adapter 的稳定后端标识。 */
+  readonly backend: SandboxBackend;
+  /** 检查当前宿主是否满足 adapter 的运行要求。 */
+  preflight(): Promise<SandboxPreflightResult>;
+  /** 解析当前平台执行命令必须读取的系统目录。 */
+  resolve_system_read_only_paths(input: ShellSandboxHostInput): Promise<string[]>;
+  /** 使用已经校验完成的统一策略启动受限进程。 */
+  spawn(request: SandboxSpawnRequest): Promise<SandboxSpawnResult>;
 }
 
 /**

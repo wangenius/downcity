@@ -80,8 +80,8 @@ jobs:
           echo "${PACKAGE_NAME}@${PACKAGE_VERSION} is not published yet"
           echo "should_publish=true" >> "$GITHUB_OUTPUT"
 
-      - name: Install shell sandbox dependencies
-        if: steps.version.outputs.should_publish == 'true' && matrix.name == '@downcity/shell'
+      - name: Install Linux sandbox dependencies
+        if: steps.version.outputs.should_publish == 'true' && matrix.name == '@downcity/sandbox-linux'
         run: |
           sudo apt-get update
           sudo apt-get install --yes bubblewrap

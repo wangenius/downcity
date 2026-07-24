@@ -9,41 +9,6 @@
 
 import type { ShellCommandInvocation } from "@/types/ShellCommand.js";
 
-function quote_windows_executable_path(value: string): string {
-  if (!/[\s"]/u.test(value)) return value;
-  let result = '"';
-  let backslashes = 0;
-  for (const character of value) {
-    if (character === "\\") {
-      backslashes += 1;
-      continue;
-    }
-    if (character === '"') {
-      result += "\\".repeat(backslashes * 2 + 1) + '"';
-      backslashes = 0;
-      continue;
-    }
-    result += "\\".repeat(backslashes) + character;
-    backslashes = 0;
-  }
-  return result + "\\".repeat(backslashes * 2) + '"';
-}
-
-/**
- * 构造 MXC `CreateProcess` 使用的 `cmd.exe` 完整命令行。
- *
- * 关键点（中文）
- * - MXC 接收单个命令行字符串，不能像 Node `spawn(command, args)` 一样代为序列化参数。
- * - `cmd.exe /s /c` 要求命令正文由一对外层双引号包裹，正文中的双引号必须原样保留。
- * - cmd 不使用反斜杠转义双引号，因此不能套用通用的 Windows argv quoting 算法。
- */
-export function build_windows_cmd_command_line(
-  shell_path: string,
-  cmd: string,
-): string {
-  return `${quote_windows_executable_path(shell_path)} /d /s /c "${cmd}"`;
-}
-
 /** 解析当前平台的默认 Shell 可执行文件。 */
 export function resolve_default_shell_path(
   platform: NodeJS.Platform = process.platform,

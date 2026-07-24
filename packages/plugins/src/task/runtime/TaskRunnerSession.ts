@@ -20,7 +20,6 @@ import {
   SessionMessages,
 } from "@downcity/agent";
 import { DefaultSessionSystemComposer } from "@downcity/agent";
-import { Shell } from "@downcity/shell";
 import type { SessionExecutor } from "@downcity/agent";
 import type {
   SessionComposeInput,
@@ -94,11 +93,10 @@ export function createTaskSessionRuntimePort(params: {
   const messages_by_session_id = new Map<string, SessionMessages>();
   const created_at_by_session_id = new Map<string, number>();
   const runtimesBySessionId = new Map<string, SessionExecutor>();
-  const shell = new Shell({
-    root_path: context.rootPath,
-    env: effective_env,
-    logger: context.logger,
-  });
+  const shell = context.shell;
+  if (!shell) {
+    throw new Error("Task agent execution requires Agent to be configured with a Shell.");
+  }
   const shell_tools = shell.tools as unknown as Record<string, Tool>;
 
   const resolve_task_messages = (session_id: string): SessionMessages => {

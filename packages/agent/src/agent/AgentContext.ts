@@ -10,11 +10,14 @@
 import type { AgentSessions } from "@/agent/AgentSessions.js";
 import type { AgentPlugins } from "@/types/plugin/PluginRuntime.js";
 import type { Logger } from "@/utils/logger/Logger.js";
+import type { Shell } from "@downcity/shell";
 
 /**
  * AgentContext 构造参数。
  */
 interface AgentContextOptions {
+  /** 当前 Agent 显式挂载的 Shell；未启用时为空。 */
+  shell?: Shell;
   /** 当前 Agent 稳定标识。 */
   agent_id: string;
 
@@ -41,6 +44,8 @@ interface AgentContextOptions {
  * 本地 Agent 的统一执行上下文。
  */
 export class AgentContext {
+  /** 当前 Agent 显式挂载的 Shell；plugin 可复用其已注入的平台 adapter。 */
+  readonly shell?: Shell;
   /** 当前 Agent 稳定标识。 */
   readonly agent_id: string;
 
@@ -63,6 +68,7 @@ export class AgentContext {
   readonly plugins: AgentPlugins;
 
   constructor(options: AgentContextOptions) {
+    this.shell = options.shell;
     this.agent_id = options.agent_id;
     this.rootPath = options.rootPath;
     this.logger = options.logger;

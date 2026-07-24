@@ -7,6 +7,7 @@
  */
 
 import type { ShellApprovalGateway } from "@/types/ShellApproval.js";
+import type { ShellSandboxAdapter } from "@/types/Sandbox.js";
 
 export type ShellLogger = {
   /**
@@ -34,6 +35,8 @@ export type ShellHostIntegration = {
 };
 
 export type ShellHostContext = {
+  /** 当前 Shell 强制注入的平台 Sandbox Adapter。 */
+  sandbox: ShellSandboxAdapter;
   /**
    * 当前项目根目录。
    */

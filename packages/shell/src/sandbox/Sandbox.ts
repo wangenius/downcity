@@ -13,9 +13,6 @@ import {
   resolve_sandbox_cwd,
   resolve_sandbox_policy,
 } from "@/sandbox/SandboxPolicy.js";
-import { spawn_macos_seatbelt } from "@/sandbox/backends/MacOsSeatbelt.js";
-import { spawn_linux_bubblewrap } from "@/sandbox/backends/LinuxBubblewrap.js";
-import { spawn_windows_mxc } from "@/sandbox/backends/WindowsMxc.js";
 import { spawn_unrestricted_host } from "@/sandbox/backends/UnrestrictedHost.js";
 
 /**
@@ -83,13 +80,7 @@ export async function spawn_in_sandbox(
     cols: input.cols,
     rows: input.rows,
   };
-  if (policy.backend === "macos-seatbelt") {
-    return await spawn_macos_seatbelt(request);
-  }
-  if (policy.backend === "linux-bubblewrap") {
-    return await spawn_linux_bubblewrap(request);
-  }
-  return await spawn_windows_mxc(request);
+  return await input.context.sandbox.spawn(request);
 }
 
 /** Shell session 使用的语义化启动别名。 */

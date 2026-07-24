@@ -9,8 +9,6 @@
 import path from "node:path";
 import fs from "fs-extra";
 import type { AgentContext } from "@downcity/agent";
-import { run_sandbox_command } from "@downcity/shell/sandbox/Sandbox.js";
-import type { ShellHostContext } from "@downcity/shell/types/ShellHostContext.js";
 import type { SessionRunResult } from "@downcity/agent";
 import type { SessionRunContext } from "@downcity/agent";
 import type { JsonObject } from "@downcity/agent";
@@ -288,8 +286,11 @@ export async function runScriptTask(params: {
     DC_SESSION_ID: params.sessionId,
   };
   stripTaskSecretEnv(childEnv);
-  const execResult = await run_sandbox_command({
-    context: params.context as unknown as ShellHostContext,
+  const shell = params.context.shell;
+  if (!shell) {
+    throw new Error("Script task execution requires Agent to be configured with a Shell.");
+  }
+  const execResult = await shell.run_safe_command({
     execution_id: `task-script:${params.sessionId}`,
     execution_dir: params.runDirAbs,
     cmd: `sh "${scriptAbs.replace(/(["\\$`])/g, "\\$1")}"`,

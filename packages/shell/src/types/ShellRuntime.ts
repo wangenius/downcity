@@ -11,6 +11,7 @@ import type {
   ShellActionResponse,
 } from "@/types/ShellAction.js";
 import type { ShellApprovalGateway } from "@/types/ShellApproval.js";
+import type { ShellSandboxAdapter } from "@/types/Sandbox.js";
 
 /**
  * Shell 运行时日志器。
@@ -80,9 +81,11 @@ export interface ShellOptions {
    */
   safe_read_only_paths?: string[];
   /**
-   * @deprecated Safe Sandbox 边界由 Shell 内部固定，不再支持外部配置。
+   * 当前平台的 Sandbox Adapter。
+   *
+   * 说明（中文）：Shell 核心不选择平台实现，调用方必须在组合根显式注入。
    */
-  sandbox?: never;
+  sandbox: ShellSandboxAdapter;
   /**
    * 可选日志器。
    */
@@ -92,7 +95,7 @@ export interface ShellOptions {
 /**
  * Agent 内部补齐给 Shell 的宿主参数。
  */
-export interface ShellConfigureOptions extends ShellOptions {
+export interface ShellConfigureOptions extends Omit<ShellOptions, "sandbox"> {
   /**
    * Agent id。
    */

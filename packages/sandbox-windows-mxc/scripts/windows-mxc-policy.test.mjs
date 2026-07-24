@@ -13,8 +13,8 @@ import {
   build_windows_mxc_config,
   build_windows_mxc_env,
   build_windows_mxc_policy,
-} from "../bin/sandbox/backends/WindowsMxc.js";
-import { read_windows_env_value } from "../bin/sandbox/WindowsEnvironment.js";
+} from "../bin/WindowsMxc.js";
+import { read_windows_env_value } from "../bin/WindowsEnvironment.js";
 
 function with_platform(platform, callback) {
   const previous = Object.getOwnPropertyDescriptor(process, "platform");

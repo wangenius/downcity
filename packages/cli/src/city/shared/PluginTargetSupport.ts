@@ -15,7 +15,7 @@ import { resolveAgentId } from "@/shared/IndexSupport.js";
 import { CliError } from "@/shared/CliError.js";
 import type { ActionScheduleJobStatus } from "@downcity/agent";
 import type { PluginCliBaseOptions } from "@downcity/agent";
-import { checkShellSandboxPreflight } from "@downcity/shell/sandbox/SandboxPreflight.js";
+import { create_platform_sandbox } from "@/city/sandbox/PlatformSandbox.js";
 import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
 import { ensure_project_execution_model_ready } from "@/city/agent/AgentExecutionModelRecovery.js";
 
@@ -35,7 +35,8 @@ function formatSandboxFixes(fixes: string[]): string {
  * 检查本机 shell sandbox 依赖。
  */
 export async function checkShellSandboxHostPreflight(): Promise<void> {
-  const result = await checkShellSandboxPreflight();
+  const sandbox = await create_platform_sandbox();
+  const result = await sandbox.preflight();
   if (result.ok) return;
 
   const note = result.issues.map((issue) => issue.message).join("\n");

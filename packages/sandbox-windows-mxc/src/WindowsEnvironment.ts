@@ -1,5 +1,5 @@
 /**
- * Windows 环境变量访问辅助。
+ * Windows MXC 环境变量访问辅助。
  *
  * 关键点（中文）
  * - Windows 环境变量名不区分大小写，但 JavaScript 对象键区分大小写。

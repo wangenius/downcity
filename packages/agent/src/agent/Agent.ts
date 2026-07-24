@@ -112,6 +112,7 @@ export class Agent {
       SessionClass: this.SessionClass,
     });
     this.context = new AgentContext({
+      ...(this.shell ? { shell: this.shell } : {}),
       agent_id: this.id,
       rootPath: this.path,
       logger: this.logger,

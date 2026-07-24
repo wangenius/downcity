@@ -11,7 +11,6 @@ import assert from "node:assert/strict";
 
 import {
   build_shell_command_invocation,
-  build_windows_cmd_command_line,
   resolve_default_shell_path,
 } from "../bin/session/ShellCommandModel.js";
 
@@ -44,22 +43,4 @@ test("POSIX shells retain login and non-login argument models", () => {
     login: false,
     platform: "linux",
   }).args, ["-c", "echo ok"]);
-});
-
-test("Windows MXC command line preserves cmd syntax and nested quotes", () => {
-  const command_line = build_windows_cmd_command_line(
-    "C:\\Windows\\System32\\cmd.exe",
-    'echo "hello world" && node -e "process.stdout.write(\'ok\')"',
-  );
-  assert.equal(
-    command_line,
-    'C:\\Windows\\System32\\cmd.exe /d /s /c "echo "hello world" && node -e "process.stdout.write(\'ok\')""',
-  );
-});
-
-test("Windows MXC command line quotes a shell path containing spaces", () => {
-  assert.equal(
-    build_windows_cmd_command_line("C:\\Program Files\\cmd.exe", "echo ok"),
-    '"C:\\Program Files\\cmd.exe" /d /s /c "echo ok"',
-  );
 });

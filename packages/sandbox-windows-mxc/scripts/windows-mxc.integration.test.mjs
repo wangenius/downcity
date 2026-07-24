@@ -17,7 +17,8 @@ import {
   closeAllShellSessions,
   createShellRuntimeState,
   execShellCommand,
-} from "../bin/session/ShellActionRuntime.js";
+} from "@downcity/shell/session/ShellActionRuntime.js";
+import { WindowsMxcSandbox } from "../bin/index.js";
 
 test("Windows MXC runs cmd and confines writes to the workspace", {
   skip: process.platform !== "win32",
@@ -37,6 +38,7 @@ test("Windows MXC runs cmd and confines writes to the workspace", {
       `echo denied>"${escaped_path}"`,
     ].join(" && ");
     const execute_result = await execShellCommand(state, {
+      sandbox: new WindowsMxcSandbox(),
       rootPath: project_root,
       env: { WINDOWS_TEST_VALUE: "downcity" },
     }, {

@@ -15,6 +15,7 @@ import path from "node:path";
 import { MockLanguageModelV3 } from "ai/test";
 import { Agent } from "@downcity/agent";
 import { Shell } from "@downcity/shell";
+import { create_platform_sandbox } from "./PlatformSandbox.mjs";
 
 /** 构造 AI SDK V3 usage。 */
 function create_usage() {
@@ -94,6 +95,7 @@ function create_final_text_stream() {
 }
 
 test("unrestricted Shell 审批保留当前 Turn 并等待用户决定", async () => {
+  const sandbox = await create_platform_sandbox();
   const project_root = await fs.mkdtemp(
     path.join(os.tmpdir(), "downcity-session-shell-approval-"),
   );
@@ -120,7 +122,7 @@ test("unrestricted Shell 审批保留当前 Turn 并等待用户决定", async (
     id: "session_shell_approval_agent",
     path: project_root,
     model,
-    shell: new Shell(),
+    shell: new Shell({ sandbox }),
   });
 
   try {

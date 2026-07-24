@@ -1,6 +1,6 @@
 {
   "name": "@downcity/shell",
-  "version": "0.1.136",
+  "version": "0.1.137",
   "type": "module",
   "description": "Downcity Shell — structured file tools, local command execution, sandboxing, shell sessions, and approvals",
   "main": "./bin/index.js",
@@ -66,7 +66,6 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@microsoft/mxc-sdk": "0.7.0",
     "ai": "^6.0.193",
     "fs-extra": "^11.3.5",
     "globby": "^11.1.0",

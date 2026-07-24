@@ -8,7 +8,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { build_linux_bubblewrap_args } from "@downcity/shell/sandbox/backends/LinuxBubblewrap.js";
+import { build_linux_bubblewrap_args } from "../bin/LinuxBubblewrap.js";
 
 function has_option_pair(args, option, source_path, target_path = source_path) {
   for (let index = 0; index < args.length - 2; index += 1) {

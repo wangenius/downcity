@@ -25,6 +25,7 @@ import { resolveAgentId } from "@/shared/IndexSupport.js";
 import { startAgentHttpGateway } from "@/city/agent/AgentHttpGateway.js";
 import { createCityBuiltinPlugins } from "@/city/runtime/plugins/CityBuiltinPlugins.js";
 import { readAgentConfig } from "@/city/process/registry/AgentConfigStore.js";
+import { create_platform_sandbox } from "@/city/sandbox/PlatformSandbox.js";
 
 /**
  * 前台启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
@@ -100,11 +101,12 @@ export async function runCommand(
     host,
     port,
   });
+  const sandbox = await create_platform_sandbox();
 
   const agent = new Agent({
     id: agentId,
     path: projectRoot,
-    shell: new Shell(),
+    shell: new Shell({ sandbox }),
     model,
     plugins,
     env: hostEnv,

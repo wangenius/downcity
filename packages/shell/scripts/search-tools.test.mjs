@@ -14,6 +14,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { Shell } from "@downcity/shell";
+import { test_sandbox } from "./TestSandbox.mjs";
 
 const rg_available = spawnSync("rg", ["--version"], { stdio: "ignore" }).status === 0;
 
@@ -27,7 +28,7 @@ async function create_fixture(t) {
   return {
     root_path,
     outside_path,
-    shell: new Shell({ root_path }),
+    shell: new Shell({ root_path, sandbox: test_sandbox }),
   };
 }
 

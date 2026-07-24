@@ -12,7 +12,7 @@ import {
   getPlatformSupport,
   type PlatformSupport,
 } from "@microsoft/mxc-sdk";
-import type { WindowsMxcSupport } from "@/types/Sandbox.js";
+import type { WindowsMxcSupport } from "@/types/WindowsMxc.js";
 
 /** Downcity Windows Development 支持的最低 Windows build。 */
 export const WINDOWS_MXC_MINIMUM_BUILD = 26_100;

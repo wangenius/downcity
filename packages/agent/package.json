@@ -1,6 +1,6 @@
 {
   "name": "@downcity/agent",
-  "version": "1.1.284",
+  "version": "1.1.285",
   "type": "module",
   "description": "Downcity Agent 运行时 — 单 Agent 执行壳与本机 RPC 能力",
   "main": "./bin/index.js",
@@ -14,7 +14,7 @@
   "scripts": {
     "build": "node scripts/agent-compiler.mjs build",
     "dev": "node scripts/agent-compiler.mjs dev",
-    "test": "pnpm build && pnpm -C ../plugins build && node --test scripts/*.test.mjs",
+    "test": "pnpm build && pnpm --filter '@downcity/sandbox-*' build && pnpm -C ../plugins build && node --test scripts/*.test.mjs",
     "test:executor-runtime": "pnpm build && node --test scripts/session-prompt-runtime.test.mjs",
     "typecheck": "node scripts/agent-compiler.mjs typecheck",
     "prepack": "npm run build && node ../../scripts/rewrite-workspace-dependencies.mjs prepare ./package.json",
@@ -36,6 +36,9 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@downcity/sandbox-linux": "workspace:^",
+    "@downcity/sandbox-macos": "workspace:^",
+    "@downcity/sandbox-windows-mxc": "workspace:^",
     "@ai-sdk/openai": "^3.0.67",
     "@types/fs-extra": "^11.0.4",
     "@types/js-yaml": "^4.0.9",

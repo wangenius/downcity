@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 import {
   evaluate_windows_mxc_support,
   parse_windows_build,
-} from "../bin/sandbox/WindowsMxcSupport.js";
+} from "../bin/WindowsMxcSupport.js";
 
 function create_platform_support(overrides = {}) {
   return {
